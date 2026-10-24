@@ -1356,7 +1356,7 @@ function useSuperAdmin(activo){
   var [anuncioGlobal,setAnuncioGlobal]=useState(null);
   var [metricasLoading,setMetricasLoading]=useState(false);
 
-  function rpc(nombre, params){
+  function rpc(nombre, params={}){
     return loadSupabaseJs().then(function(sb){
       if (!sb) return { error:{ message:"No se pudo conectar con Supabase." } };
       return sb.rpc(nombre, params);
@@ -1552,14 +1552,14 @@ var ESTADO_MEMBRESIA_TONE = { activa:"green", pendiente:"amber", vencida:"red", 
 var ROL_TONE  = { dueno:"gold", admin:"teal", broker:"green", vendedor:"purple", viewer:"dim" };
 var ROLES_BASE = ["dueno","admin","broker","vendedor","viewer"];
 
-function SABadge({children,tone}){
+function SABadge({children=undefined,tone="dim"}){
   var t = SA_TONE[tone]||SA_TONE.dim;
   return <span className="badge" style={{background:t.bg,color:t.fg,border:"1px solid "+t.bd}}>{children}</span>;
 }
-function SAEmpty({children}){
+function SAEmpty({children=undefined}){
   return <div className="op-card" style={{textAlign:"center",padding:"28px 16px",color:"var(--dim)",fontSize:12.5,cursor:"default"}}>{children}</div>;
 }
-function SASection({title,children,right}){
+function SASection({title,children=undefined,right=null}){
   return (
     <div style={{marginBottom:20}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,gap:10}}>
@@ -1705,7 +1705,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
   }).sort(function(a,b){
     var av=ordenInmob==="actividad_desc"?(a.ultima_actividad||a.ultimo_acceso||a.updated_at||a.created_at):(a.created_at||a.fecha_alta||"");
     var bv=ordenInmob==="actividad_desc"?(b.ultima_actividad||b.ultimo_acceso||b.updated_at||b.created_at):(b.created_at||b.fecha_alta||"");
-    return new Date(bv||0)-new Date(av||0);
+    return new Date(bv||0).getTime()-new Date(av||0).getTime();
   });
 
   var inmobiliariaDetalleResumen = detalleId ? sa.inmobiliarias.find(function(i){return i.inmobiliaria_id===detalleId;}) : null;
@@ -1911,7 +1911,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
             <div className="sa-list">
               {inmobiliariasFiltradas.length===0 && !sa.loading && <SAEmpty>No hay inmobiliarias que coincidan con la búsqueda.</SAEmpty>}
               {inmobiliariasFiltradas.map(function(i){
-                var vencePronto = i.fecha_renovacion && (new Date(i.fecha_renovacion) - new Date()) < 1000*60*60*24*7 && (new Date(i.fecha_renovacion) - new Date()) > 0;
+                var vencePronto = i.fecha_renovacion && (new Date(i.fecha_renovacion).getTime() - Date.now()) < 1000*60*60*24*7 && (new Date(i.fecha_renovacion).getTime() - Date.now()) > 0;
                 return (
                   <div key={i.inmobiliaria_id} className="op-card" style={{padding:"16px 18px"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
@@ -2424,7 +2424,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
           }
         };
         img.onerror=function(){dwNotify("error","No se pudo procesar la imagen.");};
-        img.src=ev.target.result;
+        img.src=String(ev.target?.result||"");
       };
       r.readAsDataURL(file);
     }catch(err){dwNotify("error","No se pudo cargar la foto.");}
@@ -2443,7 +2443,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
         var data=canvas.toDataURL("image/jpeg",0.82);
         setLocalPerfil(function(p){var fotos=Object.assign({},p.broker_fotos||{});fotos[miembro.id]=data;var next=Object.assign({},p,{broker_fotos:fotos});persistirPerfil(next);return next;});
       };
-      img.src=ev.target.result;
+      img.src=String(ev.target?.result||"");
     };
     r.readAsDataURL(file);
     e.target.value="";
@@ -2970,7 +2970,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
                 <thead>
                   <tr>
                     <th style={{textAlign:"left",padding:"6px 10px",color:"var(--dim)",fontWeight:600}}>Permiso</th>
-                    {Object.entries(ROLES_DEF).map(function(e){return <th key={e[0]} style={{padding:"6px 10px",color:e[1].color,fontWeight:600,textAlign:"center",whiteSpace:"nowrap"}}>{e[1].label}</th>;})}
+                    {Object.entries(ROLES_DEF as Record<string,{color:string;label:string;perms:string[]}>).map(function(e){return <th key={e[0]} style={{padding:"6px 10px",color:e[1].color,fontWeight:600,textAlign:"center",whiteSpace:"nowrap"}}>{e[1].label}</th>;})}
                   </tr>
                 </thead>
                 <tbody>
@@ -2978,7 +2978,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
                     return(
                       <tr key={p} style={{borderTop:"1px solid var(--border)",background:i%2===0?"rgba(255,255,255,0.01)":"transparent"}}>
                         <td style={{padding:"7px 10px",color:"var(--muted)",fontSize:12}}>{PERMS_LABELS[p]}</td>
-                        {Object.entries(ROLES_DEF).map(function(e){
+                        {Object.entries(ROLES_DEF as Record<string,{color:string;label:string;perms:string[]}>).map(function(e){
                           var has = e[1].perms.includes("todo")||e[1].perms.includes(p);
                           return <td key={e[0]} style={{padding:"7px 10px",textAlign:"center"}}><span style={{color:has?"var(--green)":"rgba(255,255,255,0.08)",fontSize:14}}>{has?"✓":"—"}</span></td>;
                         })}
@@ -3083,7 +3083,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
                 : <Inp label="Correo electrónico" value={form.email} onChange={function(e){setForm(function(f){return Object.assign({},f,{email:e.target.value});});}} placeholder="juan@inmobiliaria.com" type="email"/>
               }
               <Slt label="Rol y permisos" value={form.rol} onChange={function(e){setForm(function(f){return Object.assign({},f,{rol:e.target.value});});}}>
-                {Object.entries(ROLES_DEF).filter(function(e){return e[0]!=="dueno";}).map(function(e){
+                {Object.entries(ROLES_DEF as Record<string,{color:string;label:string;perms:string[]}>).filter(function(e){return e[0]!=="dueno";}).map(function(e){
                   return <option key={e[0]} value={e[0]}>{e[1].label} — {e[0]==="admin"?"acceso total sin ser dueño":e[0]==="broker"?"crear y editar":e[0]==="vendedor"?"solo crear":e[0]==="viewer"?"solo ver":" "}</option>;
                 })}
               </Slt>
@@ -3206,7 +3206,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
             <span style={{fontSize:12,color:puedeAgregar?"var(--dim)":"var(--gold)"}}>{puedeAgregar?"↕":"🔒"}</span>
           </div>;
         }
-        function SmallPill({children,tone}){
+        function SmallPill({children=undefined,tone}){
           var map={gold:["rgba(212,168,83,.10)","var(--gold)"],teal:["rgba(45,212,191,.10)","var(--teal)"],green:["rgba(74,222,128,.09)","var(--green)"],muted:["rgba(255,255,255,.04)","var(--muted)"]};
           var x=map[tone||"muted"]||map.muted;
           return <span style={{fontSize:12,padding:"3px 7px",borderRadius:20,background:x[0],color:x[1],border:"1px solid rgba(255,255,255,.06)",whiteSpace:"nowrap"}}>{children}</span>;
@@ -3571,7 +3571,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
             <div className="card" style={{padding:0,overflow:"hidden"}}>
               <div style={{maxHeight:420,overflowY:"auto"}}>
                 {filteredOps.length===0&&<div style={{padding:24,textAlign:"center",fontSize:13,color:"var(--dim)"}}>No hay operaciones que coincidan con el filtro.</div>}
-                {filteredOps.slice().sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);}).map(function(o,i,arr){
+                {filteredOps.slice().sort(function(a,b){return new Date(b.created_at).getTime()-new Date(a.created_at).getTime();}).map(function(o,i,arr){
                   var miembro=equipo.find(function(m){return m.id===o.broker_id;});
                   return(
                     <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:i<arr.length-1?"1px solid var(--border)":"none"}}>
@@ -3728,7 +3728,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
     return "boleto";
   }
 
-  async function shareWhatsApp(op,forzar){
+  async function shareWhatsApp(op,forzar=false){
     var docValid=aplicarEncabezadoPersonalizado(buildDocSections(opParaDocumento(Object.assign({},op,{inmobiliaria_nombre:perfil&&perfil.nombre,inmobiliaria_matricula:perfil&&perfil.matricula,inmobiliaria_domicilio:perfil&&perfil.direccion,inmobiliaria_email:perfil&&perfil.email,inmobiliaria_telefono:perfil&&perfil.telefono})), clausulas, defaultTabFor(op), bloquesReserva), op, defaultTabFor(op), perfil);
     var validacion=validarDocumentoParaExport(op,docValid,perfil);
     if(forzar&&validacion.errores.length&&typeof onAuditExport==="function"){
@@ -3770,7 +3770,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
   ];
   const enPapelera = estadoTab==="papelera";
 
-  function renderOpRow(op,nested,folder){
+  function renderOpRow(op,nested,folder=undefined){
     const monto=getMonto(op),esResAlq=op.tipo==="reserva_alquiler",esReserva=op.tipo==="reserva";
     const hijosOp=childrenMap[op.id]||[];
     const compartiendo=sharingId===op.id;
@@ -4312,7 +4312,7 @@ function CalendarioView({operaciones,onViewOp}){
     if(op.tipo==="alquiler"&&(op.alquiler_fin||op.alquiler_inicio)){
       var finFecha=finAlquilerISO(op);
       if(finFecha){
-        var fin=new Date(finFecha+"T00:00:00"), diasRestantes=Math.ceil((fin-now)/(86400000));
+        var fin=new Date(finFecha+"T00:00:00"), diasRestantes=Math.ceil((fin.getTime()-now.getTime())/(86400000));
         eventos.push(Object.assign({},base,{id:op.id+"_fin",tipo:"vencimiento",fecha:finFecha,titulo:"Vencimiento de contrato",diasRestantes:diasRestantes,urgente:diasRestantes<=60&&diasRestantes>=0,color:diasRestantes<0?"#64748b":diasRestantes<=30?"#ef4444":diasRestantes<=60?"#f97316":"#2dd4bf"}));
         var alertaFecha=new Date(fin);alertaFecha.setDate(alertaFecha.getDate()-90);
         if(alertaFecha>=now){eventos.push(Object.assign({},base,{id:op.id+"_alerta",tipo:"renovacion",fecha:alertaFecha.toISOString().slice(0,10),titulo:"Renovación próxima",diasRestantes:diasRestantes,urgente:false,color:"#a78bfa"}));}
@@ -4320,11 +4320,11 @@ function CalendarioView({operaciones,onViewOp}){
     }
     if(op.tipo==="reserva"&&op.reserva_aceptacion_vencimiento){
       var vencA=new Date(op.reserva_aceptacion_vencimiento+"T23:59:59");
-      var diasA=Math.ceil((vencA-now)/86400000);
+      var diasA=Math.ceil((vencA.getTime()-now.getTime())/86400000);
       eventos.push(Object.assign({},base,{id:op.id+"_aceptacion",tipo:"aceptacion",fecha:op.reserva_aceptacion_vencimiento,titulo:"Vencimiento de aceptación de reserva",diasRestantes:diasA,urgente:diasA<=2&&diasA>=0,color:diasA<0?"#64748b":diasA<=2?"#ef4444":"#d4a853"}));
     }
     if(op.tipo==="reserva"&&op.reserva_fecha_refuerzo){
-      var diasRef=Math.ceil((new Date(op.reserva_fecha_refuerzo)-now)/86400000);
+      var diasRef=Math.ceil((new Date(op.reserva_fecha_refuerzo).getTime()-now.getTime())/86400000);
       eventos.push(Object.assign({},base,{id:op.id+"_refuerzo",tipo:"refuerzo",fecha:op.reserva_fecha_refuerzo,titulo:"Tomar refuerzo de reserva",diasRestantes:diasRef,urgente:diasRef<=7&&diasRef>=0,color:diasRef<0?"#64748b":diasRef<=7?"#ef4444":diasRef<=15?"#f97316":"#a78bfa"}));
     }
     if(op.tipo==="reserva_alquiler"){
@@ -4335,12 +4335,12 @@ function CalendarioView({operaciones,onViewOp}){
         var vencReserva=new Date(baseFecha);vencReserva.setDate(vencReserva.getDate()+diasAceptVenc+diasVigVenc);
         var yaTieneContrato=operaciones.some(function(h){return h.parent_id===op.id&&h.tipo==="alquiler";});
         if(!yaTieneContrato){
-          var diasVR=Math.ceil((vencReserva-now)/86400000);
+          var diasVR=Math.ceil((vencReserva.getTime()-now.getTime())/86400000);
           eventos.push(Object.assign({},base,{id:op.id+"_vencres",tipo:"vencimiento",fecha:vencReserva.toISOString().slice(0,10),titulo:"Vencimiento de reserva",diasRestantes:diasVR,urgente:diasVR<=5&&diasVR>=0,color:diasVR<0?"#64748b":diasVR<=5?"#ef4444":diasVR<=10?"#f97316":"#fb923c"}));
         }
       }
       if(op.res_alq_inicio_estimado){
-        var dias2=Math.ceil((new Date(op.res_alq_inicio_estimado)-now)/86400000);
+        var dias2=Math.ceil((new Date(op.res_alq_inicio_estimado).getTime()-now.getTime())/86400000);
         eventos.push(Object.assign({},base,{id:op.id+"_resalq",tipo:"reserva",fecha:op.res_alq_inicio_estimado,titulo:"Inicio estimado de alquiler",diasRestantes:dias2,urgente:dias2<=7&&dias2>=0,color:"#fb923c"}));
       }
     }
@@ -4536,7 +4536,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   function resumenFinal(){var partes=[];if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler"){if(op.locador_nombre)partes.push(capRol(rolParte(op.tipo,0))+": "+op.locador_nombre);if(op.locatario_nombre)partes.push(capRol(rolParte(op.tipo,1))+": "+op.locatario_nombre);}else{if(op.comprador_nombre)partes.push(capRol(rolParte(op.tipo,1))+": "+op.comprador_nombre);if(op.vendedor_nombre)partes.push(capRol(rolParte(op.tipo,0))+": "+op.vendedor_nombre);}var precio=op.tipo==="alquiler"?fmt$(op.alquiler_monto_inicial,op.alquiler_moneda)+" / mes":op.tipo==="reserva_alquiler"?fmt$(op.res_alq_monto_mensual,op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS")+" / mes":fmt$(op.precio,op.moneda);var items=getComisionComponents(op)||[],com=[];["USD","ARS"].forEach(function(mon){var total=items.filter(function(i){return (i.moneda||"ARS")==mon;}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0);if(total)com.push(fmt$(total,mon));});return {precio:precio,partes:partes,comision:com.length?com.join(" · "):"Sin comisión cargada"};}
 
   const descargaEnCursoRef=useRef({pdf:false,docx:false});
-  async function handlePDF(docOverride){
+  async function handlePDF(docOverride=undefined){
     if(descargaEnCursoRef.current.pdf)return;
     descargaEnCursoRef.current.pdf=true;
     setBusy(function(b){return Object.assign({},b,{pdf:true});});setErr("");setLastAction("pdf");
@@ -4553,7 +4553,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     }
   }
 
-  async function handleDOCX(docOverride){
+  async function handleDOCX(docOverride=undefined){
     if(descargaEnCursoRef.current.docx)return;
     descargaEnCursoRef.current.docx=true;
     setBusy(function(b){return Object.assign({},b,{docx:true});});setErr("");setLastAction("docx");
@@ -4570,7 +4570,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     }
   }
 
-  async function handleShareWhatsApp(docOverride){
+  async function handleShareWhatsApp(docOverride=undefined){
     setErr("");setLastAction("share");
     setBusy(function(b){return Object.assign({},b,{share:true});});
     try{
@@ -5078,7 +5078,7 @@ function OperacionForm({initial,clausulas,perfil,equipo,operaciones,onSave,onCan
     return null;
   }
   var pct=Math.min(100,Math.round((step/total)*100));
-  async function handleFinalizarAccion(accion,estadoFinal){
+  async function handleFinalizarAccion(accion,estadoFinal=undefined){
     // Evita que un doble toque cree dos documentos (cada guardado de una operación nueva genera un id propio).
     if(guardandoFormRef.current) return;
     guardandoFormRef.current = true;

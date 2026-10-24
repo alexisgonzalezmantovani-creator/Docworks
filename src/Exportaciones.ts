@@ -69,7 +69,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       return n;
     }
 
-    function text(x,yy,txt,size,bold,wordSpacing,colorRgb){
+    function text(x,yy,txt,size,bold,wordSpacing=undefined,colorRgb=undefined){
       // Normalización global: cualquier "Campo:Texto" pasa a "Campo: Texto".
       txt=latin1Safe(normalizarTextoDocumento(txt));
       if(!txt) return;
@@ -83,7 +83,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       lines.push("ET");
       if(colorRgb) lines.push("0 0 0 rg");
     }
-    function hline(yy,grayVal,colorRgb,thickness){
+    function hline(yy,grayVal=undefined,colorRgb=undefined,thickness=undefined){
       lines.push((thickness||0.5)+" w");
       if(colorRgb){ lines.push(rgbPdfStr(colorRgb)+" RG"); }
       else { lines.push((grayVal||0.8)+" G"); }
@@ -245,14 +245,14 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
     // Dibuja un párrafo justificado con ajuste real de ancho (Helvetica),
     // con salto de línea con sangría francesa para los renglones siguientes.
     // prefixRuns: array de {txt, bold} que abre el párrafo en negrita (rótulo/número).
-    function textCentered(cx,yy,txt,size,bold,wordSpacing,colorRgb){
+    function textCentered(cx,yy,txt,size,bold,wordSpacing=undefined,colorRgb=undefined){
       var safe=latin1Safe(txt);
       if(!safe) return;
       var w=textWidthPt(safe,size,bold);
       text(cx-w/2,yy,safe,size,bold,wordSpacing,colorRgb);
     }
 
-    function drawParagraph(prefixRuns, bodyText, opts){
+    function drawParagraph(prefixRuns, bodyText, opts:{size?:number;gap?:number;indent?:number;spaceAfter?:number}={}){
       opts=opts||{};
       var size=opts.size||DOC_EXPORT_LAYOUT.bodySize, gap=opts.gap||DOC_EXPORT_LAYOUT.lineHeight, indent=opts.indent||16;
       var maxW=W-ML-MR;

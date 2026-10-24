@@ -1,3 +1,4 @@
+declare global { interface Window { supabase: { createClient: (...args: any[]) => any } } }
 // Módulo extraído sin modificar las declaraciones originales.
 export var SUPABASE_URL = "https://xpjiydwjawjizubyldtk.supabase.co";
 
