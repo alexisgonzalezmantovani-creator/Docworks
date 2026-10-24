@@ -1,3 +1,14 @@
+// Tipos de extensiones de navegador utilizadas por DocWorks.
+declare global {
+  interface Window {
+    SpeechRecognition?: any;
+    webkitSpeechRecognition?: any;
+    __dwLastNotify?: any;
+    __dwScrollLocks?: number;
+    Recharts?: any;
+  }
+  interface Navigator { standalone?: boolean; }
+}
 import { crearClausulasView, crearClausulasWorkspace } from './Clausulas';
 import { crearDocumentViewer, crearOperacionForm, crearPapeleraView, crearTareasPanel, crearNegociacionPanel, crearReservaDecisionPanel } from './Operaciones';
 import { crearSuperAdminDashboard, crearConfiguracionView, crearDashboardView , crearEstadisticasView , crearCalendarioView } from './Operaciones';
@@ -301,7 +312,7 @@ async function entregarArchivo(blob, filename, mime, shareOpts) {
 function esPWAInstalada(){
   return !!(typeof window!=="undefined" && ((window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone===true));
 }
-function descargarArchivo(blob,filename,mime,shareOpts){
+function descargarArchivo(blob,filename,mime="application/octet-stream",shareOpts={}){
   if(esDispositivoIOS()||esPWAInstalada()) return entregarArchivo(blob,filename,mime,Object.assign({},shareOpts||{},{fallbackWhatsApp:false}));
   var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download=filename;
   document.body.appendChild(a); a.click();
@@ -410,7 +421,7 @@ function esDispositivoMovilOTablet(){
 }
 function injectFonts() {
   // Viewport meta — crítico para que los breakpoints mobile funcionen
-  var vm = document.querySelector("meta[name=viewport]");
+  var vm = document.querySelector<HTMLMetaElement>("meta[name=viewport]");
   if (!vm) {
     vm = document.createElement("meta");
     vm.name = "viewport";
@@ -473,10 +484,10 @@ const LOGO_B64 = "/logo.png";
 // Título visible de la web: siempre refleja la versión del documento.
 if (typeof document !== "undefined") document.title = "DocWorks v" + DOCWORKS_VERSION;
 function dwIrPasoModelo(setPaso,n){setPaso(n);}
-if(typeof document!=="undefined"){var dwThemeMeta=document.querySelector('meta[name="theme-color"]');if(!dwThemeMeta){dwThemeMeta=document.createElement("meta");dwThemeMeta.name="theme-color";document.head.appendChild(dwThemeMeta);}dwThemeMeta.content="#102653";}
+if(typeof document!=="undefined"){var dwThemeMeta=document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');if(!dwThemeMeta){dwThemeMeta=document.createElement("meta");dwThemeMeta.name="theme-color";document.head.appendChild(dwThemeMeta);}dwThemeMeta.content="#102653";}
   // Favicon de DocWorks: se muestra en la pestaña del navegador.
   try {
-    var fav = document.getElementById("docworks-favicon");
+    var fav = document.querySelector<HTMLLinkElement>("#docworks-favicon");
     if (!fav) {
       fav = document.createElement("link");
       fav.id = "docworks-favicon";
@@ -509,7 +520,7 @@ var PWA_MANIFEST = {
 function initPWA() {
   try {
     // Manifest estático: los instaladores de iOS/Android lo detectan mejor que un Blob URL.
-    var manifestLink = document.querySelector('link[rel="manifest"]');
+    var manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
     if (!manifestLink) {
       manifestLink = document.createElement("link");
       manifestLink.id = "docworks-manifest";
@@ -519,7 +530,7 @@ function initPWA() {
     } else if (!manifestLink.getAttribute("href") || manifestLink.getAttribute("href").indexOf("manifest.webmanifest") === -1) {
       manifestLink.setAttribute("href", "/manifest.webmanifest");
     }
-    var existingThemeMeta = document.querySelector('meta[name="theme-color"]');
+    var existingThemeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (existingThemeMeta) existingThemeMeta.setAttribute("content", PWA_MANIFEST.theme_color);
     if (!existingThemeMeta) {
       var meta = document.createElement("meta");
@@ -617,7 +628,7 @@ const TIPO_ICON_DEFAULT = <FormalIcon name="ops" size={14} strokeWidth={2}/>;
 // Cada cláusula (predeterminada o creada por la inmobiliaria) puede llevar tokens
 // {{campo}} en su texto, que se resuelven con los datos reales de cada operación
 // al momento de generar el documento (ver resolveVars / finalizeDoc).
-function tipoIdentificacion(valor,parte) {
+function tipoIdentificacion(valor,parte=null) {
   if(parte&&parte.dniLabel) return parte.dniLabel;
   var limpio = String(valor || "").replace(/\D/g, "");
   if (limpio.length === 7 || limpio.length === 8) return "DNI";
@@ -784,7 +795,7 @@ var TOKENS_CONTACTO_PARTES_PRIVADOS = {
 function valorComisionPredeterminado(valor, defecto) {
   return valor === undefined || valor === null || String(valor).trim() === "" ? defecto : valor;
 }
-function resolveVars(text, op, extra) {
+function resolveVars(text, op, extra=undefined) {
   if (!text) return text;
   var derived = derivedTokensGenerales(op || {});
   var commissionKeys = {
@@ -958,7 +969,7 @@ function obtenerIdsProtegidosDePlantillas(perfil){
 // Los contratos guardan la versión vigente al momento de su creación.
 function obtenerVersionPlantilla(perfil,tipo){
   var cfg=obtenerPlantillaConfig(perfil,tipo,[]);
-  var n=parseInt(cfg.version,10);
+  var n=parseInt(String(cfg.version ?? ""),10);
   return isFinite(n)&&n>0?n:1;
 }
 function obtenerIdsObligatoriosDePlantilla(perfil,tipo){
@@ -1033,7 +1044,7 @@ function htmlEncabezadoDesdeTpl(tpl, tipo){
     return '<span data-dw-token="'+k+'" contenteditable="false" style="display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(70,180,230,.14);color:#59c7f3;font-weight:700;cursor:pointer;user-select:none;margin:0 1px">'+lab+'</span>';
   }).replace(/\n/g,"<br/>");
 }
-function EncabezadoEditor({tipo, value, onChange, onCancel, onSave, onRestablecer}){
+function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, onRestablecer}){
   const editorRef=useRef(null);
   const [tokensUsados,setTokensUsados]=useState(function(){return tokensDeTextoDocWorks(value||"");});
   const [status,setStatus]=useState(null); // saving | saved | error | ia | ia-error
@@ -1268,7 +1279,7 @@ var PRECIO_NARRATIVAS_PRESET = [
   {label:"Más breve", texto:"Precio ofrecido: {{precio_letras}}.-"}
 ];
 
-function HistorialClausulaModal({titulo,source,entidadTipo,entidadId,historial,actual,onRestore,onClose}){
+function HistorialClausulaModal({titulo,source,entidadTipo=undefined,entidadId=undefined,historial=undefined,actual,onRestore,onClose}){
   const [loading,setLoading]=useState(source==="auditoria");
   const [error,setError]=useState(null);
   const [entries,setEntries]=useState([]);
@@ -1801,7 +1812,7 @@ function comisionAutorizanteInformada(op){
   if(campos.some(function(v){return v!==undefined&&v!==null&&String(v).trim()!==""&&isFinite(parseMontoAR(v))&&parseMontoAR(v)>=0;})) return true;
   return !!String(op&&op.comision_vendedor_texto||"").trim();
 }
-function getCamposFaltantes(op,perfil) { perfil=perfil||null;
+function getCamposFaltantes(op,perfil=null) { perfil=perfil||null;
   var lista=CAMPOS_CRITICOS_POR_TIPO[op.tipo]||[];
   if(op.tipo==="exclusividad"&&perfil){
     op=Object.assign({},op,{comprador_nombre:op.inmobiliaria_nombre||perfil.inmobiliaria_nombre||op.comprador_nombre,comprador_dni:op.inmobiliaria_matricula||perfil.matricula||op.comprador_dni});
@@ -1815,7 +1826,7 @@ function getCamposFaltantes(op,perfil) { perfil=perfil||null;
     return !v || String(v).trim()==="";
   }).map(function(f){return f[1];});
 }
-function getCamposFaltantesDetalle(op,perfil) { perfil=perfil||null;
+function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
   var lista=CAMPOS_CRITICOS_POR_TIPO[op.tipo] || [];
   if(op.tipo==="exclusividad"&&perfil){
     op=Object.assign({},op,{comprador_nombre:op.inmobiliaria_nombre||perfil.inmobiliaria_nombre||op.comprador_nombre,comprador_dni:op.inmobiliaria_matricula||perfil.matricula||op.comprador_dni});
@@ -3866,7 +3877,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
 }
 
 
-function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla) {
+function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   // Las operaciones nuevas renderizan desde su snapshot; las históricas sin snapshot
   // conservan exactamente el comportamiento anterior.
   var snap=op&&op.plantilla_snapshot&&op.plantilla_snapshot.tipo===(tipo||op.tipo)?op.plantilla_snapshot:null;
@@ -3901,7 +3912,7 @@ function buildReciboSections(op, perfil, destinatario) {
     monedaBase = op.alquiler_moneda || "ARS";
     comisionPrefix = destinatario === "parte1" ? "alquiler_comision_locador" : "alquiler_comision_locatario";
     var cfgAlq = getComisionConfig(op,comisionPrefix,montoBase,monedaBase,comisionPrefix,valorComisionPredeterminado(op.alquiler_comision,"1"));
-    monto=cfgAlq.monto; moneda=cfgAlq.moneda; pct=cfgAlq.modo==="porcentaje"?parseFloat(cfgAlq.valor||0):null; modoComision=cfgAlq.modo;
+    monto=cfgAlq.monto; moneda=cfgAlq.moneda; pct=cfgAlq.modo==="porcentaje"?parseFloat(String(cfgAlq.valor||0)):null; modoComision=cfgAlq.modo;
     fecha = isoLocal(new Date());
     if (destinatario === "parte1") {
       pagador = op.locador_nombre || "___"; rolPagador = "LOCADOR";
@@ -3917,7 +3928,7 @@ function buildReciboSections(op, perfil, destinatario) {
     var legacyPctCompra = parseFloat(op.comision_porcentaje||0);
     var legacyDefaultCompra = !tienePartes && esReserva ? String(legacyPctCompra/2) : "";
     var cfgCompra = getComisionConfig(op,comisionPrefix,montoBase,monedaBase,comisionPrefix,legacyDefaultCompra);
-    monto=cfgCompra.monto; moneda=cfgCompra.moneda; pct=cfgCompra.modo==="porcentaje"?parseFloat(cfgCompra.valor||0):null; modoComision=cfgCompra.modo;
+    monto=cfgCompra.monto; moneda=cfgCompra.moneda; pct=cfgCompra.modo==="porcentaje"?parseFloat(String(cfgCompra.valor||0)):null; modoComision=cfgCompra.modo;
     fecha = isoLocal(new Date());
     if (destinatario === "parte1") { pagador = op.vendedor_nombre || "___"; rolPagador = "VENDEDOR"; }
     else { pagador = op.comprador_nombre || "___"; rolPagador = "COMPRADOR"; }
@@ -3927,7 +3938,7 @@ function buildReciboSections(op, perfil, destinatario) {
     monedaBase = op.res_alq_moneda || op.res_alq_monto_mensual_moneda || "ARS";
     comisionPrefix = destinatario === "parte1" ? "res_alq_comision_locador" : "res_alq_comision_locatario";
     var cfgResAlq = getComisionConfig(op,comisionPrefix,montoBase,monedaBase,comisionPrefix,valorComisionPredeterminado(op.res_alq_comision,"1"));
-    monto=cfgResAlq.monto; moneda=cfgResAlq.moneda; pct=cfgResAlq.modo==="porcentaje"?parseFloat(cfgResAlq.valor||0):null; modoComision=cfgResAlq.modo;
+    monto=cfgResAlq.monto; moneda=cfgResAlq.moneda; pct=cfgResAlq.modo==="porcentaje"?parseFloat(String(cfgResAlq.valor||0)):null; modoComision=cfgResAlq.modo;
     fecha = isoLocal(new Date());
     if (destinatario === "parte1") { pagador = op.locador_nombre || "___"; rolPagador = "LOCADOR"; }
     else { pagador = op.locatario_nombre || "___"; rolPagador = "LOCATARIO"; }
@@ -4274,19 +4285,19 @@ function GStyles() {
   return null;
 }
 
-function Btn({children,onClick,v,s,disabled,className,type}){
-  return <button type={type||"button"} onClick={onClick} disabled={disabled} className={"btn btn-"+(v||"primary")+(s?" btn-"+s:"")+(className?" "+className:"")}>{children}</button>;
+function Btn({children=null,onClick=undefined,v=undefined,s=undefined,disabled=undefined,className=undefined,type=undefined,title=undefined,style=undefined}){
+  return <button type={type||"button"} onClick={onClick} disabled={disabled} title={title} style={style} className={"btn btn-"+(v||"primary")+(s?" btn-"+s:"")+(className?" "+className:"")}>{children}</button>;
 }
-function Field({label,hint,children,className}){
+function Field({label=undefined,hint=undefined,children=undefined,className=undefined}){
   return <div className={"field "+(className||"")}>{label&&<label className="field-label">{label}</label>}{children}{hint&&<span className="field-hint">{hint}</span>}</div>;
 }
-function Inp({label,hint,error,className,...props}){
+function Inp({label=undefined,hint=undefined,error=undefined,className=undefined,...props}){
   return <Field label={label} hint={hint} className={className}><input className="inp" {...props}/>{error&&<span className="field-error">{error}</span>}</Field>;
 }
-function Txa({label,hint,rows,error,className,...props}){
+function Txa({label=undefined,hint=undefined,rows=undefined,error=undefined,className=undefined,...props}){
   return <Field label={label} hint={hint} className={className}><textarea className="inp" rows={rows||3} {...props}/>{error&&<span className="field-error">{error}</span>}</Field>;
 }
-function Slt({label,hint,error,className,children,...props}){
+function Slt({label=undefined,hint=undefined,error=undefined,className=undefined,children=undefined,...props}){
   return <Field label={label} hint={hint} className={className}><select className="inp" {...props}>{children}</select>{error&&<span className="field-error">{error}</span>}</Field>;
 }
 
@@ -4317,7 +4328,7 @@ function useBodyScrollLock(active){
   },[active]);
 }
 
-function Modal({open,onClose,title,children,wide,formTipo,headerExtra,headerRight,viewerMode,soft,operationForm=false,closeOnBackdrop=true}){
+function Modal({open,onClose,title,children=undefined,wide=undefined,formTipo=undefined,headerExtra=undefined,headerRight=undefined,viewerMode=undefined,soft=undefined,operationForm=false,closeOnBackdrop=true}){
   useBodyScrollLock(!!open);
   if(!open)return null;
   return(
@@ -4342,11 +4353,11 @@ function Modal({open,onClose,title,children,wide,formTipo,headerExtra,headerRigh
 // puede no dispararse o devolver siempre "cancelado" sin que se note — eso
 // hacía que "Eliminar" pareciera no funcionar. Este modal corre 100% en React
 // y no depende de ninguna API nativa del navegador.
-function requestDwConfirm(message,onConfirm,confirmLabel,secondary){
+function requestDwConfirm(message,onConfirm,confirmLabel=undefined,secondary=undefined){
   try{ window.dispatchEvent(new CustomEvent("dw:confirm",{detail:{message:message,onConfirm:onConfirm,confirmLabel:confirmLabel||"Confirmar",secondaryLabel:secondary&&secondary.label,onSecondary:secondary&&secondary.onClick}})); }
   catch(e){ dwNotify("error",typeof message==="string"?message:"Faltan datos en el documento."); }
 }
-function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger,onConfirm,onCancel,secondaryLabel,onSecondary,secondaryDisabled}){
+function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,onConfirm,onCancel,secondaryLabel=null,onSecondary=null,secondaryDisabled=false}){
   useBodyScrollLock(!!open);
   if(!open)return null;
   return(
@@ -4391,7 +4402,7 @@ function getSteps(t){
   return STEPS_COMPRA;
 }
 
-function IdentificacionField({value,onChange,placeholder,className,labelSuffix,style,error,id}){
+function IdentificacionField({value,onChange,placeholder=undefined,className=undefined,labelSuffix=undefined,style=undefined,error=undefined,id=undefined}){
   var limpio=String(value||"").replace(/\D/g,"");
   var tipo=tipoIdentificacion(value);
   var dniActivo=tipo==="DNI";
@@ -5184,7 +5195,7 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
         if(data.tipo==="devolucion_reserva") return !(operaciones||[]).some(function(h){return h.parent_id===o.id && h.tipo==="devolucion_reserva";});
         return true;
       })
-        .sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);})
+        .sort(function(a,b){return new Date(b.created_at).getTime()-new Date(a.created_at).getTime();})
         .slice(0,6)
     : [];
   var colorMap={compra:"rgba(212,168,83,0.12)",alquiler:"rgba(45,212,191,0.1)",otros:"rgba(148,163,184,0.1)"};
@@ -5400,7 +5411,7 @@ function FichaOperacionPanel({op,operaciones,onClose,embedded}){
     {prefix:"comprador",label:"Comprador"},{prefix:"vendedor",label:"Vendedor"}
   ];
   var historial=Array.isArray(op.negociacion_historial)?op.negociacion_historial:[];
-  var hijos=(operaciones||[]).filter(function(x){return x.parent_id===op.id;}).sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at);});
+  var hijos=(operaciones||[]).filter(function(x){return x.parent_id===op.id;}).sort(function(a,b){return new Date(a.created_at).getTime()-new Date(b.created_at).getTime();});
   var docs=[op].concat(hijos);
   var timeline=getLineaDeTiempo(op,operaciones||[]);
   var proximo=getProximoPasoOperacion(op,operaciones||[]);
@@ -5555,7 +5566,7 @@ function DocSummaryPanel({op, perfil, tabsDocs, onLeer, operaciones, onToggleTar
 function getDocTabs(op){
   var tiposDoc=[op.tipo];
   var tieneRecibos=op.tipo==="boleto"||op.tipo==="alquiler";
-  var TABS=tiposDoc.map(function(t){return {id:t,label:"Vista previa",icon:"👁",esRecibo:false};});
+  var TABS: any[]=tiposDoc.map(function(t){return {id:t,label:"Vista previa",icon:"👁",esRecibo:false};});
   if(op.tipo==="reserva") TABS.push({id:"negociacion",label:"Negociación",icon:"↔",esNegociacion:true});
   TABS.unshift({id:"tareas",label:"Centro de tareas",icon:"✓",esTareas:true});
   if(tieneRecibos){
@@ -5566,8 +5577,8 @@ function getDocTabs(op){
   }
   var TAB_RESUMEN={id:"resumen",label:"Resumen",icon:"📋",esResumen:true};
   var TAB_FICHA={id:"ficha",label:"Ver ficha completa",icon:"👤",esFicha:true};
-  var TABS_ALL=[TAB_RESUMEN,TAB_FICHA].concat(TABS);
-  var TABS_BARRA=[TAB_RESUMEN,TAB_FICHA].concat(TABS);
+  var TABS_ALL: any[]=[TAB_RESUMEN,TAB_FICHA].concat(TABS);
+  var TABS_BARRA: any[]=[TAB_RESUMEN,TAB_FICHA].concat(TABS);
   return {TABS:TABS,TAB_RESUMEN:TAB_RESUMEN,TAB_FICHA:TAB_FICHA,TABS_ALL:TABS_ALL,TABS_BARRA:TABS_BARRA};
 }
 // Fila de pestañas (Resumen + documento principal) para el header del modal.
@@ -5668,7 +5679,7 @@ function campoDesdeTextoFaltante(texto,op){
   var rol=(t.indexOf("comprador")>=0||t.indexOf("oferente")>=0)?"comprador":(t.indexOf("vendedor")>=0?"vendedor":(t.indexOf("locador")>=0?"locador":(t.indexOf("locatario")>=0?"locatario":(t.indexOf("comodatario")>=0?"comodatario":(t.indexOf("comodante")>=0?"comodante":"")))));
   var campo=t.indexOf("dni")>=0||t.indexOf("cuit")>=0?"dni":(t.indexOf("domicilio")>=0?"domicilio":(t.indexOf("teléfono")>=0||t.indexOf("telefono")>=0?"telefono":(t.indexOf("correo")>=0||t.indexOf("mail")>=0||t.indexOf("email")>=0?"email":(t.indexOf("nombre")>=0||t.indexOf("razón social")>=0?"nombre":""))));
   if(rol&&campo)return rol+"_"+campo;
-  var checks=[[/direcci[oó]n del inmueble|inmueble sito|inmueble ubicado/,"inmueble_direccion"],[/precio|monto total|valor de venta/,"precio"],[/anticipo|seña/,"anticipo"],[/fecha de inicio|inicio del alquiler/,"alquiler_inicio"],[/alquiler mensual/,"alquiler_monto_inicial"],[/partido|municipio/,"inmueble_partido"],[/provincia/,"inmueble_provincia"]];
+  var checks: [RegExp,string][]=[[/direcci[oó]n del inmueble|inmueble sito|inmueble ubicado/,"inmueble_direccion"],[/precio|monto total|valor de venta/,"precio"],[/anticipo|seña/,"anticipo"],[/fecha de inicio|inicio del alquiler/,"alquiler_inicio"],[/alquiler mensual/,"alquiler_monto_inicial"],[/partido|municipio/,"inmueble_partido"],[/provincia/,"inmueble_provincia"]];
   for(var i=0;i<checks.length;i++)if(checks[i][0].test(t))return checks[i][1];
   if(campo&&rol)return rol+"_"+campo;
   return "";
@@ -5774,7 +5785,7 @@ function fileToBase64(file){
   });
 }
 function fileToText(file){
-  return new Promise(function(resolve,reject){
+  return new Promise<string>(function(resolve,reject){
     var r=new FileReader();
     r.onload=function(){ resolve(String(r.result||"")); };
     r.onerror=function(){ reject(new Error("No se pudo leer el archivo.")); };
@@ -5997,7 +6008,7 @@ function BotIA({onClose,operaciones,clausulas,bloquesReserva,onAddClausula}){
 
 // Menú desplegable para insertar variables ({{campo}}) en un texto de cláusula.
 // Inserta en la posición del cursor del textarea referenciado por taRef.
-function VariablePicker({taRef,value,onChange,label}){
+function VariablePicker({taRef,value,onChange,label=""}){
   const [open,setOpen]=useState(false);
   const [pos,setPos]=useState(null);
   const wrapRef=useRef();
@@ -6311,7 +6322,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   var textoPruebaPlantilla=docPruebaPlantilla?docToPlainText(docPruebaPlantilla):"";
   var tokensPruebaPlantilla=docPruebaPlantilla?getTokensSinReemplazar(docPruebaPlantilla):[];
   useEffect(function(){setDraft(getBodyBlocksConfig(perfil,tipo));setEditId(null);setStatus(null);},[tipo,perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].body_blocks]);
-  function persist(next,extraConfig){
+  function persist(next,extraConfig=undefined){
     if(!puedeEditar)return Promise.resolve({error:new Error("Sin permisos")});
     setDraft(next);setStatus("saving");
     var mapa=Object.assign({},perfil.plantillas||{});
@@ -6389,7 +6400,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
         <div style={{display:"flex",alignItems:modoVistaClausulas==="simple"?"center":"flex-start",gap:9,minWidth:0}}>
           <div style={{minWidth:28,height:28,borderRadius:8,background:"rgba(212,168,83,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--gold)",flexShrink:0,padding:"0 5px",boxSizing:"border-box"}}><span title={b.obligatoria&&b.activo!==false?"Cláusula "+numeroActivo:""}>{b.activo===false?"—":(b.obligatoria?numeroActivo:"—")}</span></div>
           <div style={{flex:1,minWidth:0}}>
-            {editing ? <div style={{display:"flex",flexDirection:"column",gap:7}}><input className="inp" value={b.titulo} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{titulo:e.target.value}):x;}));}}/><textarea ref={contenidoEditorRef} className="inp" style={{minHeight:120,resize:"vertical",lineHeight:1.6}} value={b.contenido} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{contenido:e.target.value}):x;}));}}/><div style={{padding:10,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2, rgba(127,127,127,.035))"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:7}}><div style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Insertar campo automático</div><span style={{fontSize:11,color:"var(--dim)"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).length} disponibles</span></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45,marginBottom:8}}>Elegí un campo para insertarlo donde está el cursor. Los campos ya usados se ocultan; si los borrás del texto, vuelven a aparecer.</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).map(function(t){return <button key={t[0]} type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertToken(t[0]);}} style={{display:"inline-flex",alignItems:"center",gap:5,minHeight:30,padding:"5px 9px",borderRadius:999,border:"1px solid var(--border2, rgba(89,199,243,.28))",background:"var(--card, rgba(89,199,243,.055))",color:"var(--text)",fontSize:11.5,fontWeight:600,cursor:"pointer"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:999,background:"rgba(89,199,243,.13)",color:"#59c7f3",fontSize:13,lineHeight:1}}>+</span>{t[1]}</button>;})}{tokens.every(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])!==-1;})&&<div style={{fontSize:11.5,color:"var(--green)"}}>Ya están usados todos los campos disponibles.</div>}</div></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45}}>Los campos se completan automáticamente desde la operación al generar el documento.</div><div style={{display:"flex",justifyContent:"flex-end",gap:6}}><Btn s="sm" v="ghost" onClick={function(){restaurarBloque(editId);}}>↺ Restaurar esta cláusula</Btn><Btn s="sm" v="ghost" onClick={function(){setDraft(getBodyBlocksConfig(perfil,tipo));setEditId(null);}}>Cancelar</Btn><Btn s="sm" v="success" onClick={function(){persist(draft);setEditId(null);}}>Guardar cláusula</Btn></div></div> : <><div className="dw-model-clause-row" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:modoVistaClausulas==="simple"?"nowrap":"wrap",gap:7,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap",flex:"1 1 auto",minWidth:0,overflow:"hidden"}}><button type="button" className="dw-clause-toggle" onClick={function(){setClausulasAbiertas(function(prev){var next=Object.assign({},prev);next[b.id]=!filaAbierta;return next;});}} aria-expanded={filaAbierta} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} style={{fontSize:12.2,fontWeight:650,color:"var(--text)",border:0,padding:"6px 0",background:"transparent",textAlign:"left",cursor:"pointer",whiteSpace:modoVistaClausulas==="simple"?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}><span className="dw-clause-name">{b.titulo||"Cláusula sin título"}</span></button>{esClausulaEsencialModelo(b)&&<span className="dw-essential-label" title="Cláusula esencial del documento: se puede editar, pero no desactivar ni eliminar"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{!esClausulaEsencialModelo(b)&&b.obligatoria===true&&<span className="dw-essential-label dw-essential-label-soft" title="Cláusula obligatoria configurada por la inmobiliaria"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{esCondicional&&modoVistaClausulas!=="simple"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:999,background:"rgba(89,199,243,.10)",color:"#59c7f3",border:"1px solid rgba(89,199,243,.18)"}}>Condicional</span>}{b.activo===false&&modoVistaClausulas!=="simple"&&<span className="badge">Inactiva</span>}<button type="button" className={"dw-clause-chevron "+(filaAbierta?"is-open":"")} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} aria-expanded={filaAbierta} onClick={function(){setClausulasAbiertas(function(prev){return Object.assign({},prev,{[b.id]:!filaAbierta});});}}><span aria-hidden="true">⌄</span></button></div><div className="dw-clause-actions" style={{display:modoVistaClausulas==="simple"&&!filaAbierta?"none":"flex",gap:4,flex:"0 1 auto",flexWrap:"wrap"}}><button type="button" title="Subir" onClick={function(){move(idx,"up");}} disabled={!puedeEditar||idx===0} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↑</button><button type="button" title="Bajar" onClick={function(){move(idx,"down");}} disabled={!puedeEditar||idx===draft.length-1} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↓</button>{puedeVerHistorial&&<button type="button" title="Historial de la cláusula" onClick={function(){setHistorialSeleccionado(b);}} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<select aria-label={"Estado de la cláusula "+(b.titulo||"")} value={b.activo===false?"apagada":(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&b.obligatoria!==true?"asesor":b.obligatoria===true?"obligatoria":"apagada"} onChange={function(e){var estado=e.target.value;update(b.id,estado==="apagada"?{activo:false}:estado==="asesor"?{activo:true,obligatoria:false}:{activo:true,obligatoria:true});}} style={{maxWidth:155,minWidth:0,width:"100%",fontSize:11,padding:"5px 4px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option><option value="asesor" disabled={b.id!=="reserva.refuerzo"&&b.id!=="alquiler.seguro"}>El asesor elige</option><option value="apagada">Apagada</option></select>}{puedeEditar&&<button type="button" title="Editar" onClick={function(){setEditId(b.id);}} style={{border:"1px solid rgba(212,168,83,.25)",background:"rgba(212,168,83,.06)",color:"var(--gold)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>Editar</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<button type="button" title="Eliminar" onClick={function(){removeBlock(b.id);}} style={{border:"1px solid rgba(248,113,113,.2)",background:"transparent",color:"var(--red)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>×</button>}</div></div>{filaAbierta&&<div className="dw-clause-content" style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginTop:7,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{mostrarTokensDocWorks(b.contenido)}</div>}</>}
+            {editing ? <div style={{display:"flex",flexDirection:"column",gap:7}}><input className="inp" value={b.titulo} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{titulo:e.target.value}):x;}));}}/><textarea ref={contenidoEditorRef} className="inp" style={{minHeight:120,resize:"vertical",lineHeight:1.6}} value={b.contenido} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{contenido:e.target.value}):x;}));}}/><div style={{padding:10,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2, rgba(127,127,127,.035))"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:7}}><div style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Insertar campo automático</div><span style={{fontSize:11,color:"var(--dim)"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).length} disponibles</span></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45,marginBottom:8}}>Elegí un campo para insertarlo donde está el cursor. Los campos ya usados se ocultan; si los borrás del texto, vuelven a aparecer.</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).map(function(t){return <button key={t[0]} type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertToken(t[0]);}} style={{display:"inline-flex",alignItems:"center",gap:5,minHeight:30,padding:"5px 9px",borderRadius:999,border:"1px solid var(--border2, rgba(89,199,243,.28))",background:"var(--card, rgba(89,199,243,.055))",color:"var(--text)",fontSize:11.5,fontWeight:600,cursor:"pointer"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:999,background:"rgba(89,199,243,.13)",color:"#59c7f3",fontSize:13,lineHeight:1}}>+</span>{t[1]}</button>;})}{tokens.every(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])!==-1;})&&<div style={{fontSize:11.5,color:"var(--green)"}}>Ya están usados todos los campos disponibles.</div>}</div></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45}}>Los campos se completan automáticamente desde la operación al generar el documento.</div><div style={{display:"flex",justifyContent:"flex-end",gap:6}}><Btn s="sm" v="ghost" onClick={function(){restaurarBloque(editId);}}>↺ Restaurar esta cláusula</Btn><Btn s="sm" v="ghost" onClick={function(){setDraft(getBodyBlocksConfig(perfil,tipo));setEditId(null);}}>Cancelar</Btn><Btn s="sm" v="success" onClick={function(){persist(draft);setEditId(null);}}>Guardar cláusula</Btn></div></div> : <><div className="dw-model-clause-row" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:modoVistaClausulas==="simple"?"nowrap":"wrap",gap:7,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap",flex:"1 1 auto",minWidth:0,overflow:"hidden"}}><button type="button" className="dw-clause-toggle" onClick={function(){setClausulasAbiertas(function(prev){var next=Object.assign({},prev);next[b.id]=!filaAbierta;return next;});}} aria-expanded={filaAbierta} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} style={{fontSize:12.2,fontWeight:650,color:"var(--text)",border:0,padding:"6px 0",background:"transparent",textAlign:"left",cursor:"pointer",whiteSpace:modoVistaClausulas==="simple"?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}><span className="dw-clause-name">{b.titulo||"Cláusula sin título"}</span></button>{esClausulaEsencialModelo(b)&&<span className="dw-essential-label" title="Cláusula esencial del documento: se puede editar, pero no desactivar ni eliminar"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{!esClausulaEsencialModelo(b)&&b.obligatoria===true&&<span className="dw-essential-label dw-essential-label-soft" title="Cláusula obligatoria configurada por la inmobiliaria"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{esCondicional&&modoVistaClausulas!=="simple"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:999,background:"rgba(89,199,243,.10)",color:"#59c7f3",border:"1px solid rgba(89,199,243,.18)"}}>Condicional</span>}{b.activo===false&&modoVistaClausulas!=="simple"&&<span className="badge">Inactiva</span>}<button type="button" className={"dw-clause-chevron "+(filaAbierta?"is-open":"")} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} aria-expanded={filaAbierta} onClick={function(){setClausulasAbiertas(function(prev){return Object.assign({},prev,{[b.id]:!filaAbierta});});}}><span aria-hidden="true">⌄</span></button></div><div className="dw-clause-actions" style={{display:"flex",gap:4,flex:"0 1 auto",flexWrap:"nowrap",alignItems:"center"}}><button type="button" title="Subir" onClick={function(){move(idx,"up");}} disabled={!puedeEditar||idx===0} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↑</button><button type="button" title="Bajar" onClick={function(){move(idx,"down");}} disabled={!puedeEditar||idx===draft.length-1} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↓</button>{puedeVerHistorial&&<button type="button" title="Historial de la cláusula" onClick={function(){setHistorialSeleccionado(b);}} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<select aria-label={"Estado de la cláusula "+(b.titulo||"")} value={b.activo===false?"apagada":(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&b.obligatoria!==true?"asesor":b.obligatoria===true?"obligatoria":"apagada"} onChange={function(e){var estado=e.target.value;update(b.id,estado==="apagada"?{activo:false}:estado==="asesor"?{activo:true,obligatoria:false}:{activo:true,obligatoria:true});}} style={{maxWidth:155,minWidth:0,width:"100%",fontSize:11,padding:"5px 4px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option><option value="asesor" disabled={b.id!=="reserva.refuerzo"&&b.id!=="alquiler.seguro"}>El asesor elige</option><option value="apagada">Apagada</option></select>}{puedeEditar&&<button type="button" title="Editar" onClick={function(){setEditId(b.id);}} style={{border:"1px solid rgba(212,168,83,.25)",background:"rgba(212,168,83,.06)",color:"var(--gold)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>Editar</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<button type="button" title="Eliminar" onClick={function(){removeBlock(b.id);}} style={{border:"1px solid rgba(248,113,113,.2)",background:"transparent",color:"var(--red)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>×</button>}</div></div>{filaAbierta&&<div className="dw-clause-content" style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginTop:7,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{mostrarTokensDocWorks(b.contenido)}</div>}</>}
           </div>
         </div>
       </div>;})}
@@ -6424,9 +6435,9 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-clause-chevron.is-open{border-color:rgba(212,168,83,.38);transform:rotate(180deg)}
 .dw-clause-compact .dw-model-clause-row{flex-wrap:nowrap!important;align-items:center!important}
 .dw-clause-compact .dw-model-clause-row>div:first-child{flex-basis:auto!important;width:auto!important;min-width:0}
-.dw-clause-compact .dw-model-clause-row>div.dw-clause-actions{display:none!important}
+.dw-clause-compact .dw-model-clause-row>div.dw-clause-actions{display:flex!important;flex:0 0 auto;overflow-x:auto;max-width:48%;scrollbar-width:thin}
 .dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:wrap!important}
-.dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{display:flex!important;flex-basis:100%;justify-content:flex-end}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{display:flex!important;flex-basis:auto;justify-content:flex-end}
 .dw-clause-compact .dw-essential-label{font-size:10px;padding:2px 6px}
 .dw-clause-content{border-top:1px solid var(--border);padding-top:9px}
 @media(min-width:641px) and (max-width:1100px){.dw-clause-compact:not(.dw-clause-open) .dw-model-clause-row{flex-wrap:nowrap!important}.dw-clause-compact:not(.dw-clause-open) .dw-model-clause-row>div:first-child{flex-basis:auto!important}}
@@ -6789,7 +6800,7 @@ function useDocWorksSession(){
     try{ window.history.replaceState({},document.title,window.location.pathname+window.location.search.replace(/([?&])type=(?:invite|recovery)(&?)/i,function(_,a,b){return b?a:"";})); }catch(e){ console.warn("DocWorks: no se pudo limpiar la URL de autenticación",e); }
   }
 
-  function cargarContexto(sb,opts){
+  function cargarContexto(sb,opts=undefined){
     opts=opts||{};
     var silent=!!opts.silent;
     if(!silent) setContextoLoading(true);
@@ -7111,7 +7122,7 @@ function useOperacionesSupabase(ctx){
   contextoActivoRef.current = inmobId;
   var peticionListaRef = useRef(0);
 
-  function mapRow(r, extra){
+  function mapRow(r, extra=undefined){
     return Object.assign({}, r.datos, { id:r.id, tipo:r.tipo, estado:r.estado, parent_id:r.parent_id }, extra||{});
   }
   function rpc(nombre, params){
@@ -7879,7 +7890,7 @@ function DocWorksApp(){
     return clausulaRpc("fn_clausula_restaurar",{p_clausula_id:id}).then(async function(r){
       if(r&&r.error)return r;
       var actualizacion=await Promise.all([recargarClausulas(),recargarPapeleraClausulas()]);
-      if(actualizacion[1]&&actualizacion[1].error)return {error:new Error("La cláusula fue restaurada, pero no se pudo actualizar la papelera. Volvé a cargarla.")};
+      if(actualizacion[1]&&"error" in actualizacion[1]&&actualizacion[1].error)return {error:new Error("La cláusula fue restaurada, pero no se pudo actualizar la papelera. Volvé a cargarla.")};
       return r;
     });
   }
@@ -7967,7 +7978,7 @@ function DocWorksApp(){
           var ids=CLAUSULAS_DEFAULT.filter(function(c){return clausulaAplicaTipo(c,tipo);}).map(function(c){return c.id;});
           mapa[tipo]={clausulas_ids:ids,locked:false,version:1};
         });
-        var next=Object.assign({},cur,{plantillas:mapa,clausulas_default_ids:mapa.reserva?mapa.reserva.clausulas_ids.slice():[],clausulas_default_locked:false});
+        var next=Object.assign({},cur,{plantillas:mapa,clausulas_default_ids:mapa["reserva"]?mapa["reserva"].clausulas_ids.slice():[],clausulas_default_locked:false});
         perfilInicializadoRef.current[inmobId]=true;
         // La configuración inicial no se considera persistida hasta que Supabase confirme.
         // guardarAhora puede resolver con {error} sin rechazar la promesa.
@@ -8183,7 +8194,7 @@ function DocWorksApp(){
     // 4.16: sin este atributo las reglas [data-theme="dark"] del CSS nunca se activaban.
     r.setAttribute("data-theme",dark?"dark":"light");
     r.style.colorScheme=dark?"dark":"light";
-    try{ var tcm=document.querySelector('meta[name="theme-color"]'); if(tcm) tcm.setAttribute("content","#0b1730"); }catch(e){ console.debug("DocWorks: no se pudo actualizar theme-color",e); }
+    try{ var tcm=document.querySelector<HTMLMetaElement>('meta[name="theme-color"]'); if(tcm) tcm.setAttribute("content","#0b1730"); }catch(e){ console.debug("DocWorks: no se pudo actualizar theme-color",e); }
     if(dark){
       r.style.setProperty("--bg","#0a0f1a");
       r.style.setProperty("--surface","#111827");
