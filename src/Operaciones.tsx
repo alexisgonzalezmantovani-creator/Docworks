@@ -760,13 +760,14 @@ export const GS = `
     .dw-dashboard-root .op-card-premium{border-radius:14px;transform:none!important;}
   }
 
-  .dw-dashboard-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 22px;}
+  .dw-dashboard-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 22px;}
   .dw-overview-stat{appearance:none;text-align:left;min-width:0;display:flex;flex-direction:column;gap:13px;padding:17px 18px;border:1px solid var(--border2);border-radius:16px;background:var(--card);color:var(--text);cursor:pointer;box-shadow:0 3px 13px rgba(15,23,42,.035);transition:border-color .18s ease,box-shadow .18s ease;}
   .dw-overview-stat:hover,.dw-overview-stat.is-selected{border-color:var(--gold-line);box-shadow:0 5px 18px rgba(15,23,42,.07);}
   .dw-overview-stat.is-selected{background:linear-gradient(135deg,var(--card),var(--gold-soft));}
   .dw-overview-label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:600;line-height:1.35;}
   .dw-overview-label svg{flex-shrink:0;color:var(--gold);}
   .dw-overview-value{font-size:clamp(25px,2.8vw,34px);font-weight:650;line-height:1;letter-spacing:-.05em;font-variant-numeric:tabular-nums;}
+  @media(min-width:701px) and (max-width:1050px){.dw-dashboard-overview{grid-template-columns:repeat(3,minmax(0,1fr));}}
   @media(max-width:700px){.dw-dashboard-overview{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:16px;}.dw-overview-stat{padding:13px 14px;gap:10px;border-radius:13px;}.dw-overview-label{font-size:11px;}.dw-overview-value{font-size:27px;}}
 `;
 
@@ -3785,13 +3786,6 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
     setSharingId(null);
   }
 
-  const ESTADO_TABS=[
-    {id:"todas",label:"Todas",count:total,icon:"folder"},
-    {id:"borrador",label:"Borrador",count:nuevasCount,icon:"edit"},
-    {id:"activo",label:"Activas",count:activas,icon:"clock"},
-    {id:"cerrado",label:"Cerradas",count:cerradasCount,icon:"check"},
-    {id:"papelera",label:"Papelera",count:papelera.length,icon:"trash"},
-  ];
   const enPapelera = estadoTab==="papelera";
 
   function renderOpRow(op,nested,folder=undefined){
@@ -3913,35 +3907,12 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
         <div><div className="section-title">Operaciones</div><div className="section-sub">Tus carpetas de trabajo, con todos sus documentos vinculados en un solo lugar.</div></div>
         {!enPapelera&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
       </div>
-      {!enPapelera&&<div className="dw-dashboard-overview" aria-label="Resumen de operaciones">
-        {[{label:"Total de operaciones",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat"+(estadoTab===item.tab?" is-selected":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value">{item.value}</span></button>;})}
-      </div>}
+      <div className="dw-dashboard-overview" aria-label="Resumen de operaciones">
+        {[{label:"Total de operaciones",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"},{label:"Papelera",value:papelera.length,icon:"trash",tab:"papelera"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat"+(estadoTab===item.tab?" is-selected":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value">{item.value}</span></button>;})}
+      </div>
       {error && <div role="alert" style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.25)",color:"var(--red)",fontSize:12.5}}>{error} {onRetry&&<button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{marginLeft:8}}>Reintentar</button>}</div>}
       {papeleraError && <div role="alert" style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(212,168,83,0.08)",border:"1px solid rgba(212,168,83,0.35)",color:"var(--text)",fontSize:12.5}}>{papeleraError} {onRetry&&<button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{marginLeft:8}}>Reintentar</button>}</div>}
       {loading && operaciones.length===0 && <div style={{marginBottom:16,fontSize:12.5,color:"var(--muted)"}}>Cargando tus operaciones…</div>}
-
-      {/* Tabs de estado: Todas / Nuevas / Activas / Cerradas / Papelera.
-          overflow-x:auto + flex-shrink:0 + white-space:nowrap en cada botón
-          evita que la barra se corra o que el texto se corte en pantallas
-          angostas: si no entran todas, se scrollea horizontal en vez de
-          apretar/cortar las pestañas. */}
-      <div className="estado-tabs" style={{display:"flex",gap:6,marginBottom:16,borderBottom:"1px solid var(--border)",paddingBottom:0,overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
-        {ESTADO_TABS.map(function(t){
-          return(
-            <button key={t.id} onClick={function(){setEstadoTab(t.id);}} style={{
-              padding:"9px 16px",border:"none",background:"transparent",cursor:"pointer",
-              fontSize:13,fontWeight:600,color:estadoTab===t.id?"var(--gold)":"var(--dim)",
-              borderBottom:estadoTab===t.id?"2px solid var(--gold)":"2px solid transparent",
-              transition:"border-color 0.15s,color 0.15s",display:"flex",alignItems:"center",gap:6,
-              flexShrink:0,whiteSpace:"nowrap",
-            }}>
-              <span style={{display:"inline-flex",alignItems:"center",color:estadoTab===t.id?"var(--gold)":"var(--dim)"}}><DWIcon name={t.icon} size={14} strokeWidth={1.9}/></span>
-              {t.label}
-              <span className="op-count-pill">{t.count}</span>
-            </button>
-          );
-        })}
-      </div>
 
       {enPapelera ? (
         <PapeleraView embedded={true} papelera={papelera} onRestore={onRestore} onDeletePermanente={onDeletePermanente} onVaciar={onVaciarPapelera} confirmVaciar={confirmVaciarPapelera} setConfirmVaciar={setConfirmVaciarPapelera}/>
