@@ -768,7 +768,14 @@ export const GS = `
   .dw-overview-label svg{flex-shrink:0;color:var(--gold);}
   .dw-overview-value{font-size:clamp(25px,2.8vw,34px);font-weight:650;line-height:1;letter-spacing:-.05em;font-variant-numeric:tabular-nums;}
   @media(min-width:701px) and (max-width:1050px){.dw-dashboard-overview{grid-template-columns:repeat(3,minmax(0,1fr));}}
-  @media(max-width:700px){.dw-dashboard-overview{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:16px;}.dw-overview-stat{padding:13px 14px;gap:10px;border-radius:13px;}.dw-overview-label{font-size:11px;}.dw-overview-value{font-size:27px;}}
+  @media(max-width:700px){
+    .dw-dashboard-overview{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:14px;}
+    .dw-overview-stat{padding:10px 9px;gap:7px;border-radius:11px;min-height:74px;box-shadow:0 2px 8px rgba(15,23,42,.025);}
+    .dw-overview-label{font-size:10px;gap:5px;line-height:1.2;font-weight:550;letter-spacing:-.01em;overflow-wrap:anywhere;}
+    .dw-overview-label svg{width:13px;height:13px;}
+    .dw-overview-value{font-size:23px;font-weight:650;}
+  }
+  @media(max-width:360px){.dw-dashboard-overview{gap:5px;}.dw-overview-stat{padding:9px 7px;min-height:70px;}.dw-overview-label{font-size:9px;}.dw-overview-value{font-size:21px;}}
 `;
 
 export var MOBILE_STABILITY_CSS = `
@@ -3908,7 +3915,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
         {!enPapelera&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
       </div>
       <div className="dw-dashboard-overview" aria-label="Resumen de operaciones">
-        {[{label:"Total de operaciones",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"},{label:"Papelera",value:papelera.length,icon:"trash",tab:"papelera"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat"+(estadoTab===item.tab?" is-selected":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value">{item.value}</span></button>;})}
+        {[{label:"Todas",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"},{label:"Papelera",value:papelera.length,icon:"trash",tab:"papelera"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat"+(estadoTab===item.tab?" is-selected":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value">{item.value}</span></button>;})}
       </div>
       {error && <div role="alert" style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.25)",color:"var(--red)",fontSize:12.5}}>{error} {onRetry&&<button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{marginLeft:8}}>Reintentar</button>}</div>}
       {papeleraError && <div role="alert" style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(212,168,83,0.08)",border:"1px solid rgba(212,168,83,0.35)",color:"var(--text)",fontSize:12.5}}>{papeleraError} {onRetry&&<button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{marginLeft:8}}>Reintentar</button>}</div>}
