@@ -784,12 +784,15 @@ export const GS = `
   .dw-dashboard-root .dw-dashboard-toolbar .filter-tipo{border-radius:10px;}
   .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{border-radius:10px;}
   @media(max-width:700px){
-    .dw-dashboard-root .filter-row.dw-dashboard-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;grid-template-rows:auto auto;align-items:center;flex-direction:row!important;gap:7px;padding:7px;border-radius:12px;margin-bottom:13px;}
-    .dw-dashboard-root .dw-dashboard-toolbar .search-wrap{grid-column:1/-1;grid-row:1;min-width:0;width:100%;}
-    .dw-dashboard-root .dw-dashboard-toolbar .search-inp{width:100%;min-width:0;font-size:16px;}
-    .dw-dashboard-root .dw-dashboard-toolbar select.filter-tipo{min-width:0;max-width:100%;width:100%!important;grid-column:1;grid-row:2;}
-    .dw-dashboard-root .dw-dashboard-toolbar .filtros-btn{grid-column:2;grid-row:2;justify-self:end;white-space:nowrap;min-height:36px;}
-    .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{grid-column:3;grid-row:2;justify-self:end;white-space:nowrap;}
+    /* Search and actions share one line: no orphaned controls or empty second row. */
+    .dw-dashboard-root .filter-row.dw-dashboard-toolbar{display:flex!important;flex-direction:row!important;align-items:center;flex-wrap:nowrap!important;gap:6px;padding:6px;border-radius:12px;margin-bottom:13px;}
+    .dw-dashboard-root .dw-dashboard-toolbar .search-wrap{flex:1 1 0!important;min-width:0!important;width:auto!important;}
+    .dw-dashboard-root .dw-dashboard-toolbar .search-inp{width:100%;min-width:0;font-size:16px;padding-right:8px;text-overflow:ellipsis;}
+    .dw-dashboard-root .dw-dashboard-toolbar select.filter-tipo{display:none!important;}
+    .dw-dashboard-root .dw-dashboard-toolbar .filtros-btn{flex:0 0 auto;white-space:nowrap;min-width:36px;min-height:36px;padding:7px!important;}
+    .dw-dashboard-root .dw-dashboard-toolbar .filtros-btn .filtros-label{display:none!important;}
+    .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{flex:0 0 auto;white-space:nowrap;padding:2px;}
+    .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch button{width:28px;height:32px;}
   }
 `;
 
