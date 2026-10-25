@@ -744,6 +744,21 @@ export const GS = `
     .cuenta-dashboard-head{grid-template-columns:1fr!important;}
     .modal-box.wide{width:min(94vw,900px)!important;}
   }
+
+  /* DocWorks visual refresh: operations dashboard only. */
+  .dw-dashboard-root{width:100%;min-width:0;}
+  .dw-dashboard-root>.section-header{padding:6px 2px 19px;border-bottom:1px solid var(--border2);margin-bottom:22px!important;align-items:flex-end;}
+  .dw-dashboard-root>.section-header .section-title{font-size:clamp(25px,2.5vw,34px);letter-spacing:-.035em;line-height:1.1;}
+  .dw-dashboard-root>.section-header .section-sub{font-size:13px;line-height:1.55;margin-top:8px;max-width:580px;}
+  .dw-dashboard-root .op-card-premium{border:1px solid var(--border2);border-radius:16px;box-shadow:0 3px 14px rgba(15,23,42,.045);transition:box-shadow .18s ease,border-color .18s ease,transform .18s ease;}
+  @media(hover:hover) and (pointer:fine){.dw-dashboard-root .op-card-premium:hover{border-color:var(--gold-line);box-shadow:0 9px 28px rgba(15,23,42,.085);transform:translateY(-1px);}}
+  .dw-dashboard-root button:focus-visible,.dw-dashboard-root a:focus-visible{outline:2px solid var(--gold);outline-offset:3px;}
+  @media(max-width:640px){
+    .dw-dashboard-root>.section-header{padding:2px 0 15px;margin-bottom:15px!important;align-items:flex-start;}
+    .dw-dashboard-root>.section-header .section-title{font-size:27px;}
+    .dw-dashboard-root>.section-header .section-sub{font-size:12px;line-height:1.45;margin-top:5px;}
+    .dw-dashboard-root .op-card-premium{border-radius:14px;transform:none!important;}
+  }
 `;
 
 export var MOBILE_STABILITY_CSS = `
@@ -3884,7 +3899,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
   }
 
   return(
-    <div>
+    <div className="dw-dashboard-root">
       <div className="section-header" style={{marginBottom:18}}>
         <div><div className="section-title">Operaciones</div><div className="section-sub">Tus carpetas de trabajo, con todos sus documentos vinculados en un solo lugar.</div></div>
         {!enPapelera&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
