@@ -757,7 +757,12 @@ export const GS = `
     .dw-dashboard-root>.section-header{padding:2px 0 15px;margin-bottom:15px!important;align-items:flex-start;}
     .dw-dashboard-root>.section-header .section-title{font-size:27px;}
     .dw-dashboard-root>.section-header .section-sub{font-size:12px;line-height:1.45;margin-top:5px;}
-    .dw-dashboard-root .op-card-premium{border-radius:14px;transform:none!important;}
+    .dw-dashboard-root .op-card-premium{border-radius:14px;transform:none!important;padding:12px 12px 11px 15px;box-shadow:0 2px 10px rgba(15,23,42,.04);}
+    .dw-dashboard-root .op-card-premium .op-type-badge{font-size:10.5px;font-weight:650;padding:4px 7px;}
+    .dw-dashboard-root .op-card-premium .op-status-hero{font-size:10.5px;font-weight:700;padding:4px 8px;}
+    .dw-dashboard-root .op-card-premium .op-card-actions{gap:6px;flex-wrap:nowrap;min-width:0;}
+    .dw-dashboard-root .op-card-premium .op-card-actions .btn{min-width:0;}
+    .dw-dashboard-root .op-card-premium .op-state-rail{width:4px;}
   }
 
   .dw-dashboard-overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 22px;}
