@@ -4263,10 +4263,10 @@ function SplashScreen({onDone}){
       {!videoFailed ? <>
         <video ref={videoRef} className="dw-splash-video" controls={false} disablePictureInPicture={true} disableRemotePlayback={true} src="/Loading.MP4" autoPlay={true} muted={true} defaultMuted={true} playsInline={true} webkit-playsinline="true" preload="auto" onLoadedMetadata={function(){var v=videoRef.current;if(v){v.muted=true;v.defaultMuted=true;v.volume=0;try{var r=v.play();if(r&&typeof r.catch==="function")r.catch(function(){});}catch(e){}}}} onCanPlay={function(){var v=videoRef.current;if(v&&v.paused){v.muted=true;v.volume=0;try{var r=v.play();if(r&&typeof r.catch==="function")r.catch(function(){});}catch(e){}}}} onPlaying={function(){setVideoFailed(false);}} onEnded={finishVideo} onError={function(){setVideoFailed(true);}} style={{width:"min(72vmin,544px)",height:"min(72vmin,544px)",maxWidth:"88vw",maxHeight:"62vh",objectFit:"contain",borderRadius:18,filter:"drop-shadow(0 14px 44px rgba(0,0,0,.28))"}} />
         <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:600,color:"#e8edf6",letterSpacing:"0.04em",marginTop:22}}>Cargando<span style={{color:"#d4a853"}}>…</span></div>
-        <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:11,color:"#8ea0ba",letterSpacing:"0.18em",textTransform:"uppercase",marginTop:7}}>DocWorks · {DOCWORKS_VERSION}</div>
+        
       </> : <div style={{animation:"splashPop 0.7s cubic-bezier(0.175,0.885,0.32,1.275) both",display:"flex",flexDirection:"column",alignItems:"center",gap:0}}>
         <img src={LOGO_B64} alt="DocWorks" style={{width:"clamp(220px,46vmin,420px)",height:"clamp(220px,46vmin,420px)",objectFit:"contain",filter:"drop-shadow(0 0 38px rgba(212,168,83,0.42))"}}/>
-        <div style={{fontFamily:"DM Serif Display,serif",fontSize:"clamp(30px,5.8vmin,54px)",color:"#f1f5f9",marginTop:-4,letterSpacing:"-0.5px"}}>DocWorks <span style={{fontFamily:"DM Sans,sans-serif",fontSize:"clamp(12px,2vmin,18px)",color:"#d4a853",fontWeight:600,verticalAlign:"middle"}}>v{DOCWORKS_VERSION}</span></div>
+        
         <div style={{fontSize:13,color:"#e8edf6",marginTop:14,fontWeight:600}}>Cargando<span style={{color:"#d4a853"}}>…</span></div>
         <div style={{marginTop:20,display:"flex",gap:8}}>{[0,1,2].map(function(i){return <div key={i} style={{width:7,height:7,borderRadius:"50%",background:"rgba(212,168,83,0.8)",animation:"splashDot 1.2s "+(i*0.2)+"s ease-in-out infinite"}}/>;})}</div>
       </div>}
@@ -8972,7 +8972,7 @@ function StartupSplashHost(){
   if(!visible)return null;
   return <div aria-label="Iniciando DocWorks" role="status" style={{position:"fixed",inset:0,zIndex:99999,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:15,background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 52%, #03060d 100%)",opacity:fade?0:1,transition:"opacity .22s ease",pointerEvents:"none"}}>
     <img src={LOGO_B64} alt="DocWorks" style={{display:"block",width:"min(72vw,300px)",height:"auto",maxHeight:"38vh",objectFit:"contain",mixBlendMode:"screen",filter:"drop-shadow(0 8px 28px rgba(212,168,83,.16))"}}/>
-    <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:600,letterSpacing:".08em",color:"#dbe5f1"}}>INICIANDO DOCWORKS</div>
+    <div style={{fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:600,color:"#e8edf6"}}>Cargando<span style={{color:"#d4a853"}}>…</span></div>
     <div style={{width:30,height:3,borderRadius:99,background:"rgba(212,168,83,.18)",overflow:"hidden"}}><div style={{width:"55%",height:"100%",borderRadius:99,background:"#d4a853",animation:"dwStartupProgress .85s ease-in-out infinite alternate"}}/></div>
     <style>{"@keyframes dwStartupProgress{from{transform:translateX(-25%)}to{transform:translateX(95%)}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}"}</style>
   </div>;
