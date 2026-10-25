@@ -784,12 +784,12 @@ export const GS = `
   .dw-dashboard-root .dw-dashboard-toolbar .filter-tipo{border-radius:10px;}
   .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{border-radius:10px;}
   @media(max-width:700px){
-    .dw-dashboard-root .dw-dashboard-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;padding:7px;border-radius:12px;margin-bottom:13px;}
-    .dw-dashboard-root .dw-dashboard-toolbar .search-wrap{grid-column:1/-1;min-width:0;width:100%;}
+    .dw-dashboard-root .filter-row.dw-dashboard-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;grid-template-rows:auto auto;align-items:center;flex-direction:row!important;gap:7px;padding:7px;border-radius:12px;margin-bottom:13px;}
+    .dw-dashboard-root .dw-dashboard-toolbar .search-wrap{grid-column:1/-1;grid-row:1;min-width:0;width:100%;}
     .dw-dashboard-root .dw-dashboard-toolbar .search-inp{width:100%;min-width:0;font-size:16px;}
-    .dw-dashboard-root .dw-dashboard-toolbar .filter-tipo{min-width:0;max-width:100%;width:100%!important;grid-column:1;}
-    .dw-dashboard-root .dw-dashboard-toolbar .filtros-btn{white-space:nowrap;min-height:36px;}
-    .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{white-space:nowrap;}
+    .dw-dashboard-root .dw-dashboard-toolbar select.filter-tipo{min-width:0;max-width:100%;width:100%!important;grid-column:1;grid-row:2;}
+    .dw-dashboard-root .dw-dashboard-toolbar .filtros-btn{grid-column:2;grid-row:2;justify-self:end;white-space:nowrap;min-height:36px;}
+    .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{grid-column:3;grid-row:2;justify-self:end;white-space:nowrap;}
   }
 `;
 
