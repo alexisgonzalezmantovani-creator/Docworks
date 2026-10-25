@@ -799,6 +799,21 @@ export const GS = `
     .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{flex:0 0 auto;white-space:nowrap;padding:2px;}
     .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch button{width:28px;height:32px;}
   }
+  /* Calendar overview: compact, readable three-column cards on phones. */
+  .calendar-summary-card{padding:14px 16px;display:flex;align-items:center;gap:12px;border-radius:14px;min-width:0;}
+  .calendar-summary-icon{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;}
+  .calendar-summary-body{min-width:0;}
+  .calendar-summary-number{font-size:20px;font-weight:750;color:var(--text);line-height:1;}
+  .calendar-summary-title{font-size:12px;font-weight:700;color:var(--text);margin-top:4px;}
+  .calendar-summary-description{font-size:12px;color:var(--dim);margin-top:2px;}
+  @media(max-width:700px){
+    .calendar-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;margin-bottom:12px!important;}
+    .calendar-summary-card{padding:10px 7px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;border-radius:11px;min-width:0;}
+    .calendar-summary-icon{width:24px;height:24px;border-radius:7px;font-size:10px;}
+    .calendar-summary-number{font-size:22px;font-weight:650;letter-spacing:-.04em;}
+    .calendar-summary-title{font-size:10px;font-weight:650;line-height:1.2;overflow-wrap:anywhere;}
+    .calendar-summary-description{display:none;}
+  }
 `;
 
 export var MOBILE_STABILITY_CSS = `
@@ -4392,7 +4407,7 @@ function CalendarioView({operaciones,onViewOp}){
     </div>
 
     <div className="calendar-summary-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10,marginBottom:16}}>
-      {[{n:urgentes.length,t:"Alertas",s:"Requieren atención",c:"#ef4444",i:"!"},{n:proximos.length,t:"Próximos 30 días",s:"Fechas a tener presentes",c:"var(--gold)",i:"30"},{n:eventosFiltrados.length,t:"Eventos",s:"Según el filtro actual",c:"var(--teal)",i:"✓"}].map(function(k){return <div key={k.t} className="card" style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:12,borderRadius:14}}><div style={{width:38,height:38,borderRadius:11,background:"rgba(255,255,255,0.04)",border:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color:k.c,fontSize:14,flexShrink:0}}>{k.i}</div><div><div style={{fontSize:20,fontWeight:800,color:"var(--text)",lineHeight:1}}>{k.n}</div><div style={{fontSize:12,fontWeight:700,color:"var(--text)",marginTop:4}}>{k.t}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{k.s}</div></div></div>})}
+      {[{n:urgentes.length,t:"Alertas",s:"Requieren atención",c:"#ef4444",i:"!"},{n:proximos.length,t:"Próximos 30 días",s:"Fechas a tener presentes",c:"var(--gold)",i:"30"},{n:eventosFiltrados.length,t:"Eventos",s:"Según el filtro actual",c:"var(--teal)",i:"✓"}].map(function(k){return <div key={k.t} className="card calendar-summary-card"><div className="calendar-summary-icon" style={{color:k.c}}>{k.i}</div><div className="calendar-summary-body"><div className="calendar-summary-number">{k.n}</div><div className="calendar-summary-title">{k.t}</div><div className="calendar-summary-description">{k.s}</div></div></div>})}
     </div>
 
     {(urgentes.length>0||proximos.length>0)&&<div style={{display:"grid",gridTemplateColumns:urgentes.length>0&&proximos.length>0?"1fr 1fr":"1fr",gap:12,marginBottom:16}}>
