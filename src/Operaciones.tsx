@@ -902,8 +902,9 @@ html,body{touch-action:manipulation;}
 @media(max-width:640px){
   .mobile-topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:500!important;background:#102653!important;background:linear-gradient(120deg,#091222 0%,#122a58 48%,#0c1c3d 100%)!important;}
   .app-wrap{padding-top:calc(56px + env(safe-area-inset-top,0px))!important;}
-  .calendar-summary-grid{grid-template-columns:minmax(0,1fr)!important;gap:8px!important;}
-  .calendar-summary-grid>.card{min-width:0!important;padding:12px!important;}
+  /* Calendario: tres indicadores compactos en una fila también en iPhone. */
+  .calendar-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;}
+  .calendar-summary-grid>.card{min-width:0!important;padding:10px 7px!important;}
   .calendar-summary-grid>.card>div:last-child{min-width:0!important;overflow-wrap:anywhere;}
   .content,.main,.app-body,.app-wrap{max-width:100vw!important;min-width:0!important;}
   .content,.main{overflow-x:clip!important;}
