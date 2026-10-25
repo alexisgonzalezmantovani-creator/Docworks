@@ -776,6 +776,21 @@ export const GS = `
     .dw-overview-value{font-size:23px;font-weight:650;}
   }
   @media(max-width:360px){.dw-dashboard-overview{gap:5px;}.dw-overview-stat{padding:9px 7px;min-height:70px;}.dw-overview-label{font-size:9px;}.dw-overview-value{font-size:21px;}}
+
+  /* Compact search and filter toolbar — dashboard only. */
+  .dw-dashboard-root .dw-dashboard-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:17px;flex-wrap:wrap;padding:9px;border:1px solid var(--border2);border-radius:15px;background:var(--card);box-shadow:0 2px 12px rgba(15,23,42,.025);}
+  .dw-dashboard-root .dw-dashboard-toolbar .search-wrap{flex:1;min-width:180px;}
+  .dw-dashboard-root .dw-dashboard-toolbar .search-inp{border-radius:10px;}
+  .dw-dashboard-root .dw-dashboard-toolbar .filter-tipo{border-radius:10px;}
+  .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{border-radius:10px;}
+  @media(max-width:700px){
+    .dw-dashboard-root .dw-dashboard-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;padding:7px;border-radius:12px;margin-bottom:13px;}
+    .dw-dashboard-root .dw-dashboard-toolbar .search-wrap{grid-column:1/-1;min-width:0;width:100%;}
+    .dw-dashboard-root .dw-dashboard-toolbar .search-inp{width:100%;min-width:0;font-size:16px;}
+    .dw-dashboard-root .dw-dashboard-toolbar .filter-tipo{min-width:0;max-width:100%;width:100%!important;grid-column:1;}
+    .dw-dashboard-root .dw-dashboard-toolbar .filtros-btn{white-space:nowrap;min-height:36px;}
+    .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{white-space:nowrap;}
+  }
 `;
 
 export var MOBILE_STABILITY_CSS = `
@@ -3925,7 +3940,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
         <PapeleraView embedded={true} papelera={papelera} onRestore={onRestore} onDeletePermanente={onDeletePermanente} onVaciar={onVaciarPapelera} confirmVaciar={confirmVaciarPapelera} setConfirmVaciar={setConfirmVaciarPapelera}/>
       ) : (
       <>
-      <div className="filter-row" style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap",padding:"10px",border:"1px solid var(--border)",borderRadius:14,background:"var(--surface2)"}}>
+      <div className="filter-row dw-dashboard-toolbar">
         <div className="search-wrap" style={{flex:1,minWidth:180}}>
           <span className="search-icon"><DWIcon name="search" size={16} strokeWidth={2}/></span>
           <input className="search-inp" value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Buscar nombre, DNI, CUIT, dirección..."/>
