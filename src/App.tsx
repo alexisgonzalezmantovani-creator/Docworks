@@ -6736,6 +6736,7 @@ function LoginScreen({ onLogin, onRecover, onRegister, error, loading, connError
         <button type="submit" disabled={loading} style={{marginTop:4,padding:"11px 14px",borderRadius:10,border:"none",background:AUTH_GOLD,color:"#1a1206",fontWeight:700,fontSize:14,cursor:loading?"default":"pointer",opacity:loading?.6:1}}>{recoverMode ? (recoverLoading ? "Enviando…" : "Enviar enlace") : (loading ? "Ingresando…" : "Ingresar")}</button>
         {!recoverMode && <button type="button" onClick={onRegister} style={{background:"transparent",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:13,fontWeight:700,padding:"3px 0 0"}}>Registrate</button>}
         <button type="button" onClick={function(){setRecoverMode(function(v){return !v;});setRecoverMsg(null);setPassword("");}} style={{background:"transparent",border:"none",color:AUTH_MUTED,cursor:"pointer",fontSize:12,textDecoration:"underline",padding:0}}>{recoverMode ? "Volver a iniciar sesión" : "¿Olvidaste tu contraseña? Recuperala"}</button>
+        <a href="https://docworks-landing.vercel.app" style={{display:"block",textAlign:"center",color:AUTH_MUTED,fontSize:12,textDecoration:"none",padding:"5px 0 0"}}>← Volver al sitio web</a>
       </form>
     </div>
   );
@@ -7011,6 +7012,7 @@ function SesionBadge({ contexto, onLogout, foto }){
       </button>
       {abierto&&<div style={{position:"absolute",right:0,top:"calc(100% + 7px)",minWidth:190,zIndex:500,background:"var(--card)",border:"1px solid var(--border2)",borderRadius:12,boxShadow:"var(--shadow-lg)",padding:6}}>
         <div style={{padding:"9px 10px",borderBottom:"1px solid var(--border)",marginBottom:5}}><div style={{fontSize:12,fontWeight:700,color:"var(--text)"}}>{usuario}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{contexto.usuario.email||""}</div></div>
+        <a href="https://docworks-landing.vercel.app" style={{display:"block",padding:"9px 10px",fontSize:12,fontWeight:650,color:"var(--text)",textDecoration:"none",borderRadius:8}}>← Volver al sitio web</a>
         <button type="button" onClick={function(){setAbierto(false);onLogout();}} className="logout-btn" style={{width:"100%",textAlign:"left",padding:"9px 10px",border:0,borderRadius:8,background:"transparent",cursor:"pointer",fontSize:12,fontWeight:700}}>↪ Salir</button>
       </div>}
     </div>
