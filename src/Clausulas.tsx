@@ -310,7 +310,6 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         </div>
       </EncabezadoFijadoPanel>}
     </div>}
-    </div>}
     {seccion==="modelos"&&!puedeEditar&&<div className="notice" style={{fontSize:12}}>Los modelos de los documentos están disponibles únicamente para Dueño y Administrador.</div>}
   </div>;
 }
