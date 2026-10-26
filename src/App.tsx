@@ -6326,7 +6326,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   useEffect(function(){setDraft(getBodyBlocksConfig(perfil,tipo));setEditId(null);setStatus(null);},[tipo,perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].body_blocks]);
   function persist(next,extraConfig=undefined){
     if(!puedeEditar)return Promise.resolve({error:new Error("Sin permisos")});
-    setDraft(next);setStatus("saving");
+    setStatus("saving");
     var mapa=Object.assign({},perfil.plantillas||{});
     var configPrevio=Object.assign({},mapa[tipo]||{});
     var historial=Object.assign({},configPrevio.historial_clausulas||{});
@@ -6347,7 +6347,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     previas.forEach(function(anterior){if(anterior&&!next.some(function(b){return b&&b.id===anterior.id;}))registrarVersionAnterior(anterior);});
     var actual=Object.assign({},configPrevio,{body_blocks:completarClausulasBaseModelo(next,tipo).map(function(b,i){return normalizarBodyBlock(Object.assign({},b,{orden:i+1}),i);}),historial_clausulas:historial},extraConfig||{});
     var nextPerfil=Object.assign({},perfil,{plantillas:Object.assign({},mapa,{[tipo]:actual})});
-    return Promise.resolve(onChange(nextPerfil)).then(function(res){if(res&&res.error){setStatus("error");return res;}setStatus("saved");setTimeout(function(){setStatus(null);},2500);return res;}).catch(function(err){setStatus("error");return {error:err};});
+    return Promise.resolve(onChange(nextPerfil)).then(function(res){if(res&&res.error){setStatus("error");return res;}setDraft(next);setStatus("saved");setTimeout(function(){setStatus(null);},2500);return res;}).catch(function(err){setStatus("error");return {error:err};});
   }
   function update(id,changes){var actual=draft.find(function(b){return b.id===id;});var cambio=Object.assign({},changes||{});if(esClausulaEsencialModelo(actual)){cambio.activo=true;cambio.obligatoria=true;}persist(draft.map(function(b){return b.id===id?Object.assign({},b,cambio):b;}));}
   function move(idx,dir){var to=dir==="up"?idx-1:idx+1;if(to<0||to>=draft.length)return;var arr=draft.slice(),x=arr[idx];arr[idx]=arr[to];arr[to]=x;persist(arr);}
