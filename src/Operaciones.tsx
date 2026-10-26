@@ -811,7 +811,10 @@ export const GS = `
     .calendar-summary-card{padding:10px 7px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;border-radius:11px;min-width:0;}
     .calendar-summary-icon{width:24px;height:24px;border-radius:7px;font-size:10px;}
     .calendar-summary-number{font-size:22px;font-weight:650;letter-spacing:-.04em;}
-    .calendar-summary-title{font-size:10px;font-weight:650;line-height:1.2;overflow-wrap:anywhere;}
+    .calendar-summary-title{font-size:10px;font-weight:650;line-height:1.2;overflow-wrap:normal;word-break:normal;hyphens:none;}
+    .calendar-summary-card{overflow:hidden;box-sizing:border-box;}
+    .calendar-summary-body{width:100%;min-width:0;}
+    .calendar-summary-title{white-space:normal;}
     .calendar-summary-description{display:none;}
   }
 `;
