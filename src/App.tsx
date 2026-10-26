@@ -6372,6 +6372,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     if(editId==null)return;
     var actual=draft.find(function(b){return b.id===editId;});
     var texto=String(actual&&actual.contenido||"");
+    if(tokensDeTextoDocWorks(texto).indexOf(token)!==-1)return;
     var el=contenidoEditorRef.current;
     var inicio=el&&typeof el.selectionStart==="number"?el.selectionStart:texto.length;
     var fin=el&&typeof el.selectionEnd==="number"?el.selectionEnd:inicio;
