@@ -6332,7 +6332,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     var historial=Object.assign({},configPrevio.historial_clausulas||{});
     var usuarioNombre=(usuarioActual&&(usuarioActual.nombre||usuarioActual.email))||perfil.usuario_actual_nombre||perfil.nombre||"Usuario actual";
     var usuarioId=(usuarioActual&&usuarioActual.id)||null;
-    var previas=Array.isArray(draft)?draft:[];
+    var previas=Array.isArray(configPrevio.body_blocks)?configPrevio.body_blocks.map(function(item,i){return normalizarBodyBlock(item,i);}):getBodyBlocksConfig(perfil,tipo);
     function registrarVersionAnterior(anterior){
       var lista=Array.isArray(historial[anterior.id])?historial[anterior.id].slice():[];
       lista.unshift({fecha:new Date().toISOString(),usuario:usuarioNombre,usuarioId:usuarioId,titulo:String(anterior.titulo||""),contenido:String(anterior.contenido||""),activo:anterior.activo!==false,orden:Number(anterior.orden)||previas.indexOf(anterior)+1});
