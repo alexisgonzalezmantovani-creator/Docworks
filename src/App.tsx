@@ -1211,7 +1211,9 @@ function PrecioNarrativaEditor({bloque, onSave, onCancel}){
   function syncTexto(){
     if(editorRef.current) setTexto(textoNarrativaPrecioDocWorks(editorRef.current));
   }
+  function tokenUsado(k){return String(texto||"").includes("{{"+k+"}}");}
   function insertarToken(k){
+    if(tokenUsado(k))return;
     var root=editorRef.current;
     if(!root) return;
     root.focus();
@@ -1222,7 +1224,7 @@ function PrecioNarrativaEditor({bloque, onSave, onCancel}){
     }
     var span=document.createElement("span");
     span.setAttribute("data-dw-token",k); span.setAttribute("contenteditable","false");
-    span.style.cssText="display:inline-block;padding:1px 5px;border-radius:5px;background:rgba(70,180,230,.13);color:#59c7f3;font-weight:800;cursor:pointer;user-select:none";
+    span.style.cssText="display:inline-block;padding:1px 5px;border-radius:5px;background:rgba(212,168,83,.10);color:var(--gold);font-weight:800;cursor:pointer;user-select:none";
     span.textContent=k==="moneda_txt"?"Moneda":"Precio en letras";
     range.deleteContents(); range.insertNode(span);
     var space=document.createTextNode(" "); span.parentNode.insertBefore(space,span.nextSibling);
@@ -1245,22 +1247,19 @@ function PrecioNarrativaEditor({bloque, onSave, onCancel}){
     }catch(e){setStatus("error");}
   }
   return (
-    <div style={{marginTop:8,padding:12,borderRadius:10,background:"rgba(212,168,83,0.055)",border:"1px solid rgba(212,168,83,0.22)"}}>
+    <div style={{marginTop:8,padding:12,borderRadius:10,background:"var(--card)",border:"1px solid var(--border)"}}>
       <div style={{fontSize:12.5,fontWeight:700,color:"var(--text)",marginBottom:4}}>Cómo querés que aparezca el precio</div>
-      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.45,marginBottom:9}}>Podés modificar libremente la redacción. <b style={{color:"#59c7f3"}}>Moneda</b> y <b style={{color:"#59c7f3"}}>Precio en letras</b> son campos automáticos protegidos.</div>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:9}}>
-        {PRECIO_NARRATIVAS_PRESET.map(function(preset){return <button key={preset.label} type="button" onClick={function(){if(editorRef.current) editorRef.current.innerHTML=htmlNarrativaPrecioDocWorks(preset.texto);setTexto(preset.texto);setFaltantes([]);setStatus(null);}} style={{padding:"6px 9px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--muted)",cursor:"pointer",fontSize:12}}>{preset.label}</button>;})}
-      </div>
+      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.45,marginBottom:9}}>Podés modificar libremente la redacción. <b style={{color:"var(--gold)"}}>Moneda</b> y <b style={{color:"var(--gold)"}}>Precio en letras</b> son campos automáticos protegidos.</div>
       <label className="field-label" style={{display:"block",marginBottom:5}}>Redacción del precio</label>
       <div ref={editorRef} contentEditable suppressContentEditableWarning onInput={syncTexto} style={{width:"100%",minHeight:86,padding:"9px 10px",boxSizing:"border-box",resize:"vertical",overflowY:"auto",border:"1px solid var(--border2)",borderRadius:8,background:"var(--input)",color:"var(--text)",lineHeight:1.5,outline:"none"}} />
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
-        <button type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken("moneda_txt");}} style={{padding:"6px 9px",borderRadius:8,border:"1px solid rgba(89,199,243,.4)",background:"rgba(89,199,243,.1)",color:"#59c7f3",fontWeight:800,cursor:"pointer",fontSize:12}}>Moneda</button>
-        <button type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken("precio_letras");}} style={{padding:"6px 9px",borderRadius:8,border:"1px solid rgba(89,199,243,.4)",background:"rgba(89,199,243,.1)",color:"#59c7f3",fontWeight:800,cursor:"pointer",fontSize:12}}>Precio en letras</button>
+        <button type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken("moneda_txt");}} disabled={tokenUsado("moneda_txt")} style={{textDecoration:tokenUsado("moneda_txt")?"line-through":"none",opacity:tokenUsado("moneda_txt")?.5:1,padding:"6px 9px",borderRadius:8,border:"1px solid rgba(89,199,243,.4)",background:"rgba(89,199,243,.1)",color:"var(--gold)",fontWeight:800,cursor:"pointer",fontSize:12}}>{tokenUsado("moneda_txt")?"✓ ":""}Moneda</button>
+        <button type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken("precio_letras");}} disabled={tokenUsado("precio_letras")} style={{textDecoration:tokenUsado("precio_letras")?"line-through":"none",opacity:tokenUsado("precio_letras")?.5:1,padding:"6px 9px",borderRadius:8,border:"1px solid rgba(89,199,243,.4)",background:"rgba(89,199,243,.1)",color:"var(--gold)",fontWeight:800,cursor:"pointer",fontSize:12}}>{tokenUsado("precio_letras")?"✓ ":""}Precio en letras</button>
       </div>
       <TokensProtegidosDocWorks tokens={["moneda_txt","precio_letras"]} compact={true}/>
-      <div style={{fontSize:12,color:"var(--dim)",marginTop:5}}>Los campos celestes son automáticos. Si eliminás uno, el texto queda intacto y DocWorks te va a pedir que lo vuelvas a insertar.</div>
+      <div style={{fontSize:12,color:"var(--dim)",marginTop:5}}>Los campos utilizados aparecen tachados. Si eliminás uno, vuelve a estar disponible.</div>
       {status==="missing"&&<div style={{marginTop:8,padding:"8px 9px",borderRadius:8,border:"1px solid rgba(240,170,60,.35)",background:"rgba(240,170,60,.08)",color:"var(--text)",fontSize:12}}>
-        <b>Falta completar este documento:</b> {faltantes.map(function(k){return <button key={k} type="button" onClick={function(){insertarToken(k);}} style={{marginLeft:6,marginTop:4,padding:"5px 8px",borderRadius:7,border:"1px solid rgba(89,199,243,.4)",background:"rgba(89,199,243,.1)",color:"#59c7f3",fontWeight:800,cursor:"pointer"}}>Insertar {k==="moneda_txt"?"Moneda":"Precio en letras"}</button>;})}
+        <b>Falta completar este documento:</b> {faltantes.map(function(k){return <button key={k} type="button" onClick={function(){insertarToken(k);}} style={{marginLeft:6,marginTop:4,padding:"5px 8px",borderRadius:7,border:"1px solid rgba(89,199,243,.4)",background:"rgba(89,199,243,.1)",color:"var(--gold)",fontWeight:800,cursor:"pointer"}}>Insertar {k==="moneda_txt"?"Moneda":"Precio en letras"}</button>;})}
       </div>}
       <label className="field-label" style={{display:"block",marginTop:9,marginBottom:5}}>Título de la cláusula</label>
       <input className="inp" value={titulo} onChange={function(e){setTitulo(e.target.value);}} />
