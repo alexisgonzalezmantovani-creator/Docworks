@@ -6370,10 +6370,10 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   ];
   var tokens=tokensBase.filter(function(t,i,arr){return arr.findIndex(function(x){return x[0]===t[0];})===i;});
   function insertToken(token){
-    if(editId==null)return;
+    if(editId==null||!puedeEditar||status==="saving")return;
     var actual=draft.find(function(b){return b.id===editId;});
     var texto=String(actual&&actual.contenido||"");
-    if(tokensDeTextoDocWorks(texto).indexOf(token)!==-1)return;
+    if(!actual||tokensDeTextoDocWorks(texto).indexOf(token)!==-1)return;
     var el=contenidoEditorRef.current;
     var inicio=el&&typeof el.selectionStart==="number"?el.selectionStart:texto.length;
     var fin=el&&typeof el.selectionEnd==="number"?el.selectionEnd:inicio;
