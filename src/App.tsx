@@ -1336,7 +1336,7 @@ function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operacion
   function restaurarBloqueReserva(b){
     var def=defDeBloque(b.id);
     if(!def){ dwNotify("info","Esta cláusula es propia: no tiene una versión de fábrica para restaurar."); return; }
-    requestDwConfirm("¿Restaurar solo la cláusula «"+def.titulo+"» a la versión de fábrica?",function(){ onUpdate(b.id,{titulo:def.titulo,contenido:def.contenido}); cancelarEdicion(); });
+    requestDwConfirm("¿Restaurar solo la cláusula «"+def.titulo+"» a la versión de fábrica?",function(){ onUpdate(b.id,{titulo:def.titulo,contenido:def.contenido}); cancelarEdicion(true); });
   }
   async function restaurarTodosReserva(){
     requestDwConfirm("¿Restaurar TODAS las cláusulas de la Reserva a la versión de fábrica? Se guardará una copia del modelo actual para poder deshacer esta acción.",async function(){
@@ -1351,7 +1351,7 @@ function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operacion
         // Las cláusulas de Reserva se ordenan con la API existente; no se altera su esquema.
         var restaurados=ordenados.slice().sort(function(a,b){return (Number(a.orden)||0)-(Number(b.orden)||0);});
         for(var j=0;j<restaurados.length;j++){var objetivo=j;var actualOrden=restaurados.findIndex(function(x){return x.id===ordenados[j].id;});if(actualOrden!==j&&onMove)await onMove(ordenados[j].id,actualOrden>j?"up":"down");}
-        cancelarEdicion();
+        cancelarEdicion(true);
       }catch(e){dwNotify("error","No se pudo guardar la copia o restaurar todas las cláusulas. No se pudo completar la acción.");}
     });
   }
@@ -1364,7 +1364,7 @@ function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operacion
         var ordenActual=(bloques||[]).slice().sort(function(a,b){return (Number(a.orden)||0)-(Number(b.orden)||0);});
         for(var j=0;j<snap.clausulas.length;j++){var target=snap.clausulas[j],idx=ordenActual.findIndex(function(x){return x.id===target.id;});if(idx>=0&&idx!==j&&onMove){await onMove(target.id,idx>j?"up":"down");var item=ordenActual.splice(idx,1)[0];ordenActual.splice(j,0,item);}}
         if(typeof onSavePerfil==="function"){var mapa=Object.assign({},perfil.plantillas||{}),actual=Object.assign({},mapa.reserva||{});delete actual.restauracionAnterior;var r2=await onSavePerfil(Object.assign({},perfil,{plantillas:Object.assign({},mapa,{reserva:actual})}));if(r2&&r2.error)throw r2.error;}
-        cancelarEdicion();
+        cancelarEdicion(true);
       }catch(e){dwNotify("error","No se pudo recuperar el modelo anterior de Reserva. Revisá la conexión e intentá nuevamente.");}
     });
   }
