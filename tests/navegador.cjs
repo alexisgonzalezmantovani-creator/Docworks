@@ -30,6 +30,10 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' '+tipo+' overflow');checks++;
    await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
    await page.locator('textarea').fill('Texto de prueba móvil.');
+   const chips=await page.getByRole('button',{name:/^\+/}).allTextContents();
+   assert.equal(new Set(chips).size,chips.length,name+' '+tipo+' etiquetas de chips');checks++;
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' '+tipo+' chips overflow');checks++;
+
    await page.getByRole('button',{name:'Guardar cláusula',exact:true}).click();
    await page.locator('textarea').waitFor({state:'detached'});checks++;
    await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();

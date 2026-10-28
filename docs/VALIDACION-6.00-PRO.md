@@ -6,6 +6,10 @@ Actualización: 28 de octubre de 2026. Base oficial `main` 5.98; candidata en `w
 
 Se corrigieron la invalidación por cuenta/rol, los guardados con sesión SDK distinta, el rollback tardío y el rol de un Asesor sin perfil remoto. Se agregaron 14 pruebas de transición y 17 comprobaciones en la base real con reversión completa. Chromium y WebKit aprobaron 123 verificaciones cada uno. Detalle y límites en `PRUEBAS-SESIONES-6.00.md`.
 
+## Prueba desde la cuenta autenticada
+
+Se completó el acceso normal a Vercel y DocWorks. Se comprobaron la recarga de sesión, el descarte de un borrador y las ocho vistas previas de modelos guardados. Se corrigieron tres etiquetas ambiguas de chips manteniendo sus identificadores. Ver `PRUEBA-REAL-CUENTA-6.00.md`. Esta prueba no incluye escritura entre dos cuentas.
+
 ## Implementación
 
 Los ocho modelos (Reserva, Boleto, Reserva de alquiler, Alquiler, Comodato, Exclusividad, Refuerzo y Devolución) usan el editor compartido. Se mantienen textos históricos de Reserva, snapshots, precio protegido, roles y datos existentes. Agregar e insertar chips modifica el borrador; guardar valida título y contenido. Los errores conservan la edición. Historial y restauración mantienen metadatos; los chips no se duplican y las cláusulas conservan numeración consecutiva.

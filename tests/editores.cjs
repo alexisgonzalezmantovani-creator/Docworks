@@ -22,6 +22,13 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
   await app.act(async()=>render());
   await click(button('＋ Agregar cláusula'));
   check(tipo+' alta no persiste',()=>assert.equal(saves,0));
+  check(tipo+' chips tienen etiquetas inequívocas',()=>{const labels=buttons().map(b=>b.textContent.trim()).filter(t=>t.startsWith('+'));assert.equal(new Set(labels).size,labels.length);});
+  if(tipo==='reserva'){
+   await click(button('+Reserva alquiler · importe numérico'));
+   await click(button('+Reserva alquiler · importe en letras'));
+   check('chips distinguen monto y redacción legal',()=>{const texto=document.querySelector('textarea').value;assert.ok(texto.includes('{{res_alq_monto_reserva}}'));assert.ok(texto.includes('{{reserva_alquiler_reserva}}'));assert.ok(!buttons().some(b=>b.textContent.trim()==='+Reserva alquiler · importe en letras'));});
+  }
+
   await fill(document.querySelector('textarea'),'Texto de prueba con redacción propia.');
   const chip=buttons().find(b=>b.textContent.trim()==='+Comprador');
   assert.ok(chip,'chip de comprador disponible');await click(chip);
