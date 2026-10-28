@@ -1331,7 +1331,7 @@ function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operacion
     setEditId(b.id);
     setDraft({titulo:String(b.titulo||""),contenido:String(b.contenido||"")});
   }
-  function cancelarEdicion(){setEditId(null);setDraft({titulo:"",contenido:""});}
+  function cancelarEdicion(){var original=ordenados.find(function(item){return item.id===editId;});var cambiado=!!original&&(String(draft.titulo||"")!==String(original.titulo||"")||String(draft.contenido||"")!==String(original.contenido||""));var cerrar=function(){setEditId(null);setDraft({titulo:"",contenido:""});};if(cambiado)requestDwConfirm("¿Descartar los cambios sin guardar de esta cláusula?",cerrar);else cerrar();}
   function defDeBloque(id){ return DEFAULT_BLOQUES_RESERVA.find(function(x){return x.id===id;}); }
   function restaurarBloqueReserva(b){
     var def=defDeBloque(b.id);
