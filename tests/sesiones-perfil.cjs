@@ -42,6 +42,10 @@ function deferred(){let resolve;const promise=new Promise(r=>resolve=r);return {
  result=await pending;
  check('cambio durante recuperación de sesión no escribe',()=>{assert.equal(result.contextoObsoleto,true);assert.equal(writes.length,0);});
  await resolveRead(3,{data:{nombre:'A',rol:'dueno'},error:null});
+ const retornoAnterior=oldSave({nombre:'Borrador de la primera entrada A'});await app.act(async()=>{});
+ check('volver a la misma cuenta no reactiva callback de entrada anterior',()=>assert.equal(writes.length,0));
+ result=await retornoAnterior;
+ check('callback de primera entrada informa contexto obsoleto al volver a A',()=>assert.equal(result.contextoObsoleto,true));
  sessionUser='otro-usuario';result=await api.guardarAhora({nombre:'Incorrecto'});
  check('sesión SDK diferente al contexto no escribe',()=>{assert.equal(result.contextoObsoleto,true);assert.equal(writes.length,0);});
  sessionUser='owner-a';pending=api.guardarAhora({nombre:'Guardado válido'});await app.act(async()=>{});
@@ -86,8 +90,17 @@ function deferred(){let resolve;const promise=new Promise(r=>resolve=r);return {
  check('cierre de sesión invalida guardado pendiente',()=>{assert.equal(result.contextoObsoleto,true);assert.notEqual(api.perfil.nombre,'Respuesta posterior al cierre');});
  await render(ctx('owner-final','tenant-final'));sessionUser='owner-final';
  await resolveRead(8,{data:{nombre:'Perfil final',rol:'dueno'},error:null});
+ const callbackVigente=api.guardarAhora;
+ await render(ctx('owner-final','tenant-final'));
+ sessionError={message:'Error controlado tras render'};
+ result=await callbackVigente({});sessionError=null;
+ check('render de la misma cuenta mantiene callback vigente',()=>{assert.equal(result.contextoObsoleto,undefined);assert.equal(result.error.message,'Error controlado tras render');assert.equal(writes.length,4);});
+ sessionPause=deferred();pending=api.guardarAhora({nombre:'Pendiente al desmontar'});await app.act(async()=>{});
  const callbackDesmontado=api.guardarAhora;
  await app.act(async()=>root.unmount());
+ sessionPause.resolve({data:{session:{user:{id:'owner-final'}}},error:null});sessionPause=null;
+ result=await pending;
+ check('desmontar durante getSession impide iniciar RPC',()=>{assert.equal(result.contextoObsoleto,true);assert.equal(writes.length,4);});
  result=await callbackDesmontado({});
  check('callback después de desmontar queda invalidado',()=>{assert.equal(result.contextoObsoleto,true);assert.equal(writes.length,4);});dom.window.close();
  completo=true;clearTimeout(watchdog);

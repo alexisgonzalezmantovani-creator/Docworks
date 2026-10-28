@@ -7415,6 +7415,10 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
   var rolActual = ctx && ctx.usuario ? ctx.usuario.rol_base : null;
   var claveContexto = [inmobId,usuarioId,rolActual].join(":");
   var perfilCargado = useRef(false);
+  // Distinguir cada entrada: A → B → A no reactiva callbacks del primer A.
+  var entradaContexto = useMemo(function(){return {};},[claveContexto]);
+  var entradaActualRef = useRef(entradaContexto);
+  entradaActualRef.current = entradaContexto;
   // La respuesta de una sesión anterior jamás debe sustituir el perfil actual.
   var contextoActualRef = useRef(claveContexto);
   contextoActualRef.current = claveContexto;
@@ -7448,7 +7452,7 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
   }
   function guardarAhora(p){
     var numeroSolicitud=solicitudPerfilRef.current;
-    function vigente(){return perfilMontadoRef.current&&contextoActualRef.current===claveContexto&&solicitudPerfilRef.current===numeroSolicitud;}
+    function vigente(){return perfilMontadoRef.current&&entradaActualRef.current===entradaContexto&&contextoActualRef.current===claveContexto&&solicitudPerfilRef.current===numeroSolicitud;}
     function obsoleto(){return {contextoObsoleto:true,error:{message:"La cuenta cambió. Volvé a abrir el modelo antes de guardarlo."}};}
     if(!vigente())return Promise.resolve(obsoleto());
     if(!inmobId||!usuarioId)return Promise.resolve({error:{message:"Sin usuario o inmobiliaria activa."}});
