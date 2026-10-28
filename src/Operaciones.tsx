@@ -2262,7 +2262,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
                       <button className="btn btn-secondary btn-sm" onClick={function(){sa.setLimites(detalleId,limiteCustom).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));});}}>Guardar límite</button>
                       <button className="btn btn-ghost btn-sm" onClick={function(){sa.setLimites(detalleId,null);setLimiteCustom("");}}>Quitar override</button>
                     </div>
-                    <div style={{marginTop:12}}><Field label="Nota interna · solo Super Admin"><textarea className="inp" rows="3" value={notaInmob} onChange={function(e){setNotaInmob(e.target.value);}} placeholder="Información privada de seguimiento…"/></Field><div style={{display:"flex",justifyContent:"flex-end",marginTop:6}}><button className="btn btn-secondary btn-sm" onClick={function(){sa.guardarNotaInmobiliaria(detalleId,notaInmob).then(function(res){if(!res.error)dwNotify("success","Nota interna guardada.");});}}>Guardar nota</button></div></div>
+                    <div style={{marginTop:12}}><Field label="Nota interna · solo Super Admin"><textarea className="inp" rows={3} value={notaInmob} onChange={function(e){setNotaInmob(e.target.value);}} placeholder="Información privada de seguimiento…"/></Field><div style={{display:"flex",justifyContent:"flex-end",marginTop:6}}><button className="btn btn-secondary btn-sm" onClick={function(){sa.guardarNotaInmobiliaria(detalleId,notaInmob).then(function(res){if(!res.error)dwNotify("success","Nota interna guardada.");});}}>Guardar nota</button></div></div>
                   </SASection>
                   <SASection title="Resumen de actividad">
                     <div className="sa-kv">
@@ -2381,7 +2381,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
           <div className="grid2"><Field label="Monto"><input className="inp" type="number" value={pagoForm.monto} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{monto:e.target.value});});}}/></Field><Field label="Moneda"><select className="inp" value={pagoForm.moneda} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{moneda:e.target.value});});}}><option>ARS</option><option>USD</option></select></Field></div>
           <div className="grid2"><Field label="Método"><select className="inp" value={pagoForm.metodo} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{metodo:e.target.value});});}}>{metodosPago.map(function(m){return <option key={m}>{m}</option>;})}</select></Field><Field label="Fecha"><input className="inp" type="date" value={pagoForm.fecha} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{fecha:e.target.value});});}}/></Field></div>
           <div className="grid2"><Field label="Período desde"><input className="inp" type="date" value={pagoForm.periodo_desde} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{periodo_desde:e.target.value});});}}/></Field><Field label="Período hasta"><input className="inp" type="date" value={pagoForm.periodo_hasta} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{periodo_hasta:e.target.value});});}}/></Field></div>
-          <Field label="Nota"><textarea className="inp" rows="3" value={pagoForm.nota} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{nota:e.target.value});});}}/></Field>
+          <Field label="Nota"><textarea className="inp" rows={3} value={pagoForm.nota} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{nota:e.target.value});});}}/></Field>
           <div style={{display:"flex",justifyContent:"flex-end",gap:8}}><button className="btn btn-ghost" onClick={function(){setShowPagoManual(false);}}>Cancelar</button><button className="btn btn-primary" onClick={function(){sa.registrarPago({p_inmobiliaria_id:detalleId,p_monto:parseFloat(pagoForm.monto),p_moneda:pagoForm.moneda,p_metodo:pagoForm.metodo,p_fecha:pagoForm.fecha,p_periodo_desde:pagoForm.periodo_desde||null,p_periodo_hasta:pagoForm.periodo_hasta||null,p_nota:pagoForm.nota||null}).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));else{setShowPagoManual(false);dwNotify("success","Pago manual registrado.");}});}}>Registrar pago</button></div>
         </div>
       </Modal>
@@ -3433,7 +3433,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
                   {bloquesError&&tipoDocSel==="reserva"&&<div style={{marginBottom:10,padding:"8px 10px",borderRadius:8,background:"rgba(248,113,113,.08)",border:"1px solid rgba(248,113,113,.25)",color:"var(--red)",fontSize:12}}>{bloquesError} {onRetryBloques&&<button type="button" onClick={onRetryBloques} style={{marginLeft:8,border:"1px solid currentColor",background:"transparent",color:"inherit",borderRadius:6,padding:"3px 7px",cursor:"pointer",fontSize:12}}>Reintentar</button>}</div>}
                   {tipoDocSel==="reserva"&&bloquesLoading&&bloquesReserva.length===0&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:8}}>Cargando tus cláusulas de Reserva… mientras tanto se muestra la versión de fábrica en solo lectura.</div>}
                   {tipoDocSel==="reserva"&&!bloquesLoading&&bloquesReserva.length===0&&<div style={{fontSize:12,color:"var(--amber)",marginBottom:8}}>No hay cláusulas de Reserva activas guardadas en Supabase. Se muestra la versión de fábrica solo como vista previa; la API actual no permite reactivar cláusulas inactivas. Aplicá la migración SQL incluida para habilitarlo.</div>}
-                  {tipoDocSel==="reserva" ? (<ReservaBloquesPanel bloques={Array.isArray(bloquesReserva)&&bloquesReserva.length?bloquesReserva:DEFAULT_BLOQUES_RESERVA} onUpdate={onUpdateBloqueReserva} onMove={onMoveBloqueReserva} clausulasLib={Array.isArray(clausulas)?clausulas:[]} operaciones={Array.isArray(operaciones)?operaciones:[]} puedeEditar={puedeEditarPlantillas&&!defaultsLocked&&Array.isArray(bloquesReserva)&&bloquesReserva.length>0} perfil={perfil} puedeVerHistorial={puedeEditarPlantillas}/> ) : <CuerpoPlantillaPanel perfil={perfil} tipo={tipoDocSel} puedeEditar={puedeEditarPlantillas&&!defaultsLocked} puedeVerHistorial={puedeEditarPlantillas} usuarioActual={{id:currentUserId,nombre:(equipo||[]).find(function(m){return m&&m.id===currentUserId;})?.nombre||currentUserId||"Usuario actual"}} onChange={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} />}
+                  {<CuerpoPlantillaPanel perfil={perfil} tipo={tipoDocSel} bloquesReserva={bloquesReserva} puedeEditar={puedeEditarPlantillas&&!defaultsLocked} puedeVerHistorial={puedeEditarPlantillas} usuarioActual={{id:currentUserId,nombre:(equipo||[]).find(function(m){return m&&m.id===currentUserId;})?.nombre||currentUserId||"Usuario actual"}} onChange={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} />}
                 </div>}
               </div>
               {puedeEditarPlantillas&&<div style={{display:"flex",justifyContent:"flex-end",gap:7,marginTop:10}}>{defaultsLocked?<button onClick={desbloquearPlantilla} style={{height:32,padding:"0 12px",borderRadius:8,border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",cursor:"pointer",fontSize:12}}>Desbloquear para modificar</button>:<button onClick={finalizarPlantilla} disabled={!idsPlantilla.length} style={{height:32,padding:"0 12px",borderRadius:8,border:"1px solid rgba(74,222,128,.22)",background:idsPlantilla.length?"rgba(74,222,128,.08)":"rgba(255,255,255,.02)",color:idsPlantilla.length?"var(--green)":"var(--dim)",cursor:idsPlantilla.length?"pointer":"not-allowed",fontSize:12,fontWeight:650}}>🔒 Fijar modelo</button>}</div>}
@@ -3868,7 +3868,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
       var ultN=op.actualizado_en||op.updated_at||op.created_at;
       var dirN=op.inmueble_direccion||"";
       return(
-        <div key={op.id} className="op-card op-card-premium op-doc-card fade-up" style={Object.assign({position:"relative"},removiendo?{opacity:0,transform:"translateX(24px) scale(0.97)",pointerEvents:"none",transition:"opacity .22s ease,transform .22s ease"}:{})}>
+        <div key={op.id} className="op-card op-card-premium op-doc-card fade-up" style={Object.assign({position:"relative" as const},removiendo?{opacity:0,transform:"translateX(24px) scale(0.97)",pointerEvents:"none" as const,transition:"opacity .22s ease,transform .22s ease"}:{})}>
           <div className="op-card-inner" style={{display:"flex",gap:15,alignItems:"stretch"}}>
             <div style={{flex:1,minWidth:0,paddingLeft:2}}>
               <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginBottom:8}}>
@@ -3912,7 +3912,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
     function haceFecha(v){if(!v)return "Sin actividad";var d=new Date(v),ms=Math.max(0,Date.now()-d.getTime()),min=Math.floor(ms/60000),hor=Math.floor(min/60),dias=Math.floor(hor/24);if(min<1)return "Ahora";if(min<60)return "Hace "+min+" min";if(hor<24)return "Hace "+hor+" h";if(dias<30)return "Hace "+dias+" día"+(dias===1?"":"s");return d.toLocaleDateString("es-AR");}
     var direccion=op.inmueble_direccion||"";
     return(
-      <div key={op.id} className="op-card op-card-premium fade-up" style={Object.assign({position:"relative",marginTop:0},removiendo?{opacity:0,transform:"translateX(24px) scale(0.97)",pointerEvents:"none",transition:"opacity .22s ease,transform .22s ease"}:{})}>
+      <div key={op.id} className="op-card op-card-premium fade-up" style={Object.assign({position:"relative" as const,marginTop:0},removiendo?{opacity:0,transform:"translateX(24px) scale(0.97)",pointerEvents:"none" as const,transition:"opacity .22s ease,transform .22s ease"}:{})}>
         <div className={"op-state-rail "+estadoClase}/><div className="op-card-inner" style={{display:"flex",gap:15,alignItems:"stretch"}}>
           <div style={{flex:1,minWidth:0,paddingLeft:2}}>
             <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginBottom:8}}>
@@ -3974,7 +3974,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
         </div>
         <select className="inp filter-tipo" style={{width:"auto"}} value={filtroTipo} onChange={function(e){setFiltroTipo(e.target.value);}}>
           <option value="todos">Todos los tipos</option>
-          {Object.entries(TIPOS).map(function(e){return <option key={e[0]} value={e[0]}>{e[1]}</option>;})}
+          {Object.entries(TIPOS as Record<string,string>).map(function(e){return <option key={e[0]} value={e[0]}>{e[1]}</option>;})}
         </select>
         {(function(){
           var nFiltros=Object.values(filtros).filter(function(v){return v!==""&&v!=="todos";}).length+(filtroTipo&&filtroTipo!=="todos"?1:0);
@@ -3986,11 +3986,11 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
         </div>
       </div>
       {filtrosAbiertos&&<div className="op-filter-panel">
-        <div className="op-filter-field op-filter-tipo-mobile"><label>Tipo de operación</label><select className="inp" value={filtroTipo} onChange={function(e){setFiltroTipo(e.target.value);}}><option value="todos">Todos los tipos</option>{Object.entries(TIPOS).map(function(e){return <option key={e[0]} value={e[0]}>{e[1]}</option>;})}</select></div>
+        <div className="op-filter-field op-filter-tipo-mobile"><label>Tipo de operación</label><select className="inp" value={filtroTipo} onChange={function(e){setFiltroTipo(e.target.value);}}><option value="todos">Todos los tipos</option>{Object.entries(TIPOS as Record<string,string>).map(function(e){return <option key={e[0]} value={e[0]}>{e[1]}</option>;})}</select></div>
         <div className="op-filter-field"><label>Desde</label><input className="inp" type="date" value={filtros.desde} onChange={function(e){setFiltros(Object.assign({},filtros,{desde:e.target.value}));}}/></div>
         <div className="op-filter-field"><label>Hasta</label><input className="inp" type="date" value={filtros.hasta} onChange={function(e){setFiltros(Object.assign({},filtros,{hasta:e.target.value}));}}/></div>
-        <div className="op-filter-field"><label>Agente a cargo</label><select className="inp" value={filtros.agente} onChange={function(e){setFiltros(Object.assign({},filtros,{agente:e.target.value}));}}><option value="todos">Todos</option>{Array.from(new Map(operaciones.filter(function(o){return o.broker_id;}).map(function(o){return [String(o.broker_id),o.broker_nombre||o.broker||o.broker_id];})).entries()).map(function(e){return <option key={e[0]} value={e[0]}>{e[1]}</option>;})}</select></div>
-        <div className="op-filter-field"><label>Sucursal</label><select className="inp" value={filtros.sucursal} onChange={function(e){setFiltros(Object.assign({},filtros,{sucursal:e.target.value}));}}><option value="todos">Todas</option>{Array.from(new Set(operaciones.map(function(o){return o.sucursal||o.sucursal_nombre;}).filter(Boolean))).map(function(v){return <option key={v} value={v}>{v}</option>;})}</select></div>
+        <div className="op-filter-field"><label>Agente a cargo</label><select className="inp" value={filtros.agente} onChange={function(e){setFiltros(Object.assign({},filtros,{agente:e.target.value}));}}><option value="todos">Todos</option>{Array.from(new Map<string,string>(operaciones.filter(function(o){return o.broker_id;}).map(function(o){return [String(o.broker_id),o.broker_nombre||o.broker||o.broker_id];})).entries()).map(function(e){return <option key={e[0]} value={e[0]}>{e[1]}</option>;})}</select></div>
+        <div className="op-filter-field"><label>Sucursal</label><select className="inp" value={filtros.sucursal} onChange={function(e){setFiltros(Object.assign({},filtros,{sucursal:e.target.value}));}}><option value="todos">Todas</option>{Array.from(new Set<string>(operaciones.map(function(o){return o.sucursal||o.sucursal_nombre;}).filter(Boolean))).map(function(v){return <option key={v} value={v}>{v}</option>;})}</select></div>
         <div className="op-filter-field"><label>Monto mínimo</label><input className="inp" type="number" min="0" placeholder="Sin mínimo" value={filtros.montoMin} onChange={function(e){setFiltros(Object.assign({},filtros,{montoMin:e.target.value}));}}/></div>
         <div className="op-filter-field"><label>Monto máximo</label><input className="inp" type="number" min="0" placeholder="Sin máximo" value={filtros.montoMax} onChange={function(e){setFiltros(Object.assign({},filtros,{montoMax:e.target.value}));}}/></div>
         <div style={{gridColumn:"1/-1",display:"flex",justifyContent:"flex-end"}}><Btn v="ghost" s="sm" onClick={function(){setFiltros({desde:"",hasta:"",agente:"todos",montoMin:"",montoMax:"",sucursal:"todos"});setFiltroTipo("todos");}}>Limpiar filtros</Btn></div>
@@ -4695,9 +4695,11 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       b.push({sep:true});
       b.push({t:"PRESTA CONFORMIDAD",bold:true,label:true});
       doc.conformidad.items.forEach(function(t,i){ b.push({t:(i+1)+". "+t,justify:true}); });
-      b.push({blank:true});
-      b.push({t:(doc.conformidad.rol||"VENDEDOR"),bold:true,center:true});
-      b.push({t:(doc.conformidad.firmante||"")+(doc.conformidad.dni?" — "+doc.conformidad.dni:""),bold:true,center:true});
+      (doc.conformidad.firmantes&&doc.conformidad.firmantes.length?doc.conformidad.firmantes:[{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}]).forEach(function(firmante){
+        b.push({blank:true});
+        b.push({t:(doc.conformidad.rol||"VENDEDOR"),bold:true,center:true});
+        b.push({t:(firmante.nombre||"")+(firmante.dni?" — "+firmante.dni:""),bold:true,center:true});
+      });
     }
     return b;
   }

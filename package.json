@@ -1,12 +1,17 @@
 {
   "name": "docworks",
   "private": true,
-  "version": "2.32.0",
+  "version": "6.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node src/verificar-modulos.cjs && node src/check-integracion.cjs && node tests/documentos.cjs && node tests/editores.cjs && node tests/sesiones-perfil.cjs",
+    "check": "npm run typecheck && npm test && npm run build",
+    "test:browser": "node tests/navegador.cjs",
+    "test:webkit": "node tests/navegador.cjs --webkit"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -16,6 +21,9 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "esbuild": "0.21.5",
+    "jsdom": "26.1.0",
+    "playwright": "1.62.1",
     "typescript": "^5.5.3",
     "vite": "^5.4.0"
   }

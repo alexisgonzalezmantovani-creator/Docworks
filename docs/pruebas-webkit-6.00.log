@@ -1,0 +1,7 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> docworks@6.0.0 test:webkit
+> node tests/navegador.cjs --webkit
+
+Skipping host requirements validation logic because `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS` env variable is set.
+APROBADAS 123 verificaciones webkit en iPhone/iPad/escritorio emulados. Capturas: /tmp/docworks-browser-sDyIcX

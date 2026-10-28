@@ -462,7 +462,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "5.98";
+var DOCWORKS_VERSION = "6.00";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -983,7 +983,7 @@ function crearSnapshotPlantillaOperacion(op,perfil,clausulas,bloquesReserva){
   var obligatoriasIds=Array.isArray(cfg.obligatorias_ids)?cfg.obligatorias_ids.slice():[];
   var idsSnapshot=ids.concat(obligatoriasIds).filter(function(id,i,a){return a.indexOf(id)===i;});
   var intro=(perfil&&perfil.encabezados_custom&&perfil.encabezados_custom[tipo])||DEFAULT_ENCABEZADOS[tipo]||"";
-  var body=(tipo==="reserva"?(Array.isArray(bloquesReserva)&&bloquesReserva.length?bloquesReserva:DEFAULT_BLOQUES_RESERVA):(Array.isArray(cfg.body_blocks)&&cfg.body_blocks.length?cfg.body_blocks:getDefaultBodyBlocks(tipo)))||[];
+  var body=getBodyBlocksConfig(perfil,tipo,bloquesReserva);
   return {tipo:tipo,version:obtenerVersionPlantilla(perfil,tipo),capturado_en:new Date().toISOString(),introduccion:intro,clausulas_ids:ids,obligatorias_ids:obligatoriasIds,clausulas:(clausulas||[]).filter(function(c){return idsSnapshot.indexOf(c.id)!==-1;}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria,orden:c.orden,aplica_a:c.aplica_a};}),body_blocks:JSON.parse(JSON.stringify(body)),mostrar_introduccion:!(perfil&&perfil.mostrar_introduccion===false)};
 }
 function sellarVersionPlantillaOperacion(op,perfil,forzar,clausulas,bloquesReserva){
@@ -1054,6 +1054,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
     setTokensUsados(tokensDeTextoDocWorks(value||""));
   }, [tipo]); // solo al montar / cambiar tipo; no en cada tecla
   function insertarToken(k){
+    if(tokensDeTextoDocWorks(textoNarrativaPrecioDocWorks(editorRef.current)).indexOf(k)!==-1)return;
     var root=editorRef.current; if(!root) return;
     root.focus();
     var sel=window.getSelection&&window.getSelection();
@@ -1199,7 +1200,7 @@ function textoNarrativaPrecioDocWorks(root){
   for(var i=0;i<root.childNodes.length;i++) recorrer(root.childNodes[i]);
   return out;
 }
-function PrecioNarrativaEditor({bloque, onSave, onCancel}){
+function PrecioNarrativaEditor({bloque, onSave, onCancel, onSaved=onCancel}){
   const [texto,setTexto]=useState(bloque&&bloque.contenido||"");
   const [titulo,setTitulo]=useState(bloque&&bloque.titulo||"PRECIO");
   const [status,setStatus]=useState(null);
@@ -1212,6 +1213,7 @@ function PrecioNarrativaEditor({bloque, onSave, onCancel}){
     if(editorRef.current) setTexto(textoNarrativaPrecioDocWorks(editorRef.current));
   }
   function insertarToken(k){
+    if(tokensDeTextoDocWorks(textoNarrativaPrecioDocWorks(editorRef.current)).indexOf(k)!==-1)return;
     var root=editorRef.current;
     if(!root) return;
     root.focus();
@@ -1240,7 +1242,7 @@ function PrecioNarrativaEditor({bloque, onSave, onCancel}){
     try{
       Promise.resolve(onSave({titulo:titulo,contenido:contenido})).then(function(res){
         if(res&&res.error){setStatus("error");return;}
-        setStatus("saved"); setTimeout(function(){onCancel();},350);
+        setStatus("saved"); setTimeout(function(){onSaved();},350);
       }).catch(function(){setStatus("error");});
     }catch(e){setStatus("error");}
   }
@@ -1310,7 +1312,7 @@ function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operacion
   const [draft,setDraft]=useState({titulo:"",contenido:""});
   var bloquesSeguros=Array.isArray(bloques)?bloques:[];
   var ordenados=bloquesSeguros.filter(function(b){return b&&typeof b==="object";}).map(function(b){
-    var base=Object.assign({id:"",titulo:"",contenido:"",orden:0,sinTitulo:false,obligatoria:false,condicion:""},b);
+    var base=normalizarBodyBlock(b,0);
     var def=(typeof DEFAULT_BLOQUES_RESERVA!=="undefined"&&Array.isArray(DEFAULT_BLOQUES_RESERVA))?DEFAULT_BLOQUES_RESERVA.find(function(x){return x.id===base.id;}):null;
     if(!String(base.titulo||"").trim()&&def&&String(def.titulo||"").trim()) base.titulo=def.titulo;
     return base;
@@ -1324,7 +1326,7 @@ function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operacion
   var tokensEjemploReserva=docEjemploReserva?getTokensSinReemplazar(docEjemploReserva):[];
 
   function abrirEditor(b){
-    if(!b) return;
+    if(!b||!puedeEditar||editId) return;
     var esPrecio = b.id === "reserva.precio";
     setPrecioEditando(esPrecio);
     setEditId(b.id);
@@ -1368,7 +1370,7 @@ function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operacion
     });
   }
   function guardarEdicion(){
-    if(editId===null||editId===undefined||editId==="") return;
+    if(!puedeEditar||editId===null||editId===undefined||editId==="") return;
     try{
       var original=ordenados.find(function(x){return x.id===editId;});
       var requeridos=tokensDeTextoDocWorks((original&&original.contenido)||"");
@@ -2284,6 +2286,13 @@ function docToPlainText(doc) {
   if (doc.clausulas && doc.clausulas.length > 0) {
     doc.clausulas.forEach(function(c){ lines.push(c.num + (c.titulo ? ". " + c.titulo.toUpperCase() : ".")); if (c.texto) lines.push("  " + c.texto); lines.push(""); });
   }
+  contactosDocumento(doc).forEach(function(line){lines.push(line);});
+  (doc.firmas||[]).forEach(function(f){lines.push("Firma: "+(f.rol||"")+" — "+(f.nombre||"")+(f.dni?" — "+f.dni:""));});
+  if(doc.conformidad){
+    lines.push("PRESTA CONFORMIDAD");
+    (doc.conformidad.items||[]).forEach(function(t,i){lines.push((i+1)+". "+t);});
+    (doc.conformidad.firmantes&&doc.conformidad.firmantes.length?doc.conformidad.firmantes:[{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}]).forEach(function(f){lines.push("Firma: "+(doc.conformidad.rol||"VENDEDOR")+" — "+(f.nombre||"")+(f.dni?" — "+f.dni:""));});
+  }
   return lines.join("\n");
 }
 
@@ -2767,16 +2776,23 @@ function asegurarFirmasDocumento(doc, op, perfil) {
     return true;
   });
   var tieneInmob=indiceInmob>=0;
+  firmas=firmas.map(function(f){
+    return f&&String(f.rol||"").toUpperCase().indexOf("INMOBILIARIA")>=0?Object.assign({},f,{usarPerfil:true}):f;
+  });
   if (!tieneInmob) firmas.push({rol:"INMOBILIARIA INTERVINIENTE", nombre:"", dni:"", usarPerfil:true});
 
   var garanteNombre = op && op.alquiler_garantia_titular;
   var garanteDni = op && op.alquiler_garantia_dni;
   var tieneGarante = firmas.some(function(f){ return String(f&&f.rol||"").toUpperCase().indexOf("GARANTE")>=0; });
-  if (garanteNombre && !tieneGarante) firmas.push({rol:"GARANTE", nombre:garanteNombre, dni:garanteDni||""});
+  if (op&&op.tipo==="alquiler"&&garanteNombre && !tieneGarante) firmas.push({rol:"GARANTE", nombre:garanteNombre, dni:garanteDni||""});
 
   // En la Reserva, el Vendedor firma específicamente en PRESTA CONFORMIDAD;
   // no se duplica esa firma en el bloque principal.
   doc.firmas = firmas;
+  if(doc.conformidad&&op){
+    var prefConformidad=op.tipo==="reserva_alquiler"?"locador":"vendedor";
+    doc.conformidad.firmantes=personasDe(op,prefConformidad).map(function(p){return {nombre:p.nombre,dni:p.dni||"",rol:doc.conformidad.rol||rolParte(op.tipo,0)};});
+  }
   return doc;
 }
 
@@ -3265,7 +3281,7 @@ function normalizarBodyBlock(b, idx) {
   var normalizado = migrarBloqueLegacy(x);
   // Los modelos históricos no guardaban `obligatoria`: por defecto son obligatorias,
   // excepto las cláusulas condicionales, que dependen de la operación.
-  if (b && Object.prototype.hasOwnProperty.call(b, "obligatoria")) normalizado.obligatoria = b.obligatoria === true;
+  if (b && typeof b.obligatoria === "boolean") normalizado.obligatoria = b.obligatoria;
   else normalizado.obligatoria = !normalizado.condicion;
   return normalizado;
 }
@@ -3441,20 +3457,19 @@ function getDefaultBodyBlocks(tipo) {
   var arr = BODY_TEMPLATE_PRESETS[tipo] || [];
   return completarClausulasBaseModelo(arr,tipo);
 }
-function getBodyBlocksConfig(perfil,tipo) {
+function getBodyBlocksConfig(perfil,tipo,bloquesReserva=undefined) {
   var cfg = perfil && perfil.plantillas && perfil.plantillas[tipo];
   var arr = cfg && Array.isArray(cfg.body_blocks) ? cfg.body_blocks : null;
-  return arr && arr.length ? completarClausulasBaseModelo(arr,tipo) : getDefaultBodyBlocks(tipo);
+  return arr && arr.length ? completarClausulasBaseModelo(arr,tipo) : tipo==="reserva"&&Array.isArray(bloquesReserva)&&bloquesReserva.length ? completarClausulasBaseModelo(bloquesReserva,tipo) : getDefaultBodyBlocks(tipo);
 }
 function contarBloquesCuerpo(perfil,tipo,bloquesReserva){
-  if(tipo==="reserva") return (Array.isArray(bloquesReserva)&&bloquesReserva.length)?bloquesReserva.length:(typeof DEFAULT_BLOQUES_RESERVA!=="undefined"?DEFAULT_BLOQUES_RESERVA.length:0);
-  return getBodyBlocksConfig(perfil,tipo).length;
+  return getBodyBlocksConfig(perfil,tipo,bloquesReserva).length;
 }
 function getBodyBlocksForDocument(perfil,tipo,bloquesReserva) {
-  if (tipo === "reserva" && Array.isArray(bloquesReserva) && bloquesReserva.length) return completarClausulasBaseModelo(bloquesReserva.map(migrarBloqueLegacy),tipo);
-  var cfg = perfil && perfil.plantillas && perfil.plantillas[tipo];
-  var arr = cfg && Array.isArray(cfg.body_blocks) ? cfg.body_blocks : null;
-  return arr && arr.length ? completarClausulasBaseModelo(arr,tipo) : null;
+  var cfg=perfil&&perfil.plantillas&&perfil.plantillas[tipo];
+  if(cfg&&Array.isArray(cfg.body_blocks)&&cfg.body_blocks.length)return completarClausulasBaseModelo(cfg.body_blocks,tipo);
+  if(tipo==="reserva"&&Array.isArray(bloquesReserva)&&bloquesReserva.length)return completarClausulasBaseModelo(bloquesReserva,tipo);
+  return null;
 }
 function evalBodyCondition(condicion,op){
   if(!condicion) return true;
@@ -3883,7 +3898,7 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   var snap=op&&op.plantilla_snapshot&&op.plantilla_snapshot.tipo===(tipo||op.tipo)?op.plantilla_snapshot:null;
   if(snap){
     var actuales=Array.isArray(clausulasLib)?clausulasLib.slice():[];
-    (snap.clausulas||[]).forEach(function(sc){var i=actuales.findIndex(function(c){return c&&c.id===sc.id;});if(i>=0)actuales[i]=Object.assign({},actuales[i],sc);else actuales.push(sc);});
+    (snap.clausulas||[]).forEach(function(sc){var guardada=Object.assign({},sc,{obligatoria:sc.obligatoria===true||(snap.obligatorias_ids||[]).indexOf(sc.id)!==-1});var i=actuales.findIndex(function(c){return c&&c.id===sc.id;});if(i>=0)actuales[i]=Object.assign({},actuales[i],guardada);else actuales.push(guardada);});
     clausulasLib=actuales;
     if(Array.isArray(snap.body_blocks)&&snap.body_blocks.length)bloquesPlantilla=snap.body_blocks;
   }
@@ -4142,6 +4157,8 @@ function pxBase(text, opts) {
   opts = opts || {};
   var st = opts._docxStyle || DOCX_STYLE_DEFAULT;
   var pPr = "";
+  if (opts.keepNext) pPr += "<w:keepNext/>";
+  if (opts.keepLines) pPr += "<w:keepLines/>";
   if (opts.spacing) pPr += '<w:spacing w:before="'+(opts.spacing.before||0)+'" w:after="'+(opts.spacing.after||100)+'" w:line="'+docxTwipsFromPt(DOC_EXPORT_LAYOUT.lineHeight)+'" w:lineRule="exact"/>';
   if (opts.center) pPr += '<w:jc w:val="center"/>';
   if (opts.justify) pPr += '<w:jc w:val="both"/>';
@@ -4167,6 +4184,8 @@ function pxRunsBase(runsArr, opts) {
   opts = opts || {};
   var st = opts._docxStyle || DOCX_STYLE_DEFAULT;
   var pPr = "";
+  if (opts.keepNext) pPr += "<w:keepNext/>";
+  if (opts.keepLines) pPr += "<w:keepLines/>";
   if (opts.spacing) pPr += '<w:spacing w:before="'+(opts.spacing.before||0)+'" w:after="'+(opts.spacing.after||100)+'" w:line="'+docxTwipsFromPt(DOC_EXPORT_LAYOUT.lineHeight)+'" w:lineRule="exact"/>';
   if (opts.center) pPr += '<w:jc w:val="center"/>';
   if (opts.justify) pPr += '<w:jc w:val="both"/>';
@@ -4261,7 +4280,7 @@ function SplashScreen({onDone}){
   return(
     <div style={{position:"fixed",inset:0,zIndex:99999,background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",opacity:fade?0:1,transition:"opacity 0.5s ease",overflow:"hidden"}}>
       {!videoFailed ? <>
-        <video ref={videoRef} className="dw-splash-video" controls={false} disablePictureInPicture={true} disableRemotePlayback={true} src="/Loading.MP4" autoPlay={true} muted={true} defaultMuted={true} playsInline={true} webkit-playsinline="true" preload="auto" onLoadedMetadata={function(){var v=videoRef.current;if(v){v.muted=true;v.defaultMuted=true;v.volume=0;try{var r=v.play();if(r&&typeof r.catch==="function")r.catch(function(){});}catch(e){}}}} onCanPlay={function(){var v=videoRef.current;if(v&&v.paused){v.muted=true;v.volume=0;try{var r=v.play();if(r&&typeof r.catch==="function")r.catch(function(){});}catch(e){}}}} onPlaying={function(){setVideoFailed(false);}} onEnded={finishVideo} onError={function(){setVideoFailed(true);}} style={{width:"min(72vmin,544px)",height:"min(72vmin,544px)",maxWidth:"88vw",maxHeight:"62vh",objectFit:"contain",borderRadius:18,filter:"drop-shadow(0 14px 44px rgba(0,0,0,.28))"}} />
+        <video ref={videoRef} className="dw-splash-video" controls={false} disablePictureInPicture={true} disableRemotePlayback={true} src="/Loading.MP4" autoPlay={true} muted={true} playsInline={true} webkit-playsinline="true" preload="auto" onLoadedMetadata={function(){var v=videoRef.current;if(v){v.muted=true;v.defaultMuted=true;v.volume=0;try{var r=v.play();if(r&&typeof r.catch==="function")r.catch(function(){});}catch(e){}}}} onCanPlay={function(){var v=videoRef.current;if(v&&v.paused){v.muted=true;v.volume=0;try{var r=v.play();if(r&&typeof r.catch==="function")r.catch(function(){});}catch(e){}}}} onPlaying={function(){setVideoFailed(false);}} onEnded={finishVideo} onError={function(){setVideoFailed(true);}} style={{width:"min(72vmin,544px)",height:"min(72vmin,544px)",maxWidth:"88vw",maxHeight:"62vh",objectFit:"contain",borderRadius:18,filter:"drop-shadow(0 14px 44px rgba(0,0,0,.28))"}} />
         <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:600,color:"#e8edf6",letterSpacing:"0.04em",marginTop:22}}>Cargando<span style={{color:"#d4a853"}}>…</span></div>
         
       </> : <div style={{animation:"splashPop 0.7s cubic-bezier(0.175,0.885,0.32,1.275) both",display:"flex",flexDirection:"column",alignItems:"center",gap:0}}>
@@ -4356,6 +4375,10 @@ function Modal({open,onClose,title,children=undefined,wide=undefined,formTipo=un
 function requestDwConfirm(message,onConfirm,confirmLabel=undefined,secondary=undefined){
   try{ window.dispatchEvent(new CustomEvent("dw:confirm",{detail:{message:message,onConfirm:onConfirm,confirmLabel:confirmLabel||"Confirmar",secondaryLabel:secondary&&secondary.label,onSecondary:secondary&&secondary.onClick}})); }
   catch(e){ dwNotify("error",typeof message==="string"?message:"Faltan datos en el documento."); }
+}
+function navegarConProteccionModelo(continuar){
+  var evento=new CustomEvent("dw:model-navigation",{cancelable:true,detail:{continuar:continuar}});
+  if(window.dispatchEvent(evento))continuar();
 }
 function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,onConfirm,onCancel,secondaryLabel=null,onSecondary=null,secondaryDisabled=false}){
   useBodyScrollLock(!!open);
@@ -5801,8 +5824,8 @@ function BotIA({onClose,operaciones,clausulas,bloquesReserva,onAddClausula}){
   const [attError,setAttError]=useState("");
   const [showOpPicker,setShowOpPicker]=useState(false);
   const [modoClausula,setModoClausula]=useState(false);
-  const bottomRef=useRef();
-  const fileRef=useRef();
+  const bottomRef=useRef<HTMLDivElement>(null);
+  const fileRef=useRef<HTMLInputElement>(null);
 
   useEffect(function(){if(bottomRef.current)bottomRef.current.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
 
@@ -6011,8 +6034,8 @@ function BotIA({onClose,operaciones,clausulas,bloquesReserva,onAddClausula}){
 function VariablePicker({taRef,value,onChange,label=""}){
   const [open,setOpen]=useState(false);
   const [pos,setPos]=useState(null);
-  const wrapRef=useRef();
-  const btnRef=useRef();
+  const wrapRef=useRef<HTMLDivElement>(null);
+  const btnRef=useRef<HTMLButtonElement>(null);
 
   function place(){
     var el=btnRef.current;
@@ -6198,8 +6221,8 @@ function ClausulaIAComposer({onDraft}){
 function Dropdown({items}){
   const [open,setOpen]=useState(false);
   const [pos,setPos]=useState(null);
-  const btnRef=useRef();
-  const menuRef=useRef();
+  const btnRef=useRef<HTMLButtonElement>(null);
+  const menuRef=useRef<HTMLDivElement>(null);
   useEffect(function(){
     function handle(e){
       if(btnRef.current&&btnRef.current.contains(e.target))return;
@@ -6297,8 +6320,8 @@ const PERMS_LABELS = {
 const NIVEL_LABELS = { junior:"Junior", semisenior:"Intermedio", senior:"Senior" };
 
 
-function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previewOpen,onPreviewChange,puedeVerHistorial,usuarioActual}) {
-  const [draft,setDraft]=useState(function(){return getBodyBlocksConfig(perfil,tipo);});
+function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previewOpen,onPreviewChange,puedeVerHistorial,usuarioActual,bloquesReserva,onEditingChange}) {
+  const [draft,setDraft]=useState(function(){return getBodyBlocksConfig(perfil,tipo,bloquesReserva);});
   const contenidoEditorRef=useRef(null);
   const [editId,setEditId]=useState(null);
   const [historialSeleccionado,setHistorialSeleccionado]=useState(null);
@@ -6306,6 +6329,27 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   const [probarAbierto,setProbarAbierto]=useState(false);
   const [modoVistaClausulas,setModoVistaClausulas]=useState("simple");
   const [clausulasAbiertas,setClausulasAbiertas]=useState({});
+  useEffect(function(){if(onEditingChange)onEditingChange(!!editId);},[editId,onEditingChange]);
+  useEffect(function(){
+    if(!editId)return;
+    function advertirSalida(e){e.preventDefault();e.returnValue="";}
+    window.addEventListener("beforeunload",advertirSalida);
+    return function(){window.removeEventListener("beforeunload",advertirSalida);};
+  },[editId]);
+  useEffect(function(){
+    if(!editId&&status!=="saving")return;
+    function protegerNavegacion(e){
+      if(e.defaultPrevented)return;
+      e.preventDefault();
+      if(status==="saving"){dwNotify("info","Esperá a que termine de guardarse el modelo.");return;}
+      requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",function(){
+        setDraft(getBodyBlocksConfig(perfil,tipo,bloquesReserva));setEditId(null);
+        e.detail.continuar();
+      });
+    }
+    window.addEventListener("dw:model-navigation",protegerNavegacion);
+    return function(){window.removeEventListener("dw:model-navigation",protegerNavegacion);};
+  },[editId,status,perfil,tipo,bloquesReserva]);
   var previewVisible=typeof previewOpen==="boolean"?previewOpen:probarAbierto;
   function togglePreview(){if(typeof onPreviewChange==="function")onPreviewChange(!previewVisible);else setProbarAbierto(!previewVisible);}
   var opEjemploPlantilla=Object.assign({},SAMPLE_OP_PREVIEW,{
@@ -6321,38 +6365,52 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   var analisisPruebaPlantilla=docPruebaPlantilla?analizarDatosObligatorios(docPruebaPlantilla,tipo,opEjemploPlantilla):null;
   var textoPruebaPlantilla=docPruebaPlantilla?docToPlainText(docPruebaPlantilla):"";
   var tokensPruebaPlantilla=docPruebaPlantilla?getTokensSinReemplazar(docPruebaPlantilla):[];
-  useEffect(function(){setDraft(getBodyBlocksConfig(perfil,tipo));setEditId(null);setStatus(null);},[tipo,perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].body_blocks]);
+  useEffect(function(){setDraft(getBodyBlocksConfig(perfil,tipo,bloquesReserva));setEditId(null);setStatus(null);},[tipo]);
+  useEffect(function(){if(!editId)setDraft(getBodyBlocksConfig(perfil,tipo,bloquesReserva));},[editId,perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].body_blocks,bloquesReserva]);
   function persist(next,extraConfig=undefined){
-    if(!puedeEditar)return Promise.resolve({error:new Error("Sin permisos")});
+    if(!puedeEditar||status==="saving")return Promise.resolve({error:new Error("Sin permisos")});
     setDraft(next);setStatus("saving");
     var mapa=Object.assign({},perfil.plantillas||{});
     var configPrevio=Object.assign({},mapa[tipo]||{});
     var historial=Object.assign({},configPrevio.historial_clausulas||{});
     var usuarioNombre=(usuarioActual&&(usuarioActual.nombre||usuarioActual.email))||perfil.usuario_actual_nombre||perfil.nombre||"Usuario actual";
     var usuarioId=(usuarioActual&&usuarioActual.id)||null;
-    var previas=Array.isArray(draft)?draft:[];
+    var previas=getBodyBlocksConfig(perfil,tipo,bloquesReserva);
     function registrarVersionAnterior(anterior){
       var lista=Array.isArray(historial[anterior.id])?historial[anterior.id].slice():[];
-      lista.unshift({fecha:new Date().toISOString(),usuario:usuarioNombre,usuarioId:usuarioId,titulo:String(anterior.titulo||""),contenido:String(anterior.contenido||""),activo:anterior.activo!==false,orden:Number(anterior.orden)||previas.indexOf(anterior)+1});
+      lista.unshift({fecha:new Date().toISOString(),usuario:usuarioNombre,usuarioId:usuarioId,titulo:String(anterior.titulo||""),contenido:String(anterior.contenido||""),activo:anterior.activo!==false,orden:Number(anterior.orden)||previas.indexOf(anterior)+1,obligatoria:anterior.obligatoria,condicion:anterior.condicion,sinTitulo:anterior.sinTitulo});
       historial[anterior.id]=lista.slice(0,10);
     }
     (Array.isArray(next)?next:[]).forEach(function(b){
       var anterior=previas.find(function(x){return x&&x.id===b.id;});
       if(!anterior)return;
-      var cambio=String(anterior.titulo||"")!==String(b.titulo||"")||String(anterior.contenido||"")!==String(b.contenido||"")||(anterior.activo!==false)!==(b.activo!==false)||(Number(anterior.orden)||0)!==(Number(b.orden)||0);
+      var cambio=String(anterior.titulo||"")!==String(b.titulo||"")||String(anterior.contenido||"")!==String(b.contenido||"")||(anterior.activo!==false)!==(b.activo!==false)||(Number(anterior.orden)||0)!==(Number(b.orden)||0)||anterior.obligatoria!==b.obligatoria||anterior.condicion!==b.condicion||anterior.sinTitulo!==b.sinTitulo;
       if(cambio)registrarVersionAnterior(anterior);
     });
     previas.forEach(function(anterior){if(anterior&&!next.some(function(b){return b&&b.id===anterior.id;}))registrarVersionAnterior(anterior);});
     var actual=Object.assign({},configPrevio,{body_blocks:completarClausulasBaseModelo(next,tipo).map(function(b,i){return normalizarBodyBlock(Object.assign({},b,{orden:i+1}),i);}),historial_clausulas:historial},extraConfig||{});
     var nextPerfil=Object.assign({},perfil,{plantillas:Object.assign({},mapa,{[tipo]:actual})});
-    return Promise.resolve(onChange(nextPerfil)).then(function(res){if(res&&res.error){setStatus("error");return res;}setStatus("saved");setTimeout(function(){setStatus(null);},2500);return res;}).catch(function(err){setStatus("error");return {error:err};});
+    return Promise.resolve().then(function(){return onChange(nextPerfil);}).then(function(res){if(res&&res.error){setStatus("error");return res;}setStatus("saved");setTimeout(function(){setStatus(null);},2500);return res;}).catch(function(err){setStatus("error");return {error:err};});
   }
-  function update(id,changes){var actual=draft.find(function(b){return b.id===id;});var cambio=Object.assign({},changes||{});if(esClausulaEsencialModelo(actual)){cambio.activo=true;cambio.obligatoria=true;}persist(draft.map(function(b){return b.id===id?Object.assign({},b,cambio):b;}));}
-  function move(idx,dir){var to=dir==="up"?idx-1:idx+1;if(to<0||to>=draft.length)return;var arr=draft.slice(),x=arr[idx];arr[idx]=arr[to];arr[to]=x;persist(arr);}
-  function addBlock(){var n=draft.length+1;var b=normalizarBodyBlock({id:tipo+".custom."+Date.now(),titulo:"NUEVA CLÁUSULA",contenido:"Escribí acá la redacción de esta cláusula. Podés insertar variables automáticas desde el listado inferior."},n-1);persist(draft.concat([b]));setEditId(b.id);}
-  function removeBlock(id){var b=draft.find(function(x){return x.id===id;});if(!b)return;if(esClausulaEsencialModelo(b)){dwNotify("warning","Este apartado es esencial del modelo. Podés editar su texto, pero no eliminarlo.");return;}requestDwConfirm("¿Eliminar la cláusula “"+(b.titulo||"sin título")+"” de esta plantilla?",function(){persist(draft.filter(function(x){return x.id!==id;}));});}
-  function reset(){requestDwConfirm("¿Restaurar TODAS las cláusulas de "+(TIPOS[tipo]||tipo)+" a la versión de fábrica? Se guardará una copia del modelo actual para poder deshacer esta acción.",function(){var snapshot={fecha:new Date().toISOString(),clausulas:draft.map(function(b,i){return {id:b.id,titulo:String(b.titulo||""),contenido:String(b.contenido||""),activo:b.activo!==false,orden:Number(b.orden)||i+1};})};persist(getDefaultBodyBlocks(tipo),{restauracionAnterior:snapshot});setEditId(null);});}
-  function deshacerRestauracion(){var snap=perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior;if(!snap||!Array.isArray(snap.clausulas))return;requestDwConfirm("¿Deshacer la restauración y recuperar el modelo anterior?",function(){persist(snap.clausulas.map(function(b,i){return normalizarBodyBlock(Object.assign({},b,{orden:i+1}),i);}),{restauracionAnterior:null});setEditId(null);});}
+  function cancelarBorrador(){
+    if(status==="saving")return;
+    requestDwConfirm("¿Descartar los cambios sin guardar de esta cláusula?",function(){setDraft(getBodyBlocksConfig(perfil,tipo,bloquesReserva));setEditId(null);});
+  }
+  async function guardarClausula(){
+    if(!puedeEditar||status==="saving")return;
+    var bloque=draft.find(function(b){return b.id===editId;});
+    if(!bloque||!String(bloque.titulo||"").trim()||!String(bloque.contenido||"").trim()){
+      dwNotify("warning","Completá el título y el texto antes de guardar la cláusula.");return;
+    }
+    var res=await persist(draft);
+    if(!res||!res.error)setEditId(null);
+  }
+  function update(id,changes){if(editId||status==="saving")return;var actual=draft.find(function(b){return b.id===id;});var cambio=Object.assign({},changes||{});if(esClausulaEsencialModelo(actual)){cambio.activo=true;cambio.obligatoria=true;}persist(draft.map(function(b){return b.id===id?Object.assign({},b,cambio):b;}));}
+  function move(idx,dir){if(editId||status==="saving")return;var to=dir==="up"?idx-1:idx+1;if(to<0||to>=draft.length)return;var arr=draft.slice(),x=arr[idx];arr[idx]=arr[to];arr[to]=x;persist(arr);}
+  function addBlock(){if(!puedeEditar||editId||status==="saving")return;var n=draft.length+1;var b=normalizarBodyBlock({id:tipo+".custom."+Date.now(),titulo:"NUEVA CLÁUSULA",contenido:"Escribí acá la redacción de esta cláusula. Podés insertar variables automáticas desde el listado inferior."},n-1);if(editId)return;setDraft(draft.concat([b]));setEditId(b.id);}
+  function removeBlock(id){if(editId||status==="saving")return;var b=draft.find(function(x){return x.id===id;});if(!b)return;if(esClausulaEsencialModelo(b)){dwNotify("warning","Este apartado es esencial del modelo. Podés editar su texto, pero no eliminarlo.");return;}requestDwConfirm("¿Eliminar la cláusula “"+(b.titulo||"sin título")+"” de esta plantilla?",function(){persist(draft.filter(function(x){return x.id!==id;}));});}
+  function reset(){if(editId||status==="saving")return;requestDwConfirm("¿Restaurar TODAS las cláusulas de "+(TIPOS[tipo]||tipo)+" a la versión de fábrica? Se guardará una copia del modelo actual para poder deshacer esta acción.",function(){var snapshot={fecha:new Date().toISOString(),clausulas:draft.map(function(b,i){return Object.assign({},b,{orden:Number(b.orden)||i+1});})};persist(getDefaultBodyBlocks(tipo),{restauracionAnterior:snapshot});setEditId(null);});}
+  function deshacerRestauracion(){if(editId||status==="saving")return;var snap=perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior;if(!snap||!Array.isArray(snap.clausulas))return;requestDwConfirm("¿Deshacer la restauración y recuperar el modelo anterior?",function(){persist(snap.clausulas.map(function(b,i){return normalizarBodyBlock(Object.assign({},b,{orden:i+1}),i);}),{restauracionAnterior:null});setEditId(null);});}
   function restaurarBloque(id){
     var def=getDefaultBodyBlocks(tipo).find(function(x){return x.id===id;});
     if(!def){ dwNotify("info","Esta cláusula es propia: no tiene una versión de fábrica para restaurar."); return; }
@@ -6363,21 +6421,22 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     ["inmueble_direccion","Dirección"],["inmueble_partido","Partido / localidad"],["inmueble_provincia","Provincia"],
     ["precio_letras","Precio en letras"],["moneda_txt","Moneda"],["anticipo_letras","Anticipo en letras"],["saldo_letras","Saldo en letras"],["fecha_posesion","Fecha de posesión"],
     ["comision_porcentaje","Comisión"],["comision_vendedor","Comisión vendedor"],["comision_comprador","Comisión comprador"],["alquiler_monto_inicial","Canon inicial"],["alquiler_inicio","Inicio"],["alquiler_fin","Vencimiento"],
-    ["res_alq_monto_reserva","Reserva alquiler"],["res_alq_monto_mensual","Valor del alquiler mensual"],["res_alq_inicio_estimado","Inicio estimado"],["devolucion_motivo","Motivo devolución"],["comodato_plazo","Plazo comodato"],["comodato_uso","Destino comodato"],
-    ["escribania_clausula","Escribanía"],["exclusividad_vigencia","Vigencia"],["exclusividad_modalidad_texto","Modalidad"],["alquiler_canon_clause","Canon y actualización"],["alquiler_deposito_desc","Depósito"],["alquiler_garantia_detalle","Garantía"],["alquiler_plazo_texto","Plazo"],["devolucion_motivo_texto","Motivo devolución"],["refuerzo_trayectoria","Antecedentes"],["reserva_alquiler_reserva","Reserva alquiler"],["reserva_alquiler_canon","Valor del alquiler mensual"]
+    ["res_alq_monto_reserva","Reserva alquiler · importe numérico"],["res_alq_monto_mensual","Alquiler mensual · importe numérico"],["res_alq_inicio_estimado","Inicio estimado"],["devolucion_motivo","Motivo devolución · texto cargado"],["comodato_plazo","Plazo comodato"],["comodato_uso","Destino comodato"],
+    ["escribania_clausula","Escribanía"],["exclusividad_vigencia","Vigencia"],["exclusividad_modalidad_texto","Modalidad"],["alquiler_canon_clause","Canon y actualización"],["alquiler_deposito_desc","Depósito"],["alquiler_garantia_detalle","Garantía"],["alquiler_plazo_texto","Plazo"],["devolucion_motivo_texto","Motivo devolución · con texto de respaldo"],["refuerzo_trayectoria","Antecedentes"],["reserva_alquiler_reserva","Reserva alquiler · importe en letras"],["reserva_alquiler_canon","Alquiler mensual · importe en letras"]
   ];
   var tokens=tokensBase.filter(function(t,i,arr){return arr.findIndex(function(x){return x[0]===t[0];})===i;});
   function insertToken(token){
     if(editId==null)return;
     var actual=draft.find(function(b){return b.id===editId;});
     var texto=String(actual&&actual.contenido||"");
+    if(!puedeEditar||tokensDeTextoDocWorks(texto).indexOf(token)!==-1)return;
     var el=contenidoEditorRef.current;
     var inicio=el&&typeof el.selectionStart==="number"?el.selectionStart:texto.length;
     var fin=el&&typeof el.selectionEnd==="number"?el.selectionEnd:inicio;
     var insertar="{{"+token+"}}";
     var nuevoTexto=texto.slice(0,inicio)+insertar+texto.slice(fin);
     var arr=draft.map(function(b){return b.id===editId?Object.assign({},b,{contenido:nuevoTexto}):b;});
-    persist(arr);
+    setDraft(arr);
     setTimeout(function(){if(contenidoEditorRef.current){contenidoEditorRef.current.focus();contenidoEditorRef.current.setSelectionRange(inicio+insertar.length,inicio+insertar.length);}},0);
   }
   return <div>
@@ -6400,7 +6459,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
         <div style={{display:"flex",alignItems:modoVistaClausulas==="simple"?"center":"flex-start",gap:9,minWidth:0}}>
           <div style={{minWidth:28,height:28,borderRadius:8,background:"rgba(212,168,83,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--gold)",flexShrink:0,padding:"0 5px",boxSizing:"border-box"}}><span title={b.obligatoria&&b.activo!==false?"Cláusula "+numeroActivo:""}>{b.activo===false?"—":(b.obligatoria?numeroActivo:"—")}</span></div>
           <div style={{flex:1,minWidth:0}}>
-            {editing ? <div style={{display:"flex",flexDirection:"column",gap:7}}><input className="inp" value={b.titulo} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{titulo:e.target.value}):x;}));}}/><textarea ref={contenidoEditorRef} className="inp" style={{minHeight:120,resize:"vertical",lineHeight:1.6}} value={b.contenido} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{contenido:e.target.value}):x;}));}}/><div style={{padding:10,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2, rgba(127,127,127,.035))"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:7}}><div style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Insertar campo automático</div><span style={{fontSize:11,color:"var(--dim)"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).length} disponibles</span></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45,marginBottom:8}}>Elegí un campo para insertarlo donde está el cursor. Los campos ya usados se ocultan; si los borrás del texto, vuelven a aparecer.</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).map(function(t){return <button key={t[0]} type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertToken(t[0]);}} style={{display:"inline-flex",alignItems:"center",gap:5,minHeight:30,padding:"5px 9px",borderRadius:999,border:"1px solid var(--border2, rgba(89,199,243,.28))",background:"var(--card, rgba(89,199,243,.055))",color:"var(--text)",fontSize:11.5,fontWeight:600,cursor:"pointer"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:999,background:"rgba(89,199,243,.13)",color:"#59c7f3",fontSize:13,lineHeight:1}}>+</span>{t[1]}</button>;})}{tokens.every(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])!==-1;})&&<div style={{fontSize:11.5,color:"var(--green)"}}>Ya están usados todos los campos disponibles.</div>}</div></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45}}>Los campos se completan automáticamente desde la operación al generar el documento.</div><div style={{display:"flex",justifyContent:"flex-end",gap:6}}><Btn s="sm" v="ghost" onClick={function(){restaurarBloque(editId);}}>↺ Restaurar esta cláusula</Btn><Btn s="sm" v="ghost" onClick={function(){setDraft(getBodyBlocksConfig(perfil,tipo));setEditId(null);}}>Cancelar</Btn><Btn s="sm" v="success" onClick={function(){persist(draft);setEditId(null);}}>Guardar cláusula</Btn></div></div> : <><div className="dw-model-clause-row" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:modoVistaClausulas==="simple"?"nowrap":"wrap",gap:7,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap",flex:"1 1 auto",minWidth:0,overflow:"hidden"}}><button type="button" className="dw-clause-toggle" onClick={function(){setClausulasAbiertas(function(prev){var next=Object.assign({},prev);next[b.id]=!filaAbierta;return next;});}} aria-expanded={filaAbierta} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} style={{fontSize:12.2,fontWeight:650,color:"var(--text)",border:0,padding:"6px 0",background:"transparent",textAlign:"left",cursor:"pointer",whiteSpace:modoVistaClausulas==="simple"?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}><span className="dw-clause-name">{b.titulo||"Cláusula sin título"}</span></button>{esClausulaEsencialModelo(b)&&<span className="dw-essential-label" title="Cláusula esencial del documento: se puede editar, pero no desactivar ni eliminar"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{!esClausulaEsencialModelo(b)&&b.obligatoria===true&&<span className="dw-essential-label dw-essential-label-soft" title="Cláusula obligatoria configurada por la inmobiliaria"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{esCondicional&&modoVistaClausulas!=="simple"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:999,background:"rgba(89,199,243,.10)",color:"#59c7f3",border:"1px solid rgba(89,199,243,.18)"}}>Condicional</span>}{b.activo===false&&modoVistaClausulas!=="simple"&&<span className="badge">Inactiva</span>}<button type="button" className={"dw-clause-chevron "+(filaAbierta?"is-open":"")} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} aria-expanded={filaAbierta} onClick={function(){setClausulasAbiertas(function(prev){return Object.assign({},prev,{[b.id]:!filaAbierta});});}}><span aria-hidden="true">⌄</span></button></div><div className="dw-clause-actions" style={{display:"flex",gap:4,flex:"0 1 auto",flexWrap:"nowrap",alignItems:"center"}}><button type="button" title="Subir" onClick={function(){move(idx,"up");}} disabled={!puedeEditar||idx===0} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↑</button><button type="button" title="Bajar" onClick={function(){move(idx,"down");}} disabled={!puedeEditar||idx===draft.length-1} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↓</button>{puedeVerHistorial&&<button type="button" title="Historial de la cláusula" onClick={function(){setHistorialSeleccionado(b);}} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<select aria-label={"Estado de la cláusula "+(b.titulo||"")} value={b.activo===false?"apagada":(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&b.obligatoria!==true?"asesor":b.obligatoria===true?"obligatoria":"apagada"} onChange={function(e){var estado=e.target.value;update(b.id,estado==="apagada"?{activo:false}:estado==="asesor"?{activo:true,obligatoria:false}:{activo:true,obligatoria:true});}} style={{maxWidth:155,minWidth:0,width:"100%",fontSize:11,padding:"5px 4px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option><option value="asesor" disabled={b.id!=="reserva.refuerzo"&&b.id!=="alquiler.seguro"}>El asesor elige</option><option value="apagada">Apagada</option></select>}{puedeEditar&&<button type="button" title="Editar" onClick={function(){setEditId(b.id);}} style={{border:"1px solid rgba(212,168,83,.25)",background:"rgba(212,168,83,.06)",color:"var(--gold)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>Editar</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<button type="button" title="Eliminar" onClick={function(){removeBlock(b.id);}} style={{border:"1px solid rgba(248,113,113,.2)",background:"transparent",color:"var(--red)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>×</button>}</div></div>{filaAbierta&&<div className="dw-clause-content" style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginTop:7,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{mostrarTokensDocWorks(b.contenido)}</div>}</>}
+            {editing&&tipo==="reserva"&&b.id==="reserva.precio" ? <PrecioNarrativaEditor bloque={b} onSave={function(cambios){return persist(draft.map(function(x){return x.id===b.id?Object.assign({},x,cambios):x;}));}} onCancel={cancelarBorrador} onSaved={function(){setEditId(null);}}/> : editing ? <div style={{display:"flex",flexDirection:"column",gap:7}}><input className="inp" value={b.titulo} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{titulo:e.target.value}):x;}));}}/><textarea ref={contenidoEditorRef} className="inp" style={{minHeight:120,resize:"vertical",lineHeight:1.6}} value={b.contenido} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{contenido:e.target.value}):x;}));}}/><div style={{padding:10,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2, rgba(127,127,127,.035))"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:7}}><div style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Insertar campo automático</div><span style={{fontSize:11,color:"var(--dim)"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).length} disponibles</span></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45,marginBottom:8}}>Elegí un campo para insertarlo donde está el cursor. Los campos ya usados se ocultan; si los borrás del texto, vuelven a aparecer.</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).map(function(t){return <button key={t[0]} type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertToken(t[0]);}} style={{display:"inline-flex",alignItems:"center",gap:5,minHeight:30,padding:"5px 9px",borderRadius:999,border:"1px solid var(--border2, rgba(89,199,243,.28))",background:"var(--card, rgba(89,199,243,.055))",color:"var(--text)",fontSize:11.5,fontWeight:600,cursor:"pointer"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:999,background:"rgba(89,199,243,.13)",color:"#59c7f3",fontSize:13,lineHeight:1}}>+</span>{t[1]}</button>;})}{tokens.every(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])!==-1;})&&<div style={{fontSize:11.5,color:"var(--green)"}}>Ya están usados todos los campos disponibles.</div>}</div></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45}}>Los campos se completan automáticamente desde la operación al generar el documento.</div><div style={{display:"flex",justifyContent:"flex-end",gap:6,flexWrap:"wrap"}}><Btn s="sm" v="ghost" onClick={function(){restaurarBloque(editId);}}>↺ Restaurar esta cláusula</Btn><Btn s="sm" v="ghost" onClick={cancelarBorrador}>Cancelar</Btn><Btn s="sm" v="success" onClick={function(){guardarClausula();}}>Guardar cláusula</Btn></div></div> : <><div className="dw-model-clause-row" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:modoVistaClausulas==="simple"?"nowrap":"wrap",gap:7,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap",flex:"1 1 auto",minWidth:0,overflow:"hidden"}}><button type="button" className="dw-clause-toggle" onClick={function(){setClausulasAbiertas(function(prev){var next=Object.assign({},prev);next[b.id]=!filaAbierta;return next;});}} aria-expanded={filaAbierta} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} style={{fontSize:12.2,fontWeight:650,color:"var(--text)",border:0,padding:"6px 0",background:"transparent",textAlign:"left",cursor:"pointer",whiteSpace:modoVistaClausulas==="simple"?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}><span className="dw-clause-name">{b.titulo||"Cláusula sin título"}</span></button>{esClausulaEsencialModelo(b)&&<span className="dw-essential-label" title="Cláusula esencial del documento: se puede editar, pero no desactivar ni eliminar"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{!esClausulaEsencialModelo(b)&&b.obligatoria===true&&<span className="dw-essential-label dw-essential-label-soft" title="Cláusula obligatoria configurada por la inmobiliaria"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{esCondicional&&modoVistaClausulas!=="simple"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:999,background:"rgba(89,199,243,.10)",color:"#59c7f3",border:"1px solid rgba(89,199,243,.18)"}}>Condicional</span>}{b.activo===false&&modoVistaClausulas!=="simple"&&<span className="badge">Inactiva</span>}<button type="button" className={"dw-clause-chevron "+(filaAbierta?"is-open":"")} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} aria-expanded={filaAbierta} onClick={function(){setClausulasAbiertas(function(prev){return Object.assign({},prev,{[b.id]:!filaAbierta});});}}><span aria-hidden="true">⌄</span></button></div><div className="dw-clause-actions" style={{display:"flex",gap:4,flex:"0 1 auto",flexWrap:"nowrap",alignItems:"center"}}><button type="button" title="Subir" onClick={function(){move(idx,"up");}} disabled={!puedeEditar||idx===0} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↑</button><button type="button" title="Bajar" onClick={function(){move(idx,"down");}} disabled={!puedeEditar||idx===draft.length-1} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↓</button>{puedeVerHistorial&&<button type="button" title="Historial de la cláusula" onClick={function(){setHistorialSeleccionado(b);}} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<select aria-label={"Estado de la cláusula "+(b.titulo||"")} value={b.activo===false?"apagada":(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&b.obligatoria!==true?"asesor":b.obligatoria===true?"obligatoria":"apagada"} onChange={function(e){var estado=e.target.value;update(b.id,estado==="apagada"?{activo:false}:estado==="asesor"?{activo:true,obligatoria:false}:{activo:true,obligatoria:true});}} style={{maxWidth:155,minWidth:0,width:"100%",fontSize:11,padding:"5px 4px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option><option value="asesor" disabled={b.id!=="reserva.refuerzo"&&b.id!=="alquiler.seguro"}>El asesor elige</option><option value="apagada">Apagada</option></select>}{puedeEditar&&<button type="button" title="Editar" onClick={function(){if(!editId&&status!=="saving")setEditId(b.id);}} style={{border:"1px solid rgba(212,168,83,.25)",background:"rgba(212,168,83,.06)",color:"var(--gold)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>Editar</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<button type="button" title="Eliminar" onClick={function(){removeBlock(b.id);}} style={{border:"1px solid rgba(248,113,113,.2)",background:"transparent",color:"var(--red)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>×</button>}</div></div>{filaAbierta&&<div className="dw-clause-content" style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginTop:7,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{mostrarTokensDocWorks(b.contenido)}</div>}</>}
           </div>
         </div>
       </div>;})}
@@ -6409,7 +6468,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     {draft.some(function(b){return b.condicion||b.condicional;})&&<div style={{fontSize:11.5,color:"var(--dim)",padding:"8px 10px",borderRadius:8,background:"rgba(212,168,83,.06)",border:"1px solid rgba(212,168,83,.18)"}}>El número en el documento final puede cambiar si una cláusula condicional no aplica.</div>}
     <div style={{fontSize:11.5,color:"var(--dim)",padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",lineHeight:1.5}}>El estado «Opcional» está disponible únicamente para las cláusulas condicionales que ya se activan desde la operación (refuerzo de reserva y seguro de alquiler). En las demás cláusulas del cuerpo, la opción permanece deshabilitada hasta contar con soporte real en la operación.</div>
     <div style={{marginTop:12,padding:10,borderRadius:10,background:"rgba(89,199,243,.035)",border:"1px solid rgba(89,199,243,.14)"}}><div style={{fontSize:12,fontWeight:750,color:"#59c7f3",marginBottom:5}}>VARIABLES AUTOMÁTICAS</div><div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5}}>Usá los botones dentro de cada cláusula para insertar campos que vienen de Operaciones. El usuario edita la redacción; DocWorks completa los datos al generar el documento.</div></div>
-    {historialSeleccionado&&<HistorialClausulaModal titulo={historialSeleccionado.titulo} source="perfil" historial={perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].historial_clausulas&&perfil.plantillas[tipo].historial_clausulas[historialSeleccionado.id]} actual={historialSeleccionado} onClose={function(){setHistorialSeleccionado(null);}} onRestore={function(v){var next=draft.map(function(b){return b.id===historialSeleccionado.id?Object.assign({},b,{titulo:v.titulo,contenido:v.contenido,activo:v.activo!==false,orden:v.orden}):Object.assign({},b);});var pos=next.findIndex(function(b){return b.id===historialSeleccionado.id;});if(pos>=0){var item=next.splice(pos,1)[0];next.splice(Math.max(0,Math.min(next.length,(Number(v.orden)||1)-1)),0,item);}next=next.map(function(b,i){return Object.assign({},b,{orden:i+1});});return persist(next);}}/>}
+    {historialSeleccionado&&<HistorialClausulaModal titulo={historialSeleccionado.titulo} source="perfil" historial={perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].historial_clausulas&&perfil.plantillas[tipo].historial_clausulas[historialSeleccionado.id]} actual={historialSeleccionado} onClose={function(){setHistorialSeleccionado(null);}} onRestore={function(v){var next=draft.map(function(b){return b.id===historialSeleccionado.id?Object.assign({},b,{titulo:v.titulo,contenido:v.contenido,activo:v.activo!==false,orden:v.orden,obligatoria:typeof v.obligatoria==="boolean"?v.obligatoria:b.obligatoria,condicion:Object.prototype.hasOwnProperty.call(v,"condicion")?v.condicion:b.condicion,sinTitulo:typeof v.sinTitulo==="boolean"?v.sinTitulo:b.sinTitulo}):Object.assign({},b);});var pos=next.findIndex(function(b){return b.id===historialSeleccionado.id;});if(pos>=0){var item=next.splice(pos,1)[0];next.splice(Math.max(0,Math.min(next.length,(Number(v.orden)||1)-1)),0,item);}next=next.map(function(b,i){return Object.assign({},b,{orden:i+1});});return persist(next);}}/>}
   </div>;
 }
 
@@ -6442,10 +6501,18 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-clause-content{border-top:1px solid var(--border);padding-top:9px}
 @media(min-width:641px) and (max-width:1100px){.dw-clause-compact:not(.dw-clause-open) .dw-model-clause-row{flex-wrap:nowrap!important}.dw-clause-compact:not(.dw-clause-open) .dw-model-clause-row>div:first-child{flex-basis:auto!important}}
 @media(max-width:640px){.dw-clause-compact:not(.dw-clause-open) .dw-model-clause-row{flex-wrap:nowrap!important}.dw-clause-compact:not(.dw-clause-open) .dw-model-clause-row>div:first-child{flex-basis:auto!important}.dw-clause-compact .dw-essential-label{font-size:9px}.dw-clause-compact .dw-clause-chevron{width:26px;height:26px;flex-basis:26px}}
+/* 6.00: el título tiene prioridad; las acciones aparecen al desplegar. */
+.dw-clause-compact:not(.dw-clause-open) .dw-model-clause-row>div.dw-clause-actions{display:none!important}
+.dw-clause-compact .dw-clause-name{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
+.dw-clause-compact .dw-clause-toggle{padding:8px 0!important}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:wrap!important}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row>div:first-child{flex-basis:100%!important}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{max-width:100%;width:100%;flex-wrap:wrap!important;overflow:visible}
+@media(max-width:1100px){.dw-clause-chevron{min-width:36px;min-height:36px}.dw-clause-actions button{min-height:34px}.dw-clause-actions select{min-height:34px}}
 @media(prefers-reduced-motion:reduce){.dw-clause-chevron,.dw-clause-card{transition:none}}
 `;
 
-function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onTipoDocChange,ocultarSelector,barraSuperior,previewOpen,onPreviewChange,children,pasoModelo,mostrarCuerpo,mostrarIntroduccion}) {
+function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onTipoDocChange,ocultarSelector,barraSuperior,previewOpen,onPreviewChange,children,pasoModelo,mostrarCuerpo,mostrarIntroduccion,onEditingChange}) {
   const [tipoDocInterno,setTipoDocInterno]=useState("reserva");
   const tipoDocSel=tipoDocExterno||tipoDocInterno;
   function setTipoDocSel(v){if(typeof onTipoDocChange==="function")onTipoDocChange(v);else setTipoDocInterno(v);}
@@ -6454,6 +6521,20 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   const [confirmLockDefaults,setConfirmLockDefaults]=useState(false);
   const [confirmPreviewReviewed,setConfirmPreviewReviewed]=useState(false);
   const [saveStatus,setSaveStatus]=useState(null);
+  useEffect(function(){if(onEditingChange)onEditingChange(encabezadoEditing||saveStatus==="saving");},[encabezadoEditing,saveStatus,onEditingChange]);
+  useEffect(function(){
+    if(!encabezadoEditing&&saveStatus!=="saving")return;
+    function advertirSalida(e){e.preventDefault();e.returnValue="";}
+    function protegerSalida(e){
+      if(e.defaultPrevented)return;
+      e.preventDefault();
+      if(saveStatus==="saving"){dwNotify("info","Esperá a que termine de guardarse el documento.");return;}
+      requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del documento?",function(){setEncabezadoEditing(false);setEncabezadoDraft("");e.detail.continuar();});
+    }
+    window.addEventListener("beforeunload",advertirSalida);
+    window.addEventListener("dw:model-navigation",protegerSalida);
+    return function(){window.removeEventListener("beforeunload",advertirSalida);window.removeEventListener("dw:model-navigation",protegerSalida);};
+  },[encabezadoEditing,saveStatus]);
   const puedeEditar=!!perfil&&(perfil.rol==="dueno"||perfil.rol==="admin");
   const cfg=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas);
   const idsPlantilla=cfg.clausulas_ids||[];
@@ -6508,7 +6589,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   }
   return <div style={{display:"flex",flexDirection:"column",gap:12}}>
     {barraSuperior&&<div id="dw-config-modelo" style={{position:"sticky",top:0,zIndex:8,scrollMarginTop:90,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:12,background:"var(--card)",boxShadow:"0 4px 14px rgba(0,0,0,.08)"}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><div style={{fontSize:12.5,fontWeight:700,color:"var(--text)"}}>{TIPOS[tipoDocSel]||tipoDocSel} · {pasoModelo===3?"Introducción y texto base":pasoModelo===2?"Cláusulas obligatorias":"Plantilla del documento"}</div>{cfg.locked&&puedeEditar&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){actualizarPlantilla({locked:false});}}>Habilitar edición</button>}</div>
+      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><div style={{fontSize:12.5,fontWeight:700,color:"var(--text)"}}>{TIPOS[tipoDocSel]||tipoDocSel}</div>{cfg.locked&&puedeEditar&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){actualizarPlantilla({locked:false});}}>Habilitar edición</button>}</div>
       <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){if(typeof onPreviewChange==="function")onPreviewChange(!previewOpen);}}>{previewOpen?"Cerrar vista previa":"Vista previa del modelo"}</button><button type="button" className="btn btn-primary btn-sm" disabled={!puedeEditar||!!cfg.locked} onClick={function(){setConfirmPreviewReviewed(false);setConfirmLockDefaults(true);}}>Publicar para asesores</button></div>
     </div>}
     {!puedeEditar&&<div className="notice" style={{fontSize:12}}>Esta configuración es de solo lectura. Solo Dueño y Administrador pueden editar encabezados y cláusulas.</div>}
@@ -6521,7 +6602,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
       {saveStatus==="saving"&&<div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Guardando cambios…</div>}{saveStatus==="saved"&&<div style={{fontSize:12,color:"var(--green)",marginTop:8}}>Cambios guardados.</div>}{saveStatus==="error"&&<div style={{fontSize:12,color:"var(--red)",marginTop:8}}>No se pudo guardar. Revisá la conexión e intentá nuevamente.</div>}
     </div>}
     {(pasoModelo===2||pasoModelo===3)&&<div id="dw-config-clausulas" style={{scrollMarginTop:90,border:"1px solid var(--border)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:12}}>
-      <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Texto base del documento</div>
+      <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Contenido del documento</div>
       {children}
 
     </div>}
@@ -7345,42 +7426,63 @@ function useBloquesReservaSupabase(ctx){
 // localStorage como caché para no perder cambios si la red falla.
 function usePerfilSupabase(ctx, perfil, setPerfil){
   var inmobId = ctx && ctx.inmobiliaria ? ctx.inmobiliaria.id : null;
+  var usuarioId = ctx && ctx.usuario ? ctx.usuario.id : null;
+  var rolActual = ctx && ctx.usuario ? ctx.usuario.rol_base : null;
+  var claveContexto = [inmobId,usuarioId,rolActual].join(":");
   var perfilCargado = useRef(false);
+  // Distinguir cada entrada: A → B → A no reactiva callbacks del primer A.
+  var entradaContexto = useMemo(function(){return {};},[claveContexto]);
+  var entradaActualRef = useRef(entradaContexto);
+  entradaActualRef.current = entradaContexto;
   // La respuesta de una sesión anterior jamás debe sustituir el perfil actual.
-  var contextoActualRef = useRef(inmobId);
-  contextoActualRef.current = inmobId;
+  var contextoActualRef = useRef(claveContexto);
+  contextoActualRef.current = claveContexto;
   var solicitudPerfilRef = useRef(0);
+  var perfilMontadoRef = useRef(false);
+  useEffect(function(){
+    perfilMontadoRef.current=true;
+    return function(){perfilMontadoRef.current=false;};
+  },[]);
   var [perfilNubeCargado,setPerfilNubeCargado]=useState(false);
   function leer(sb, idSolicitado, numeroSolicitud){
     if(!idSolicitado) return Promise.resolve();
     return sb.rpc("fn_perfil_inmobiliaria_obtener",{}).then(function(res){
-      if(contextoActualRef.current !== idSolicitado || solicitudPerfilRef.current !== numeroSolicitud) return;
+      if(contextoActualRef.current !== claveContexto || solicitudPerfilRef.current !== numeroSolicitud) return;
       if(res.error) throw res.error;
       var data=res.data;
       // La nube es la fuente de verdad. No fusionar datos de localStorage de
       // otra sesión/inmobiliaria: podría arrastrar logo, modelos o identidad ajena.
       // Si todavía no existe perfil remoto, partir de defaults limpios.
       setPerfil(Object.assign({}, DEFAULT_PERFIL,
-        data && data._cloud_missing!==true ? data : {}));
+        data && data._cloud_missing!==true ? data : {nombre_usuario:data&&data.nombre_usuario||""},
+        {rol:data&&data.rol||rolActual||"viewer"}));
       perfilCargado.current=true; setPerfilNubeCargado(true);
     }).catch(function(err){
-      if(contextoActualRef.current !== idSolicitado || solicitudPerfilRef.current !== numeroSolicitud) return;
+      if(contextoActualRef.current !== claveContexto || solicitudPerfilRef.current !== numeroSolicitud) return;
       // No marcar como cargado si la lectura falló: evitar crear y guardar
       // modelos sobre un perfil remoto que todavía no conocemos.
       perfilCargado.current=false; setPerfilNubeCargado(false);
       dwNotify("error",traducirError(err&&err.message?err.message:"No se pudo sincronizar la configuración con la nube."));
     });
   }
-  function guardar(sb, p){
-    if(!inmobId) return Promise.resolve({error:{message:"Sin inmobiliaria activa."}});
-    return sb.rpc("fn_perfil_inmobiliaria_guardar",{p_datos:p});
-  }
   function guardarAhora(p){
-    if(!inmobId) return Promise.resolve({error:{message:"Sin inmobiliaria activa."}});
-    return loadSupabaseJs().then(function(sb){
-      if(!sb) return {error:{message:"No se pudo conectar con Supabase."}};
-      return guardar(sb,p);
-    }).catch(function(e){ return {error:{message:e&&e.message?e.message:"No se pudo guardar el perfil."}}; });
+    var numeroSolicitud=solicitudPerfilRef.current;
+    function vigente(){return perfilMontadoRef.current&&entradaActualRef.current===entradaContexto&&contextoActualRef.current===claveContexto&&solicitudPerfilRef.current===numeroSolicitud;}
+    function obsoleto(){return {contextoObsoleto:true,error:{message:"La cuenta cambió. Volvé a abrir el modelo antes de guardarlo."}};}
+    if(!vigente())return Promise.resolve(obsoleto());
+    if(!inmobId||!usuarioId)return Promise.resolve({error:{message:"Sin usuario o inmobiliaria activa."}});
+    if(!perfilCargado.current)return Promise.resolve({error:{message:"Esperá a que se cargue la configuración de la nube antes de guardar."}});
+    return loadSupabaseJs().then(async function(sb){
+      if(!vigente())return obsoleto();
+      if(!sb)return {error:{message:"No se pudo conectar con Supabase."}};
+      // Correlación de sesión, no autorización: el rol siempre lo valida la RPC.
+      var sesion=await sb.auth.getSession();
+      if(!vigente())return obsoleto();
+      if(sesion.error)return {error:sesion.error};
+      if(!sesion.data||!sesion.data.session||sesion.data.session.user.id!==usuarioId)return obsoleto();
+      var respuesta=await sb.rpc("fn_perfil_inmobiliaria_guardar",{p_datos:p});
+      return vigente()?respuesta:obsoleto();
+    }).catch(function(e){return vigente()?{error:{message:e&&e.message?e.message:"No se pudo guardar el perfil."}}:obsoleto();});
   }
   useEffect(function(){
     var idSolicitado=inmobId;
@@ -7390,17 +7492,17 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
     setPerfil(Object.assign({}, DEFAULT_PERFIL));
     if(!idSolicitado) { setPerfilNubeCargado(true); return; }
     loadSupabaseJs().then(function(sb){
-      if(contextoActualRef.current !== idSolicitado || solicitudPerfilRef.current !== numeroSolicitud) return;
+      if(contextoActualRef.current !== claveContexto || solicitudPerfilRef.current !== numeroSolicitud) return;
       if(sb) return leer(sb,idSolicitado,numeroSolicitud);
       throw new Error("No se pudo conectar con Supabase.");
     }).catch(function(err){
-      if(contextoActualRef.current !== idSolicitado || solicitudPerfilRef.current !== numeroSolicitud) return;
+      if(contextoActualRef.current !== claveContexto || solicitudPerfilRef.current !== numeroSolicitud) return;
       perfilCargado.current=false; setPerfilNubeCargado(false);
       dwNotify("error",traducirError(err&&err.message?err.message:"No se pudo sincronizar la configuración con la nube."));
     });
     return function(){ ++solicitudPerfilRef.current; };
-  },[inmobId]);
-  return {guardarAhora:guardarAhora,cargado:perfilNubeCargado};
+  },[claveContexto]);
+  return {guardarAhora:guardarAhora,cargado:perfilNubeCargado,contexto:claveContexto};
 }
 
 function LoginGate({docworksAuth}){
@@ -7512,7 +7614,7 @@ function DocWorksOnboarding({ open, step, onStep, onClose, onNavigate, role }) {
     </>
   ) : null;
 
-  var tooltipStyle={
+  var tooltipStyle: import("react").CSSProperties={
     position:"fixed",zIndex:5002,width:"min(350px,calc(100vw - 28px))",padding:"17px 18px 16px",
     border:"1px solid rgba(212,168,83,.34)",borderRadius:16,
     background:"linear-gradient(145deg,rgba(16,25,43,.985),rgba(8,14,26,.995))",
@@ -7556,7 +7658,7 @@ function DocWorksOnboarding({ open, step, onStep, onClose, onNavigate, role }) {
           </div>
         </div>
       ) : (
-        <div role="dialog" aria-modal="true" aria-label={current.title} style={Object.assign({},tooltipStyle,tooltipPosition(),{pointerEvents:"auto"})}>
+        <div role="dialog" aria-modal="true" aria-label={current.title} style={Object.assign({},tooltipStyle,tooltipPosition(),{pointerEvents:"auto" as const})}>
           <div style={{display:"flex",alignItems:"flex-start",gap:11}}>
             <div style={{width:32,height:32,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(212,168,83,.10)",border:"1px solid rgba(212,168,83,.22)",color:"var(--gold)",fontSize:16,flex:"0 0 auto"}}>{current.icon}</div>
             <div style={{minWidth:0,flex:1}}>
@@ -7589,7 +7691,7 @@ const EstadisticasView = crearEstadisticasView({Btn, getComisionComponents, load
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
 const OperacionForm = crearOperacionForm({AutosaveIndicator, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
-const ClausulasWorkspace = crearClausulasWorkspace({ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, useEffect, useState});
+const ClausulasWorkspace = crearClausulasWorkspace({ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, requestDwConfirm, useEffect, useState});
 const DashboardView = crearDashboardView({Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
 const SuperAdminDashboard = crearSuperAdminDashboard({AUTH_RED, AUTH_MUTED, descargarCSV, loadSupabaseJs, traducirError, Field, dwNotify, requestDwConfirm, fmt$, Modal, DWIcon});
 const ConfiguracionView = crearConfiguracionView({Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
@@ -7772,7 +7874,11 @@ function DocWorksApp(){
     else posponerInstalacion();
   }
   var mostrarInstalar=isMobileOrTablet&&!isStandalone&&!installedFlag;
-  const [view,setView]=useState(function(){return lsGet("last_view_v1","dashboard");});
+  const [view,setViewDirecto]=useState(function(){return lsGet("last_view_v1","dashboard");});
+  function setView(next){
+    if(next===view)return;
+    navegarConProteccionModelo(function(){setViewDirecto(next);});
+  }
   useEffect(function(){lsSet("last_view_v1",view||"dashboard");},[view]);
   // 4.08 — Los botones flotantes ("+" y asistente) se esconden al bajar y vuelven al subir.
   useEffect(function(){
@@ -8824,9 +8930,9 @@ function DocWorksApp(){
             <div className="content">
               {view==="dashboard"&&<DashboardView operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={function(){setFormFocusCampo(null);setEditOp(null);setFormTipo(null);setShowForm(true);}} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
               {view==="calendario"&&<CalendarioView operaciones={operaciones} onViewOp={function(op){abrirDoc(op);}}/>}
-              {view==="clausulas"&&<ClausulasWorkspace perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
+              {view==="clausulas"&&<ClausulasWorkspace key={perfilNube.contexto} perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
               {view==="estadisticas"&&<EstadisticasView onExportarCSV={exportarOperacionesCSV} operaciones={operaciones} equipo={equipo} perfil={perfil} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol}/>}
-              {view==="configuracion"&&<ConfiguracionView onOpenBot={function(){setShowBot(true);}} perfil={perfil} onChange={function(p){ var anterior=perfil; setPerfil(p); return perfilNube.guardarAhora(p).then(function(res){ if(res&&res.error){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(res.error.message||"Error de comunicación con Supabase.")); } return res; }).catch(function(err){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase.")); return {error:err}; }); }} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol} darkMode={darkMode} onToggleDark={toggleDark} equipo={equipo} equipoSupabase={equipoSupabase} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} onMoveClausula={moveClausula} onDuplicateClausula={duplicateClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} onRetryClausulas={recargarClausulas} papelera={papelera} auditLog={auditLog} auditoriaSupabase={auditoriaSupabase} onExportarRespaldo={exportarRespaldo} onImportarRespaldo={importarRespaldo} onVaciarAuditoria={function(){setAuditLog([]);}} puedeInstalar={!!deferredInstallPrompt} onInstalar={instalarApp} onStartTour={abrirOnboarding} ctx={ctx}/>}
+              {view==="configuracion"&&<ConfiguracionView onOpenBot={function(){setShowBot(true);}} perfil={perfil} onChange={function(p){ var anterior=perfil; setPerfil(p); return perfilNube.guardarAhora(p).then(function(res){ if(res&&res.error&&!res.contextoObsoleto){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(res.error.message||"Error de comunicación con Supabase.")); } return res; }).catch(function(err){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase.")); return {error:err}; }); }} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol} darkMode={darkMode} onToggleDark={toggleDark} equipo={equipo} equipoSupabase={equipoSupabase} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} onMoveClausula={moveClausula} onDuplicateClausula={duplicateClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} onRetryClausulas={recargarClausulas} papelera={papelera} auditLog={auditLog} auditoriaSupabase={auditoriaSupabase} onExportarRespaldo={exportarRespaldo} onImportarRespaldo={importarRespaldo} onVaciarAuditoria={function(){setAuditLog([]);}} puedeInstalar={!!deferredInstallPrompt} onInstalar={instalarApp} onStartTour={abrirOnboarding} ctx={ctx}/>}
             </div>
           </div>
         </div>
@@ -8912,7 +9018,7 @@ function DocWorksApp(){
           onDOCX={function(){setDocAutoAction("docx");}}
           onShare={function(){setDocAutoAction("whatsapp");}}
         />:null}>
-        {viewDoc&&<DocumentViewer op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={toggleTarea} onUpdateOperation={onUpdateOperationGlobal} onActionWorkflow={function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}} onCompleteData={function(op,campo){setViewDoc(null);setDocAutoAction(null);setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
+        {viewDoc&&<DocumentViewer op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={toggleTarea} onUpdateOperation={onUpdateOperationGlobal} onActionWorkflow={function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}} onCompleteData={function(op,campo){setViewDoc(null);setDocAutoAction(null);setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
       </Modal>
       <ConfirmModal open={confirmCloseForm} title="Salir de la operación" message="Ya cargaste datos. ¿Querés guardar un borrador antes de salir?" confirmLabel="Guardar borrador" cancelLabel="Salir sin guardar" onCancel={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}/>
       <ConfirmModal
@@ -8981,4 +9087,3 @@ function StartupSplashHost(){
 export default function App(){
   return <DWErrorBoundary><DocWorksApp/><StartupSplashHost/></DWErrorBoundary>;
 }
-
