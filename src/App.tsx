@@ -1325,6 +1325,7 @@ function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operacion
 
   function abrirEditor(b){
     if(!b) return;
+    if(editId&&editId!==b.id){var anterior=ordenados.find(function(item){return item.id===editId;});var hayCambios=!!anterior&&(String(draft.titulo||"")!==String(anterior.titulo||"")||String(draft.contenido||"")!==String(anterior.contenido||""));if(hayCambios){requestDwConfirm("¿Descartar los cambios de la cláusula actual para editar otra?",function(){setClausulasAbiertas({[b.id]:true});setPrecioEditando(b.id==="reserva.precio");setEditId(b.id);setDraft({titulo:String(b.titulo||""),contenido:String(b.contenido||"")});});return;}}
     setClausulasAbiertas({[b.id]:true});
     var esPrecio = b.id === "reserva.precio";
     setPrecioEditando(esPrecio);
