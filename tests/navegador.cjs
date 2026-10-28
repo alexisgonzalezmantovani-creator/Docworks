@@ -25,7 +25,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
  let checks=0;
  try{
  for(const [name,width,height] of [['iphone',390,844],['ipad',820,1180],['desktop',1440,1000]]){
-  const page=await browser.newPage(),errors=[];await page.setViewportSize({width,height});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage(),errors=[];await page.setViewportSize({width,height});page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.text().includes('same key'))errors.push(m.text());});
   await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1')?r.continue():r.abort());
   await page.goto('http://127.0.0.1:'+server.address().port);
   for(const tipo of ['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva']){
@@ -54,6 +54,12 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
    if(tipo==='boleto')await page.screenshot({path:path.join(out,name+'.png'),fullPage:true});
   }
   await page.goto('http://127.0.0.1:'+server.address().port+'/workspace');
+  for(const label of ['Reserva de Compra','Boleto de Compraventa','Reserva de Alquiler','Contrato de Alquiler','Comodato','Autorización de Venta','Refuerzo de Reserva','Devolución de Reserva']){
+   await page.locator('.dw-model-type-chip').filter({hasText:label}).click();
+   assert.equal(await page.locator('#dw-config-modelo').count(),1);checks++;
+   assert.ok((await page.locator('#dw-config-modelo').textContent()).startsWith(label),name+' cambio a '+label);checks++;
+  }
+  await page.locator('.dw-model-type-chip').filter({hasText:'Reserva de Compra'}).click();
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
   assert.equal(await nav.getByRole('button').count(),2);checks++;
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
