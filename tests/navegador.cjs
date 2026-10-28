@@ -1,5 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),http=require('node:http'),assert=require('node:assert/strict');
-const {chromium}=require('playwright');
+const engine=process.argv.includes('--webkit')?'webkit':'chromium';
+const browserType=require('playwright')[engine];
 const root=path.resolve(__dirname,'..'),out=process.env.DOCWORKS_BROWSER_OUTPUT||fs.mkdtempSync(path.join(os.tmpdir(),'docworks-browser-'));
 fs.mkdirSync(out,{recursive:true});
 const harness=`
@@ -15,7 +16,7 @@ require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(root,'sr
 const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(out,'harness.js')));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/harness.js"></script></body></html>');}});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- const browser=await chromium.launchPersistentContext(path.join(out,'profile'),{headless:true,executablePath:process.env.DOCWORKS_BROWSER_EXECUTABLE||undefined,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-zygote','--single-process','--use-gl=angle','--use-angle=swiftshader']});
+ const browser=await browserType.launchPersistentContext(path.join(out,'profile'),{headless:true,...(engine==='chromium'?{executablePath:process.env.DOCWORKS_BROWSER_EXECUTABLE||undefined,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-zygote','--single-process','--use-gl=angle','--use-angle=swiftshader']}:{})});
  let checks=0;
  try{
  for(const [name,width,height] of [['iphone',390,844],['ipad',820,1180],['desktop',1440,1000]]){
@@ -45,6 +46,6 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   }
   assert.deepEqual(errors,[]);checks++;await page.close();
  }
- console.log('APROBADAS',checks,'verificaciones Chromium en iPhone/iPad/escritorio emulados. Capturas:',out);
+ console.log('APROBADAS',checks,'verificaciones '+engine+' en iPhone/iPad/escritorio emulados. Capturas:',out);
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>server.close());

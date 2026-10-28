@@ -1,6 +1,10 @@
 # DocWorks 6.00 PRO — entrega y verificación
 
-Actualización: 28 de octubre de 2026. Base oficial `main` 5.98; candidata en `work/docworks-6-pro`, PR #4. No se modificó producción ni la base de datos.
+Actualización: 28 de octubre de 2026. Base oficial `main` 5.98; candidata en `work/docworks-6-pro`, PR #4. No se modificó producción. Las pruebas SQL de la revisión de sesiones revierten todas sus escrituras y verifican que no queden cambios persistentes.
+
+## Revisión de sesiones
+
+Se corrigieron la invalidación por cuenta/rol, los guardados con sesión SDK distinta, el rollback tardío y el rol de un Asesor sin perfil remoto. Se agregaron 14 pruebas de transición y 17 comprobaciones en la base real con reversión completa. Chromium y WebKit aprobaron 123 verificaciones cada uno. Detalle y límites en `PRUEBAS-SESIONES-6.00.md`.
 
 ## Implementación
 
@@ -22,8 +26,8 @@ Las pruebas de datos detectan campos faltantes y tokens sin resolver; los ejempl
 
 ## Pendientes que requieren otro entorno
 
-- Safari real y hardware iPhone/iPad, impresión y compartir de iOS.
-- Persistencia y aislamiento de permisos con dos sesiones autenticadas y recarga entre dispositivos. Las pruebas de interfaz usan callbacks simulados; no se escribieron datos reales en Supabase.
+- Safari real y hardware iPhone/iPad, impresión y compartir de iOS. WebKit de Playwright en Linux ya pasó la suite de 123 verificaciones, sin sustituir estas pruebas de hardware.
+- Persistencia y aislamiento de permisos con dos sesiones autenticadas y recarga entre dispositivos. Las pruebas de interfaz usan callbacks simulados; la suite SQL ejecutó las RPC reales con claims de prueba y revirtió todas las escrituras. No se iniciaron sesiones Auth reales.
 - Microsoft Word real; la revisión visual realizada usa LibreOffice.
 
 Por estos límites, la entrega es una candidata verificada localmente, no una certificación completa de producción. No fusionar/publicar sin cerrar las pruebas autenticadas y de Safari ya exigidas para esta entrega. El aviso de Vite por bundle mayor a 500 kB persiste y no impide compilar.

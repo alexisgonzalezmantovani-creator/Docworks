@@ -7411,42 +7411,54 @@ function useBloquesReservaSupabase(ctx){
 // localStorage como caché para no perder cambios si la red falla.
 function usePerfilSupabase(ctx, perfil, setPerfil){
   var inmobId = ctx && ctx.inmobiliaria ? ctx.inmobiliaria.id : null;
+  var usuarioId = ctx && ctx.usuario ? ctx.usuario.id : null;
+  var rolActual = ctx && ctx.usuario ? ctx.usuario.rol_base : null;
+  var claveContexto = [inmobId,usuarioId,rolActual].join(":");
   var perfilCargado = useRef(false);
   // La respuesta de una sesión anterior jamás debe sustituir el perfil actual.
-  var contextoActualRef = useRef(inmobId);
-  contextoActualRef.current = inmobId;
+  var contextoActualRef = useRef(claveContexto);
+  contextoActualRef.current = claveContexto;
   var solicitudPerfilRef = useRef(0);
   var [perfilNubeCargado,setPerfilNubeCargado]=useState(false);
   function leer(sb, idSolicitado, numeroSolicitud){
     if(!idSolicitado) return Promise.resolve();
     return sb.rpc("fn_perfil_inmobiliaria_obtener",{}).then(function(res){
-      if(contextoActualRef.current !== idSolicitado || solicitudPerfilRef.current !== numeroSolicitud) return;
+      if(contextoActualRef.current !== claveContexto || solicitudPerfilRef.current !== numeroSolicitud) return;
       if(res.error) throw res.error;
       var data=res.data;
       // La nube es la fuente de verdad. No fusionar datos de localStorage de
       // otra sesión/inmobiliaria: podría arrastrar logo, modelos o identidad ajena.
       // Si todavía no existe perfil remoto, partir de defaults limpios.
       setPerfil(Object.assign({}, DEFAULT_PERFIL,
-        data && data._cloud_missing!==true ? data : {}));
+        data && data._cloud_missing!==true ? data : {nombre_usuario:data&&data.nombre_usuario||""},
+        {rol:data&&data.rol||rolActual||"viewer"}));
       perfilCargado.current=true; setPerfilNubeCargado(true);
     }).catch(function(err){
-      if(contextoActualRef.current !== idSolicitado || solicitudPerfilRef.current !== numeroSolicitud) return;
+      if(contextoActualRef.current !== claveContexto || solicitudPerfilRef.current !== numeroSolicitud) return;
       // No marcar como cargado si la lectura falló: evitar crear y guardar
       // modelos sobre un perfil remoto que todavía no conocemos.
       perfilCargado.current=false; setPerfilNubeCargado(false);
       dwNotify("error",traducirError(err&&err.message?err.message:"No se pudo sincronizar la configuración con la nube."));
     });
   }
-  function guardar(sb, p){
-    if(!inmobId) return Promise.resolve({error:{message:"Sin inmobiliaria activa."}});
-    return sb.rpc("fn_perfil_inmobiliaria_guardar",{p_datos:p});
-  }
   function guardarAhora(p){
-    if(!inmobId) return Promise.resolve({error:{message:"Sin inmobiliaria activa."}});
-    return loadSupabaseJs().then(function(sb){
-      if(!sb) return {error:{message:"No se pudo conectar con Supabase."}};
-      return guardar(sb,p);
-    }).catch(function(e){ return {error:{message:e&&e.message?e.message:"No se pudo guardar el perfil."}}; });
+    var numeroSolicitud=solicitudPerfilRef.current;
+    function vigente(){return contextoActualRef.current===claveContexto&&solicitudPerfilRef.current===numeroSolicitud;}
+    function obsoleto(){return {contextoObsoleto:true,error:{message:"La cuenta cambió. Volvé a abrir el modelo antes de guardarlo."}};}
+    if(!vigente())return Promise.resolve(obsoleto());
+    if(!inmobId||!usuarioId)return Promise.resolve({error:{message:"Sin usuario o inmobiliaria activa."}});
+    if(!perfilCargado.current)return Promise.resolve({error:{message:"Esperá a que se cargue la configuración de la nube antes de guardar."}});
+    return loadSupabaseJs().then(async function(sb){
+      if(!vigente())return obsoleto();
+      if(!sb)return {error:{message:"No se pudo conectar con Supabase."}};
+      // Correlación de sesión, no autorización: el rol siempre lo valida la RPC.
+      var sesion=await sb.auth.getSession();
+      if(!vigente())return obsoleto();
+      if(sesion.error)return {error:sesion.error};
+      if(!sesion.data||!sesion.data.session||sesion.data.session.user.id!==usuarioId)return obsoleto();
+      var respuesta=await sb.rpc("fn_perfil_inmobiliaria_guardar",{p_datos:p});
+      return vigente()?respuesta:obsoleto();
+    }).catch(function(e){return vigente()?{error:{message:e&&e.message?e.message:"No se pudo guardar el perfil."}}:obsoleto();});
   }
   useEffect(function(){
     var idSolicitado=inmobId;
@@ -7456,17 +7468,17 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
     setPerfil(Object.assign({}, DEFAULT_PERFIL));
     if(!idSolicitado) { setPerfilNubeCargado(true); return; }
     loadSupabaseJs().then(function(sb){
-      if(contextoActualRef.current !== idSolicitado || solicitudPerfilRef.current !== numeroSolicitud) return;
+      if(contextoActualRef.current !== claveContexto || solicitudPerfilRef.current !== numeroSolicitud) return;
       if(sb) return leer(sb,idSolicitado,numeroSolicitud);
       throw new Error("No se pudo conectar con Supabase.");
     }).catch(function(err){
-      if(contextoActualRef.current !== idSolicitado || solicitudPerfilRef.current !== numeroSolicitud) return;
+      if(contextoActualRef.current !== claveContexto || solicitudPerfilRef.current !== numeroSolicitud) return;
       perfilCargado.current=false; setPerfilNubeCargado(false);
       dwNotify("error",traducirError(err&&err.message?err.message:"No se pudo sincronizar la configuración con la nube."));
     });
     return function(){ ++solicitudPerfilRef.current; };
-  },[inmobId]);
-  return {guardarAhora:guardarAhora,cargado:perfilNubeCargado};
+  },[claveContexto]);
+  return {guardarAhora:guardarAhora,cargado:perfilNubeCargado,contexto:claveContexto};
 }
 
 function LoginGate({docworksAuth}){
@@ -8894,9 +8906,9 @@ function DocWorksApp(){
             <div className="content">
               {view==="dashboard"&&<DashboardView operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={function(){setFormFocusCampo(null);setEditOp(null);setFormTipo(null);setShowForm(true);}} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
               {view==="calendario"&&<CalendarioView operaciones={operaciones} onViewOp={function(op){abrirDoc(op);}}/>}
-              {view==="clausulas"&&<ClausulasWorkspace perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
+              {view==="clausulas"&&<ClausulasWorkspace key={perfilNube.contexto} perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
               {view==="estadisticas"&&<EstadisticasView onExportarCSV={exportarOperacionesCSV} operaciones={operaciones} equipo={equipo} perfil={perfil} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol}/>}
-              {view==="configuracion"&&<ConfiguracionView onOpenBot={function(){setShowBot(true);}} perfil={perfil} onChange={function(p){ var anterior=perfil; setPerfil(p); return perfilNube.guardarAhora(p).then(function(res){ if(res&&res.error){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(res.error.message||"Error de comunicación con Supabase.")); } return res; }).catch(function(err){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase.")); return {error:err}; }); }} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol} darkMode={darkMode} onToggleDark={toggleDark} equipo={equipo} equipoSupabase={equipoSupabase} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} onMoveClausula={moveClausula} onDuplicateClausula={duplicateClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} onRetryClausulas={recargarClausulas} papelera={papelera} auditLog={auditLog} auditoriaSupabase={auditoriaSupabase} onExportarRespaldo={exportarRespaldo} onImportarRespaldo={importarRespaldo} onVaciarAuditoria={function(){setAuditLog([]);}} puedeInstalar={!!deferredInstallPrompt} onInstalar={instalarApp} onStartTour={abrirOnboarding} ctx={ctx}/>}
+              {view==="configuracion"&&<ConfiguracionView onOpenBot={function(){setShowBot(true);}} perfil={perfil} onChange={function(p){ var anterior=perfil; setPerfil(p); return perfilNube.guardarAhora(p).then(function(res){ if(res&&res.error&&!res.contextoObsoleto){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(res.error.message||"Error de comunicación con Supabase.")); } return res; }).catch(function(err){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase.")); return {error:err}; }); }} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol} darkMode={darkMode} onToggleDark={toggleDark} equipo={equipo} equipoSupabase={equipoSupabase} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} onMoveClausula={moveClausula} onDuplicateClausula={duplicateClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} onRetryClausulas={recargarClausulas} papelera={papelera} auditLog={auditLog} auditoriaSupabase={auditoriaSupabase} onExportarRespaldo={exportarRespaldo} onImportarRespaldo={importarRespaldo} onVaciarAuditoria={function(){setAuditLog([]);}} puedeInstalar={!!deferredInstallPrompt} onInstalar={instalarApp} onStartTour={abrirOnboarding} ctx={ctx}/>}
             </div>
           </div>
         </div>
@@ -8982,7 +8994,7 @@ function DocWorksApp(){
           onDOCX={function(){setDocAutoAction("docx");}}
           onShare={function(){setDocAutoAction("whatsapp");}}
         />:null}>
-        {viewDoc&&<DocumentViewer op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={toggleTarea} onUpdateOperation={onUpdateOperationGlobal} onActionWorkflow={function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}} onCompleteData={function(op,campo){setViewDoc(null);setDocAutoAction(null);setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
+        {viewDoc&&<DocumentViewer op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={toggleTarea} onUpdateOperation={onUpdateOperationGlobal} onActionWorkflow={function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}} onCompleteData={function(op,campo){setViewDoc(null);setDocAutoAction(null);setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
       </Modal>
       <ConfirmModal open={confirmCloseForm} title="Salir de la operación" message="Ya cargaste datos. ¿Querés guardar un borrador antes de salir?" confirmLabel="Guardar borrador" cancelLabel="Salir sin guardar" onCancel={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}/>
       <ConfirmModal
