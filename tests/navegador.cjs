@@ -10,7 +10,12 @@ function Harness(){
  useEffect(()=>{const listener=e=>setConfirmacion(e.detail);window.addEventListener('dw:confirm',listener);return ()=>window.removeEventListener('dw:confirm',listener);},[]);
  return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><select aria-label="Documento de prueba" value={tipo} onChange={e=>setTipo(e.target.value)}>{PLANTILLA_TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select><button onClick={()=>navegarConProteccionModelo(()=>setAbierto(false))}>Salir del modelo</button><button onClick={()=>setAbierto(true)}>Abrir modelo</button>{abierto&&<CuerpoPlantillaPanel key={tipo} perfil={perfil} tipo={tipo} puedeEditar={true} clausulas={[]} onChange={async p=>{setPerfil(p);return {};}}/>}<ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
 }
-createRoot(document.getElementById('root')).render(<Harness/>);
+function WorkspaceHarness(){
+ const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[confirmacion,setConfirmacion]=useState(null),[guardados,setGuardados]=useState(0);
+ useEffect(()=>{const listener=e=>setConfirmacion(e.detail);window.addEventListener('dw:confirm',listener);return ()=>window.removeEventListener('dw:confirm',listener);},[]);
+ return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><output data-testid="guardados">{guardados}</output><ClausulasWorkspace perfil={perfil} onSavePerfil={async p=>{setPerfil(p);setGuardados(n=>n+1);return {};}} clausulas={[{id:'ejemplo-opcional',titulo:'Texto reutilizable de ejemplo',contenido:'Texto ficticio para comprobar la biblioteca.',tipos:['todos']}]} operaciones={[]} bloquesReserva={[]} onAddClausula={()=>{}} onEditClausula={()=>{}} onDeleteClausula={()=>{}}/><ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
+}
+createRoot(document.getElementById('root')).render(location.pathname==='/workspace'?<WorkspaceHarness/>:<Harness/>);
 `;
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+harness,resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:path.join(out,'harness.js')});
 const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(out,'harness.js')));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/harness.js"></script></body></html>');}});
@@ -48,6 +53,42 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
    assert.equal(await page.locator('textarea').count(),0);checks++;
    if(tipo==='boleto')await page.screenshot({path:path.join(out,name+'.png'),fullPage:true});
   }
+  await page.goto('http://127.0.0.1:'+server.address().port+'/workspace');
+  const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
+  assert.equal(await nav.getByRole('button').count(),2);checks++;
+  await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
+  assert.equal(await page.locator('#dw-model-preview-area').count(),1);checks++;
+  assert.equal(await page.getByRole('tablist',{name:'Contenido del modelo'}).count(),0);checks++;
+  const extras=page.locator('#dw-model-extra-clauses');
+  assert.equal(await extras.getAttribute('open'),null);checks++;
+  await extras.locator('summary').click();
+  await page.getByLabel('Estado de Texto reutilizable de ejemplo',{exact:true}).selectOption('asesor');
+  await page.getByRole('checkbox',{name:'Recomendar',exact:true}).check();
+  assert.equal(await page.getByRole('checkbox',{name:'Recomendar',exact:true}).isChecked(),true);checks++;
+  assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' workspace overflow');checks++;
+  await page.screenshot({path:path.join(out,'documentos-'+name+'.png'),fullPage:true});
+  await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+  assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
+  await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
+  await page.locator('textarea').fill('Borrador conservado al cambiar de sección.');
+  await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+  await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
+  assert.ok((await page.locator('textarea').inputValue()).includes('Borrador conservado'));checks++;
+  await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+  await page.getByRole('button',{name:'Confirmar',exact:true}).click();
+  assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
+  await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  await page.getByRole('button',{name:'Editar introducción',exact:true}).click();
+  await page.locator('[contenteditable="true"]').fill('Introducción sin guardar.');
+  await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+  await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
+  assert.equal(await page.locator('[contenteditable="true"]').textContent(),'Introducción sin guardar.');checks++;
+  await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+  await page.getByRole('button',{name:'Confirmar',exact:true}).click();
+  assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
+  assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
   assert.deepEqual(errors,[]);checks++;await page.close();
  }
  console.log('APROBADAS',checks,'verificaciones '+engine+' en iPhone/iPad/escritorio emulados. Capturas:',out);

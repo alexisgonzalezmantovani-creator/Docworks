@@ -6339,6 +6339,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   useEffect(function(){
     if(!editId&&status!=="saving")return;
     function protegerNavegacion(e){
+      if(e.defaultPrevented)return;
       e.preventDefault();
       if(status==="saving"){dwNotify("info","Esperá a que termine de guardarse el modelo.");return;}
       requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",function(){
@@ -6511,7 +6512,7 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 @media(prefers-reduced-motion:reduce){.dw-clause-chevron,.dw-clause-card{transition:none}}
 `;
 
-function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onTipoDocChange,ocultarSelector,barraSuperior,previewOpen,onPreviewChange,children,pasoModelo,mostrarCuerpo,mostrarIntroduccion}) {
+function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onTipoDocChange,ocultarSelector,barraSuperior,previewOpen,onPreviewChange,children,pasoModelo,mostrarCuerpo,mostrarIntroduccion,onEditingChange}) {
   const [tipoDocInterno,setTipoDocInterno]=useState("reserva");
   const tipoDocSel=tipoDocExterno||tipoDocInterno;
   function setTipoDocSel(v){if(typeof onTipoDocChange==="function")onTipoDocChange(v);else setTipoDocInterno(v);}
@@ -6520,6 +6521,20 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   const [confirmLockDefaults,setConfirmLockDefaults]=useState(false);
   const [confirmPreviewReviewed,setConfirmPreviewReviewed]=useState(false);
   const [saveStatus,setSaveStatus]=useState(null);
+  useEffect(function(){if(onEditingChange)onEditingChange(encabezadoEditing||saveStatus==="saving");},[encabezadoEditing,saveStatus,onEditingChange]);
+  useEffect(function(){
+    if(!encabezadoEditing&&saveStatus!=="saving")return;
+    function advertirSalida(e){e.preventDefault();e.returnValue="";}
+    function protegerSalida(e){
+      if(e.defaultPrevented)return;
+      e.preventDefault();
+      if(saveStatus==="saving"){dwNotify("info","Esperá a que termine de guardarse el documento.");return;}
+      requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del documento?",function(){setEncabezadoEditing(false);setEncabezadoDraft("");e.detail.continuar();});
+    }
+    window.addEventListener("beforeunload",advertirSalida);
+    window.addEventListener("dw:model-navigation",protegerSalida);
+    return function(){window.removeEventListener("beforeunload",advertirSalida);window.removeEventListener("dw:model-navigation",protegerSalida);};
+  },[encabezadoEditing,saveStatus]);
   const puedeEditar=!!perfil&&(perfil.rol==="dueno"||perfil.rol==="admin");
   const cfg=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas);
   const idsPlantilla=cfg.clausulas_ids||[];
@@ -6574,7 +6589,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   }
   return <div style={{display:"flex",flexDirection:"column",gap:12}}>
     {barraSuperior&&<div id="dw-config-modelo" style={{position:"sticky",top:0,zIndex:8,scrollMarginTop:90,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:12,background:"var(--card)",boxShadow:"0 4px 14px rgba(0,0,0,.08)"}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><div style={{fontSize:12.5,fontWeight:700,color:"var(--text)"}}>{TIPOS[tipoDocSel]||tipoDocSel} · {pasoModelo===3?"Introducción y texto base":pasoModelo===2?"Cláusulas obligatorias":"Plantilla del documento"}</div>{cfg.locked&&puedeEditar&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){actualizarPlantilla({locked:false});}}>Habilitar edición</button>}</div>
+      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><div style={{fontSize:12.5,fontWeight:700,color:"var(--text)"}}>{TIPOS[tipoDocSel]||tipoDocSel}</div>{cfg.locked&&puedeEditar&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){actualizarPlantilla({locked:false});}}>Habilitar edición</button>}</div>
       <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){if(typeof onPreviewChange==="function")onPreviewChange(!previewOpen);}}>{previewOpen?"Cerrar vista previa":"Vista previa del modelo"}</button><button type="button" className="btn btn-primary btn-sm" disabled={!puedeEditar||!!cfg.locked} onClick={function(){setConfirmPreviewReviewed(false);setConfirmLockDefaults(true);}}>Publicar para asesores</button></div>
     </div>}
     {!puedeEditar&&<div className="notice" style={{fontSize:12}}>Esta configuración es de solo lectura. Solo Dueño y Administrador pueden editar encabezados y cláusulas.</div>}
@@ -6587,7 +6602,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
       {saveStatus==="saving"&&<div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Guardando cambios…</div>}{saveStatus==="saved"&&<div style={{fontSize:12,color:"var(--green)",marginTop:8}}>Cambios guardados.</div>}{saveStatus==="error"&&<div style={{fontSize:12,color:"var(--red)",marginTop:8}}>No se pudo guardar. Revisá la conexión e intentá nuevamente.</div>}
     </div>}
     {(pasoModelo===2||pasoModelo===3)&&<div id="dw-config-clausulas" style={{scrollMarginTop:90,border:"1px solid var(--border)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:12}}>
-      <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Texto base del documento</div>
+      <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Contenido del documento</div>
       {children}
 
     </div>}
