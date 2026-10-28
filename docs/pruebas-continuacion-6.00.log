@@ -1,0 +1,237 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> docworks@6.0.0 check
+> npm run typecheck && npm test && npm run build
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> docworks@6.0.0 typecheck
+> tsc --noEmit
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> docworks@6.0.0 test
+> node src/verificar-modulos.cjs && node src/check-integracion.cjs && node tests/documentos.cjs && node tests/editores.cjs && node tests/sesiones-perfil.cjs
+
+OK sintaxis App.tsx
+OK sintaxis Operaciones.tsx
+OK sintaxis Clausulas.tsx
+OK sintaxis Exportaciones.ts
+OK sintaxis Servicios.ts
+OK generador generarPDFModulo
+OK generador generarDOCXModulo
+OK version 6.00
+COMPROBACIONES ESTATICAS APROBADAS
+TypeScript unresolved/TDZ/import diagnostics: 0 ; all TypeScript diagnostics: 0
+OK legacy obligatoria por defecto
+OK legacy condicional opcional
+OK undefined de Supabase usa valor por defecto
+OK false explícito preservado
+OK reserva construye sin mutar operación
+OK reserva faltantes detectados
+OK reserva tokens resueltos
+OK reserva numeración continua
+OK reserva contactos privados ocultos
+OK reserva firmas idempotentes
+OK reserva inmobiliaria única usa perfil
+OK Reserva conformidad individual por vendedor
+OK reserva PDF válido
+OK reserva DOCX válido
+OK boleto construye sin mutar operación
+OK boleto faltantes detectados
+OK boleto tokens resueltos
+OK boleto numeración continua
+OK boleto contactos privados ocultos
+OK boleto firmas idempotentes
+OK boleto inmobiliaria única usa perfil
+OK boleto PDF válido
+OK boleto DOCX válido
+OK reserva_alquiler construye sin mutar operación
+OK reserva_alquiler faltantes detectados
+OK reserva_alquiler tokens resueltos
+OK reserva_alquiler numeración continua
+OK reserva_alquiler contactos privados ocultos
+OK reserva_alquiler firmas idempotentes
+OK reserva_alquiler inmobiliaria única usa perfil
+OK reserva_alquiler PDF válido
+OK reserva_alquiler DOCX válido
+OK alquiler construye sin mutar operación
+OK alquiler faltantes detectados
+OK alquiler tokens resueltos
+OK alquiler numeración continua
+OK alquiler contactos privados ocultos
+OK alquiler firmas idempotentes
+OK alquiler inmobiliaria única usa perfil
+OK alquiler PDF válido
+OK alquiler DOCX válido
+OK comodato construye sin mutar operación
+OK comodato faltantes detectados
+OK comodato tokens resueltos
+OK comodato numeración continua
+OK comodato contactos privados ocultos
+OK comodato firmas idempotentes
+OK comodato inmobiliaria única usa perfil
+OK comodato PDF válido
+OK comodato DOCX válido
+OK exclusividad construye sin mutar operación
+OK exclusividad faltantes detectados
+OK exclusividad tokens resueltos
+OK exclusividad numeración continua
+OK exclusividad contactos privados ocultos
+OK exclusividad firmas idempotentes
+OK exclusividad inmobiliaria única usa perfil
+OK exclusividad PDF válido
+OK exclusividad DOCX válido
+OK refuerzo_reserva construye sin mutar operación
+OK refuerzo_reserva faltantes detectados
+OK refuerzo_reserva tokens resueltos
+OK refuerzo_reserva numeración continua
+OK refuerzo_reserva contactos privados ocultos
+OK refuerzo_reserva firmas idempotentes
+OK refuerzo_reserva inmobiliaria única usa perfil
+OK refuerzo_reserva PDF válido
+OK refuerzo_reserva DOCX válido
+OK devolucion_reserva construye sin mutar operación
+OK devolucion_reserva faltantes detectados
+OK devolucion_reserva tokens resueltos
+OK devolucion_reserva numeración continua
+OK devolucion_reserva contactos privados ocultos
+OK devolucion_reserva firmas idempotentes
+OK devolucion_reserva inmobiliaria única usa perfil
+OK devolucion_reserva PDF válido
+OK devolucion_reserva DOCX válido
+OK Snapshot respeta obligatorias del modelo
+APROBADAS 78 verificaciones. Exportaciones: /tmp/docworks-test-tyq89M
+OK reserva alta no persiste
+OK reserva chips tienen etiquetas inequívocas
+OK chips distinguen monto y redacción legal
+OK reserva chip no persiste
+OK reserva navegación espera confirmación
+OK reserva cancelar navegación conserva borrador
+OK reserva confirmar navegación descarta sin persistir
+OK reserva cancelar confirma y descarta
+OK reserva error conserva editor
+OK reserva guarda solo explícitamente
+OK reserva historial conserva versión anterior
+OK reserva edición protegida
+OK boleto alta no persiste
+OK boleto chips tienen etiquetas inequívocas
+OK boleto chip no persiste
+OK boleto navegación espera confirmación
+OK boleto cancelar navegación conserva borrador
+OK boleto confirmar navegación descarta sin persistir
+OK boleto cancelar confirma y descarta
+OK boleto error conserva editor
+OK boleto guarda solo explícitamente
+OK boleto historial conserva versión anterior
+OK boleto edición protegida
+OK reserva_alquiler alta no persiste
+OK reserva_alquiler chips tienen etiquetas inequívocas
+OK reserva_alquiler chip no persiste
+OK reserva_alquiler navegación espera confirmación
+OK reserva_alquiler cancelar navegación conserva borrador
+OK reserva_alquiler confirmar navegación descarta sin persistir
+OK reserva_alquiler cancelar confirma y descarta
+OK reserva_alquiler error conserva editor
+OK reserva_alquiler guarda solo explícitamente
+OK reserva_alquiler historial conserva versión anterior
+OK reserva_alquiler edición protegida
+OK alquiler alta no persiste
+OK alquiler chips tienen etiquetas inequívocas
+OK alquiler chip no persiste
+OK alquiler navegación espera confirmación
+OK alquiler cancelar navegación conserva borrador
+OK alquiler confirmar navegación descarta sin persistir
+OK alquiler cancelar confirma y descarta
+OK alquiler error conserva editor
+OK alquiler guarda solo explícitamente
+OK alquiler historial conserva versión anterior
+OK alquiler edición protegida
+OK comodato alta no persiste
+OK comodato chips tienen etiquetas inequívocas
+OK comodato chip no persiste
+OK comodato navegación espera confirmación
+OK comodato cancelar navegación conserva borrador
+OK comodato confirmar navegación descarta sin persistir
+OK comodato cancelar confirma y descarta
+OK comodato error conserva editor
+OK comodato guarda solo explícitamente
+OK comodato historial conserva versión anterior
+OK comodato edición protegida
+OK exclusividad alta no persiste
+OK exclusividad chips tienen etiquetas inequívocas
+OK exclusividad chip no persiste
+OK exclusividad navegación espera confirmación
+OK exclusividad cancelar navegación conserva borrador
+OK exclusividad confirmar navegación descarta sin persistir
+OK exclusividad cancelar confirma y descarta
+OK exclusividad error conserva editor
+OK exclusividad guarda solo explícitamente
+OK exclusividad historial conserva versión anterior
+OK exclusividad edición protegida
+OK refuerzo_reserva alta no persiste
+OK refuerzo_reserva chips tienen etiquetas inequívocas
+OK refuerzo_reserva chip no persiste
+OK refuerzo_reserva navegación espera confirmación
+OK refuerzo_reserva cancelar navegación conserva borrador
+OK refuerzo_reserva confirmar navegación descarta sin persistir
+OK refuerzo_reserva cancelar confirma y descarta
+OK refuerzo_reserva error conserva editor
+OK refuerzo_reserva guarda solo explícitamente
+OK refuerzo_reserva historial conserva versión anterior
+OK refuerzo_reserva edición protegida
+OK devolucion_reserva alta no persiste
+OK devolucion_reserva chips tienen etiquetas inequívocas
+OK devolucion_reserva chip no persiste
+OK devolucion_reserva navegación espera confirmación
+OK devolucion_reserva cancelar navegación conserva borrador
+OK devolucion_reserva confirmar navegación descarta sin persistir
+OK devolucion_reserva cancelar confirma y descarta
+OK devolucion_reserva error conserva editor
+OK devolucion_reserva guarda solo explícitamente
+OK devolucion_reserva historial conserva versión anterior
+OK devolucion_reserva edición protegida
+OK confirmación de descarte en ocho documentos
+OK Reserva hereda texto de tabla histórica
+OK Documento y snapshot usan Reserva editada
+APROBADAS 92 verificaciones de interacción (DOM simulado; sin motor de layout).
+OK no guarda antes de leer la nube
+OK carga inicial conserva modelos de nube
+OK cambiar usuario de misma inmobiliaria vuelve a leer
+OK callback de usuario anterior rechazado antes de RPC
+OK lectura tardía no reemplaza otro usuario o inmobiliaria
+OK cambio durante recuperación de sesión no escribe
+OK sesión SDK diferente al contexto no escribe
+OK sesión y contexto coincidentes envían una RPC
+OK guardado vigente devuelve éxito
+OK respuesta tardía informa contexto obsoleto para impedir rollback ajeno
+OK fallo de lectura mantiene guardado bloqueado
+OK perfil remoto ausente no eleva asesor a dueño
+OK cambio de rol invalida contexto y vuelve a leer
+OK sesión vencida bloquea escritura sin perder perfil
+OK error de renovación se devuelve sin escribir
+OK rechazo del SDK se devuelve sin escribir
+OK tras recuperar sesión se permite reintentar
+OK rechazo de RPC conserva perfil y devuelve error
+OK sin cuenta no hay guardado
+OK cierre de sesión invalida guardado pendiente
+OK callback después de desmontar queda invalidado
+APROBADAS 21 verificaciones de transición de sesión con SDK simulado.
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> docworks@6.0.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 34 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                    0.60 kB │ gzip:   0.37 kB
+dist/assets/index-BguoPBLx.js  1,113.85 kB │ gzip: 293.83 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.94s

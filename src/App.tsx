@@ -7419,6 +7419,11 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
   var contextoActualRef = useRef(claveContexto);
   contextoActualRef.current = claveContexto;
   var solicitudPerfilRef = useRef(0);
+  var perfilMontadoRef = useRef(false);
+  useEffect(function(){
+    perfilMontadoRef.current=true;
+    return function(){perfilMontadoRef.current=false;};
+  },[]);
   var [perfilNubeCargado,setPerfilNubeCargado]=useState(false);
   function leer(sb, idSolicitado, numeroSolicitud){
     if(!idSolicitado) return Promise.resolve();
@@ -7443,7 +7448,7 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
   }
   function guardarAhora(p){
     var numeroSolicitud=solicitudPerfilRef.current;
-    function vigente(){return contextoActualRef.current===claveContexto&&solicitudPerfilRef.current===numeroSolicitud;}
+    function vigente(){return perfilMontadoRef.current&&contextoActualRef.current===claveContexto&&solicitudPerfilRef.current===numeroSolicitud;}
     function obsoleto(){return {contextoObsoleto:true,error:{message:"La cuenta cambió. Volvé a abrir el modelo antes de guardarlo."}};}
     if(!vigente())return Promise.resolve(obsoleto());
     if(!inmobId||!usuarioId)return Promise.resolve({error:{message:"Sin usuario o inmobiliaria activa."}});

@@ -29,3 +29,43 @@ jobs:
         with:
           name: docworks-vite-dist
           path: dist/
+
+  browsers:
+    name: Editores en ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+      - name: Instalar navegador y bibliotecas
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Verificar ocho editores en tres tamaños
+        env:
+          DOCWORKS_BROWSER_OUTPUT: .browser-results/${{ matrix.browser }}
+        run: |
+          set -o pipefail
+          mkdir -p "$DOCWORKS_BROWSER_OUTPUT"
+          if [ "${{ matrix.browser }}" = "webkit" ]; then
+            npm run test:webkit 2>&1 | tee "$DOCWORKS_BROWSER_OUTPUT/resultados.log"
+          else
+            npm run test:browser 2>&1 | tee "$DOCWORKS_BROWSER_OUTPUT/resultados.log"
+          fi
+      - name: Guardar resultados y capturas ficticias
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docworks-editores-${{ matrix.browser }}
+          path: |
+            .browser-results/${{ matrix.browser }}/*.log
+            .browser-results/${{ matrix.browser }}/*.png
+          if-no-files-found: warn
+          retention-days: 14
