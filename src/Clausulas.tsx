@@ -217,7 +217,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
 }
 
 export function crearClausulasWorkspace(deps){
- const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, useEffect, useState} = deps;
+ const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, requestDwConfirm, useEffect, useState} = deps;
 
 
 /* Componente legado de cláusulas personales eliminado: ya no forma parte del producto. */
@@ -226,8 +226,18 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   const [mostrarPapeleraClausulas,setMostrarPapeleraClausulas]=useState(false);
   const [restaurandoClausula,setRestaurandoClausula]=useState(null);
   const [errorPapeleraClausulas,setErrorPapeleraClausulas]=useState("");
-  const [seccion,setSeccion]=useState("adicionales");
+  const [seccion,setSeccionDirecto]=useState("adicionales");
+  function setSeccion(next){
+    function cambiar(){setModeloEditando(false);setSeccionDirecto(next);}
+    if(modeloEditando&&next!==seccion)requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",cambiar);else cambiar();
+  }
   const [tipoDocSel,setTipoDocSel]=useState("reserva");
+  const [modeloEditando,setModeloEditando]=useState(false);
+  function cambiarDocumento(tipo){
+    if(tipo===tipoDocSel)return;
+    function cambiar(){setModeloEditando(false);setTipoDocSel(tipo);}
+    if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de cambiar de documento?",cambiar);else cambiar();
+  }
   const [filtroAdicional,setFiltroAdicional]=useState("todas");
   const [previewModeloAbierta,setPreviewModeloAbierta]=useState(false);
   const [pasoModelo,setPasoModelo]=useState(1);
@@ -238,7 +248,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   const rolLabel=(ROLES_DEF[perfil&&perfil.rol]&&ROLES_DEF[perfil.rol].label)||(perfil&&perfil.rol)||"usuario";
   function guardarPerfil(next){return onSavePerfil(next);}
   function cambiarEstadoClausulaBiblioteca(clausula,estado){
-    if(!puedeEditar||!clausula)return Promise.resolve({error:new Error("Sin permisos")});
+    if(!puedeEditar||!clausula||obtenerPlantillaConfig(perfil,tipoDocSel,clausulas).locked)return Promise.resolve({error:new Error("Sin permisos")});
     if(clausula.obligatoria===true&&estado!=="obligatoria")return Promise.resolve({error:new Error("Esta cláusula es esencial y no se puede desactivar desde este modelo.")});
     var mapa=Object.assign({},perfil&&perfil.plantillas||{}),cfg=Object.assign({},mapa[tipoDocSel]||{});
     var opcionales=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas).clausulas_ids.slice();
@@ -260,7 +270,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   }
   function contarModelo(tipo){return contarBloquesCuerpo(perfil,tipo,bloquesReserva);}
   var protegidas=obtenerIdsProtegidosDePlantillas(perfil);
-  var protegidasConTipos=protegidas.map(function(id){var c=(clausulas||[]).find(function(x){return x.id===id;})||null;var tiposFijos=PLANTILLA_TIPOS.filter(function(tipo){var cfg=obtenerPlantillaConfig(perfil,tipo,clausulas);return !!cfg.locked&&(cfg.clausulas_ids||[]).indexOf(id)!==-1;});return {id:id,clausula:c,tipos:tiposFijos};});
+  var protegidasConTipos=protegidas.map(function(id){var c=(clausulas||[]).find(function(x){return x.id===id;})||null;var tiposFijos=PLANTILLA_TIPOS.filter(function(tipo){var cfg=obtenerPlantillaConfig(perfil,tipo,clausulas);return !!cfg.locked&&((cfg.clausulas_ids||[]).indexOf(id)!==-1||(cfg.obligatorias_ids||[]).indexOf(id)!==-1);});return {id:id,clausula:c,tipos:tiposFijos};});
   var adicionalesVisibles=(clausulas||[]).filter(function(c){if(protegidas.indexOf(c.id)!==-1)return false;return filtroAdicional==="todas"||clausulaAplicaTipo(c,filtroAdicional);});
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div className="section-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
@@ -286,7 +296,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       <div style={{fontSize:15,fontWeight:700,marginBottom:5}}>Cláusulas frecuentes para el broker</div>
       <div style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.55,marginBottom:12}}>Seleccioná las cláusulas adicionales que querés recomendar en cada tipo de operación. No se incorporan automáticamente al documento y no reemplazan las cláusulas del modelo.</div>
       <label style={{display:"block",fontSize:12,marginBottom:6}}>Tipo de documento</label>
-      <select value={tipoDocSel} onChange={function(e){setTipoDocSel(e.target.value);}} style={{width:"100%",maxWidth:380,padding:10,borderRadius:9,border:"1px solid var(--border)",background:"var(--card)",color:"var(--text)",marginBottom:12}}>{PLANTILLA_TIPOS.map(function(tipo){return <option key={tipo} value={tipo}>{TIPOS[tipo]||tipo}</option>;})}</select>
+      <select value={tipoDocSel} onChange={function(e){cambiarDocumento(e.target.value);}} style={{width:"100%",maxWidth:380,padding:10,borderRadius:9,border:"1px solid var(--border)",background:"var(--card)",color:"var(--text)",marginBottom:12}}>{PLANTILLA_TIPOS.map(function(tipo){return <option key={tipo} value={tipo}>{TIPOS[tipo]||tipo}</option>;})}</select>
       {(clausulas||[]).filter(function(c){return c&&clausulaAplicaTipo(c,tipoDocSel)&&protegidas.indexOf(c.id)===-1&&!clausulaYaEnTextoBase(c);}).map(function(c){var ids=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas).frecuentes_ids||[];return <label key={c.id} style={{display:"flex",alignItems:"center",gap:11,padding:"12px 2px",borderBottom:"1px solid var(--border)",cursor:"pointer"}}><input type="checkbox" checked={ids.indexOf(c.id)!==-1} onChange={function(){alternarFrecuente(c.id);}}/><span style={{flex:1,minWidth:0,fontSize:13}}>{c.titulo||"Cláusula sin título"}</span></label>;})}
       <div style={{fontSize:12,color:"var(--muted)",marginTop:12}}>Las cláusulas de precio, honorarios y otras partes estructurales permanecen exclusivamente en el modelo de la inmobiliaria.</div>
     </div>}
@@ -294,17 +304,17 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       <style>{".dw-model-type-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.dw-model-type-chip{min-width:0;text-align:left}@media(max-width:640px){.dw-model-type-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dw-model-type-chip{width:100%;min-width:0;max-width:none}}@media(max-width:380px){.dw-model-type-grid{grid-template-columns:minmax(0,1fr)}}"}</style>
       {<div id="dw-config-tipo" className="card" style={{padding:12,scrollMarginTop:90}}>
         <div style={{fontSize:12,fontWeight:750,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:5}}>Elegí un documento</div><div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>Seleccioná el documento para personalizar sus cláusulas y su contenido.</div>
-        <div className="dw-model-type-grid">{PLANTILLA_TIPOS.map(function(tipo){var cfg=obtenerPlantillaConfig(perfil,tipo,clausulas);var active=tipoDocSel===tipo;return <button key={tipo} type="button" className="dw-model-type-chip" onClick={function(){setTipoDocSel(tipo);}} style={{display:"flex",flexDirection:"column",gap:5,border:"1px solid "+(active?"rgba(212,168,83,.65)":"var(--border)"),borderRadius:10,padding:"10px 11px",background:active?"rgba(212,168,83,.10)":"var(--card)",color:active?"var(--text)":"var(--muted)",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:5,fontSize:12,fontWeight:750}}><span>{TIPOS[tipo]||tipo}</span>{cfg.locked&&<span title="Modelo fijado" aria-label="Modelo fijado">🔒</span>}</span><span style={{fontSize:11,color:"var(--dim)"}}>{contarModelo(tipo)} cláusulas</span></button>;})}</div>
+        <div className="dw-model-type-grid">{PLANTILLA_TIPOS.map(function(tipo){var cfg=obtenerPlantillaConfig(perfil,tipo,clausulas);var active=tipoDocSel===tipo;return <button key={tipo} type="button" className="dw-model-type-chip" onClick={function(){cambiarDocumento(tipo);}} style={{display:"flex",flexDirection:"column",gap:5,border:"1px solid "+(active?"rgba(212,168,83,.65)":"var(--border)"),borderRadius:10,padding:"10px 11px",background:active?"rgba(212,168,83,.10)":"var(--card)",color:active?"var(--text)":"var(--muted)",cursor:"pointer"}}><span style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:5,fontSize:12,fontWeight:750}}><span>{TIPOS[tipo]||tipo}</span>{cfg.locked&&<span title="Modelo fijado" aria-label="Modelo fijado">🔒</span>}</span><span style={{fontSize:11,color:"var(--dim)"}}>{contarModelo(tipo)} cláusulas</span></button>;})}</div>
       </div>}
       {<div role="tablist" aria-label="Contenido del modelo" style={{display:"flex",gap:6,flexWrap:"wrap"}}><button type="button" role="tab" aria-selected={subseccionModelo==="obligatorias"} onClick={function(){setSubseccionModelo("obligatorias");}} className="btn btn-sm" style={{flex:"1 1 150px",minHeight:42,background:subseccionModelo==="obligatorias"?"var(--card)":"transparent",border:"1px solid var(--border)",color:"var(--text)"}}><span aria-hidden="true">🔒 </span>Obligatorias</button><button type="button" role="tab" aria-selected={subseccionModelo==="introduccion"} onClick={function(){setSubseccionModelo("introduccion");}} className="btn btn-sm" style={{flex:"1 1 150px",minHeight:42,background:subseccionModelo==="introduccion"?"var(--card)":"transparent",border:"1px solid var(--border)",color:"var(--text)"}}>Introducción y texto base</button></div>}
-      <EncabezadoFijadoPanel pasoModelo={subseccionModelo==="introduccion"?3:2} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={setTipoDocSel} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={function(open){if(open)setSubseccionModelo("obligatorias");setPreviewModeloAbierta(open);}}>
+      <EncabezadoFijadoPanel pasoModelo={subseccionModelo==="introduccion"?3:2} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={function(open){if(open)setSubseccionModelo("obligatorias");setPreviewModeloAbierta(open);}}>
         <div className="card" style={{padding:14}}>
           <div style={{fontSize:15,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}><span aria-hidden="true">🔒 </span>Cláusulas obligatorias</div>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Son el esqueleto del documento: salen siempre, en este orden. Editá el texto y reordená las cláusulas. Las esenciales del sistema no se pueden eliminar.</div>
           <div id="dw-model-preview-area">
             {bloquesError&&tipoDocSel==="reserva"&&<div className="notice notice-amber" style={{fontSize:12,marginBottom:10}}>{bloquesError} {onRetryBloques&&<button type="button" onClick={onRetryBloques} className="btn btn-secondary btn-sm">Reintentar</button>}</div>}
             {bloquesLoading&&tipoDocSel==="reserva"&&(!bloquesReserva||bloquesReserva.length===0)&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Cargando las cláusulas del modelo de Reserva…</div>}
-            {tipoDocSel==="reserva" ? <ReservaBloquesPanel bloques={Array.isArray(bloquesReserva)&&bloquesReserva.length?bloquesReserva:DEFAULT_BLOQUES_RESERVA} onUpdate={onUpdateBloqueReserva} onMove={onMoveBloqueReserva} clausulasLib={Array.isArray(clausulas)?clausulas:[]} operaciones={Array.isArray(operaciones)?operaciones:[]} puedeEditar={puedeEditar&&Array.isArray(bloquesReserva)&&bloquesReserva.length>0&&!obtenerPlantillaConfig(perfil,tipoDocSel,clausulas).locked} perfil={perfil} onSavePerfil={guardarPerfil} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta} puedeVerHistorial={puedeEditar} onAgregarClausula={function(){document.getElementById("dw-model-extra-clauses")?.scrollIntoView({behavior:"smooth",block:"start"});}}/> : <CuerpoPlantillaPanel perfil={perfil} tipo={tipoDocSel} puedeEditar={puedeEditar&&!obtenerPlantillaConfig(perfil,tipoDocSel,clausulas).locked} puedeVerHistorial={puedeEditar} usuarioActual={usuarioActual} onChange={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}/> }
+            {<CuerpoPlantillaPanel perfil={perfil} tipo={tipoDocSel} bloquesReserva={bloquesReserva} onEditingChange={setModeloEditando} puedeEditar={puedeEditar&&!obtenerPlantillaConfig(perfil,tipoDocSel,clausulas).locked} puedeVerHistorial={puedeEditar} usuarioActual={usuarioActual} onChange={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}/>}
           </div>
         </div>
       </EncabezadoFijadoPanel>

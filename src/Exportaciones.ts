@@ -443,7 +443,9 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       confItems.forEach(function(txt,i){
         drawParagraph([{txt:(i+1)+". ",bold:true}], txt, {spaceAfter:10});
       });
-      // Reserva aire de firma + rótulos del propietario en un solo bloque
+      // Una firma de conformidad por titular; mantener compatibilidad con documentos antiguos.
+      var conformantes=doc.conformidad.firmantes&&doc.conformidad.firmantes.length?doc.conformidad.firmantes:[{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}];
+      conformantes.forEach(function(firmante){
       ensureSpace(firmaBlank + firmaLabels + 10);
       y -= 8;
       y -= firmaBlank;
@@ -451,9 +453,10 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       var sigWConformidad=Math.min(200,Math.max(140,W-ML-MR-40));
       lines.push("0.5 G 0.6 w "+(cxConformidad-sigWConformidad/2)+" "+y+" m "+(cxConformidad+sigWConformidad/2)+" "+y+" l S 0 G");
       textCentered(cxConformidad,y-12,doc.conformidad.rol||"VENDEDOR",8,false);
-      textCentered(cxConformidad,y-24,doc.conformidad.firmante||"",8,true);
-      if(doc.conformidad.dni) textCentered(cxConformidad,y-35,tipoIdentificacion(doc.conformidad.dni,doc.conformidad)+": "+doc.conformidad.dni,8,false);
+      textCentered(cxConformidad,y-24,firmante.nombre||"",8,true);
+      if(firmante.dni) textCentered(cxConformidad,y-35,tipoIdentificacion(firmante.dni,firmante)+": "+firmante.dni,8,false);
       y -= firmaLabels;
+      });
     }
 
     // Cierra la última página pendiente
@@ -706,10 +709,13 @@ export async function generarDOCXModulo(doc, perfil, deps) {
           {text: txt, size:10.5},
         ], {justify:true, spacing:{before:140, after:80}});
       });
+      var conformantesDocx=doc.conformidad.firmantes&&doc.conformidad.firmantes.length?doc.conformidad.firmantes:[{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}];
+      conformantesDocx.forEach(function(firmante){
       body += px("________________________", {size:DOC_EXPORT_LAYOUT.signatureSize, center:true, spacing:{before:docxTwipsFromPt(DOC_EXPORT_LAYOUT.signatureGap),after:35}});
       body += px(doc.conformidad.rol||"VENDEDOR", {size:9, color:"555555", center:true, spacing:{before:0,after:12}});
-      body += px(doc.conformidad.firmante||"", {size:10, bold:true, center:true, spacing:{before:0,after:14}});
-      if (doc.conformidad.dni) body += px(tipoIdentificacion(doc.conformidad.dni,doc.conformidad)+": "+doc.conformidad.dni, {size:9, color:"444444", center:true, spacing:{before:0,after:90}});
+      body += px(firmante.nombre||"", {size:10, bold:true, center:true, spacing:{before:0,after:14}});
+      if (firmante.dni) body += px(tipoIdentificacion(firmante.dni,firmante)+": "+firmante.dni, {size:9, color:"444444", center:true, spacing:{before:0,after:90}});
+      });
     }
 
     // El pie se genera como footer real de Word (por página), no como contenido

@@ -1,4 +1,4 @@
-const ts=require('/opt/nvm/versions/node/v22.16.0/lib/node_modules/typescript/lib/typescript.js'),path=require('path'),fs=require('fs');
+const ts=require('typescript'),path=require('path'),fs=require('fs');
 const root=__dirname, files=['App.tsx','Operaciones.tsx','Clausulas.tsx','Exportaciones.ts','Servicios.ts'];
 const sf=new Map(files.map(n=>[n,ts.createSourceFile(n,fs.readFileSync(path.join(root,n),'utf8'),ts.ScriptTarget.Latest,true,n.endsWith('tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS)]));
 let errors=[];

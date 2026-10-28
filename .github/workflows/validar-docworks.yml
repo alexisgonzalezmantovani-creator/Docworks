@@ -2,7 +2,9 @@ name: Validar DocWorks (rama de prueba)
 on:
   push:
     branches:
-      - test/docworks-5-85-validation
+      - work/docworks-6-pro
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,9 +17,9 @@ jobs:
         with:
           node-version: '22'
       - name: Instalar dependencias
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Compilar con Vite
-        run: npm run build
+        run: npm run check
       - name: Verificar integración
         run: |
           if [ -f src/verificar-modulos.cjs ]; then node src/verificar-modulos.cjs; fi
