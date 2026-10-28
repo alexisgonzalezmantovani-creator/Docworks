@@ -2776,6 +2776,9 @@ function asegurarFirmasDocumento(doc, op, perfil) {
     return true;
   });
   var tieneInmob=indiceInmob>=0;
+  firmas=firmas.map(function(f){
+    return f&&String(f.rol||"").toUpperCase().indexOf("INMOBILIARIA")>=0?Object.assign({},f,{usarPerfil:true}):f;
+  });
   if (!tieneInmob) firmas.push({rol:"INMOBILIARIA INTERVINIENTE", nombre:"", dni:"", usarPerfil:true});
 
   var garanteNombre = op && op.alquiler_garantia_titular;
@@ -4154,6 +4157,8 @@ function pxBase(text, opts) {
   opts = opts || {};
   var st = opts._docxStyle || DOCX_STYLE_DEFAULT;
   var pPr = "";
+  if (opts.keepNext) pPr += "<w:keepNext/>";
+  if (opts.keepLines) pPr += "<w:keepLines/>";
   if (opts.spacing) pPr += '<w:spacing w:before="'+(opts.spacing.before||0)+'" w:after="'+(opts.spacing.after||100)+'" w:line="'+docxTwipsFromPt(DOC_EXPORT_LAYOUT.lineHeight)+'" w:lineRule="exact"/>';
   if (opts.center) pPr += '<w:jc w:val="center"/>';
   if (opts.justify) pPr += '<w:jc w:val="both"/>';
@@ -4179,6 +4184,8 @@ function pxRunsBase(runsArr, opts) {
   opts = opts || {};
   var st = opts._docxStyle || DOCX_STYLE_DEFAULT;
   var pPr = "";
+  if (opts.keepNext) pPr += "<w:keepNext/>";
+  if (opts.keepLines) pPr += "<w:keepLines/>";
   if (opts.spacing) pPr += '<w:spacing w:before="'+(opts.spacing.before||0)+'" w:after="'+(opts.spacing.after||100)+'" w:line="'+docxTwipsFromPt(DOC_EXPORT_LAYOUT.lineHeight)+'" w:lineRule="exact"/>';
   if (opts.center) pPr += '<w:jc w:val="center"/>';
   if (opts.justify) pPr += '<w:jc w:val="both"/>';
@@ -4368,6 +4375,10 @@ function Modal({open,onClose,title,children=undefined,wide=undefined,formTipo=un
 function requestDwConfirm(message,onConfirm,confirmLabel=undefined,secondary=undefined){
   try{ window.dispatchEvent(new CustomEvent("dw:confirm",{detail:{message:message,onConfirm:onConfirm,confirmLabel:confirmLabel||"Confirmar",secondaryLabel:secondary&&secondary.label,onSecondary:secondary&&secondary.onClick}})); }
   catch(e){ dwNotify("error",typeof message==="string"?message:"Faltan datos en el documento."); }
+}
+function navegarConProteccionModelo(continuar){
+  var evento=new CustomEvent("dw:model-navigation",{cancelable:true,detail:{continuar:continuar}});
+  if(window.dispatchEvent(evento))continuar();
 }
 function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,onConfirm,onCancel,secondaryLabel=null,onSecondary=null,secondaryDisabled=false}){
   useBodyScrollLock(!!open);
@@ -6325,6 +6336,19 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     window.addEventListener("beforeunload",advertirSalida);
     return function(){window.removeEventListener("beforeunload",advertirSalida);};
   },[editId]);
+  useEffect(function(){
+    if(!editId&&status!=="saving")return;
+    function protegerNavegacion(e){
+      e.preventDefault();
+      if(status==="saving"){dwNotify("info","Esperá a que termine de guardarse el modelo.");return;}
+      requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",function(){
+        setDraft(getBodyBlocksConfig(perfil,tipo,bloquesReserva));setEditId(null);
+        e.detail.continuar();
+      });
+    }
+    window.addEventListener("dw:model-navigation",protegerNavegacion);
+    return function(){window.removeEventListener("dw:model-navigation",protegerNavegacion);};
+  },[editId,status,perfil,tipo,bloquesReserva]);
   var previewVisible=typeof previewOpen==="boolean"?previewOpen:probarAbierto;
   function togglePreview(){if(typeof onPreviewChange==="function")onPreviewChange(!previewVisible);else setProbarAbierto(!previewVisible);}
   var opEjemploPlantilla=Object.assign({},SAMPLE_OP_PREVIEW,{
@@ -7814,7 +7838,11 @@ function DocWorksApp(){
     else posponerInstalacion();
   }
   var mostrarInstalar=isMobileOrTablet&&!isStandalone&&!installedFlag;
-  const [view,setView]=useState(function(){return lsGet("last_view_v1","dashboard");});
+  const [view,setViewDirecto]=useState(function(){return lsGet("last_view_v1","dashboard");});
+  function setView(next){
+    if(next===view)return;
+    navegarConProteccionModelo(function(){setViewDirecto(next);});
+  }
   useEffect(function(){lsSet("last_view_v1",view||"dashboard");},[view]);
   // 4.08 — Los botones flotantes ("+" y asistente) se esconden al bajar y vuelven al subir.
   useEffect(function(){

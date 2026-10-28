@@ -5,10 +5,10 @@ fs.mkdirSync(out,{recursive:true});
 const harness=`
 import {createRoot} from 'react-dom/client';
 function Harness(){
- const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[tipo,setTipo]=useState('reserva');
- return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><select aria-label="Documento de prueba" value={tipo} onChange={e=>setTipo(e.target.value)}>{PLANTILLA_TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select><CuerpoPlantillaPanel key={tipo} perfil={perfil} tipo={tipo} puedeEditar={true} clausulas={[]} onChange={async p=>{setPerfil(p);return {};}}/></main></>;
+ const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[tipo,setTipo]=useState('reserva'),[abierto,setAbierto]=useState(true),[confirmacion,setConfirmacion]=useState(null);
+ useEffect(()=>{const listener=e=>setConfirmacion(e.detail);window.addEventListener('dw:confirm',listener);return ()=>window.removeEventListener('dw:confirm',listener);},[]);
+ return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><select aria-label="Documento de prueba" value={tipo} onChange={e=>setTipo(e.target.value)}>{PLANTILLA_TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select><button onClick={()=>navegarConProteccionModelo(()=>setAbierto(false))}>Salir del modelo</button><button onClick={()=>setAbierto(true)}>Abrir modelo</button>{abierto&&<CuerpoPlantillaPanel key={tipo} perfil={perfil} tipo={tipo} puedeEditar={true} clausulas={[]} onChange={async p=>{setPerfil(p);return {};}}/>}<ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
 }
-window.addEventListener('dw:confirm',e=>e.detail.onConfirm());
 createRoot(document.getElementById('root')).render(<Harness/>);
 `;
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+harness,resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:path.join(out,'harness.js')});
@@ -31,6 +31,16 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
    await page.locator('textarea').fill('Texto de prueba móvil.');
    await page.getByRole('button',{name:'Guardar cláusula',exact:true}).click();
    await page.locator('textarea').waitFor({state:'detached'});checks++;
+   await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
+   await page.locator('textarea').fill('Borrador que debe sobrevivir al cancelar la salida.');
+   await page.getByRole('button',{name:'Salir del modelo',exact:true}).click();
+   await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
+   assert.ok((await page.locator('textarea').inputValue()).includes('sobrevivir'));checks++;
+   await page.getByRole('button',{name:'Salir del modelo',exact:true}).click();
+   await page.getByRole('button',{name:'Confirmar',exact:true}).click();
+   await page.locator('textarea').waitFor({state:'detached'});checks++;
+   await page.getByRole('button',{name:'Abrir modelo',exact:true}).click();
+   assert.equal(await page.locator('textarea').count(),0);checks++;
    if(tipo==='boleto')await page.screenshot({path:path.join(out,name+'.png'),fullPage:true});
   }
   assert.deepEqual(errors,[]);checks++;await page.close();

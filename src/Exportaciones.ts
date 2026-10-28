@@ -673,7 +673,7 @@ export async function generarDOCXModulo(doc, perfil, deps) {
     // Firmas: grilla horizontal de tres columnas, como en el PDF.
     // Cada fila se mantiene junta para evitar firmas partidas entre páginas.
     body += px("", {border:true, spacing:{before:140,after:100}});
-    body += px("FIRMAS", {bold:true, size:DOC_EXPORT_LAYOUT.signatureSize+3, center:true, spacing:{before:100,after:90}});
+    body += px("FIRMAS", {keepNext:true,bold:true, size:DOC_EXPORT_LAYOUT.signatureSize+3, center:true, spacing:{before:100,after:90}});
     var firmantesPpalesDocx = (doc.firmas && doc.firmas.length) ? doc.firmas.slice() : (doc.partes||[]).slice();
     var huboInmobEnFirmasDocx = firmantesPpalesDocx.some(function(f){return !!f.usarPerfil;});
     if (!huboInmobEnFirmasDocx) firmantesPpalesDocx.push({rol:"INMOBILIARIA INTERVINIENTE",usarPerfil:true});
@@ -702,7 +702,7 @@ export async function generarDOCXModulo(doc, perfil, deps) {
     // Presta Conformidad (reserva): aceptación posterior del propietario, numeración propia
     if (doc.conformidad && doc.conformidad.items && doc.conformidad.items.length) {
       body += px("", {border:true, spacing:{before:140,after:100}});
-      body += px("PRESTA CONFORMIDAD", {bold:true, size:11, spacing:{before:80,after:120}});
+      body += px("PRESTA CONFORMIDAD", {keepNext:true,bold:true, size:11, spacing:{before:80,after:120}});
       doc.conformidad.items.forEach(function(txt, i) {
         body += pxRuns([
           {text: (i+1)+". ", bold:true, size:10.5, color:DOCX_COLOR_PRIM},
@@ -711,9 +711,9 @@ export async function generarDOCXModulo(doc, perfil, deps) {
       });
       var conformantesDocx=doc.conformidad.firmantes&&doc.conformidad.firmantes.length?doc.conformidad.firmantes:[{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}];
       conformantesDocx.forEach(function(firmante){
-      body += px("________________________", {size:DOC_EXPORT_LAYOUT.signatureSize, center:true, spacing:{before:docxTwipsFromPt(DOC_EXPORT_LAYOUT.signatureGap),after:35}});
-      body += px(doc.conformidad.rol||"VENDEDOR", {size:9, color:"555555", center:true, spacing:{before:0,after:12}});
-      body += px(firmante.nombre||"", {size:10, bold:true, center:true, spacing:{before:0,after:14}});
+      body += px("________________________", {keepNext:true,keepLines:true,size:DOC_EXPORT_LAYOUT.signatureSize, center:true, spacing:{before:docxTwipsFromPt(DOC_EXPORT_LAYOUT.signatureGap),after:35}});
+      body += px(doc.conformidad.rol||"VENDEDOR", {keepNext:true,size:9, color:"555555", center:true, spacing:{before:0,after:12}});
+      body += px(firmante.nombre||"", {keepNext:!!firmante.dni,size:10, bold:true, center:true, spacing:{before:0,after:14}});
       if (firmante.dni) body += px(tipoIdentificacion(firmante.dni,firmante)+": "+firmante.dni, {size:9, color:"444444", center:true, spacing:{before:0,after:90}});
       });
     }

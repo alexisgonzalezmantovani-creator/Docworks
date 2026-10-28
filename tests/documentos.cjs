@@ -25,6 +25,7 @@ delete global.document;
   check(tipo+' numeración continua',()=>assert.deepEqual(doc.secciones.map(x=>Number(x.titulo.match(/^\d+/)?.[0])),doc.secciones.map((_,i)=>i+1)));
   check(tipo+' contactos privados ocultos',()=>assert.ok(!text.includes('privado@example.test')));
   check(tipo+' firmas idempotentes',()=>{const once=JSON.stringify(doc.firmas);app.asegurarFirmasDocumento(doc,op,{});assert.equal(JSON.stringify(doc.firmas),once);});
+  check(tipo+' inmobiliaria única usa perfil',()=>{const firmas=doc.firmas.filter(f=>f.usarPerfil||String(f.rol||'').includes('INMOBILIARIA'));assert.equal(firmas.length,1);assert.equal(firmas[0].usarPerfil,true);});
   if(tipo==='reserva')check('Reserva conformidad individual por vendedor',()=>assert.equal(doc.conformidad.firmantes.length,2));
   const pdf=await app.generarPDF(doc,null,{}),word=await app.generarDOCX(doc,{});
   check(tipo+' PDF válido',()=>{assert.ok(pdf?.blob?.size>1000);});
