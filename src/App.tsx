@@ -460,7 +460,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.09";
+var DOCWORKS_VERSION = "6.10";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -2855,7 +2855,7 @@ function finalizeDoc(doc, op, clausulasLib) {
     if(!clave||contenidosVistos.has(clave))return;
     contenidosVistos.add(clave);
     n++;
-    extra.push({num:n,titulo:titulo,texto:texto,obligatoria:!!obligatoria});
+    extra.push({num:n,titulo:String(titulo||"").trim()||"CONDICIÓN PARTICULAR",texto:texto,obligatoria:!!obligatoria});
   }
   var seleccionadasIds = op.clausulas_ids || [];
   // El orden final sigue el orden de la biblioteca (el que definió el
@@ -3195,9 +3195,8 @@ async function mejorarEncabezadoIA(textoActual, tipo) {
 //
 //   id                  estable, no cambia aunque se edite el título.
 //   titulo              sin el número — la numeración es automática (orden).
-//   sinTitulo           true = la cláusula no lleva rótulo de texto, solo el
-//                        número. En la configuración actual todas las cláusulas base
-//                        de Reserva llevan título visible para facilitar su edición.
+//   sinTitulo           legado conservado como dato; los títulos ahora se muestran
+//                        en todos los documentos para identificar cada cláusula.
 //   contenido           texto legal con tokens {{...}}; puede tener varios
 //                        párrafos separados por "\n\n" (así es hoy el bloque 7).
 //   variables           lista informativa de tokens usados (para mostrar en
@@ -3242,7 +3241,7 @@ function renderBloques(bloques, op, tokensBase) {
   activos.forEach(function(b, i){ extra[tokenNumeroBloque(b.id)] = String(i+1); });
   var secciones = activos.map(function(b, i){
     var n = i+1;
-    var tituloFinal = b.sinTitulo ? (n+".") : (n+". "+b.titulo);
+    var tituloFinal = n+". "+nombreClausulaModelo(b);
     var parrafos = (b.contenido||"").split("\n\n").map(function(p){ return resolveVars(p, op, extra); });
     return { titulo: tituloFinal, items: parrafos, _bloqueId: b.id, _n: n };
   });
@@ -3316,14 +3315,25 @@ function compararGeneradoresReserva(op, bloques, clausulasLib) {
 // personalizada dentro de perfil.plantillas[tipo].body_blocks. Los tokens
 // {{...}} se resuelven contra la operación al generar PDF/Word; no se guardan
 // datos reales dentro de la plantilla.
+function nombreClausulaModelo(b){
+  var titulo=String(b&&b.titulo||"").trim();
+  if(titulo&&!/^(cl[aá]usula(?: sin t[ií]tulo| \d+)?|\d+\.?)$/i.test(titulo))return titulo;
+  var tipos=Object.keys(BODY_TEMPLATE_PRESETS||{});
+  for(var i=0;i<tipos.length;i++){
+    var base=BODY_TEMPLATE_PRESETS[tipos[i]].find(function(x){return x.id===(b&&b.id);});
+    if(base&&base.titulo)return base.titulo;
+  }
+  return "CONDICIÓN PARTICULAR";
+}
 function normalizarBodyBlock(b, idx) {
   var x = Object.assign({id:"",titulo:"",contenido:"",orden:idx+1,activo:true,sinTitulo:false,condicion:null}, b || {});
   x.id = String(x.id || ("bloque_"+(idx+1)));
-  x.titulo = String(x.titulo || "");
+  x.titulo = nombreClausulaModelo(x);
   x.contenido = String(x.contenido || "");
   x.orden = Number(x.orden)||idx+1;
   x.activo = x.activo !== false;
-  x.sinTitulo = !!x.sinTitulo;
+  // Los nombres son visibles también en modelos que antes ocultaban el título.
+  x.sinTitulo = false;
   // Compatibilidad 4.41: migrar primero para detectar también las condiciones
   // inferidas por ID (por ejemplo op_refuerzo y op_seguro) antes de fijar el estado.
   var normalizado = migrarBloqueLegacy(x);
@@ -3593,7 +3603,7 @@ function buildDocSectionsFromEditableBody(op, clausulasLib, tipo, bloquesPlantil
   var secciones=sorted.map(function(b,i){
     var txt=String(b.contenido||"");
     var items=txt.split(/\n\n/).map(function(p){return resolveVars(p,op,Object.assign({},extras,derivedTokensGenerales(op)));}).filter(function(p){return String(p||"").trim()!=="";});
-    return {titulo:b.sinTitulo?(i+1)+".":(i+1)+". "+String(b.titulo||"Cláusula"),items:items,_bloqueId:b.id};
+    return {titulo:(i+1)+". "+nombreClausulaModelo(b),items:items,_bloqueId:b.id};
   });
   // Los bloques creados con «Agregar cláusula» no forman parte del contrato
   // hasta que tengan contenido real. Evita imprimir el borrador «NUEVA CLÁUSULA».
@@ -9140,7 +9150,7 @@ function StartupSplashHost(){
   },[]);
   if(!visible)return null;
   return <div aria-label="Iniciando DocWorks" role="status" style={{position:"fixed",inset:0,zIndex:99999,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:15,background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 52%, #03060d 100%)",opacity:fade?0:1,transition:"opacity .22s ease",pointerEvents:"none"}}>
-    <img src={LOGO_B64} alt="DocWorks" style={{display:"block",width:"min(72vw,300px)",height:"auto",maxHeight:"38vh",objectFit:"contain",mixBlendMode:"screen",filter:"drop-shadow(0 8px 28px rgba(212,168,83,.16))"}}/>
+    <img src={DOCWORKS_HEADER_LOGO} alt="DocWorks" style={{display:"block",width:"min(80vw,400px)",height:"auto",maxHeight:"30vh",objectFit:"contain",filter:"drop-shadow(0 8px 28px rgba(212,168,83,.16))"}}/>
     <div style={{fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:600,color:"#e8edf6"}}>Cargando<span style={{color:"#d4a853"}}>…</span></div>
     <div style={{width:30,height:3,borderRadius:99,background:"rgba(212,168,83,.18)",overflow:"hidden"}}><div style={{width:"55%",height:"100%",borderRadius:99,background:"#d4a853",animation:"dwStartupProgress .85s ease-in-out infinite alternate"}}/></div>
     <style>{"@keyframes dwStartupProgress{from{transform:translateX(-25%)}to{transform:translateX(95%)}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}"}</style>

@@ -110,6 +110,26 @@ const deps={crear:async c=>{altas++;catalogo.push({...c,id:'nuevo'});return {dat
  check('ir a papelera respeta borradores pendientes',()=>{assert.ok(pendingConfirm);assert.ok(document.querySelector('fieldset'));assert.equal(recargas,1);assert.equal(document.getElementById('dw-papelera-titulo'),null);});
  await a.act(async()=>pendingConfirm.onConfirm());pendingConfirm=null;
  check('confirmar salida abre papelera una sola vez',()=>{assert.equal(recargas,2);assert.ok(document.getElementById('dw-papelera-titulo'));});
+ perfil={rol:'dueno',plantillas:{reserva:{locked:true,clausulas_ids:['protegida']}}};
+ catalogo=[
+  {id:'uuid-vieja',titulo:'Multa por incumplimiento',contenido:'Texto antiguo.',tipos:['todos'],obligatoria:false},
+  {id:'eliminada-vieja',titulo:'Eliminada del catálogo',contenido:'No debe ofrecerse.',tipos:['todos'],activo:false},
+  {id:'protegida',titulo:'Incluida en modelo fijado',contenido:'Texto protegido.',tipos:['todos']},
+  {id:'credito-90',titulo:'Crédito hipotecario 90 días',contenido:'Válido por 90 días.',tipos:['todos']},
+  {id:'credito-sin-plazo',titulo:'Crédito hipotecario sin plazo',contenido:'Válido sin plazo.',tipos:['todos']},
+  {id:'solo-boleto',titulo:'Acuerdo especial del boleto',contenido:'Texto de boleto.',tipos:['boleto']}
+ ];await a.act(async()=>render());
+ const visibles=()=>[...document.querySelectorAll('[data-clausula-id]')].map(e=>e.dataset.clausulaId);
+ async function elegir(id,tipo){await a.act(async()=>{const el=document.getElementById(id);el.value=tipo;el.dispatchEvent(new Event('change',{bubbles:true}));});}
+ for(const tipo of a.PLANTILLA_TIPOS){
+  await click(button('Biblioteca de cláusulas'));await elegir('dw-biblioteca-documento',tipo);const idsBiblioteca=visibles();
+  await click(button('Documentos'));await elegir('dw-modelo-documento',tipo);const idsDocumento=visibles();
+  check(tipo+' muestra el mismo catálogo en Biblioteca y Documentos',()=>{assert.deepEqual(idsDocumento,idsBiblioteca);assert.ok(!idsDocumento.includes('uuid-vieja'));assert.ok(!idsDocumento.includes('eliminada-vieja'));assert.ok(!idsDocumento.includes('protegida'));assert.ok(idsDocumento.includes('credito-90'));assert.ok(idsDocumento.includes('credito-sin-plazo'));assert.equal(idsDocumento.includes('solo-boleto'),tipo==='boleto');});
+ }
+ catalogo=catalogo.filter(c=>c.id!=='credito-90').map(c=>c.id==='credito-sin-plazo'?{...c,titulo:'Crédito hipotecario actualizado'}:c);await a.act(async()=>render());
+ check('recargar catálogo actualiza Documentos sin revivir textos anteriores',()=>{assert.ok(!visibles().includes('credito-90'));assert.ok(document.getElementById('dw-model-extra-clauses').textContent.includes('Crédito hipotecario actualizado'));});
+ await click(button('Biblioteca de cláusulas'));await elegir('dw-biblioteca-documento','todas');
+ check('Biblioteca refleja la misma eliminación y el mismo nombre actualizado',()=>{assert.ok(!visibles().includes('credito-90'));assert.ok(document.body.textContent.includes('Crédito hipotecario actualizado'));});
  perfil={...perfil,rol:'asesor'};await a.act(async()=>render());
  check('asesor no accede a papelera ni a restauración',()=>{assert.ok(![...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Papelera'));assert.equal(document.getElementById('dw-papelera-titulo'),null);});
  await a.act(async()=>root.unmount());dom.window.close();console.log('APROBADAS',checks,'verificaciones de biblioteca simple.');

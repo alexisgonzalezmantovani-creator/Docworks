@@ -13,7 +13,7 @@ function Harness(){
 }
 function WorkspaceHarness(){
  const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[confirmacion,setConfirmacion]=useState(null),[guardados,setGuardados]=useState(0);
- const [catalogo,setCatalogo]=useState([{id:'ejemplo-opcional',titulo:'Texto reutilizable de ejemplo',contenido:'Texto ficticio para comprobar la biblioteca.',tipos:['todos']}]);
+ const [catalogo,setCatalogo]=useState([{id:'ejemplo-opcional',titulo:'Texto reutilizable de ejemplo',contenido:'Texto ficticio para comprobar la biblioteca.',tipos:['todos']},{id:'vieja-uuid',titulo:'Multa por incumplimiento',contenido:'Vieja cláusula copiada con UUID.',tipos:['todos'],obligatoria:false},{id:'inactiva',titulo:'Cláusula eliminada',contenido:'Texto eliminado.',tipos:['todos'],activo:false}]);
  const [altas,setAltas]=useState(0),[fallar,setFallar]=useState(false);
  useEffect(()=>{const listener=e=>setConfirmacion(e.detail);window.addEventListener('dw:confirm',listener);return ()=>window.removeEventListener('dw:confirm',listener);},[]);
  return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><output data-testid="guardados">{guardados}</output><output data-testid="altas">{altas}</output><output data-testid="perfil" hidden>{JSON.stringify(perfil)}</output><button onClick={()=>setFallar(v=>!v)}>{fallar?'Restablecer guardado':'Simular fallo de habilitación'}</button><ClausulasWorkspace perfil={perfil} onSavePerfil={async p=>{if(fallar)return {error:{message:'Fallo simulado'}};setPerfil(p);setGuardados(n=>n+1);return {};}} clausulas={catalogo} operaciones={[]} bloquesReserva={[]} onAddClausula={async c=>{const id='catalogo-'+(altas+1);setAltas(n=>n+1);setCatalogo(xs=>xs.concat([{...c,id}]));return {data:id};}} onEditClausula={()=>({})} onDeleteClausula={()=>{}}/><ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
@@ -63,6 +63,15 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
    await page.locator('#dw-modelo-documento').selectOption({label});
    assert.equal(await page.locator('#dw-config-modelo').count(),1);checks++;
    assert.ok((await page.locator('#dw-config-modelo').textContent()).startsWith(label),name+' cambio a '+label);checks++;
+   const tipoActual=await page.locator('#dw-modelo-documento').inputValue();
+   const idsDocumento=await page.locator('#dw-model-extra-clauses [data-clausula-id]').evaluateAll(xs=>xs.map(x=>x.dataset.clausulaId));
+   await page.getByRole('navigation',{name:'Cláusulas y documentos'}).getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+   await page.locator('#dw-biblioteca-documento').selectOption(tipoActual);
+   const idsBiblioteca=await page.locator('[data-clausula-id]').evaluateAll(xs=>xs.map(x=>x.dataset.clausulaId));
+   assert.deepEqual(idsDocumento,idsBiblioteca,name+' mismo catálogo '+label);checks++;
+   assert.deepEqual(idsDocumento,['ejemplo-opcional'],name+' sin cláusulas viejas/eliminadas '+label);checks++;
+   await page.getByRole('navigation',{name:'Cláusulas y documentos'}).getByRole('button',{name:'Documentos',exact:true}).click();
+
   }
   await page.locator('#dw-modelo-documento').selectOption({label:'Reserva de Compra'});
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
@@ -99,6 +108,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' workspace overflow');checks++;
   await page.screenshot({path:path.join(out,'documentos-'+name+'.png'),fullPage:true});
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+  await page.locator('#dw-biblioteca-documento').selectOption('todas');
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
   await nav.getByRole('button',{name:'Documentos',exact:true}).click();
   await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
