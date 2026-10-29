@@ -169,15 +169,13 @@ async function docworksMercadoPago(action, payload) {
   return res.data || {};
 }
 
+var rechartsCarga: Promise<void>|null=null;
 function loadRecharts(): Promise<void> {
-  return new Promise(function(resolve) {
-    if (window.Recharts) { resolve(); return; }
-    var s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.js";
-    s.onload = function() { resolve(); };
-    s.onerror = function() { resolve(); };
-    document.head.appendChild(s);
-  });
+  if(window.Recharts)return Promise.resolve();
+  if(!rechartsCarga){
+    rechartsCarga=import("recharts").then(function(modulo){window.Recharts=modulo;}).catch(function(error){rechartsCarga=null;throw error;});
+  }
+  return rechartsCarga;
 }
 
 // ── PDF NATIVO — sin dependencias externas ───────────────────────────────────
@@ -462,7 +460,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.06";
+var DOCWORKS_VERSION = "6.09";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -917,7 +915,7 @@ function clausulaRepiteSeccionDoc(c,doc){
   var t=dwNormTexto(c.titulo);
   var secs=(doc&&doc.secciones)||[];
   var temas=DW_TEMAS_BASE.concat([DW_TEMA_HONORARIOS]);
-  return temas.some(function(re){return re.test(t)&&secs.some(function(sc){return re.test(dwNormTexto(sc.titulo));});});
+  return temas.some(function(re){return re.test(t)&&secs.some(function(sc){return re.test(dwNormTexto(sc.titulo))||(/expensas/.test(t)&&/expensas/.test(dwNormTexto((sc.items||[]).join(" "))));});});
 }
 function clausulaAplicaTipo(c, tipo) {
   if ((tipo==="alquiler" || tipo==="reserva_alquiler") && c) {
@@ -931,11 +929,42 @@ function clausulaAplicaTipo(c, tipo) {
   return esAlquilerTipo ? true : c.categoria !== "alquiler";
 }
 
+// Los detalles pertenecen a la operación; nunca modifican el texto de la biblioteca.
+var DETALLES_CLAUSULAS = {
+  "especial.aires_incluidos":{campo:"entrega_aires_detalle",label:"Detalle de aires acondicionados",placeholder:"Cantidad, marca/modelo, ambiente y estado de cada equipo",encabezado:"EQUIPOS INCLUIDOS"},
+  "especial.entrega_amoblada":{campo:"entrega_muebles_detalle",label:"Inventario de muebles y artefactos",placeholder:"Un bien por línea: cantidad, descripción y estado",encabezado:"INVENTARIO DE ENTREGA"}
+};
+function detalleClausulaOperacion(c,op){
+  var cfg=configDetalleClausula(c);
+  var detalle=cfg&&String(op[cfg.campo]||"").trim();
+  return detalle?"\n\n"+cfg.encabezado+":\n"+detalle:"";
+}
+function configDetalleClausula(c){
+  if(!c)return null;
+  if(Object.prototype.hasOwnProperty.call(DETALLES_CLAUSULAS,c.id))return DETALLES_CLAUSULAS[c.id];
+  // Al copiar una idea a Supabase recibe un UUID propio. Reconocer la redacción
+  // de fábrica conserva los campos sin depender del identificador local.
+  var original=CLAUSULAS_DEFAULT.find(function(base){return Object.prototype.hasOwnProperty.call(DETALLES_CLAUSULAS,base.id)&&claveContenidoClausula(base.contenido)===claveContenidoClausula(c.contenido);});
+  return original?DETALLES_CLAUSULAS[original.id]:null;
+}
+function claveContenidoClausula(texto){
+  // Comparación exacta salvo espacios: no equiparar redacciones legales distintas.
+  return String(texto||"").replace(/\s+/g," ").trim();
+}
+
 // Plantillas: cada tipo de documento mantiene su propia selección y orden de cláusulas.
 // Se conserva compatibilidad con la configuración anterior (`clausulas_default_ids`).
 const PLANTILLA_TIPOS = [
   "reserva", "boleto", "reserva_alquiler", "alquiler", "comodato", "exclusividad", "refuerzo_reserva", "devolucion_reserva"
 ];
+function crearPlantillasIniciales(catalogo=CLAUSULAS_DEFAULT){
+  var mapa={};
+  PLANTILLA_TIPOS.forEach(function(tipo){
+    var aplicables=catalogo.filter(function(c){return clausulaAplicaTipo(c,tipo);});
+    mapa[tipo]={clausulas_ids:aplicables.filter(function(c){return c.obligatoria===false;}).map(function(c){return c.id;}),obligatorias_ids:aplicables.filter(function(c){return c.obligatoria===true;}).map(function(c){return c.id;}),locked:false,version:1};
+  });
+  return mapa;
+}
 function obtenerPlantillaConfig(perfil, tipo, clausulas){
   var mapa = perfil && perfil.plantillas ? perfil.plantillas : {};
   var actual = mapa && mapa[tipo];
@@ -1474,6 +1503,7 @@ function draftTieneContenido(d) {
     "comodatario_nombre","comodante_nombre","autorizante_nombre","inmobiliaria_nombre",
     "inmueble_direccion","inmueble_partido","inmueble_provincia","precio",
     "anticipo","fecha_posesion","alquiler_monto_inicial","alquiler_inicio",
+    "entrega_aires_detalle","entrega_muebles_detalle",
     "res_alq_monto_reserva","res_alq_monto_mensual","res_alq_inicio_estimado",
     "comodato_plazo","comodato_uso","devolucion_motivo","refuerzo_trayectoria",
     "comprador_dni","vendedor_dni","locador_dni","locatario_dni",
@@ -1786,6 +1816,7 @@ function parseMontoAR(valor){
 function esMontoMayorACero(valor){ var n=parseMontoAR(valor); return isFinite(n) && n>0; }
 // 4.29: el paso depende del tipo de documento (en Reserva de alquiler el locatario va primero; en documentos simples todo lo demás está en el paso 4).
 function getPasoDeCampo(campo,tipo){
+  if(campo==="entrega_aires_detalle"||campo==="entrega_muebles_detalle"){var pasos=getSteps(tipo);return pasos[pasos.length-1].id;}
   var simple=["comodato","exclusividad","refuerzo_reserva","devolucion_reserva"].indexOf(tipo)>=0;
   var m=String(campo||"").match(/^(comprador|vendedor|locador|locatario)_/);
   if(m){
@@ -1829,7 +1860,11 @@ function getCamposFaltantes(op,perfil=null) { perfil=perfil||null;
   }).map(function(f){return f[1];});
 }
 function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
-  var lista=CAMPOS_CRITICOS_POR_TIPO[op.tipo] || [];
+  var lista=(CAMPOS_CRITICOS_POR_TIPO[op.tipo] || []).slice();
+  if(["reserva","boleto","alquiler"].indexOf(op.tipo)!==-1)Object.keys(DETALLES_CLAUSULAS).forEach(function(id){
+    var cfg=DETALLES_CLAUSULAS[id];
+    if((op.clausulas_ids||[]).indexOf(op[cfg.campo+"_id"]||id)!==-1)lista.push([cfg.campo,cfg.label]);
+  });
   if(op.tipo==="exclusividad"&&perfil){
     op=Object.assign({},op,{comprador_nombre:op.inmobiliaria_nombre||perfil.inmobiliaria_nombre||op.comprador_nombre,comprador_dni:op.inmobiliaria_matricula||perfil.matricula||op.comprador_dni});
   }
@@ -2813,6 +2848,15 @@ function finalizeDoc(doc, op, clausulasLib) {
   },0);
   if(!n) n=(doc.secciones||[]).length;
   var extra = [];
+  var contenidosVistos=new Set();
+  (doc.secciones||[]).forEach(function(sec){(sec.items||[]).forEach(function(item){var clave=claveContenidoClausula(item);if(clave)contenidosVistos.add(clave);});});
+  function agregarExtra(titulo,texto,obligatoria){
+    var clave=claveContenidoClausula(texto);
+    if(!clave||contenidosVistos.has(clave))return;
+    contenidosVistos.add(clave);
+    n++;
+    extra.push({num:n,titulo:titulo,texto:texto,obligatoria:!!obligatoria});
+  }
   var seleccionadasIds = op.clausulas_ids || [];
   // El orden final sigue el orden de la biblioteca (el que definió el
   // Dueño/Administrador en Configuración → Plantillas con las flechas ↑/↓),
@@ -2830,17 +2874,14 @@ function finalizeDoc(doc, op, clausulasLib) {
       return c.obligatoria || seleccionadasIds.indexOf(c.id) !== -1;
     })
     .forEach(function(c) {
-      n++;
-      extra.push({ num: n, titulo: resolveVars(c.titulo, op), texto: resolveVars(c.contenido, op), obligatoria: !!c.obligatoria });
+      agregarExtra(resolveVars(c.titulo, op),resolveVars(c.contenido, op)+detalleClausulaOperacion(c,op),c.obligatoria);
     });
   if (op.clausulas_custom && op.clausulas_custom.trim()) {
     if (op.clausulas_custom_titulo && op.clausulas_custom_titulo.trim()) {
-      n++;
-      extra.push({ num: n, titulo: resolveVars(op.clausulas_custom_titulo.trim(), op), texto: resolveVars(op.clausulas_custom.trim(), op) });
+      agregarExtra(resolveVars(op.clausulas_custom_titulo.trim(), op),resolveVars(op.clausulas_custom.trim(), op),false);
     } else {
       op.clausulas_custom.split("\n").filter(function(l){ return l.trim(); }).forEach(function(l) {
-        n++;
-        extra.push({ num: n, titulo: null, texto: resolveVars(l.trim(), op) });
+        agregarExtra(null,resolveVars(l.trim(), op),false);
       });
     }
   }
@@ -3574,7 +3615,7 @@ function buildDocSectionsFromEditableBody(op, clausulasLib, tipo, bloquesPlantil
   if(out.conformidad&&Array.isArray(out.conformidad.items)){
     out.conformidad.items=out.conformidad.items.map(function(t){return resolveVars(t,op,extras);});
   }
-  return out;
+  return finalizeDoc(out,op,clausulasLib);
 }
 
 function buildDocSectionsStandard(op, clausulasLib, tipo) {
@@ -5106,7 +5147,10 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
   var nombreInmobiliariaObligatoria=(perfil&&perfil.nombre&&String(perfil.nombre).trim())?String(perfil.nombre).trim():"la inmobiliaria";
   function toggle(id){
     if(protegidas.indexOf(id)!==-1)return;
-    onChange("clausulas_ids",selected.includes(id)?selected.filter(function(x){return x!==id;}):selected.concat([id]));
+    var activando=!selected.includes(id);
+    onChange("clausulas_ids",activando?selected.concat([id]):selected.filter(function(x){return x!==id;}));
+    var cfg=configDetalleClausula((clausulas||[]).find(function(c){return c.id===id;}));
+    if(activando&&cfg){onChange(cfg.campo+"_id",id);setClausulaExpandida(id);}
   }
   var [clausulaExpandida,setClausulaExpandida]=useState(null);
   var [showAdd,setShowAdd]=useState(!!(data.clausulas_custom||data.clausulas_custom_titulo));
@@ -5122,9 +5166,10 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
     <div style={{fontSize:12,fontWeight:750,color:"var(--text)",margin:"2px 0 8px"}}>Cláusulas adicionales</div>
     {lista.length===0&&<div className="notice" style={{fontSize:13,lineHeight:1.5,marginBottom:10}}>No hay cláusulas adicionales disponibles para este documento. Podés agregar una propia para esta operación o pedir al administrador que habilite más opciones.</div>}
     <div style={{display:"flex",flexDirection:"column",gap:7}}>
-      {lista.map(function(c){var obligatoria=!!c.obligatoria;var protegida=protegidas.indexOf(c.id)!==-1;var sel=obligatoria||protegida||selected.includes(c.id);var expandida=clausulaExpandida===c.id;return <div key={c.id} className="op-card" style={{padding:"0 11px",borderColor:sel?"var(--gold)":"var(--border2)"}}>
+      {lista.map(function(c){var obligatoria=!!c.obligatoria;var protegida=protegidas.indexOf(c.id)!==-1;var sel=obligatoria||protegida||selected.includes(c.id);var expandida=clausulaExpandida===c.id;var detalleCfg=configDetalleClausula(c);return <div key={c.id} className="op-card" style={{padding:"0 11px",borderColor:sel?"var(--gold)":"var(--border2)"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,minHeight:43}}><button type="button" aria-expanded={expandida} onClick={function(){setClausulaExpandida(expandida?null:c.id);}} style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:7,padding:"10px 0",border:0,background:"transparent",color:"var(--text)",textAlign:"left",cursor:"pointer"}}><span style={{fontSize:12.5,fontWeight:650,overflowWrap:"anywhere"}}>{c.titulo}</span>{idsFrecuentes.indexOf(c.id)!==-1&&<span style={{fontSize:10,color:"var(--gold)",whiteSpace:"nowrap"}}>Frecuente</span>}{obligatoria&&<span className="badge badge-gold">Obligatoria</span>}{protegida&&!obligatoria&&<span className="badge badge-gold">Obligatoria</span>}<span style={{marginLeft:"auto",fontSize:11,color:"var(--dim)"}}>{expandida?"−":"＋"}</span></button><button type="button" aria-label={(sel?"Quitar ":"Agregar ")+c.titulo} disabled={obligatoria||protegida} onClick={function(){toggle(c.id);}} className={"dw-ios-sw"+(sel?" on":"")+((obligatoria||protegida)?" locked":"")} role="switch" aria-checked={sel} style={{flex:"0 0 auto"}}/></div>
         {expandida&&<div style={{fontSize:12,color:"var(--dim)",lineHeight:1.55,padding:"0 0 11px",whiteSpace:"pre-wrap"}}>{mostrarTokensDocWorks(c.contenido)}</div>}
+        {sel&&detalleCfg&&<Txa id={"dw-field-"+detalleCfg.campo} label={detalleCfg.label} hint="Se incorpora al documento de esta operación. Completá el detalle acordado por las partes." value={data[detalleCfg.campo]||""} onChange={function(e){onChange(detalleCfg.campo,e.target.value);onChange(detalleCfg.campo+"_id",c.id);}} rows={4} placeholder={detalleCfg.placeholder}/>}
       </div>;})}
     </div>
     <div style={{marginTop:14,paddingTop:12,borderTop:"1px dashed var(--border2)"}}>
@@ -6132,35 +6177,42 @@ function TipoSelector({value,onChange}){
     <div>
       <div style={{fontSize:12,fontWeight:600,color:"var(--muted)",marginBottom:6}}>Aplica a los documentos:</div>
       <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-        <div className={"tipo-chip "+(esTodos?"on":"")} onClick={toggleTodos}>{esTodos?"✓ ":""}Todos los documentos</div>
+        <button type="button" aria-pressed={esTodos} className={"tipo-chip "+(esTodos?"on":"")} onClick={toggleTodos}>{esTodos?"✓ ":""}Todos los documentos</button>
         {Object.keys(TIPOS).map(function(k){
-          return <div key={k} className={"tipo-chip "+(!esTodos&&v.indexOf(k)!==-1?"on":"")} onClick={function(){toggleTipo(k);}}>{!esTodos&&v.indexOf(k)!==-1?"✓ ":""}{TIPOS[k]}</div>;
+          return <button type="button" key={k} aria-pressed={!esTodos&&v.indexOf(k)!==-1} className={"tipo-chip "+(!esTodos&&v.indexOf(k)!==-1?"on":"")} onClick={function(){toggleTipo(k);}}>{!esTodos&&v.indexOf(k)!==-1?"✓ ":""}{TIPOS[k]}</button>;
         })}
       </div>
     </div>
   );
 }
 
-function ClausulaFormBody({form,setForm,onCancel,onSubmit,editId,guardando}){
+function ClausulaFormBody({form,setForm,onCancel,onSubmit,editId,guardando,habilitarParaAsesores,onHabilitarChange,soloHabilitar,bloquearGuardado,guardarLabel,advertencia}){
   const taRef=useRef();
   const [opcionesAbiertas,setOpcionesAbiertas]=useState(!!editId);
   const CATS=["general","posesion","pago","rescision","impuestos","alquiler"];
   form=form||FORM_CLAUSULA_EMPTY;
   var tiposSeguros=Array.isArray(form.tipos)&&form.tipos.length?form.tipos:["todos"];
+  var creacionSimple=typeof habilitarParaAsesores==="boolean"&&!editId;
   return(
     <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      <fieldset disabled={!!guardando||!!soloHabilitar} style={{border:0,padding:0,margin:0,minWidth:0,display:"flex",flexDirection:"column",gap:10}}>
       <Inp label="Título" value={form.titulo} onChange={function(e){setForm(function(f){return Object.assign({},f,{titulo:e.target.value});});}} placeholder="Ej: Multa por rescisión"/>
+      {advertencia}
+      {creacionSimple&&<>
+        <TipoSelector value={tiposSeguros} onChange={function(t){setForm(function(f){return Object.assign({},f,{tipos:t});});}}/>
+        <label style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:13,cursor:"pointer",lineHeight:1.5}}><input type="checkbox" checked={habilitarParaAsesores} onChange={function(e){onHabilitarChange(e.target.checked);}}/><span><b>Disponible para asesores</b><br/><span style={{color:"var(--muted)",fontSize:12}}>Podrán elegirla al final de los documentos seleccionados. Si lo desmarcás, queda guardada solo en la biblioteca.</span></span></label>
+      </>}
       <div style={{border:"1px solid var(--border)",borderRadius:9,overflow:"hidden"}}>
         <button type="button" aria-expanded={opcionesAbiertas} onClick={function(){setOpcionesAbiertas(function(v){return !v;});}} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,padding:"10px 12px",border:0,background:"var(--card2, transparent)",color:"var(--text)",cursor:"pointer",textAlign:"left",fontSize:12.5,fontWeight:650}}><span>Opciones</span><span>{opcionesAbiertas?"−":"＋"}</span></button>
         {opcionesAbiertas&&<div style={{display:"flex",flexDirection:"column",gap:10,padding:12}}>
           <Slt label="Categoría" value={form.categoria||"general"} onChange={function(e){setForm(function(f){return Object.assign({},f,{categoria:e.target.value});});}}>
             {CATS.map(function(c){return <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>;})}
           </Slt>
-          <TipoSelector value={tiposSeguros} onChange={function(t){setForm(function(f){return Object.assign({},f,{tipos:t});});}}/>
-          <label style={{display:"flex",alignItems:"flex-start",gap:8,padding:"9px 11px",borderRadius:8,border:"1px solid var(--border)",background:form.obligatoria?"rgba(180,83,9,0.08)":"transparent",cursor:"pointer",fontSize:12.5,color:"var(--text)"}}>
+          {!creacionSimple&&<TipoSelector value={tiposSeguros} onChange={function(t){setForm(function(f){return Object.assign({},f,{tipos:t});});}}/>}
+          {!creacionSimple&&<label style={{display:"flex",alignItems:"flex-start",gap:8,padding:"9px 11px",borderRadius:8,border:"1px solid var(--border)",background:form.obligatoria?"rgba(180,83,9,0.08)":"transparent",cursor:"pointer",fontSize:12.5,color:"var(--text)"}}>
             <input type="checkbox" checked={!!form.obligatoria} onChange={function(e){setForm(function(f){return Object.assign({},f,{obligatoria:e.target.checked});});}} style={{marginTop:2}}/>
             <span><b>Obligatoria en la biblioteca</b> — configuración administrada por Dueño/Administrador.</span>
-          </label>
+          </label>}
         </div>}
       </div>
       <div>
@@ -6174,9 +6226,10 @@ function ClausulaFormBody({form,setForm,onCancel,onSubmit,editId,guardando}){
         <textarea id="dw-clausula-texto" ref={taRef} className="inp" rows={4} value={form.contenido} onChange={function(e){setForm(function(f){return Object.assign({},f,{contenido:e.target.value});});}} placeholder="Redactá el texto. Usá «Vincular dato» para insertar campos como el nombre del titular, DNI, dirección, etc."/>
         <div style={{fontSize:12,color:"var(--dim)",marginTop:4}}>Los campos vinculados se completan automáticamente con los datos reales de cada operación al generar el documento.</div>
       </div>
+      </fieldset>
       <div style={{display:"flex",gap:7,justifyContent:"flex-end"}}>
-        {editId&&<Btn v="ghost" s="sm" onClick={onCancel}>Cancelar</Btn>}
-        <Btn s="sm" onClick={onSubmit} disabled={!!guardando}>{guardando?"Guardando…":editId?"Guardar cambios":"Guardar cláusula"}</Btn>
+        {editId&&<Btn v="ghost" s="sm" onClick={onCancel} disabled={!!guardando}>Cancelar</Btn>}
+        <Btn s="sm" onClick={onSubmit} disabled={!!guardando||!!bloquearGuardado}>{guardando?"Guardando…":guardarLabel||(editId?"Guardar cambios":"Guardar cláusula")}</Btn>
       </div>
     </div>
   );
@@ -7702,8 +7755,8 @@ const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMP
 const EstadisticasView = crearEstadisticasView({Btn, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
 const OperacionForm = crearOperacionForm({AutosaveIndicator, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
-const ClausulasView = crearClausulasView({useState, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
-const ClausulasWorkspace = crearClausulasWorkspace({ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, requestDwConfirm, useEffect, useState});
+const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
+const ClausulasWorkspace = crearClausulasWorkspace({ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
 const SuperAdminDashboard = crearSuperAdminDashboard({AUTH_RED, AUTH_MUTED, descargarCSV, loadSupabaseJs, traducirError, Field, dwNotify, requestDwConfirm, fmt$, Modal, DWIcon});
 const ConfiguracionView = crearConfiguracionView({Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
@@ -7722,7 +7775,7 @@ function DocWorksApp(){
   useEffect(function(){ lsSet("top_search_v1",topSearch||""); },[topSearch]);
   useEffect(function(){ lsSet("recent_searches_v1",recentSearches||[]); },[recentSearches]);
   useEffect(function(){ lsSet("recent_operation_ids_v1",recentOperationIds||[]); },[recentOperationIds]);
-  useEffect(function(){injectFonts();loadRecharts();applyTheme(darkMode);initPWA();if(!document.getElementById("dw-mobile-stability-css")){var st=document.createElement("style");st.id="dw-mobile-stability-css";st.textContent=MOBILE_STABILITY_CSS;document.head.appendChild(st);}},[darkMode]);
+  useEffect(function(){injectFonts();applyTheme(darkMode);initPWA();if(!document.getElementById("dw-mobile-stability-css")){var st=document.createElement("style");st.id="dw-mobile-stability-css";st.textContent=MOBILE_STABILITY_CSS;document.head.appendChild(st);}},[darkMode]);
   // iOS puede restaurar una posición intermedia mientras la barra fija y el contenido terminan de medir su altura.
   // Normalizamos una sola vez al montar la app; navegar entre vistas no vuelve a desplazar al usuario.
   useEffect(function(){
@@ -8089,15 +8142,11 @@ function DocWorksApp(){
   var perfilNubeCargado=!!perfilNube.cargado;
   useEffect(function(){
     var inmobId=docworksAuth.contexto && docworksAuth.contexto.inmobiliaria ? docworksAuth.contexto.inmobiliaria.id : null;
-    if(!inmobId || !perfilNubeCargado || perfilInicializadoRef.current[inmobId]) return;
+    if(!inmobId || !perfilNubeCargado || clausulasLoading || clausulasError || perfilInicializadoRef.current[inmobId]) return;
     var timer=setTimeout(function(){
       setPerfil(function(cur){
         if(cur.plantillas && Object.keys(cur.plantillas).length>0){ perfilInicializadoRef.current[inmobId]=true; return cur; }
-        var mapa={};
-        PLANTILLA_TIPOS.forEach(function(tipo){
-          var ids=CLAUSULAS_DEFAULT.filter(function(c){return clausulaAplicaTipo(c,tipo);}).map(function(c){return c.id;});
-          mapa[tipo]={clausulas_ids:ids,locked:false,version:1};
-        });
+        var mapa=crearPlantillasIniciales(clausulas);
         var next=Object.assign({},cur,{plantillas:mapa,clausulas_default_ids:mapa["reserva"]?mapa["reserva"].clausulas_ids.slice():[],clausulas_default_locked:false});
         perfilInicializadoRef.current[inmobId]=true;
         // La configuración inicial no se considera persistida hasta que Supabase confirme.
@@ -8113,7 +8162,7 @@ function DocWorksApp(){
       });
     },1200);
     return function(){clearTimeout(timer);};
-  },[docworksAuth.contexto && docworksAuth.contexto.inmobiliaria ? docworksAuth.contexto.inmobiliaria.id : null, perfilNubeCargado]);
+  },[docworksAuth.contexto && docworksAuth.contexto.inmobiliaria ? docworksAuth.contexto.inmobiliaria.id : null, perfilNubeCargado,clausulasLoading,clausulasError]);
   const [equipo,setEquipo]=useState(function(){ return lsGet("equipo", DEFAULT_EQUIPO); });
   useEffect(function(){
     if (equipoSupabase.equipo.length || !equipoSupabase.loading) {
@@ -8742,6 +8791,8 @@ function DocWorksApp(){
       precio:op.precio||"", moneda:op.moneda||"USD", anticipo:op.anticipo||"", comision_porcentaje:valorComisionPredeterminado(op.comision_porcentaje,""),
       // A pedir de nuevo: fecha de posesión/firma y datos de escribanía.
       fecha_posesion:"", escribania:"", escribania_observaciones:"", saldo:"",
+      entrega_aires_detalle:op.entrega_aires_detalle||"", entrega_muebles_detalle:op.entrega_muebles_detalle||"",
+      entrega_aires_detalle_id:op.entrega_aires_detalle_id||"", entrega_muebles_detalle_id:op.entrega_muebles_detalle_id||"",
       clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"",
     });
     var conId=Object.assign({},nuevo,{id:genId(),created_at:new Date().toISOString()});
