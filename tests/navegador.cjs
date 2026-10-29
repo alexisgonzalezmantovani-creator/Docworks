@@ -68,7 +68,10 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   assert.equal(await page.locator('#dw-model-preview-area').count(),1);checks++;
   const acciones=page.getByTestId('dw-model-actions');
   assert.equal(await acciones.getByRole('button',{name:'Guardar cambios',exact:true}).count(),1);checks++;
-  assert.equal(await acciones.getByRole('button',{name:'Vista previa',exact:true}).count(),0);checks++;
+  assert.equal(await acciones.getByRole('button',{name:'Vista previa',exact:true}).count(),1);checks++;
+  assert.equal(await page.getByRole('group',{name:'Elegir vista de cláusulas'}).count(),0);checks++;
+  assert.ok(await page.locator('.dw-clause-compact').count()>0,name+' cláusulas compactas');checks++;
+  assert.equal(await page.locator('.dw-clause-compact:not(.dw-clause-open) .dw-clause-actions:visible').count(),0);checks++;
   await page.getByTestId('dw-open-fullpage-preview').click();
   await page.getByTestId('dw-fullpage-preview').waitFor();checks++;
   await page.getByRole('button',{name:'Cerrar vista previa'}).click();
