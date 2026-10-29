@@ -2282,9 +2282,16 @@ function docToPlainText(doc) {
   if (doc.encabezado) { doc.encabezado.split("\n\n").forEach(function(p){ lines.push(p, ""); }); }
   (doc.partes || []).forEach(function(p){ if(!doc.ocultarPartesEnCuerpo) lines.push(p.rol + ": " + p.nombre + (p.dni ? " — " + p.dni : "")); });
   lines.push("");
-  (doc.secciones || []).forEach(function(s){ lines.push(s.titulo); (s.items||[]).forEach(function(i){ if(i) lines.push("  " + i); }); lines.push(""); });
+  (doc.secciones || []).forEach(function(sec){
+    var prefix=prefijoClausulaFormal(sec.titulo);
+    (sec.items||[]).forEach(function(item,idx){
+      if(!item)return;
+      lines.push(idx===0?prefix+cuerpoTrasRotulo(item):normalizarTextoDocumento(item));
+    });
+    lines.push("");
+  });
   if (doc.clausulas && doc.clausulas.length > 0) {
-    doc.clausulas.forEach(function(c){ lines.push(c.num + (c.titulo ? ". " + c.titulo.toUpperCase() : ".")); if (c.texto) lines.push("  " + c.texto); lines.push(""); });
+    doc.clausulas.forEach(function(c){ lines.push(prefijoClausulaDesdeNumTitulo(c.num,c.titulo||"")+cuerpoTrasRotulo(c.texto||"")); lines.push(""); });
   }
   contactosDocumento(doc).forEach(function(line){lines.push(line);});
   (doc.firmas||[]).forEach(function(f){lines.push("Firma: "+(f.rol||"")+" — "+(f.nombre||"")+(f.dni?" — "+f.dni:""));});
