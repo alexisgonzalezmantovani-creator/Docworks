@@ -1603,6 +1603,20 @@ var SA_CSS = `
 .sa-payment-row,.sa-activity-row{font-size:12.5px;background:rgba(212,168,83,0.04);border-radius:9px;}
 @media(max-width:640px){.sa-detail-tabs{margin-left:-4px;margin-right:-4px;padding-left:4px;padding-right:4px;}.sa-detail-content{padding-top:14px;}.sa-clause-head{flex-direction:column;}.sa-clause-badges{justify-content:flex-start;}.sa-detail-row{align-items:flex-start;}.sa-payment-row,.sa-activity-row{flex-direction:column;align-items:flex-start;}.sa-detail-list{max-height:55vh;}}
 @media(max-width:640px){ .sa-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;} .sa-tab{flex-shrink:0;} .sa-kv{gap:12px;} }
+
+.sa-app{position:fixed;inset:0;z-index:400;overflow:auto;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;padding:24px;box-sizing:border-box}
+.sa-layout{display:grid;grid-template-columns:208px minmax(0,1fr);gap:30px;max-width:1360px;margin:0 auto;min-height:100%}
+.sa-sidebar{position:sticky;top:0;align-self:start;display:flex;flex-direction:column;gap:24px;padding:22px 14px;min-height:calc(100dvh - 48px);border:1px solid #1d3354;border-radius:16px;background:#0b1730;color:#e7edf8}
+.sa-brand img{display:block;width:165px;height:auto;max-width:100%}.sa-app .sa-sidebar .sa-tab{color:#b7c5dc}.sa-app .sa-sidebar .sa-tab:hover{background:rgba(255,255,255,.05);color:#fff}.sa-app .sa-sidebar .sa-tab.active{color:#e5bc65}.sa-sidebar .sa-account,.sa-sidebar .sa-brand span{color:#97a9c5}.sa-sidebar .sa-account .btn{color:#c9d5e8}.sa-brand span{display:block;font-size:10px;font-weight:750;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-top:12px}
+.sa-app .sa-tabs{display:flex;flex-direction:column;gap:6px;border:0;padding:0;margin:0;overflow:visible}.sa-app .sa-tab{display:flex;align-items:center;gap:10px;min-height:46px;padding:11px 12px;border:1px solid transparent;border-radius:10px;text-align:left;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}.sa-app .sa-tab.active{color:var(--gold);background:rgba(212,168,83,.09);border-color:rgba(212,168,83,.22)}.sa-nav-count{margin-left:auto;font-size:11px;border-radius:6px;padding:2px 6px;background:rgba(212,168,83,.12)}
+.sa-account{margin-top:auto;font-size:11px;line-height:1.5;color:var(--dim);overflow-wrap:anywhere}.sa-account button{margin-top:10px;width:100%;text-align:left}
+.sa-main{min-width:0;padding:10px 0 30px}.sa-pagehead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:24px}.sa-pagehead h1{font-family:'DM Serif Display',serif;font-size:30px;font-weight:400;line-height:1.2;margin:0 0 7px}.sa-pagehead p{font-size:13px;color:var(--dim);margin:0;line-height:1.5}.sa-head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sa-app button:focus-visible,.sa-app input:focus-visible,.sa-app select:focus-visible,.sa-app summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.sa-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}.sa-overview button{min-width:0;min-height:115px;text-align:left;padding:18px;border:1px solid var(--border);border-radius:14px;background:var(--card);color:var(--text);cursor:pointer}.sa-overview small{font-size:12px;font-weight:600;color:var(--muted);display:block}.sa-overview strong{display:block;font-size:32px;font-weight:650;letter-spacing:-1px;margin-top:8px}.sa-overview span{display:block;font-size:11px;color:var(--dim);margin-top:5px}
+.sa-priority{padding:20px;border:1px solid var(--border);border-radius:14px;background:var(--card);margin-bottom:22px}.sa-blockhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}.sa-blockhead h2{font-size:15px;font-weight:750;margin:0}.sa-blockhead p{font-size:12px;color:var(--dim);margin:5px 0 0;line-height:1.5}.sa-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}.sa-shortcuts button{display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0;min-height:55px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);text-align:left;cursor:pointer;font-size:12px}.sa-shortcuts b{font-size:20px;color:var(--gold)}
+.sa-priority-row{display:flex;align-items:center;gap:12px;text-align:left;border:0;border-top:1px solid var(--border);background:transparent;color:var(--text);width:100%;padding:13px 0;cursor:pointer}.sa-priority-row>div:nth-child(2){flex:1;min-width:0}.sa-priority-row strong{font-size:13px;display:block;overflow-wrap:anywhere}.sa-priority-row small{font-size:11px;color:var(--dim);display:block;margin-top:4px}.sa-more-metrics{margin-bottom:20px;border:1px solid var(--border);border-radius:12px;padding:12px 14px}.sa-more-metrics>summary{cursor:pointer;font-size:12px;font-weight:650;color:var(--muted);padding:5px 0}.sa-more-metrics[open]>summary{margin-bottom:12px}.sa-announcement-grid{display:grid;grid-template-columns:minmax(0,1fr) 170px auto;gap:9px;align-items:end}
+.sa-detail-settings-grid{display:grid;grid-template-columns:minmax(0,1fr) 140px auto;gap:8px;align-items:end;margin-top:12px}.sa-toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:16px}.sa-toolbar .search-wrap{min-width:180px;flex:1 1 260px}.sa-toolbar>div:not(.search-wrap){flex:1 1 140px;min-width:0;max-width:190px}.sa-app .sa-org-card{padding:17px 18px;cursor:default}.sa-org-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.sa-org-name{display:flex;gap:12px;align-items:center;min-width:0;flex:1 1 230px}.sa-org-name h3{font-size:14px;margin:0;overflow-wrap:anywhere}.sa-org-name p{font-size:12px;color:var(--dim);margin:4px 0 0;overflow-wrap:anywhere}.sa-org-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px;margin-top:13px;font-size:12px;color:var(--dim)}.sa-org-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sa-app .grid2{min-width:0}.sa-app .inp{max-width:100%;box-sizing:border-box}.sa-app .notice{overflow-wrap:anywhere}
+@media(max-width:1100px){.sa-layout{grid-template-columns:175px minmax(0,1fr);gap:20px}.sa-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.sa-app{padding:14px}.sa-layout{display:block}.sa-sidebar{position:relative;min-height:0;padding:16px;border:1px solid #1d3354;border-radius:14px;gap:14px}.sa-brand{display:flex;align-items:center;justify-content:space-between;gap:12px}.sa-brand img{width:145px}.sa-brand span{margin:0;font-size:9px}.sa-app .sa-tabs{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 6px;gap:5px}.sa-app .sa-tab{flex-shrink:0;min-height:44px;font-size:12px;padding:9px 11px}.sa-account{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0}.sa-account button{margin:0;width:auto;flex-shrink:0}.sa-account>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sa-main{padding-top:20px}.sa-pagehead h1{font-size:26px}.sa-pagehead{gap:14px;margin-bottom:18px}.sa-head-actions{width:100%}.sa-overview{gap:9px}.sa-overview button{padding:14px;min-height:105px}.sa-overview strong{font-size:28px}.sa-priority{padding:14px}.sa-shortcuts{grid-template-columns:minmax(0,1fr)}.sa-priority-row{flex-wrap:wrap}.sa-announcement-grid,.sa-detail-settings-grid{grid-template-columns:minmax(0,1fr)}.sa-toolbar>div:not(.search-wrap){max-width:none}.sa-org-card .sa-avatar{flex-shrink:0}.sa-org-bottom{align-items:flex-start}.sa-app .grid2{grid-template-columns:minmax(0,1fr)}.sa-app .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 `;
 function SAStyles(){
   useEffect(function(){
@@ -1677,6 +1691,11 @@ function saResumenCambios(a): any {
   var keys={}; Object.keys(ant||{}).forEach(function(k){keys[k]=true;}); Object.keys(nue||{}).forEach(function(k){keys[k]=true;});
   var out=[]; Object.keys(keys).forEach(function(k){var av=saValorAudit(ant[k]),nv=saValorAudit(nue[k]);if(av!==nv)out.push({campo:k,antes:av,despues:nv});});
   return out.length?out:null;
+}
+
+function SAIcon({name}){
+  var paths={resumen:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,inmobiliarias:<><path d="M4 21V5l8-2v18M12 8h8v13M2 21h20M7 8h2M7 12h2M7 16h2M15 12h2M15 16h2"/></>,solicitudes:<><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/></>,planes:<><path d="m12 3 9 5-9 5-9-5 9-5ZM3 8v9l9 5 9-5V8M12 13v9"/></>,auditoria:<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,pagos:<><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></>};
+  return <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{paths[name]}</svg>;
 }
 
 function SuperAdminDashboard({ contexto, onLogout }){
@@ -1770,8 +1789,16 @@ function SuperAdminDashboard({ contexto, onLogout }){
     return m.indexOf(metodoPagoFiltro.toLowerCase()) > -1;
   });
 
+  var solicitudesPendientes=sa.registroSolicitudes.filter(function(r){return !r.estado||r.estado==="pendiente";});
+  function requiereAtencion(i){return ["pendiente","vencida","suspendida"].indexOf(i.estado)!==-1;}
+  function venceEstaSemana(i){var d=saDiasHasta(i.fecha_vencimiento||i.fecha_renovacion);return i.estado==="activa"&&d!==null&&d>=0&&d<=7;}
+  var inmobiliariasAtencion=sa.inmobiliarias.filter(requiereAtencion);
+  var renovacionesProximas=sa.inmobiliarias.filter(venceEstaSemana);
+  var prioritarias=inmobiliariasAtencion.concat(renovacionesProximas).sort(function(a,b){return (saDiasHasta(a.fecha_vencimiento||a.fecha_renovacion)??99999)-(saDiasHasta(b.fecha_vencimiento||b.fecha_renovacion)??99999);});
+  function verInmobiliarias(estado){setBusqueda("");setFiltroPlan("todos");setFiltroEstado(estado||"todas");setTab("inmobiliarias");}
+  function actualizarPanel(){sa.recargar();sa.cargarRegistroSolicitudes();if(tab==="pagos")sa.cargarPagos(pagosFiltro||null);if(tab==="auditoria")sa.cargarAuditoria(auditFiltro||null);}
   var inmobiliariasFiltradas = sa.inmobiliarias.filter(function(i){
-    if (filtroEstado!=="todas" && i.estado!==filtroEstado) return false;
+    if(filtroEstado==="atencion"?!requiereAtencion(i):filtroEstado==="vence7"?!venceEstaSemana(i):filtroEstado!=="todas"&&i.estado!==filtroEstado)return false;
     if (filtroPlan!=="todos" && String(i.plan_codigo||i.plan_nombre||"")!==String(filtroPlan)) return false;
     var q=busqueda.toLowerCase().trim();
     if(q){ var hay=[i.inmobiliaria_nombre,i.dueno_nombre,i.dueno_email,i.owner_nombre,i.owner_email,i.email_dueno].map(function(v){return String(v||"").toLowerCase();}).join(" "); if(hay.indexOf(q)===-1) return false; }
@@ -1827,31 +1854,32 @@ function SuperAdminDashboard({ contexto, onLogout }){
   var facturacionPorPlanLista = Object.keys(facturacionPorPlan).map(function(k){return facturacionPorPlan[k];}).sort(function(a,b){return b.subtotal-a.subtotal;});
 
   return (
-    <div style={{position:"fixed",inset:0,zIndex:400,overflow:"auto",background:"var(--bg)",color:"var(--text)",padding:24,fontFamily:"'DM Sans',sans-serif"}}>
+    <div className="sa-app" id="dw-superadmin">
       <SAStyles/>
-      <div style={{maxWidth:1040,margin:"0 auto"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
-          <div className="sa-headbar">
-            <div className="sa-avatar" style={{fontSize:18}}>D</div>
-            <div>
-              <div style={{fontFamily:"'DM Serif Display',serif",fontSize:21,color:"var(--text)"}}>Panel de Superadministración</div>
-              <div style={{fontSize:12.5,color:"var(--dim)"}}>Gestión global de DocWorks</div>
-            </div>
-          </div>
-          <button className="btn btn-ghost" onClick={onLogout}>Cerrar sesión</button>
-        </div>
-
-        <div className="sa-tabs">
-          {TABS_SA.map(function(t){
-            return <button key={t[0]} className={"sa-tab"+(tab===t[0]?" active":"")} onClick={function(){setTab(t[0]);}}><span>{t[2]}</span>{t[1]}</button>;
-          })}
-        </div>
-
-        {sa.error && <div className="notice notice-amber" style={{marginBottom:16,borderColor:"rgba(248,113,113,0.3)",color:"var(--red)",background:"rgba(248,113,113,0.08)"}}>{sa.error}</div>}
+      <div className="sa-layout">
+        <aside className="sa-sidebar" aria-label="Administración global">
+          <div className="sa-brand"><img src="/docworks-header-logo.png" alt="DocWorks"/><span>Administración</span></div>
+          <nav className="sa-tabs" aria-label="Superadministración">
+            {TABS_SA.map(function(t){return <button key={t[0]} type="button" aria-current={tab===t[0]?"page":undefined} className={"sa-tab"+(tab===t[0]?" active":"")} onClick={function(){setTab(t[0]);}}><SAIcon name={t[0]}/>{t[1]}{t[0]==="solicitudes"&&solicitudesPendientes.length>0&&<span className="sa-nav-count">{solicitudesPendientes.length}</span>}</button>;})}
+          </nav>
+          <div className="sa-account"><span>{contexto&&contexto.usuario&&(contexto.usuario.nombre||contexto.usuario.email)||"Superadministrador"}</span><button type="button" className="btn btn-ghost btn-sm" onClick={onLogout}>Cerrar sesión</button></div>
+        </aside>
+        <main className="sa-main" aria-label="Panel de superadmin">
+          <header className="sa-pagehead"><div><h1>{TABS_SA.find(function(t){return t[0]===tab;})[1]}</h1><p>{{resumen:"La actividad de DocWorks y lo que necesita tu atención.",inmobiliarias:"Cuentas, accesos y membresías en un solo lugar.",solicitudes:"Revisá las nuevas inmobiliarias que quieren sumarse.",planes:"Administrá precios y límites de cada plan.",auditoria:"Consultá los cambios y la actividad de la plataforma.",pagos:"Revisá cobros y medios de pago por inmobiliaria."}[tab]}</p></div><div className="sa-head-actions"><button type="button" className="btn btn-secondary btn-sm" disabled={sa.loading} onClick={actualizarPanel}>{sa.loading?"Actualizando…":"Actualizar"}</button>{(tab==="resumen"||tab==="inmobiliarias")&&<button type="button" className="btn btn-primary btn-sm" onClick={function(){setShowNueva(true);}}>+ Nueva inmobiliaria</button>}</div></header>
+        {sa.error && <div role="alert" className="notice notice-amber" style={{marginBottom:16,borderColor:"rgba(248,113,113,0.3)",color:"var(--red)",background:"rgba(248,113,113,0.08)"}}>{sa.error}</div>}
 
         {tab==="resumen" && (
           sa.dashboard ? (
             <div>
+              <div className="sa-overview" aria-label="Indicadores principales">
+                {[{label:"Inmobiliarias",value:sa.dashboard.total_inmobiliarias,hint:"Ver todas las cuentas",filter:"todas"},{label:"Activas",value:sa.dashboard.inmobiliarias_activas,hint:"Con membresía activa",filter:"activa"},{label:"Requieren atención",value:inmobiliariasAtencion.length,hint:"Pendientes, vencidas o suspendidas",filter:"atencion"},{label:"Usuarios",value:sa.dashboard.total_usuarios,hint:"En todas las inmobiliarias",filter:"todas"}].map(function(k){return <button type="button" key={k.label} onClick={function(){verInmobiliarias(k.filter);}}><small>{k.label}</small><strong>{k.value??"—"}</strong><span>{k.hint}</span></button>;})}
+              </div>
+              <section className="sa-priority" aria-labelledby="sa-priority-title">
+                <div className="sa-blockhead"><div><h2 id="sa-priority-title">Para revisar hoy</h2><p>Solicitudes pendientes y membresías que necesitan seguimiento.</p></div><button type="button" className="btn btn-ghost btn-sm" onClick={function(){verInmobiliarias("atencion");}}>Ver cuentas pendientes</button></div>
+                <div className="sa-shortcuts"><button type="button" onClick={function(){setTab("solicitudes");}}>Solicitudes pendientes <b>{solicitudesPendientes.length}</b></button><button type="button" onClick={function(){verInmobiliarias("atencion");}}>Cuentas para revisar <b>{inmobiliariasAtencion.length}</b></button><button type="button" onClick={function(){verInmobiliarias("vence7");}}>Vencen en 7 días <b>{renovacionesProximas.length}</b></button></div>
+                {prioritarias.length===0?<div style={{fontSize:13,color:"var(--dim)",padding:"10px 0"}}>No hay cuentas pendientes ni vencimientos en los próximos 7 días.</div>:prioritarias.slice(0,5).map(function(i){return <button type="button" className="sa-priority-row" key={i.inmobiliaria_id} onClick={function(){setTab("inmobiliarias");abrirDetalle(i.inmobiliaria_id,i.inmobiliaria_nombre);}}><SAAvatar nombre={i.inmobiliaria_nombre}/><div><strong>{i.inmobiliaria_nombre}</strong><small>{i.plan_nombre||"Sin plan"} · {saEstadoVencimiento(i.fecha_vencimiento||i.fecha_renovacion,i.estado).label}</small></div><SABadge tone={ESTADO_MEMBRESIA_TONE[i.estado]}>{i.estado}</SABadge><span aria-hidden="true">→</span></button>;})}
+              </section>
+              <details className="sa-more-metrics"><summary>Más indicadores de la plataforma</summary>
               <div className="stats-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}}>
                 {statsItems.map(function(row){
                   return (
@@ -1864,40 +1892,23 @@ function SuperAdminDashboard({ contexto, onLogout }){
                 })}
               </div>
 
+              </details>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:10,marginBottom:18}}>
                 <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>INACTIVAS · 30 DÍAS</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:24,marginTop:4}}>{sa.metricasUso&&sa.metricasUso.inmobiliarias_inactivas_30_dias!=null?sa.metricasUso.inmobiliarias_inactivas_30_dias:"—"}</div></div>
                 <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>OPERACIONES · MES</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:24,marginTop:4}}>{sa.metricasUso&&sa.metricasUso.operaciones_mes!=null?sa.metricasUso.operaciones_mes:"—"}</div></div>
                 <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>USUARIOS ACTIVOS</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:24,marginTop:4}}>{sa.metricasUso&&sa.metricasUso.usuarios_activos!=null?sa.metricasUso.usuarios_activos:"—"}</div></div>
                 <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>INGRESOS · MES</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:18,marginTop:6}}>{sa.metricasUso&&sa.metricasUso.ingresos_mes_por_plan?Object.keys(sa.metricasUso.ingresos_mes_por_plan).map(function(k){return <div key={k}>{k}: {sa.metricasUso.ingresos_mes_por_plan[k]}</div>;}):"—"}</div></div>
               </div>
-              <SASection title="Anuncio global" right={<SABadge tone="gold">VISIBLE PARA TODOS</SABadge>}>
+              <details className="sa-more-metrics"><summary>Anuncio global para los usuarios</summary><SASection title="Anuncio global" right={<SABadge tone="gold">VISIBLE PARA TODOS</SABadge>}>
                 <div className="op-card" style={{padding:14}}>
-                  <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 170px auto",gap:9,alignItems:"end"}}>
+                  <div className="sa-announcement-grid">
                     <Field label="Mensaje"><input className="inp" value={anuncioForm.mensaje} onChange={function(e){setAnuncioForm(function(f){return Object.assign({},f,{mensaje:e.target.value});});}} placeholder="Mensaje que verán los usuarios al entrar"/></Field>
                     <Field label="Fecha de fin"><input className="inp" type="date" value={anuncioForm.fecha_fin} onChange={function(e){setAnuncioForm(function(f){return Object.assign({},f,{fecha_fin:e.target.value});});}}/></Field>
                     <button className="btn btn-primary" onClick={function(){sa.setAnuncio({p_mensaje:anuncioForm.mensaje||null,p_fecha_fin:anuncioForm.fecha_fin||null}).then(function(res){if(!res.error)dwNotify("success","Anuncio global actualizado.");});}}>Publicar</button>
                   </div>
                   {sa.anuncioGlobal&&sa.anuncioGlobal.mensaje&&<div style={{marginTop:10,fontSize:12,color:"var(--dim)"}}>Actual: <b style={{color:"var(--text)"}}>{sa.anuncioGlobal.mensaje}</b> · hasta {saFechaCorta(sa.anuncioGlobal.fecha_fin)}</div>}
                 </div>
-              </SASection>
-
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12,marginBottom:24}}>
-                <div className="stat-card" style={{padding:16,textAlign:"left",background:"linear-gradient(135deg,var(--surface),rgba(212,168,83,0.08))"}}>
-                  <div style={{fontSize:12,fontWeight:800,color:"var(--gold)",letterSpacing:".08em",textTransform:"uppercase"}}>Suscripciones</div>
-                  <div style={{fontFamily:"'DM Serif Display',serif",fontSize:27,marginTop:5}}>{sa.dashboard.membresias_activas || 0}</div>
-                  <div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>membresías activas</div>
-                </div>
-                <div className="stat-card" style={{padding:16,textAlign:"left"}}>
-                  <div style={{fontSize:12,fontWeight:800,color:"var(--dim)",letterSpacing:".08em",textTransform:"uppercase"}}>Cobros</div>
-                  <div style={{fontFamily:"'DM Serif Display',serif",fontSize:27,marginTop:5}}>{sa.pagos.length}</div>
-                  <div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>movimientos registrados</div>
-                </div>
-                <div className="stat-card" style={{padding:16,textAlign:"left"}}>
-                  <div style={{fontSize:12,fontWeight:800,color:"var(--dim)",letterSpacing:".08em",textTransform:"uppercase"}}>Medios</div>
-                  <div style={{fontSize:14,fontWeight:700,marginTop:9}}>💳 Tarjetas · 🏦 Transferencia</div>
-                  <div style={{fontSize:12,color:"var(--dim)",marginTop:5}}>listo para integrar pasarela</div>
-                </div>
-              </div>
+              </SASection></details>
 
               <SASection title="Facturación mensual" right={<SABadge tone="gold">PRECIOS VIGENTES</SABadge>}>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10,marginBottom:14}}>
@@ -1938,76 +1949,36 @@ function SuperAdminDashboard({ contexto, onLogout }){
                 )}
               </SASection>
 
-              {sa.dashboard.inmobiliarias_suspendidas>0 && (
-                <SASection title={"Requieren atención (" + sa.inmobiliarias.filter(function(i){return i.estado==="suspendida"||i.estado==="vencida";}).length + ")"}>
-                  <div className="sa-list">
-                    {sa.inmobiliarias.filter(function(i){return i.estado==="suspendida"||i.estado==="vencida";}).map(function(i){
-                      return (
-                        <div key={i.inmobiliaria_id} className="op-card" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,padding:"14px 16px"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:12}}>
-                            <SAAvatar nombre={i.inmobiliaria_nombre}/>
-                            <div style={{fontWeight:700,fontSize:13.5}}>{i.inmobiliaria_nombre}</div>
-                          </div>
-                          <div style={{display:"flex",alignItems:"center",gap:8}}>
-                            <SABadge tone={ESTADO_MEMBRESIA_TONE[i.estado]}>{i.estado}</SABadge>
-                            <button className="btn btn-ghost btn-sm" onClick={function(){setTab("inmobiliarias"); abrirDetalle(i.inmobiliaria_id, i.inmobiliaria_nombre);}}>Revisar</button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </SASection>
-              )}
+
             </div>
-          ) : <div style={{fontSize:13,color:"var(--dim)"}}>Cargando estadísticas…</div>
+          ) : <div role="status" style={{fontSize:13,color:"var(--dim)"}}>{sa.error?"No se pudo cargar el resumen. Volvé a intentar con Actualizar.":"Cargando estadísticas…"}</div>
         )}
 
         {tab==="inmobiliarias" && (
           <div>
-            <div className="filter-row" style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+            <div className="sa-toolbar">
               <div className="search-wrap" style={{flex:"1 1 220px",minWidth:180}}>
-                <span className="search-icon">🔍</span>
-                <input className="search-inp" value={busqueda} onChange={function(e){setBusqueda(e.target.value);}} placeholder="Buscar por nombre o email del dueño..."/>
+                <span className="search-icon" aria-hidden="true">⌕</span>
+                <input className="search-inp" aria-label="Buscar inmobiliarias por nombre o email" value={busqueda} onChange={function(e){setBusqueda(e.target.value);}} placeholder="Buscar por nombre o email del dueño..."/>
               </div>
               <div style={{width:170}}>
-                <select className="inp" value={filtroEstado} onChange={function(e){setFiltroEstado(e.target.value);}}>
-                  <option value="todas">Todos los estados</option>
+                <select className="inp" aria-label="Estado de inmobiliaria" value={filtroEstado} onChange={function(e){setFiltroEstado(e.target.value);}}>
+                  <option value="todas">Todos los estados</option><option value="atencion">Requieren atención</option><option value="vence7">Vencen en 7 días</option>
                   {ESTADOS_MEMBRESIA.map(function(e){return <option key={e} value={e}>{e}</option>;})}
                 </select>
               </div>
-              <div style={{width:160}}><select className="inp" value={filtroPlan} onChange={function(e){setFiltroPlan(e.target.value);}}><option value="todos">Todos los planes</option>{sa.planes.map(function(p){return <option key={p.id||p.codigo} value={p.codigo||p.nombre}>{p.nombre}</option>;})}</select></div>
-              <div style={{width:170}}><select className="inp" value={ordenInmob} onChange={function(e){setOrdenInmob(e.target.value);}}><option value="alta_desc">Alta: más recientes</option><option value="actividad_desc">Actividad: más recientes</option></select></div>
-              <button className="btn btn-primary" style={{marginLeft:"auto"}} onClick={function(){setShowNueva(true);}}>+ Nueva inmobiliaria</button><button className="btn btn-ghost btn-sm" onClick={function(){saDescargarCSVConFiltros(inmobiliariasFiltradas.map(function(i){return {nombre:i.inmobiliaria_nombre,email_dueno:i.dueno_email||i.owner_email||i.email_dueno||"",plan:i.plan_nombre,estado:i.estado,fecha_alta:i.created_at||i.fecha_alta,fecha_vencimiento:i.fecha_vencimiento||i.fecha_renovacion,usuarios_activos:i.usuarios_activos,limite_usuarios:i.limite_usuarios};}),"docworks-inmobiliarias.csv");}}>CSV</button>
+              <div style={{width:160}}><select className="inp" aria-label="Filtrar inmobiliarias por plan" value={filtroPlan} onChange={function(e){setFiltroPlan(e.target.value);}}><option value="todos">Todos los planes</option>{sa.planes.map(function(p){return <option key={p.id||p.codigo} value={p.codigo||p.nombre}>{p.nombre}</option>;})}</select></div>
+              <div style={{width:170}}><select className="inp" aria-label="Ordenar inmobiliarias" value={ordenInmob} onChange={function(e){setOrdenInmob(e.target.value);}}><option value="alta_desc">Alta: más recientes</option><option value="actividad_desc">Actividad: más recientes</option></select></div>
+              {(busqueda||filtroEstado!=="todas"||filtroPlan!=="todos")&&<button type="button" className="btn btn-ghost btn-sm" onClick={function(){setBusqueda("");setFiltroEstado("todas");setFiltroPlan("todos");}}>Restablecer filtros</button>}
+              <button className="btn btn-ghost btn-sm" onClick={function(){saDescargarCSVConFiltros(inmobiliariasFiltradas.map(function(i){return {nombre:i.inmobiliaria_nombre,email_dueno:i.dueno_email||i.owner_email||i.email_dueno||"",plan:i.plan_nombre,estado:i.estado,fecha_alta:i.created_at||i.fecha_alta,fecha_vencimiento:i.fecha_vencimiento||i.fecha_renovacion,usuarios_activos:i.usuarios_activos,limite_usuarios:i.limite_usuarios};}),"docworks-inmobiliarias.csv");}}>CSV</button>
             </div>
             <div style={{fontSize:12,color:"var(--dim)",marginBottom:12}}>
               {inmobiliariasFiltradas.length} de {sa.inmobiliarias.length} inmobiliarias
             </div>
             <div className="sa-list">
               {inmobiliariasFiltradas.length===0 && !sa.loading && <SAEmpty>No hay inmobiliarias que coincidan con la búsqueda.</SAEmpty>}
-              {inmobiliariasFiltradas.map(function(i){
-                var vencePronto = i.fecha_renovacion && (new Date(i.fecha_renovacion).getTime() - Date.now()) < 1000*60*60*24*7 && (new Date(i.fecha_renovacion).getTime() - Date.now()) > 0;
-                return (
-                  <div key={i.inmobiliaria_id} className="op-card" style={{padding:"16px 18px"}}>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-                      <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
-                        <SAAvatar nombre={i.inmobiliaria_nombre}/>
-                        <div style={{minWidth:0}}>
-                          <div style={{fontWeight:700,fontSize:14}}>{i.inmobiliaria_nombre}</div>
-                          <div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>
-                            Plan {i.plan_nombre} · {i.usuarios_activos}/{i.limite_usuarios} usuarios · Vence {saFechaCorta(i.fecha_vencimiento||i.fecha_renovacion)}
-                          </div>
-                          <SABar value={i.usuarios_activos} max={i.limite_usuarios}/>
-                        </div>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                        <SABadge tone={ESTADO_MEMBRESIA_TONE[i.estado]}>{i.estado}</SABadge>
-                        {i.fecha_vencimiento&&<SABadge tone={saEstadoVencimiento(i.fecha_vencimiento,i.estado).tone}>{saEstadoVencimiento(i.fecha_vencimiento,i.estado).label}</SABadge>}
-                        <button className="btn btn-secondary btn-sm" onClick={function(){abrirDetalle(i.inmobiliaria_id, i.inmobiliaria_nombre);}}>Ver detalle</button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {inmobiliariasFiltradas.map(function(i){return <article key={i.inmobiliaria_id} className="op-card sa-org-card" data-testid="sa-org-card"><div className="sa-org-top"><div className="sa-org-name"><SAAvatar nombre={i.inmobiliaria_nombre}/><div><h3>{i.inmobiliaria_nombre}</h3><p>{i.dueno_email||i.owner_email||i.email_dueno||"Sin email de contacto"}</p></div></div><div className="sa-org-actions"><SABadge tone={ESTADO_MEMBRESIA_TONE[i.estado]}>{i.estado}</SABadge><button type="button" className="btn btn-secondary btn-sm" aria-label={"Ver detalle de "+i.inmobiliaria_nombre} onClick={function(){abrirDetalle(i.inmobiliaria_id,i.inmobiliaria_nombre);}}>Ver detalle →</button></div></div><div className="sa-org-bottom"><span>Plan <b style={{color:"var(--text)"}}>{i.plan_nombre||"Sin asignar"}</b></span><span>{i.usuarios_activos??0} / {i.limite_usuarios??"—"} usuarios</span><SABadge tone={saEstadoVencimiento(i.fecha_vencimiento||i.fecha_renovacion,i.estado).tone}>{saEstadoVencimiento(i.fecha_vencimiento||i.fecha_renovacion,i.estado).label}</SABadge></div><SABar value={i.usuarios_activos} max={i.limite_usuarios}/></article>;})}
+
             </div>
           </div>
         )}
@@ -2162,6 +2133,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
             </div>
           </div>
         )}
+        </main>
       </div>
 
       <Modal open={showCheckout} onClose={function(){setShowCheckout(false);}} title="Nueva suscripción · PRO">
@@ -2233,7 +2205,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
                       <div>Alta: <b>{det.inmobiliaria&&det.inmobiliaria.creada_en?new Date(det.inmobiliaria.creada_en).toLocaleDateString("es-AR"):"—"}</b></div>
                       <div>Vence: <b>{det.membresia&&det.membresia.fecha_vencimiento?new Date(det.membresia.fecha_vencimiento).toLocaleDateString("es-AR"):"—"}</b></div>
                       <div>Cláusulas: <b>{det.clausulas_count}</b></div>
-                      <div>Cláusulas: <b>{det.bloques_count}</b></div>
+                      <div>Bloques del modelo: <b>{det.bloques_count}</b></div>
                     </div>
                     <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
                       <div style={{width:220,maxWidth:"100%"}}>
@@ -2257,7 +2229,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
                       <button className="btn btn-secondary btn-sm" onClick={function(){sa.extenderMembresia(detalleId,30,"prueba_gratis","Prueba gratis").then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));});}}>Dar prueba gratis</button>
                       {det.membresia&&det.membresia.estado==="archivada"?<button className="btn btn-secondary btn-sm" onClick={function(){requestDwConfirm("¿Reactivar esta inmobiliaria?",function(){sa.archivarInmobiliaria(detalleId,false);});}}>Reactivar</button>:<button className="btn btn-ghost btn-sm" onClick={function(){requestDwConfirm("¿Archivar esta inmobiliaria? Se aplicará soft delete y no se borrará físicamente.",function(){requestDwConfirm("Confirmación final: ¿querés archivar la inmobiliaria?",function(){sa.archivarInmobiliaria(detalleId,true);});});}}>Archivar</button>}
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 140px auto",gap:8,alignItems:"end",marginTop:12}}>
+                    <div className="sa-detail-settings-grid">
                       <Field label="Límite personalizado de usuarios"><input className="inp" type="number" min="0" value={limiteCustom} onChange={function(e){setLimiteCustom(e.target.value);}} placeholder={det.limite_usuarios!=null?String(det.limite_usuarios):"Usar límite del plan"}/></Field>
                       <button className="btn btn-secondary btn-sm" onClick={function(){sa.setLimites(detalleId,limiteCustom).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));});}}>Guardar límite</button>
                       <button className="btn btn-ghost btn-sm" onClick={function(){sa.setLimites(detalleId,null);setLimiteCustom("");}}>Quitar override</button>
