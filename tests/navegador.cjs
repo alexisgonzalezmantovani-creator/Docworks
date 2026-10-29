@@ -74,6 +74,11 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   assert.equal(await page.locator('.dw-clause-compact:not(.dw-clause-open) .dw-clause-actions:visible').count(),0);checks++;
   await page.getByTestId('dw-open-fullpage-preview').click();
   await page.getByTestId('dw-fullpage-preview').waitFor();checks++;
+  const cierreFijo=page.getByTestId('dw-preview-fixed-close');
+  assert.equal(await cierreFijo.count(),1);checks++;
+  assert.equal(await cierreFijo.evaluate(el=>getComputedStyle(el).position),'fixed');checks++;
+  await page.getByTestId('dw-fullpage-preview').evaluate(el=>el.scrollTop=el.scrollHeight);
+  assert.ok(await cierreFijo.isVisible());checks++;
   await page.getByRole('button',{name:'Cerrar vista previa'}).click();
   await page.getByTestId('dw-fullpage-preview').waitFor({state:'detached'});checks++;
   assert.equal(await page.getByRole('button',{name:'Publicar para asesores'}).count(),0);checks++;
