@@ -63,6 +63,20 @@ export var DEFAULT_BLOQUES_RESERVA = [
     variables:[], condicion:null, orden:15, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
 ];
 
+// Catálogo activo único para Biblioteca y las opciones de cada documento.
+// La coincidencia de títulos es exacta: variantes con otros plazos se conservan.
+export function filtrarCatalogoClausulas(clausulas,opciones){
+  var o=opciones||{},protegidas=o.idsProtegidos||[];
+  var esenciales=["multa por incumplimiento","libre de ocupantes","expensas y servicios","comisión inmobiliaria","jurisdicción","estado del inmueble","prohibición de subalquilar","servicios a cargo del locatario","obras y mejoras"];
+  function clave(t){return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase().replace(/\s+/g," ");}
+  var titulosBase=esenciales.map(clave);
+  return (clausulas||[]).filter(function(c){
+    if(!c||c.activo===false||c.id==="c4"||protegidas.indexOf(c.id)!==-1)return false;
+    if(titulosBase.indexOf(clave(c.titulo))!==-1||o.esTextoBase(c))return false;
+    return !o.tipo||o.aplicaTipo(c,o.tipo);
+  });
+}
+
 // Comparación orientativa de títulos; nunca decide equivalencia del texto legal.
 export function buscarTitulosParecidos(titulo,clausulas,excluirId){
   function palabras(t){return Array.from(new Set(String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().split(/[^a-z0-9]+/).filter(function(p){return p&&!/^(de|del|la|el|los|las|por|para|con|sin|y|en|a|un|una|clausula)$/.test(p);})));}
@@ -250,7 +264,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
             {filtradas.map(function(c){
               var esTodos=!c.tipos||!c.tipos.length||c.tipos.indexOf("todos")!==-1;
               return(
-                <div key={c.id} className="op-card">
+                <div key={c.id} data-clausula-id={c.id} className="op-card">
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
                     <div style={{flex:1}}>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap"}}>
@@ -356,9 +370,9 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   }
   function contarModelo(tipo){return contarBloquesCuerpo(perfil,tipo,bloquesReserva);}
   var protegidas=obtenerIdsProtegidosDePlantillas(perfil);
-  // Los textos esenciales ya forman parte del cuerpo del documento. No se ofrecen como extras.
-  var titulosDelModelo=new Set(["multa por incumplimiento","libre de ocupantes","expensas y servicios","comisión inmobiliaria","comision inmobiliaria","jurisdicción","jurisdiccion","estado del inmueble","prohibición de subalquilar","prohibicion de subalquilar","servicios a cargo del locatario","obras y mejoras"]);
-  var adicionalesVisibles=(clausulas||[]).filter(function(c){if(protegidas.indexOf(c.id)!==-1)return false;var titulo=String(c.titulo||"").trim().toLocaleLowerCase("es-AR");if(titulosDelModelo.has(titulo))return false;if(clausulaYaEnTextoBase(c))return false;return filtroAdicional==="todas"||clausulaAplicaTipo(c,filtroAdicional);});
+  var catalogoBiblioteca=filtrarCatalogoClausulas(clausulas,{idsProtegidos:protegidas,esTextoBase:clausulaYaEnTextoBase,aplicaTipo:clausulaAplicaTipo});
+  var adicionalesVisibles=catalogoBiblioteca.filter(function(c){return filtroAdicional==="todas"||clausulaAplicaTipo(c,filtroAdicional);});
+  var opcionalesDocumento=catalogoBiblioteca.filter(function(c){return clausulaAplicaTipo(c,tipoDocSel);});
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":"Elegí un documento y editá su contenido."}</div></div></div>
     {puedeEditar&&<nav aria-label="Cláusulas y documentos" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -400,9 +414,11 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         </div>
       {<details key={"biblioteca-"+tipoDocSel} id="dw-model-extra-clauses" className="card" style={{padding:14,scrollMarginTop:90}} data-step="clausulas">
         <summary style={{fontSize:14,fontWeight:700,color:"var(--text)",cursor:"pointer",minHeight:44,padding:"10px 0",boxSizing:"border-box"}}>Cláusulas opcionales</summary>
-        <div style={{fontSize:13,color:"var(--dim)",lineHeight:1.55,marginTop:5}}>El asesor podrá elegir estas cláusulas al preparar {TIPOS[tipoDocSel]||tipoDocSel}.</div>
+        <div style={{fontSize:13,color:"var(--dim)",lineHeight:1.55,marginTop:5}}>Son las mismas cláusulas de Biblioteca que aplican a {TIPOS[tipoDocSel]||tipoDocSel}. Habilitá las que el asesor podrá elegir al preparar la operación.</div>
         <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Los cambios de estas opciones se guardan al seleccionarlos. Podés editar los textos desde acá. Los cambios de cada cláusula se guardan al confirmarlos.</div>
-        {(clausulas||[]).filter(function(c){return c&&clausulaAplicaTipo(c,tipoDocSel)&&!clausulaYaEnTextoBase(c);}).map(function(c){var cfg=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas);var elegida=(cfg.clausulas_ids||[]).indexOf(c.id)!==-1;var obligatoriaModelo=c.obligatoria===true||(cfg.obligatorias_ids||[]).indexOf(c.id)!==-1;var estado=obligatoriaModelo?"obligatoria":elegida?"asesor":"apagada";return <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 0",borderBottom:"1px solid var(--border)",minWidth:0}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13.5,fontWeight:650,color:"var(--text)",overflowWrap:"anywhere"}}>{c.titulo||"Cláusula sin título"}</div><div style={{fontSize:12.5,color:"var(--dim)",marginTop:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{mostrarTokensDocWorks(c.contenido||"")}</div></div><select aria-label={"Estado de "+(c.titulo||"cláusula")} value={estado} disabled={!puedeEditar||c.obligatoria===true} onChange={function(e){cambiarEstadoClausulaBiblioteca(c,e.target.value);}} style={{width:150,maxWidth:"44%",minWidth:0,fontSize:12.5,padding:"9px 6px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option><option value="asesor">Opcional</option><option value="apagada">Apagada</option></select>{puedeEditar&&estado!=="obligatoria"&&<button type="button" className="btn btn-secondary btn-sm" disabled={opcionalGuardando} onClick={function(){abrirEdicionOpcional(c);}}>Editar</button>}
+        {clausulasLoading&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>Cargando biblioteca…</div>}
+        {clausulasError&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginBottom:10}}>{clausulasError} <button type="button" className="btn btn-secondary btn-sm" onClick={onRetryClausulas}>Reintentar</button></div>}
+        {opcionalesDocumento.map(function(c){var cfg=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas);var elegida=(cfg.clausulas_ids||[]).indexOf(c.id)!==-1;var obligatoriaModelo=c.obligatoria===true||(cfg.obligatorias_ids||[]).indexOf(c.id)!==-1;var estado=obligatoriaModelo?"obligatoria":elegida?"asesor":"apagada";return <div key={c.id} data-clausula-id={c.id} style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 0",borderBottom:"1px solid var(--border)",minWidth:0}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13.5,fontWeight:650,color:"var(--text)",overflowWrap:"anywhere"}}>{c.titulo||"Cláusula sin título"}</div><div style={{fontSize:12.5,color:"var(--dim)",marginTop:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{mostrarTokensDocWorks(c.contenido||"")}</div></div><select aria-label={"Estado de "+(c.titulo||"cláusula")} value={estado} disabled={!puedeEditar||c.obligatoria===true} onChange={function(e){cambiarEstadoClausulaBiblioteca(c,e.target.value);}} style={{width:150,maxWidth:"44%",minWidth:0,fontSize:12.5,padding:"9px 6px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option><option value="asesor">Opcional</option><option value="apagada">Apagada</option></select>{puedeEditar&&estado!=="obligatoria"&&<button type="button" className="btn btn-secondary btn-sm" disabled={opcionalGuardando} onClick={function(){abrirEdicionOpcional(c);}}>Editar</button>}
         {opcionalEditando===c.id&&opcionalBorrador&&<div style={{flex:"1 0 100%",minWidth:0,padding:12,border:"1px solid var(--border)",borderRadius:10,display:"flex",flexDirection:"column",gap:9}}>
           <div style={{fontSize:12,color:"var(--muted)"}}>Editás el texto compartido de la biblioteca. Si se utiliza en otros documentos, el cambio también puede afectarlos.</div>
           <label style={{fontSize:12}}>Título<input className="inp" style={{width:"100%",boxSizing:"border-box"}} value={opcionalBorrador.titulo} onChange={function(e){setOpcionalBorrador(Object.assign({},opcionalBorrador,{titulo:e.target.value}));}}/></label>
@@ -413,7 +429,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
             <button type="button" className="btn btn-primary btn-sm" disabled={opcionalGuardando} onClick={function(){requestDwConfirm("¿Guardar los cambios de esta cláusula compartida?",guardarEdicionOpcional);}}>{opcionalGuardando?"Guardando…":"Guardar cláusula"}</button>
           </div>
         </div>}</div>;})}
-        {!(clausulas||[]).some(function(c){return c&&clausulaAplicaTipo(c,tipoDocSel)&&!clausulaYaEnTextoBase(c);})&&<div style={{fontSize:12,color:"var(--dim)",padding:"10px 0"}}>Todavía no hay textos de biblioteca para este documento. Podés crearlos en Biblioteca de cláusulas.</div>}
+        {!clausulasLoading&&!clausulasError&&opcionalesDocumento.length===0&&<div style={{fontSize:12,color:"var(--dim)",padding:"10px 0"}}>Todavía no hay textos de biblioteca para este documento. Podés crearlos en Biblioteca de cláusulas.</div>}
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setSeccion("adicionales");}}>Ir a Biblioteca de cláusulas</button></div>
 
       </details>}
