@@ -6615,7 +6615,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
     </div>}
     {barraSuperior&&<div className="card" data-testid="dw-model-actions" style={{padding:14,display:"flex",flexDirection:"column",gap:8}}>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
-        
+        <button type="button" data-testid="dw-open-fullpage-preview" className="btn btn-secondary" onClick={function(){if(typeof onPreviewChange==="function")onPreviewChange(true);}}>Vista previa</button>
         {puedeEditar&&<button type="button" className="btn btn-primary" disabled={saveStatus==="saving"||encabezadoEditing||!!modeloEnEdicion} onClick={guardarModelo}>{saveStatus==="saving"?"Guardando…":"Guardar cambios"}</button>}
       </div>
       <div style={{fontSize:12,color:"var(--dim)",textAlign:"right"}}>{saveStatus==="saved"?"Modelo guardado correctamente.":saveStatus==="error"?"No se pudo guardar el modelo.":encabezadoEditing||modeloEnEdicion?"Terminá la edición antes de guardar.":"Los cambios se aplicarán a las nuevas operaciones."}</div>
