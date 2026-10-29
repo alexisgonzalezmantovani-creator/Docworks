@@ -8095,7 +8095,7 @@ function DocWorksApp(){
         if(cur.plantillas && Object.keys(cur.plantillas).length>0){ perfilInicializadoRef.current[inmobId]=true; return cur; }
         var mapa={};
         PLANTILLA_TIPOS.forEach(function(tipo){
-          var ids=CLAUSULAS_DEFAULT.filter(function(c){return clausulaAplicaTipo(c,tipo);}).map(function(c){return c.id;});
+          var ids=CLAUSULAS_DEFAULT.filter(function(c){return c.obligatoria===true && clausulaAplicaTipo(c,tipo);}).map(function(c){return c.id;});
           mapa[tipo]={clausulas_ids:ids,locked:false,version:1};
         });
         var next=Object.assign({},cur,{plantillas:mapa,clausulas_default_ids:mapa["reserva"]?mapa["reserva"].clausulas_ids.slice():[],clausulas_default_locked:false});
