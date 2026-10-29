@@ -462,7 +462,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.01";
+var DOCWORKS_VERSION = "6.02";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -6512,7 +6512,7 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 @media(prefers-reduced-motion:reduce){.dw-clause-chevron,.dw-clause-card{transition:none}}
 `;
 
-function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onTipoDocChange,ocultarSelector,barraSuperior,previewOpen,onPreviewChange,children,pasoModelo,mostrarCuerpo,mostrarIntroduccion,onEditingChange}) {
+function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onTipoDocChange,ocultarSelector,barraSuperior,previewOpen,onPreviewChange,children,pasoModelo,mostrarCuerpo,mostrarIntroduccion,onEditingChange,modeloEnEdicion}) {
   const [tipoDocInterno,setTipoDocInterno]=useState("reserva");
   const tipoDocSel=tipoDocExterno||tipoDocInterno;
   function setTipoDocSel(v){if(typeof onTipoDocChange==="function")onTipoDocChange(v);else setTipoDocInterno(v);}
@@ -6552,32 +6552,37 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   function actualizarPlantilla(changes){
     if(!puedeEditar)return Promise.resolve({error:new Error("Sin permisos")});
     var mapa=Object.assign({},perfil.plantillas||{});
-    var actual=Object.assign({},mapa[tipoDocSel]||{}, {clausulas_ids:idsPlantilla.slice(),locked:!!cfg.locked,version:obtenerVersionPlantilla(perfil,tipoDocSel)});
+    var actual=Object.assign({},mapa[tipoDocSel]||{}, {clausulas_ids:idsPlantilla.slice(),locked:false,version:obtenerVersionPlantilla(perfil,tipoDocSel)});
     actual=Object.assign(actual,changes||{});
     var next=Object.assign({},perfil,{plantillas:Object.assign({},mapa,{[tipoDocSel]:actual}),clausulas_default_ids:actual.clausulas_ids.slice(),clausulas_default_locked:!!actual.locked});
     return persistir(next);
   }
-  function agregarClausula(id){if(!puedeEditar||cfg.locked||!id||idsPlantilla.indexOf(id)!==-1)return;actualizarPlantilla({clausulas_ids:idsPlantilla.concat([id]),locked:false});}
-  function quitarClausula(id){if(!puedeEditar||cfg.locked)return;actualizarPlantilla({clausulas_ids:idsPlantilla.filter(function(x){return x!==id;}),locked:false});}
+  function agregarClausula(id){if(!puedeEditar||!id||idsPlantilla.indexOf(id)!==-1)return;actualizarPlantilla({clausulas_ids:idsPlantilla.concat([id]),locked:false});}
+  function quitarClausula(id){if(!puedeEditar)return;actualizarPlantilla({clausulas_ids:idsPlantilla.filter(function(x){return x!==id;}),locked:false});}
   function moverClausula(id,delta){
-    if(!puedeEditar||cfg.locked)return;
+    if(!puedeEditar)return;
     var arr=idsPlantilla.slice(),i=arr.indexOf(id),j=i+delta;
     if(i<0||j<0||j>=arr.length)return;
     var tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;actualizarPlantilla({clausulas_ids:arr,locked:false});
   }
-  function fijarPlantilla(){
-    if(!puedeEditar||cfg.locked)return;
+  async function guardarModelo(){
+    if(!puedeEditar||saveStatus==="saving"||encabezadoEditing||modeloEnEdicion)return;
     var mapa=Object.assign({},perfil.plantillas||{}),versionAnterior=obtenerVersionPlantilla(perfil,tipoDocSel),ahora=new Date().toISOString();
     var anterior=mapa[tipoDocSel]||{};
     var historial=Array.isArray(anterior.historial_versiones)?anterior.historial_versiones.slice():[];
-    // Conserva una instantánea inmutable del modelo previo antes de publicar la nueva versión.
-    if(versionAnterior>0 && (anterior.version_publicada_en || anterior.locked)){
-      historial.unshift({version:versionAnterior,guardada_en:anterior.version_publicada_en||anterior.version_updated_at||ahora,introduccion:(perfil.encabezados_custom||{})[tipoDocSel]||DEFAULT_ENCABEZADOS[tipoDocSel]||"",clausulas_ids:(anterior.clausulas_ids||idsPlantilla).slice(),obligatorias_ids:(Array.isArray(anterior.obligatorias_ids)?anterior.obligatorias_ids:[]).slice(),clausulas:(clausulas||[]).filter(function(c){return (anterior.clausulas_ids||idsPlantilla).indexOf(c.id)!==-1||(Array.isArray(anterior.obligatorias_ids)&&anterior.obligatorias_ids.indexOf(c.id)!==-1);}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria};}),body_blocks:Array.isArray(anterior.body_blocks)?JSON.parse(JSON.stringify(anterior.body_blocks)):[],frecuentes_ids:Array.isArray(anterior.frecuentes_ids)?anterior.frecuentes_ids.slice():[]});
+    if(versionAnterior>0&&(anterior.version_publicada_en||anterior.locked)){
+      historial.unshift({version:versionAnterior,guardada_en:anterior.version_publicada_en||anterior.version_updated_at||ahora,
+        introduccion:(perfil.encabezados_custom||{})[tipoDocSel]||DEFAULT_ENCABEZADOS[tipoDocSel]||"",
+        clausulas_ids:(anterior.clausulas_ids||idsPlantilla).slice(),
+        obligatorias_ids:(Array.isArray(anterior.obligatorias_ids)?anterior.obligatorias_ids:[]).slice(),
+        clausulas:(clausulas||[]).filter(function(c){return (anterior.clausulas_ids||idsPlantilla).indexOf(c.id)!==-1||(Array.isArray(anterior.obligatorias_ids)&&anterior.obligatorias_ids.indexOf(c.id)!==-1);}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria};}),
+        body_blocks:Array.isArray(anterior.body_blocks)?JSON.parse(JSON.stringify(anterior.body_blocks)):[],
+        frecuentes_ids:Array.isArray(anterior.frecuentes_ids)?anterior.frecuentes_ids.slice():[]});
     }
-    var nueva=Object.assign({},anterior,{clausulas_ids:idsPlantilla.slice(),locked:true,version:versionAnterior+1,version_updated_at:ahora,version_publicada_en:ahora,historial_versiones:historial.slice(0,30)});
-    persistir(Object.assign({},perfil,{plantillas:Object.assign({},mapa,{[tipoDocSel]:nueva}),clausulas_default_ids:idsPlantilla.slice(),clausulas_default_locked:true}));
-    setConfirmLockDefaults(false);
-    setConfirmPreviewReviewed(false);
+    var nueva=Object.assign({},anterior,{clausulas_ids:idsPlantilla.slice(),locked:false,version:versionAnterior+1,version_updated_at:ahora,version_publicada_en:ahora,historial_versiones:historial.slice(0,30)});
+    var res=await persistir(Object.assign({},perfil,{plantillas:Object.assign({},mapa,{[tipoDocSel]:nueva}),clausulas_default_ids:idsPlantilla.slice(),clausulas_default_locked:false}));
+    if(res&&res.error){dwNotify("error","No se pudo guardar el modelo. Revisá la conexión.");return;}
+    dwNotify("success","Modelo guardado. Se utilizará en las nuevas operaciones.");
   }
   function guardarEncabezado(texto){
     var mapa=Object.assign({},customMap);mapa[tipoDocSel]=texto;
@@ -6588,10 +6593,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
     return persistir(Object.assign({},perfil,{encabezados_custom:mapa})).then(function(res){if(!(res&&res.error)){setEncabezadoDraft("");setEncabezadoEditing(false);}return res;});
   }
   return <div style={{display:"flex",flexDirection:"column",gap:12}}>
-    {barraSuperior&&<div id="dw-config-modelo" style={{position:"sticky",top:0,zIndex:8,scrollMarginTop:90,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:12,background:"var(--card)",boxShadow:"0 4px 14px rgba(0,0,0,.08)"}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}><div style={{fontSize:12.5,fontWeight:700,color:"var(--text)"}}>{TIPOS[tipoDocSel]||tipoDocSel}</div>{cfg.locked&&puedeEditar&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){actualizarPlantilla({locked:false});}}>Habilitar edición</button>}</div>
-      <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){if(typeof onPreviewChange==="function")onPreviewChange(!previewOpen);}}>{previewOpen?"Cerrar vista previa":"Vista previa del modelo"}</button><button type="button" className="btn btn-primary btn-sm" disabled={!puedeEditar||!!cfg.locked} onClick={function(){setConfirmPreviewReviewed(false);setConfirmLockDefaults(true);}}>Publicar para asesores</button></div>
-    </div>}
+    {barraSuperior&&<div id="dw-config-modelo" style={{padding:"8px 2px",fontSize:13,fontWeight:700,color:"var(--text)"}}>{TIPOS[tipoDocSel]||tipoDocSel}</div>}
     {!puedeEditar&&<div className="notice" style={{fontSize:12}}>Esta configuración es de solo lectura. Solo Dueño y Administrador pueden editar encabezados y cláusulas.</div>}
     {pasoModelo===3&&mostrarIntroduccion!==false&&<div id="dw-config-introduccion" className="card" style={{padding:14,scrollMarginTop:90}}>
       <div style={{fontSize:15,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Introducción del documento</div>
@@ -6606,8 +6608,13 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
       {children}
 
     </div>}
-    {confirmLockDefaults&&<Modal open={true} onClose={function(){setConfirmLockDefaults(false);setConfirmPreviewReviewed(false);}} title="Publicar para asesores"><div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:12}}>Vas a publicar una nueva versión de {TIPOS[tipoDocSel]}. Revisá la vista previa y comprobá que la introducción, las cláusulas y sus variables sean correctas. La versión del modelo avanzará a {obtenerVersionPlantilla(perfil,tipoDocSel)+1}. Las cláusulas opcionales quedarán disponibles para que el asesor las agregue cuando las necesite.</div><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setConfirmLockDefaults(false);setConfirmPreviewReviewed(false);if(typeof onPreviewChange==="function")onPreviewChange(true);}}>Ver vista previa con datos de ejemplo</button><label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:13,fontSize:12.5,color:"var(--text)",lineHeight:1.45}}><input type="checkbox" checked={confirmPreviewReviewed} onChange={function(e){setConfirmPreviewReviewed(e.target.checked);}} style={{marginTop:2}}/><span>Revisé la vista previa y verifiqué la introducción, las cláusulas y las variables del modelo.</span></label><div style={{display:"flex",justifyContent:"flex-end",gap:7,marginTop:15}}><Btn v="ghost" onClick={function(){setConfirmLockDefaults(false);setConfirmPreviewReviewed(false);}}>Cancelar</Btn><Btn v="success" disabled={!confirmPreviewReviewed} onClick={fijarPlantilla}>Publicar para asesores</Btn></div></Modal>}
-    {false&&confirmLockDefaults&&pasoModelo!==2&&<Modal open={true} onClose={function(){setConfirmLockDefaults(false);setConfirmPreviewReviewed(false);}} title="Publicar para asesores"><div style={{fontSize:13,color:"var(--muted)",lineHeight:1.6,marginBottom:12}}>Antes de publicar, revisá la vista previa completa de {TIPOS[tipoDocSel]||tipoDocSel}. La nueva versión se aplicará a las operaciones nuevas; los documentos existentes conservarán su contenido.</div><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setConfirmLockDefaults(false);setConfirmPreviewReviewed(false);if(typeof onPreviewChange==="function")onPreviewChange(true);}}>Ver vista previa del modelo</button><label style={{display:"flex",alignItems:"flex-start",gap:9,marginTop:13,fontSize:13,color:"var(--text)",lineHeight:1.5}}><input type="checkbox" checked={confirmPreviewReviewed} onChange={function(e){setConfirmPreviewReviewed(e.target.checked);}} style={{marginTop:3}}/><span>Revisé la vista previa y confirmo que el modelo está listo para los asesores.</span></label><div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:16}}><Btn v="ghost" onClick={function(){setConfirmLockDefaults(false);setConfirmPreviewReviewed(false);}}>Cancelar</Btn><Btn v="success" disabled={!confirmPreviewReviewed} onClick={fijarPlantilla}>Publicar para asesores</Btn></div></Modal>}
+    {barraSuperior&&<div className="card" data-testid="dw-model-actions" style={{padding:14,display:"flex",flexDirection:"column",gap:8}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+        <button type="button" className="btn btn-secondary" onClick={function(){if(typeof onPreviewChange==="function")onPreviewChange(!previewOpen);}}>{previewOpen?"Cerrar vista previa":"Vista previa"}</button>
+        {puedeEditar&&<button type="button" className="btn btn-primary" disabled={saveStatus==="saving"||encabezadoEditing||!!modeloEnEdicion} onClick={guardarModelo}>{saveStatus==="saving"?"Guardando…":"Guardar cambios"}</button>}
+      </div>
+      <div style={{fontSize:12,color:"var(--dim)",textAlign:"right"}}>{saveStatus==="saved"?"Modelo guardado correctamente.":saveStatus==="error"?"No se pudo guardar el modelo.":encabezadoEditing||modeloEnEdicion?"Terminá de editar la cláusula o introducción antes de guardar.":"Se aplicará a nuevas operaciones. Los textos que editás se guardan al confirmar cada cláusula."}</div>
+    </div>}
   </div>;
 }
 
