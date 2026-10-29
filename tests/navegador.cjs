@@ -67,6 +67,10 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   const acciones=page.getByTestId('dw-model-actions');
   assert.equal(await acciones.getByRole('button',{name:'Guardar cambios',exact:true}).count(),1);checks++;
   assert.equal(await acciones.getByRole('button',{name:'Vista previa',exact:true}).count(),0);checks++;
+  await page.getByTestId('dw-open-fullpage-preview').click();
+  await page.getByTestId('dw-fullpage-preview').waitFor();checks++;
+  await page.getByRole('button',{name:'Cerrar vista previa'}).click();
+  await page.getByTestId('dw-fullpage-preview').waitFor({state:'detached'});checks++;
   assert.equal(await page.getByRole('button',{name:'Publicar para asesores'}).count(),0);checks++;
   assert.ok(await page.evaluate(()=>{const a=document.querySelector('[data-testid="dw-model-actions"]');const b=document.querySelector('#dw-model-extra-clauses');return a&&b&&a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_PRECEDING;}),name+' acciones al final');checks++;
   await acciones.getByRole('button',{name:'Guardar cambios',exact:true}).click();
