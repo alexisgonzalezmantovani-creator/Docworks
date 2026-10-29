@@ -460,7 +460,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.10";
+var DOCWORKS_VERSION = "6.11";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -477,7 +477,7 @@ var DOCWORKS_VERSION = "6.10";
 // 3.13: estabilización — errores de auth, cleanup de suscripción, rollback de operaciones y estados de devolución.
 
 // Logo público usado por la app y por el favicon.
-const LOGO_B64 = "/logo.png";
+const LOGO_B64 = "/docworks-startup-logo.png";
 
 // Título visible de la web: siempre refleja la versión del documento.
 if (typeof document !== "undefined") document.title = "DocWorks v" + DOCWORKS_VERSION;
@@ -9150,7 +9150,7 @@ function StartupSplashHost(){
   },[]);
   if(!visible)return null;
   return <div aria-label="Iniciando DocWorks" role="status" style={{position:"fixed",inset:0,zIndex:99999,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:15,background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 52%, #03060d 100%)",opacity:fade?0:1,transition:"opacity .22s ease",pointerEvents:"none"}}>
-    <img src={DOCWORKS_HEADER_LOGO} alt="DocWorks" style={{display:"block",width:"min(80vw,400px)",height:"auto",maxHeight:"30vh",objectFit:"contain",filter:"drop-shadow(0 8px 28px rgba(212,168,83,.16))"}}/>
+    <img src={LOGO_B64} alt="DocWorks" style={{display:"block",width:"min(80vw,400px)",height:"auto",maxHeight:"48vh",objectFit:"contain",filter:"drop-shadow(0 8px 28px rgba(212,168,83,.16))"}}/>
     <div style={{fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:600,color:"#e8edf6"}}>Cargando<span style={{color:"#d4a853"}}>…</span></div>
     <div style={{width:30,height:3,borderRadius:99,background:"rgba(212,168,83,.18)",overflow:"hidden"}}><div style={{width:"55%",height:"100%",borderRadius:99,background:"#d4a853",animation:"dwStartupProgress .85s ease-in-out infinite alternate"}}/></div>
     <style>{"@keyframes dwStartupProgress{from{transform:translateX(-25%)}to{transform:translateX(95%)}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}"}</style>
