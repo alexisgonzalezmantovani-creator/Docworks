@@ -310,8 +310,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       </div>}
       <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
         <div className="card" style={{padding:14}}>
-          <div style={{fontSize:15,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Texto del documento</div>
-          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Estas cláusulas se incluyen siempre. Tocá una para leerla y, si tenés permisos, editarla. Las esenciales están protegidas.</div>
+          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:10}}>Tocá una cláusula para leerla y después elegí Editar. Las esenciales están protegidas.</div>
           <div id="dw-model-preview-area">
             {bloquesError&&tipoDocSel==="reserva"&&<div className="notice notice-amber" style={{fontSize:12,marginBottom:10}}>{bloquesError} {onRetryBloques&&<button type="button" onClick={onRetryBloques} className="btn btn-secondary btn-sm">Reintentar</button>}</div>}
             {bloquesLoading&&tipoDocSel==="reserva"&&(!bloquesReserva||bloquesReserva.length===0)&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Cargando las cláusulas del modelo de Reserva…</div>}
