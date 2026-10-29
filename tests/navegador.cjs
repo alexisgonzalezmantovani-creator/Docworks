@@ -57,11 +57,11 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   }
   await page.goto('http://127.0.0.1:'+server.address().port+'/workspace');
   for(const label of ['Reserva de Compra','Boleto de Compraventa','Reserva de Alquiler','Contrato de Alquiler','Comodato','Autorización de Venta','Refuerzo de Reserva','Devolución de Reserva']){
-   await page.locator('.dw-model-type-chip').filter({hasText:label}).click();
+   await page.locator('#dw-modelo-documento').selectOption({label});
    assert.equal(await page.locator('#dw-config-modelo').count(),1);checks++;
    assert.ok((await page.locator('#dw-config-modelo').textContent()).startsWith(label),name+' cambio a '+label);checks++;
   }
-  await page.locator('.dw-model-type-chip').filter({hasText:'Reserva de Compra'}).click();
+  await page.locator('#dw-modelo-documento').selectOption({label:'Reserva de Compra'});
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
   assert.equal(await nav.getByRole('button').count(),2);checks++;
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
@@ -74,6 +74,11 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   assert.equal(await page.locator('.dw-clause-compact:not(.dw-clause-open) .dw-clause-actions:visible').count(),0);checks++;
   await page.getByTestId('dw-open-fullpage-preview').click();
   await page.getByTestId('dw-fullpage-preview').waitFor();checks++;
+  const cierreFijo=page.getByTestId('dw-preview-fixed-close');
+  assert.equal(await cierreFijo.count(),1);checks++;
+  assert.equal(await cierreFijo.evaluate(el=>getComputedStyle(el).position),'fixed');checks++;
+  await page.getByTestId('dw-fullpage-preview').evaluate(el=>el.scrollTop=el.scrollHeight);
+  assert.ok(await cierreFijo.isVisible());checks++;
   await page.getByRole('button',{name:'Cerrar vista previa'}).click();
   await page.getByTestId('dw-fullpage-preview').waitFor({state:'detached'});checks++;
   assert.equal(await page.getByRole('button',{name:'Publicar para asesores'}).count(),0);checks++;
