@@ -6334,7 +6334,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   const [historialSeleccionado,setHistorialSeleccionado]=useState(null);
   const [status,setStatus]=useState(null);
   const [probarAbierto,setProbarAbierto]=useState(false);
-  const modoVistaClausulas="simple";
+  const [modoVistaClausulas]=useState("simple");
   const [clausulasAbiertas,setClausulasAbiertas]=useState({});
   useEffect(function(){if(onEditingChange)onEditingChange(!!editId);},[editId,onEditingChange]);
   useEffect(function(){
