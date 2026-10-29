@@ -66,7 +66,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   }
   await page.locator('#dw-modelo-documento').selectOption({label:'Reserva de Compra'});
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
-  assert.equal(await nav.getByRole('button').count(),2);checks++;
+  assert.equal(await nav.getByRole('button').count(),3);checks++;
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
   assert.equal(await page.locator('#dw-model-preview-area').count(),1);checks++;
   const acciones=page.getByTestId('dw-model-actions');
@@ -150,6 +150,13 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   await page.getByRole('button',{name:'Reintentar habilitación',exact:true}).click();
   await page.locator('#dw-clausula-texto').waitFor({state:'detached'});
   assert.equal(await page.getByTestId('altas').textContent(),'2');checks++;
+  await nav.getByRole('button',{name:'Papelera',exact:true}).click();
+  await page.getByRole('heading',{name:'Papelera de cláusulas',exact:true}).waitFor();checks++;
+  assert.equal(await page.locator('#dw-biblioteca-documento').count(),0);checks++;
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' papelera overflow');checks++;
+  await page.screenshot({path:path.join(out,name+'-papelera.png'),fullPage:true});
+  await page.getByRole('button',{name:'Volver a biblioteca',exact:true}).click();
+  await page.locator('#dw-biblioteca-documento').waitFor();checks++;
   await page.goto('http://127.0.0.1:'+server.address().port+'/estadisticas');
   await page.locator('.recharts-wrapper').first().waitFor();
   assert.ok(await page.locator('.recharts-wrapper svg').count()>=2);checks++;
