@@ -57,11 +57,11 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   }
   await page.goto('http://127.0.0.1:'+server.address().port+'/workspace');
   for(const label of ['Reserva de Compra','Boleto de Compraventa','Reserva de Alquiler','Contrato de Alquiler','Comodato','Autorización de Venta','Refuerzo de Reserva','Devolución de Reserva']){
-   await page.locator('.dw-model-type-chip').filter({hasText:label}).click();
+   await page.locator('#dw-modelo-documento').selectOption({label});
    assert.equal(await page.locator('#dw-config-modelo').count(),1);checks++;
    assert.ok((await page.locator('#dw-config-modelo').textContent()).startsWith(label),name+' cambio a '+label);checks++;
   }
-  await page.locator('.dw-model-type-chip').filter({hasText:'Reserva de Compra'}).click();
+  await page.locator('#dw-modelo-documento').selectOption({label:'Reserva de Compra'});
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
   assert.equal(await nav.getByRole('button').count(),2);checks++;
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
