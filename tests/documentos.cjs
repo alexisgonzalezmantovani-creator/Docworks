@@ -23,6 +23,7 @@ delete global.document;
   check(tipo+' faltantes detectados',()=>assert.ok(app.getCamposFaltantesDetalle({...app.EMPTY_OP,tipo}).length>0));
   check(tipo+' tokens resueltos',()=>assert.deepEqual(app.getTokensSinReemplazar(doc),[]));
   check(tipo+' numeración continua',()=>assert.deepEqual(doc.secciones.map(x=>Number(x.titulo.match(/^\d+/)?.[0])),doc.secciones.map((_,i)=>i+1)));
+  check(tipo+' preview usa rótulos formales como PDF',()=>{if(doc.secciones.length)assert.ok(text.includes('CLÁUSULA PRIMERA'));assert.ok(!text.includes('\n1. '+String(doc.secciones[0]?.titulo||'').replace(/^1\.\s*/,'')));});
   check(tipo+' contactos privados ocultos',()=>assert.ok(!text.includes('privado@example.test')));
   check(tipo+' firmas idempotentes',()=>{const once=JSON.stringify(doc.firmas);app.asegurarFirmasDocumento(doc,op,{});assert.equal(JSON.stringify(doc.firmas),once);});
   check(tipo+' inmobiliaria única usa perfil',()=>{const firmas=doc.firmas.filter(f=>f.usarPerfil||String(f.rol||'').includes('INMOBILIARIA'));assert.equal(firmas.length,1);assert.equal(firmas[0].usarPerfil,true);});

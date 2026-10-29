@@ -462,7 +462,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.02";
+var DOCWORKS_VERSION = "6.03";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -2282,9 +2282,16 @@ function docToPlainText(doc) {
   if (doc.encabezado) { doc.encabezado.split("\n\n").forEach(function(p){ lines.push(p, ""); }); }
   (doc.partes || []).forEach(function(p){ if(!doc.ocultarPartesEnCuerpo) lines.push(p.rol + ": " + p.nombre + (p.dni ? " — " + p.dni : "")); });
   lines.push("");
-  (doc.secciones || []).forEach(function(s){ lines.push(s.titulo); (s.items||[]).forEach(function(i){ if(i) lines.push("  " + i); }); lines.push(""); });
+  (doc.secciones || []).forEach(function(sec){
+    var prefix=prefijoClausulaFormal(sec.titulo);
+    (sec.items||[]).forEach(function(item,idx){
+      if(!item)return;
+      lines.push(idx===0?prefix+cuerpoTrasRotulo(item):normalizarTextoDocumento(item));
+    });
+    lines.push("");
+  });
   if (doc.clausulas && doc.clausulas.length > 0) {
-    doc.clausulas.forEach(function(c){ lines.push(c.num + (c.titulo ? ". " + c.titulo.toUpperCase() : ".")); if (c.texto) lines.push("  " + c.texto); lines.push(""); });
+    doc.clausulas.forEach(function(c){ lines.push(prefijoClausulaDesdeNumTitulo(c.num,c.titulo||"")+cuerpoTrasRotulo(c.texto||"")); lines.push(""); });
   }
   contactosDocumento(doc).forEach(function(line){lines.push(line);});
   (doc.firmas||[]).forEach(function(f){lines.push("Firma: "+(f.rol||"")+" — "+(f.nombre||"")+(f.dni?" — "+f.dni:""));});
