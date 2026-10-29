@@ -462,7 +462,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.04";
+var DOCWORKS_VERSION = "6.05";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -6334,7 +6334,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   const [historialSeleccionado,setHistorialSeleccionado]=useState(null);
   const [status,setStatus]=useState(null);
   const [probarAbierto,setProbarAbierto]=useState(false);
-  const [modoVistaClausulas,setModoVistaClausulas]=useState("simple");
+  const [modoVistaClausulas]=useState("simple");
   const [clausulasAbiertas,setClausulasAbiertas]=useState({});
   useEffect(function(){if(onEditingChange)onEditingChange(!!editId);},[editId,onEditingChange]);
   useEffect(function(){
@@ -6448,7 +6448,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   }
   return <div>
     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginBottom:12}}>
-      <div><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{fontFamily:"DM Serif Display,serif",fontSize:15,color:"var(--text)"}}>Modelo del documento · {TIPOS[tipo]||tipo} · {draft.length} cláusula{draft.length===1?"":"s"}</div></div><div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:3}}>Este es el modelo estándar del documento. Solo Dueño o Administrador pueden modificarlo. Las variables siguen conectadas a Operaciones.</div></div>
+      <div style={{fontFamily:"DM Serif Display,serif",fontSize:15,color:"var(--text)"}}>Cláusulas del documento · {draft.filter(function(b){return b.activo!==false&&b.obligatoria===true;}).length} incluidas</div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{puedeEditar&&<><Btn s="sm" v="ghost" onClick={reset}>↺ Restaurar todas las cláusulas</Btn>{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior&&<Btn s="sm" v="secondary" onClick={deshacerRestauracion}>Deshacer restauración</Btn>}<Btn s="sm" onClick={addBlock}>＋ Agregar cláusula</Btn></>}</div>
     </div>
     {previewVisible&&createPortal(<div role="dialog" aria-modal="true" aria-label="Vista previa del modelo" data-testid="dw-fullpage-preview" style={{position:"fixed",inset:0,zIndex:10050,background:"rgba(8,16,30,.88)",overflowY:"auto",overscrollBehavior:"contain",padding:"max(12px,env(safe-area-inset-top)) 12px max(20px,env(safe-area-inset-bottom))"}}><div style={{maxWidth:820,margin:"0 auto",background:"#fff",color:"#1f2937",borderRadius:8,boxShadow:"0 18px 65px rgba(0,0,0,.35)",padding:"clamp(18px,5vw,52px)",minHeight:"min(100vh,1050px)",boxSizing:"border-box"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:22,borderBottom:"1px solid #e5e7eb",paddingBottom:12}}><strong style={{fontSize:14}}>Vista previa · Datos de ejemplo</strong><button type="button" className="btn btn-secondary btn-sm" onClick={togglePreview} aria-label="Cerrar vista previa">✕ Cerrar</button></div>
@@ -6461,8 +6461,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     {status&&<div style={{marginBottom:9,fontSize:12,color:status==="error"?"var(--red)":status==="saved"?"var(--green)":"var(--gold)"}}>{status==="saving"?"Guardando cambios…":status==="saved"?"Cambios guardados ✓":"No se pudo guardar el modelo del documento."}</div>}
     <div style={{display:"flex",flexDirection:"column",gap:7}}>
       <style>{DW_MODEL_CLAUSES_UI_CSS + DW_MODEL_CLAUSES_V489_CSS}</style>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",margin:"8px 0 10px"}}><div style={{fontSize:12,fontWeight:700,color:"var(--text)"}}>Cláusulas del modelo</div><div role="group" aria-label="Elegir vista de cláusulas" style={{display:"inline-flex",gap:3,padding:3,border:"1px solid var(--border)",borderRadius:9,background:"var(--card2, var(--card))"}}><button type="button" aria-pressed={modoVistaClausulas==="simple"} onClick={function(){setModoVistaClausulas("simple");setClausulasAbiertas({});}} style={{border:0,borderRadius:6,padding:"6px 9px",fontSize:11.5,fontWeight:modoVistaClausulas==="simple"?750:500,background:modoVistaClausulas==="simple"?"var(--surface2)":"transparent",color:"var(--text)",cursor:"pointer"}}>Hoja compacta</button><button type="button" aria-pressed={modoVistaClausulas==="abierta"} onClick={function(){setModoVistaClausulas("abierta");}} style={{border:0,borderRadius:6,padding:"6px 9px",fontSize:11.5,fontWeight:modoVistaClausulas==="abierta"?750:500,background:modoVistaClausulas==="abierta"?"var(--surface2)":"transparent",color:"var(--text)",cursor:"pointer"}}>Vista detallada</button></div></div>
-      {draft.map(function(b,idx){var editing=editId===b.id;var numeroActivo=draft.slice(0,idx+1).filter(function(x){return x.activo!==false&&x.obligatoria===true;}).length;var esCondicional=!!(b.condicion||b.condicional);var filaAbierta=modoVistaClausulas==="abierta"?clausulasAbiertas[b.id]!==false:!!clausulasAbiertas[b.id];return <div key={b.id} className={"dw-clause-card "+(modoVistaClausulas==="simple"?"dw-clause-compact":"dw-clause-detail")+(filaAbierta?" dw-clause-open":"")} style={{border:"1px solid "+(editing?"rgba(212,168,83,.40)":"var(--border2)"),borderRadius:10,padding:modoVistaClausulas==="simple"?"6px 9px":11,background:editing?"rgba(212,168,83,.035)":"var(--card)"}}>
+            {draft.map(function(b,idx){var editing=editId===b.id;var numeroActivo=draft.slice(0,idx+1).filter(function(x){return x.activo!==false&&x.obligatoria===true;}).length;var esCondicional=!!(b.condicion||b.condicional);var filaAbierta=modoVistaClausulas==="abierta"?clausulasAbiertas[b.id]!==false:!!clausulasAbiertas[b.id];return <div key={b.id} className={"dw-clause-card "+(modoVistaClausulas==="simple"?"dw-clause-compact":"dw-clause-detail")+(filaAbierta?" dw-clause-open":"")} style={{border:"1px solid "+(editing?"rgba(212,168,83,.40)":"var(--border2)"),borderRadius:10,padding:modoVistaClausulas==="simple"?"6px 9px":11,background:editing?"rgba(212,168,83,.035)":"var(--card)"}}>
         <div style={{display:"flex",alignItems:modoVistaClausulas==="simple"?"center":"flex-start",gap:9,minWidth:0}}>
           <div style={{minWidth:28,height:28,borderRadius:8,background:"rgba(212,168,83,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--gold)",flexShrink:0,padding:"0 5px",boxSizing:"border-box"}}><span title={b.obligatoria&&b.activo!==false?"Cláusula "+numeroActivo:""}>{b.activo===false?"—":(b.obligatoria?numeroActivo:"—")}</span></div>
           <div style={{flex:1,minWidth:0}}>
@@ -6603,15 +6602,14 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
     {barraSuperior&&<div id="dw-config-modelo" style={{padding:"8px 2px",fontSize:13,fontWeight:700,color:"var(--text)"}}>{TIPOS[tipoDocSel]||tipoDocSel}</div>}
     {!puedeEditar&&<div className="notice" style={{fontSize:12}}>Esta configuración es de solo lectura. Solo Dueño y Administrador pueden editar encabezados y cláusulas.</div>}
     {pasoModelo===3&&mostrarIntroduccion!==false&&<div id="dw-config-introduccion" className="card" style={{padding:14,scrollMarginTop:90}}>
-      <div style={{fontSize:15,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Introducción del documento</div>
-      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Texto inicial del documento. Las fichas de datos se completan automáticamente con la operación.</div>
+      <div style={{fontSize:15,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Introducción</div>
+      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Los datos se completan desde la operación.</div>
       {!ocultarSelector&&<label className="field" style={{display:"block",marginBottom:10}}><span className="field-label">Tipo de documento</span><select className="inp" value={tipoDocSel} onChange={function(e){setTipoDocSel(e.target.value);setEncabezadoEditing(false);setEncabezadoDraft("");}} style={{width:"100%"}}>{PLANTILLA_TIPOS.map(function(tipo){return <option key={tipo} value={tipo}>{TIPOS[tipo]||tipo}</option>;})}</select></label>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:8}}><span className="badge" style={{background:customTexto?"rgba(212,168,83,.10)":"rgba(74,222,128,.08)",color:customTexto?"var(--gold)":"var(--green)"}}>{customTexto?"Personalizado":"Predeterminado"}</span>{puedeEditar&&!encabezadoEditing&&<div style={{display:"flex",gap:6}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setEncabezadoDraft(getEncabezadoTemplate(tipoDocSel,perfil));setEncabezadoEditing(true);}}>Editar introducción</button>{customTexto&&<button type="button" className="btn btn-secondary btn-sm" onClick={restablecerEncabezado}>Restablecer</button>}</div>}</div>
       {encabezadoEditing&&puedeEditar?<EncabezadoEditor tipo={tipoDocSel} value={encabezadoDraft||getEncabezadoTemplate(tipoDocSel,perfil)} onCancel={function(){setEncabezadoEditing(false);setEncabezadoDraft("");}} onRestablecer={function(){setEncabezadoDraft(DEFAULT_ENCABEZADOS[tipoDocSel]||"");}} onSave={guardarEncabezado}/>:<div style={{padding:"10px 11px",borderRadius:8,background:"rgba(255,255,255,.025)",border:"1px solid var(--border2)",fontSize:12,color:"var(--muted)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{sustituirTokens(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"Sin introducción predeterminada para este tipo.",SAMPLE_OP_PREVIEW,perfil,tipoDocSel).slice(0,650)}{(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"").length>650?"…":""}</div>}
       {saveStatus==="saving"&&<div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Guardando cambios…</div>}{saveStatus==="saved"&&<div style={{fontSize:12,color:"var(--green)",marginTop:8}}>Cambios guardados.</div>}{saveStatus==="error"&&<div style={{fontSize:12,color:"var(--red)",marginTop:8}}>No se pudo guardar. Revisá la conexión e intentá nuevamente.</div>}
     </div>}
     {(pasoModelo===2||pasoModelo===3)&&<div id="dw-config-clausulas" style={{scrollMarginTop:90,border:"1px solid var(--border)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:12}}>
-      <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Contenido del documento</div>
       {children}
 
     </div>}
@@ -6620,7 +6618,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
         
         {puedeEditar&&<button type="button" className="btn btn-primary" disabled={saveStatus==="saving"||encabezadoEditing||!!modeloEnEdicion} onClick={guardarModelo}>{saveStatus==="saving"?"Guardando…":"Guardar cambios"}</button>}
       </div>
-      <div style={{fontSize:12,color:"var(--dim)",textAlign:"right"}}>{saveStatus==="saved"?"Modelo guardado correctamente.":saveStatus==="error"?"No se pudo guardar el modelo.":encabezadoEditing||modeloEnEdicion?"Terminá de editar la cláusula o introducción antes de guardar.":"Se aplicará a nuevas operaciones. Los textos que editás se guardan al confirmar cada cláusula."}</div>
+      <div style={{fontSize:12,color:"var(--dim)",textAlign:"right"}}>{saveStatus==="saved"?"Modelo guardado correctamente.":saveStatus==="error"?"No se pudo guardar el modelo.":encabezadoEditing||modeloEnEdicion?"Terminá la edición antes de guardar.":"Los cambios se aplicarán a las nuevas operaciones."}</div>
     </div>}
   </div>;
 }
