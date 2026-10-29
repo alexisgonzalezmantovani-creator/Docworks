@@ -32,11 +32,19 @@ explica ese estado; el reintento conserva el UUID confirmado y no repite el alta
 - Quedan pendientes la prueba autenticada del nuevo flujo y los dispositivos físicos;
   la emulación de tamaño y WebKit Linux no equivalen a Safari en un iPhone real.
 
+## Corrección detectada al verificar el despliegue
+
+El archivo externo de Recharts esperaba React, ReactDOM y PropTypes globales y fallaba
+con `forwardRef` al iniciar la app. Recharts 2.12.7 queda fijado en package-lock y se
+carga como módulo del mismo paquete de la app al abrir Estadísticas. Las pruebas de
+navegador ahora verifican que se dibujen los gráficos con la red externa bloqueada.
+
 ## Estado
 
 Incluye las mejoras de 6.07 y 6.08. Las condiciones especiales conservan su lugar al
 final de la operación y del documento; el aviso por títulos parecidos permite guardar
 textos con condiciones y plazos distintos.
 
-Versión local: no enviada a GitHub ni publicada. El control automático de la sesión
-rechazó el envío de código al repositorio y exigió autorización explícita en este chat.
+Publicación autorizada por el usuario. Respaldo previo en
+`backup/docworks-6-06-before-6-09-2026-10-29`. La rama de entrega es
+`release/docworks-6-09-pro` y pasa por la matriz CI antes de actualizar producción.

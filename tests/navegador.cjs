@@ -18,7 +18,8 @@ function WorkspaceHarness(){
  useEffect(()=>{const listener=e=>setConfirmacion(e.detail);window.addEventListener('dw:confirm',listener);return ()=>window.removeEventListener('dw:confirm',listener);},[]);
  return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><output data-testid="guardados">{guardados}</output><output data-testid="altas">{altas}</output><output data-testid="perfil" hidden>{JSON.stringify(perfil)}</output><button onClick={()=>setFallar(v=>!v)}>{fallar?'Restablecer guardado':'Simular fallo de habilitación'}</button><ClausulasWorkspace perfil={perfil} onSavePerfil={async p=>{if(fallar)return {error:{message:'Fallo simulado'}};setPerfil(p);setGuardados(n=>n+1);return {};}} clausulas={catalogo} operaciones={[]} bloquesReserva={[]} onAddClausula={async c=>{const id='catalogo-'+(altas+1);setAltas(n=>n+1);setCatalogo(xs=>xs.concat([{...c,id}]));return {data:id};}} onEditClausula={()=>({})} onDeleteClausula={()=>{}}/><ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
 }
-createRoot(document.getElementById('root')).render(location.pathname==='/workspace'?<WorkspaceHarness/>:<Harness/>);
+function EstadisticasHarness(){return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14}}><EstadisticasView operaciones={[]} equipo={[]} perfil={{rol:'dueno'}} currentUserRole="dueno"/></main></>;}
+createRoot(document.getElementById('root')).render(location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
 `;
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+harness,resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:path.join(out,'harness.js')});
 const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(out,'harness.js')));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/harness.js"></script></body></html>');}});
@@ -149,6 +150,12 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   await page.getByRole('button',{name:'Reintentar habilitación',exact:true}).click();
   await page.locator('#dw-clausula-texto').waitFor({state:'detached'});
   assert.equal(await page.getByTestId('altas').textContent(),'2');checks++;
+  await page.goto('http://127.0.0.1:'+server.address().port+'/estadisticas');
+  await page.locator('.recharts-wrapper').first().waitFor();
+  assert.ok(await page.locator('.recharts-wrapper svg').count()>=2);checks++;
+  assert.equal(await page.getByText('No se pudieron cargar los gráficos.',{exact:false}).count(),0);checks++;
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' estadísticas overflow');checks++;
+  await page.screenshot({path:path.join(out,'estadisticas-'+name+'.png'),fullPage:true});
   assert.deepEqual(errors,[]);checks++;await page.close();
  }
  console.log('APROBADAS',checks,'verificaciones '+engine+' en iPhone/iPad/escritorio emulados. Capturas:',out);

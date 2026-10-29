@@ -169,15 +169,13 @@ async function docworksMercadoPago(action, payload) {
   return res.data || {};
 }
 
+var rechartsCarga: Promise<void>|null=null;
 function loadRecharts(): Promise<void> {
-  return new Promise(function(resolve) {
-    if (window.Recharts) { resolve(); return; }
-    var s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.js";
-    s.onload = function() { resolve(); };
-    s.onerror = function() { resolve(); };
-    document.head.appendChild(s);
-  });
+  if(window.Recharts)return Promise.resolve();
+  if(!rechartsCarga){
+    rechartsCarga=import("recharts").then(function(modulo){window.Recharts=modulo;}).catch(function(error){rechartsCarga=null;throw error;});
+  }
+  return rechartsCarga;
 }
 
 // ── PDF NATIVO — sin dependencias externas ───────────────────────────────────
@@ -7777,7 +7775,7 @@ function DocWorksApp(){
   useEffect(function(){ lsSet("top_search_v1",topSearch||""); },[topSearch]);
   useEffect(function(){ lsSet("recent_searches_v1",recentSearches||[]); },[recentSearches]);
   useEffect(function(){ lsSet("recent_operation_ids_v1",recentOperationIds||[]); },[recentOperationIds]);
-  useEffect(function(){injectFonts();loadRecharts();applyTheme(darkMode);initPWA();if(!document.getElementById("dw-mobile-stability-css")){var st=document.createElement("style");st.id="dw-mobile-stability-css";st.textContent=MOBILE_STABILITY_CSS;document.head.appendChild(st);}},[darkMode]);
+  useEffect(function(){injectFonts();applyTheme(darkMode);initPWA();if(!document.getElementById("dw-mobile-stability-css")){var st=document.createElement("style");st.id="dw-mobile-stability-css";st.textContent=MOBILE_STABILITY_CSS;document.head.appendChild(st);}},[darkMode]);
   // iOS puede restaurar una posición intermedia mientras la barra fija y el contenido terminan de medir su altura.
   // Normalizamos una sola vez al montar la app; navegar entre vistas no vuelve a desplazar al usuario.
   useEffect(function(){
