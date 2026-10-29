@@ -7,8 +7,9 @@ const harness=`
 import {createRoot} from 'react-dom/client';
 function Harness(){
  const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[tipo,setTipo]=useState('reserva'),[abierto,setAbierto]=useState(true),[confirmacion,setConfirmacion]=useState(null);
+ const [preview,setPreview]=useState(false);
  useEffect(()=>{const listener=e=>setConfirmacion(e.detail);window.addEventListener('dw:confirm',listener);return ()=>window.removeEventListener('dw:confirm',listener);},[]);
- return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><select aria-label="Documento de prueba" value={tipo} onChange={e=>setTipo(e.target.value)}>{PLANTILLA_TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select><button onClick={()=>navegarConProteccionModelo(()=>setAbierto(false))}>Salir del modelo</button><button onClick={()=>setAbierto(true)}>Abrir modelo</button>{abierto&&<CuerpoPlantillaPanel key={tipo} perfil={perfil} tipo={tipo} puedeEditar={true} clausulas={[]} onChange={async p=>{setPerfil(p);return {};}}/>}<ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
+ return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><select aria-label="Documento de prueba" value={tipo} onChange={e=>setTipo(e.target.value)}>{PLANTILLA_TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select><button onClick={()=>navegarConProteccionModelo(()=>setAbierto(false))}>Salir del modelo</button><button onClick={()=>setAbierto(true)}>Abrir modelo</button><button onClick={()=>setPreview(true)}>Abrir vista previa de prueba</button>{abierto&&<CuerpoPlantillaPanel key={tipo} perfil={perfil} tipo={tipo} puedeEditar={true} previewOpen={preview} onPreviewChange={setPreview} clausulas={[]} onChange={async p=>{setPerfil(p);return {};}}/>}<ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
 }
 function WorkspaceHarness(){
  const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[confirmacion,setConfirmacion]=useState(null),[guardados,setGuardados]=useState(0);
@@ -30,8 +31,9 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   await page.goto('http://127.0.0.1:'+server.address().port);
   for(const tipo of ['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva']){
    await page.getByLabel('Documento de prueba').selectOption(tipo);
-   await page.getByRole('button',{name:'Vista previa con datos de ejemplo',exact:true}).click();
-   await page.getByText('EJEMPLO FICTICIO',{exact:false}).waitFor();
+   await page.getByRole('button',{name:'Abrir vista previa de prueba'}).click();
+   await page.getByTestId('dw-fullpage-preview').waitFor();
+   await page.getByRole('button',{name:'Cerrar vista previa'}).click();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' '+tipo+' overflow');checks++;
    await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
    await page.locator('textarea').fill('Texto de prueba móvil.');
@@ -66,7 +68,11 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   assert.equal(await page.locator('#dw-model-preview-area').count(),1);checks++;
   const acciones=page.getByTestId('dw-model-actions');
   assert.equal(await acciones.getByRole('button',{name:'Guardar cambios',exact:true}).count(),1);checks++;
-  assert.equal(await acciones.getByRole('button',{name:'Vista previa',exact:true}).count(),1);checks++;
+  assert.equal(await acciones.getByRole('button',{name:'Vista previa',exact:true}).count(),0);checks++;
+  await page.getByTestId('dw-open-fullpage-preview').click();
+  await page.getByTestId('dw-fullpage-preview').waitFor();checks++;
+  await page.getByRole('button',{name:'Cerrar vista previa'}).click();
+  await page.getByTestId('dw-fullpage-preview').waitFor({state:'detached'});checks++;
   assert.equal(await page.getByRole('button',{name:'Publicar para asesores'}).count(),0);checks++;
   assert.ok(await page.evaluate(()=>{const a=document.querySelector('[data-testid="dw-model-actions"]');const b=document.querySelector('#dw-model-extra-clauses');return a&&b&&a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_PRECEDING;}),name+' acciones al final');checks++;
   await acciones.getByRole('button',{name:'Guardar cambios',exact:true}).click();
