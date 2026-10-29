@@ -63,10 +63,43 @@ export var DEFAULT_BLOQUES_RESERVA = [
     variables:[], condicion:null, orden:15, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
 ];
 
+// Comparación orientativa de títulos; nunca decide equivalencia del texto legal.
+export function buscarTitulosParecidos(titulo,clausulas,excluirId){
+  function palabras(t){return Array.from(new Set(String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().split(/[^a-z0-9]+/).filter(function(p){return p&&!/^(de|del|la|el|los|las|por|para|con|sin|y|en|a|un|una|clausula)$/.test(p);})));}
+  var buscadas=palabras(titulo);
+  if(!buscadas.length)return [];
+  return (clausulas||[]).filter(function(c){
+    if(!c||c.id===excluirId||c.activo===false)return false;
+    var otras=palabras(c.titulo),comunes=buscadas.filter(function(p){return otras.indexOf(p)!==-1;}).length;
+    var exactas=buscadas.slice().sort().join(" ")===otras.slice().sort().join(" ");
+    return exactas||(comunes>=2&&(comunes/Math.min(buscadas.length,otras.length)>=0.8||comunes/(buscadas.length+otras.length-comunes)>=0.6));
+  }).slice(0,3);
+}
+
+// Conservar el UUID creado permite reintentar solo la habilitación si falla el perfil.
+export async function guardarClausulaConDisponibilidad(clausula,opciones,deps){
+  var id=opciones.creadaId||null;
+  try{
+    if(!id){var creada=await deps.crear(clausula);if(creada&&creada.error)return creada;id=creada&&creada.data;}
+    if(typeof id!=="string"||!id)return {error:{message:"No se pudo confirmar la cláusula guardada. Actualizá la biblioteca antes de volver a crearla."},creacionSinConfirmar:true};
+    if(!opciones.habilitar)return {data:id};
+    var perfil=deps.getPerfil(),mapa=Object.assign({},perfil.plantillas||{});
+    deps.tipos.forEach(function(tipo){
+      if(!deps.aplicaTipo(clausula,tipo))return;
+      var config=deps.obtenerConfig(perfil,tipo,deps.catalogo||[]),actual=Object.assign({},mapa[tipo]||{});
+      actual.clausulas_ids=Array.from(new Set((config.clausulas_ids||[]).concat([id])));
+      mapa[tipo]=actual;
+    });
+    var resultado=await deps.guardarPerfil(Object.assign({},perfil,{plantillas:mapa}));
+    if(resultado&&resultado.error)return {error:{message:"La cláusula ya está guardada en la biblioteca. No se pudo habilitar para los asesores. Reintentá la habilitación."},clausulaCreadaId:id};
+    return {data:id};
+  }catch(e){return {error:{message:id?"La cláusula ya está guardada. Reintentá habilitarla para los asesores.":"No se pudo confirmar el guardado. Actualizá la biblioteca antes de volver a crearla."},clausulaCreadaId:id||undefined,creacionSinConfirmar:!id};}
+}
+
 // Editor de biblioteca de cláusulas separado de App.tsx.
 export function crearClausulasView(deps) {
-  const { useState, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo } = deps;
-function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,error,loading,ocultarProtegidasIds,modoIntegrado,onRetry,tipoFiltro,puedeVerHistorial}){
+  const { useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo } = deps;
+function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,error,loading,ocultarProtegidasIds,modoIntegrado,onRetry,tipoFiltro,puedeVerHistorial,clausulasParaComparar}){
   const [form,setForm]=useState(FORM_CLAUSULA_EMPTY);
   const [editId,setEditId]=useState(null);
   const [guardandoClausula,setGuardandoClausula]=useState(false);
@@ -81,23 +114,53 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
   const [generandoIdea,setGenerandoIdea]=useState(false);
   const [errorIdea,setErrorIdea]=useState("");
   const [opcionesAbiertas,setOpcionesAbiertas]=useState(false);
+  const [habilitarParaAsesores,setHabilitarParaAsesores]=useState(true);
+  const [clausulaCreadaId,setClausulaCreadaId]=useState(null);
+  const [creacionSinConfirmar,setCreacionSinConfirmar]=useState(false);
   var editable = puedeEditar!==false;
+  const salvandoRef=useRef(false);
+  const salidaBibliotecaRef=useRef(null);
+  var hayBorrador=clausulaTab==="editor"&&!!(editId||String(form.titulo||"").trim()||String(form.contenido||"").trim()||ideaInicial.trim());
+  function cerrarEditor(){
+    setEditId(null);setClausulaCreadaId(null);setCreacionSinConfirmar(false);
+    setForm(FORM_CLAUSULA_EMPTY);setIdeaInicial("");setClausulaTab("biblioteca");
+  }
+  function solicitarSalida(continuar){
+    if(salvandoRef.current||generandoIdea){dwNotify("info","Esperá a que termine la acción en curso antes de salir de la cláusula.");return;}
+    if(!hayBorrador){continuar();return;}
+    var mensaje=clausulaCreadaId?"La cláusula está guardada en la biblioteca, pero falta habilitarla para los asesores. ¿Salir y dejar la habilitación pendiente?":creacionSinConfirmar?"El guardado no pudo confirmarse. Revisá la biblioteca antes de crear otra copia. ¿Salir del editor?":"¿Descartar los cambios sin guardar antes de salir de la cláusula?";
+    requestDwConfirm(mensaje,continuar);
+  }
+  salidaBibliotecaRef.current={pendiente:hayBorrador||guardandoClausula||generandoIdea,salir:function(continuar){solicitarSalida(function(){cerrarEditor();continuar();});}};
+  useEffect(function(){
+    function protegerNavegacion(e){
+      if(e.defaultPrevented||!salidaBibliotecaRef.current.pendiente)return;
+      e.preventDefault();salidaBibliotecaRef.current.salir(e.detail.continuar);
+    }
+    function advertirRecarga(e){if(salidaBibliotecaRef.current.pendiente){e.preventDefault();e.returnValue="";}}
+    window.addEventListener("dw:model-navigation",protegerNavegacion);
+    window.addEventListener("beforeunload",advertirRecarga);
+    return function(){window.removeEventListener("dw:model-navigation",protegerNavegacion);window.removeEventListener("beforeunload",advertirRecarga);};
+  },[]);
+  var similares=buscarTitulosParecidos(form.titulo,clausulasParaComparar||clausulas,editId||clausulaCreadaId);
   async function submit(){
-    if(!editable||guardandoClausula)return;
+    if(!editable||guardandoClausula||salvandoRef.current||creacionSinConfirmar)return;
     if(!String(form.titulo||"").trim()||!String(form.contenido||"").trim()){
       setErrorGuardadoClausula("Completá el título y el texto antes de guardar.");return;
     }
-    setGuardandoClausula(true);setErrorGuardadoClausula("");
+    salvandoRef.current=true;setGuardandoClausula(true);setErrorGuardadoClausula("");
     try{
-      var resultado=editId?await onEdit(editId,form):await onAdd(Object.assign({},form,{id:genId()}));
-      if(resultado&&resultado.error)throw resultado.error;
+      var resultado=editId?await onEdit(editId,form):await onAdd(Object.assign({},form,{id:genId(),obligatoria:modoIntegrado?false:!!form.obligatoria}),{habilitar:!!modoIntegrado&&habilitarParaAsesores,creadaId:clausulaCreadaId});
+      if(resultado&&resultado.error){if(resultado.clausulaCreadaId)setClausulaCreadaId(resultado.clausulaCreadaId);if(resultado.creacionSinConfirmar)setCreacionSinConfirmar(true);throw resultado.error;}
+      if(!editId)dwNotify("success",modoIntegrado&&habilitarParaAsesores?"Cláusula guardada y disponible para los asesores en los documentos elegidos.":"Cláusula guardada en la biblioteca.");
+      setClausulaCreadaId(null);
       setForm(FORM_CLAUSULA_EMPTY);setEditId(null);setClausulaTab("biblioteca");
     }catch(err){
       setErrorGuardadoClausula(traducirError(err&&err.message?err.message:"No se pudo guardar la cláusula. Reintentá sin perder los datos ingresados."));
-    }finally{setGuardandoClausula(false);}
+    }finally{salvandoRef.current=false;setGuardandoClausula(false);}
   }
-  function abrirNueva(){if(!editable||guardandoClausula)return;setErrorGuardadoClausula("");setEditId(null);setForm(Object.assign({},FORM_CLAUSULA_EMPTY,{tipos:tipoFiltro?[tipoFiltro]:["todos"]}));setIdeaInicial("");setErrorIdea("");setOpcionesAbiertas(false);setClausulaTab("editor");}
-  function abrirEdicion(c){if(!editable||guardandoClausula)return;setErrorGuardadoClausula("");setEditId(c.id);setForm({titulo:c.titulo,categoria:c.categoria,contenido:c.contenido,tipos:c.tipos||["todos"],obligatoria:!!c.obligatoria});setOpcionesAbiertas(true);setClausulaTab("editor");}
+  function abrirNueva(idea=null){if(!editable||guardandoClausula)return;setErrorGuardadoClausula("");setClausulaCreadaId(null);setCreacionSinConfirmar(false);setHabilitarParaAsesores(true);setEditId(null);setForm(Object.assign({},FORM_CLAUSULA_EMPTY,idea&&idea.contenido?idea:{},{tipos:tipoFiltro?[tipoFiltro]:idea&&idea.tipos||["todos"],obligatoria:false}));setIdeaInicial("");setErrorIdea("");setOpcionesAbiertas(false);setClausulaTab("editor");}
+  function abrirEdicion(c){if(!editable||guardandoClausula)return;setClausulaCreadaId(null);setCreacionSinConfirmar(false);setErrorGuardadoClausula("");setEditId(c.id);setForm({titulo:c.titulo,categoria:c.categoria,contenido:c.contenido,tipos:c.tipos||["todos"],obligatoria:!!c.obligatoria});setOpcionesAbiertas(true);setClausulaTab("editor");}
   function aplicarBorrador(draft){
     setEditId(null);
     setForm({titulo:draft.titulo||"",categoria:draft.categoria||"general",contenido:draft.contenido||"",tipos:tipoFiltro?[tipoFiltro]:["todos"],obligatoria:false});
@@ -132,7 +195,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
   return(
     <div>
       <div className="section-header">
-        <div><div className="section-title">Cláusulas opcionales</div><div className="section-sub">Cláusulas reutilizables para cada tipo de documento.</div></div>
+        {!modoIntegrado&&<div><div className="section-title">Biblioteca de cláusulas</div><div className="section-sub">Condiciones especiales reutilizables para cada documento.</div></div>}
       </div>
       {error && <div style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.25)",color:"var(--red)",fontSize:12.5}}>{error} {onRetry&&<button type="button" onClick={onRetry} className="btn btn-secondary btn-sm" style={{marginLeft:8}}>Reintentar</button>}</div>}
       {loading && <div style={{marginBottom:16,fontSize:12.5,color:"var(--muted)"}}>Cargando cláusulas…</div>}
@@ -144,17 +207,17 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
       )}
       {!modoIntegrado&&<div className="card" style={{padding:8,marginBottom:10}}>
         <div style={{display:"flex",gap:5,borderBottom:"1px solid var(--border)"}}>
-          <button type="button" onClick={function(){setClausulaTab("biblioteca");}} style={{flex:1,border:0,borderBottom:clausulaTab==="biblioteca"?"2px solid var(--gold)":"2px solid transparent",background:"transparent",color:clausulaTab==="biblioteca"?"var(--text)":"var(--muted)",padding:"10px 12px",cursor:"pointer",fontSize:12,fontWeight:clausulaTab==="biblioteca"?700:500}}>Cláusulas opcionales</button>
-          {editable&&<button type="button" onClick={abrirNueva} style={{flex:1,border:0,borderBottom:clausulaTab==="editor"?"2px solid var(--gold)":"2px solid transparent",background:"transparent",color:clausulaTab==="editor"?"var(--text)":"var(--muted)",padding:"10px 12px",cursor:"pointer",fontSize:12,fontWeight:clausulaTab==="editor"?700:500}}>{editId?"Modificar cláusula":"Crear cláusula"}</button>}
+          <button type="button" onClick={function(){solicitarSalida(cerrarEditor);}} style={{flex:1,border:0,borderBottom:clausulaTab==="biblioteca"?"2px solid var(--gold)":"2px solid transparent",background:"transparent",color:clausulaTab==="biblioteca"?"var(--text)":"var(--muted)",padding:"10px 12px",cursor:"pointer",fontSize:12,fontWeight:clausulaTab==="biblioteca"?700:500}}>Cláusulas opcionales</button>
+          {editable&&<button type="button" onClick={function(){abrirNueva();}} style={{flex:1,border:0,borderBottom:clausulaTab==="editor"?"2px solid var(--gold)":"2px solid transparent",background:"transparent",color:clausulaTab==="editor"?"var(--text)":"var(--muted)",padding:"10px 12px",cursor:"pointer",fontSize:12,fontWeight:clausulaTab==="editor"?700:500}}>{editId?"Modificar cláusula":"Crear cláusula"}</button>}
         </div>
       </div>}
-      {modoIntegrado&&editable&&clausulaTab!=="editor"&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}><button type="button" className="btn btn-primary btn-sm" onClick={abrirNueva}>＋ Crear cláusula</button></div>}
+      {modoIntegrado&&editable&&clausulaTab!=="editor"&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}><button type="button" className="btn btn-primary btn-sm" onClick={function(){abrirNueva();}}>＋ Crear cláusula para biblioteca</button></div>}
       {clausulaTab==="editor"&&editable&&<div className="card" style={{padding:18,marginBottom:10}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14}}>
-          <div><p style={{fontFamily:"DM Serif Display,serif",fontSize:15,color:"var(--text)",margin:0}}>{editId?"Modificar cláusula":"Agregar cláusula"}</p><div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>{editId?"Editá el título y el texto; después guardá los cambios.":"Partí de una idea, redactala con IA o escribila directamente. Revisá el texto antes de guardarlo."}</div></div>
-          <button type="button" onClick={function(){setClausulaTab("biblioteca");setEditId(null);}} style={{border:"1px solid var(--border)",background:"rgba(255,255,255,.03)",color:"var(--muted)",borderRadius:8,padding:"7px 10px",cursor:"pointer",fontSize:12}}>Cancelar</button>
+          <div><p style={{fontFamily:"DM Serif Display,serif",fontSize:15,color:"var(--text)",margin:0}}>{editId?"Modificar cláusula":"Crear cláusula para la biblioteca"}</p><div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>{editId?"Editá el título y el texto; después guardá los cambios.":"Partí de una idea, redactala con IA o escribila directamente. Revisá el texto antes de guardarlo."}</div></div>
+          <button type="button" disabled={guardandoClausula||generandoIdea} onClick={function(){solicitarSalida(cerrarEditor);}} style={{border:"1px solid var(--border)",background:"rgba(255,255,255,.03)",color:"var(--muted)",borderRadius:8,padding:"7px 10px",cursor:"pointer",fontSize:12}}>Cancelar</button>
         </div>
-        {!editId&&<div style={{padding:12,border:"1px solid var(--border)",borderRadius:10,marginBottom:14,background:"var(--card2, var(--card))"}}>
+        {!editId&&!clausulaCreadaId&&!creacionSinConfirmar&&<div style={{padding:12,border:"1px solid var(--border)",borderRadius:10,marginBottom:14,background:"var(--card2, var(--card))"}}>
           <label className="field-label" style={{display:"block",marginBottom:7}}>Contá en una frase qué querés que diga</label>
           <textarea className="inp" rows={2} value={ideaInicial} onChange={function(e){setIdeaInicial(e.target.value);setErrorIdea("");}} placeholder="Ej.: establecer cómo se distribuyen los gastos de reparación." style={{width:"100%",resize:"vertical",boxSizing:"border-box"}}/>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:9}}>
@@ -164,7 +227,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
           {errorIdea&&<div style={{fontSize:12,color:"var(--red)",marginTop:7}}>{errorIdea}</div>}
         </div>}
         {errorGuardadoClausula&&<div role="alert" style={{color:"var(--red)",fontSize:12.5,marginBottom:9}}>{errorGuardadoClausula}</div>}
-        <ClausulaFormBody form={form} setForm={setForm} editId={editId} onSubmit={submit} guardando={guardandoClausula} onCancel={function(){if(guardandoClausula)return;setEditId(null);setForm(FORM_CLAUSULA_EMPTY);setClausulaTab("biblioteca");}}/>
+        <ClausulaFormBody form={form} setForm={setForm} editId={editId} onSubmit={submit} guardando={guardandoClausula} habilitarParaAsesores={modoIntegrado&&!editId?habilitarParaAsesores:undefined} onHabilitarChange={setHabilitarParaAsesores} soloHabilitar={!!clausulaCreadaId||creacionSinConfirmar} bloquearGuardado={creacionSinConfirmar} guardarLabel={clausulaCreadaId?"Reintentar habilitación":modoIntegrado&&!editId&&habilitarParaAsesores?"Guardar y habilitar":undefined} advertencia={similares.length>0&&!clausulaCreadaId?<div role="status" style={{padding:12,border:"1px solid var(--gold)",borderRadius:10,fontSize:12.5,lineHeight:1.5}}><b>Hay títulos parecidos en la biblioteca</b><p style={{margin:"5px 0"}}>Podrían tener condiciones o plazos diferentes. Revisá el texto; podés guardar esta cláusula igualmente.</p>{similares.map(function(c){return <details key={c.id} style={{marginTop:6}}><summary style={{cursor:"pointer",fontWeight:650}}>{c.titulo}</summary><div style={{whiteSpace:"pre-wrap",marginTop:5}}>{c.contenido}</div></details>;})}</div>:null} onCancel={function(){solicitarSalida(cerrarEditor);}}/>
       </div>}
       {clausulaTab==="biblioteca"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"flex",gap:7,flexWrap:"wrap",alignItems:"center"}}>
@@ -179,7 +242,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
             </div>
             {editable&&<button type="button" onClick={function(){setSoloObligatorias(function(v){return !v;});}} aria-pressed={soloObligatorias} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderRadius:10,border:"1px solid "+(soloObligatorias?"var(--gold)":"var(--border2)"),background:soloObligatorias?"rgba(212,175,55,0.1)":"rgba(255,255,255,0.03)",color:soloObligatorias?"var(--gold)":"var(--muted)",fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>{soloObligatorias?"✓ ":""}Obligatorias</button>}
           </div>
-          {editable&&(()=>{var idsActuales=bibliotecaVisible.map(function(c){return c.id;});var ideas=CLAUSULAS_DEFAULT.filter(function(c){return idsActuales.indexOf(c.id)===-1&&(!tipoFiltro||clausulaAplicaTipo(c,tipoFiltro));});return ideas.length>0?<div style={{border:"1px solid var(--border)",borderRadius:10,padding:10,background:"var(--card2, var(--card))"}}><div style={{fontSize:12,fontWeight:700,color:"var(--text)",marginBottom:7}}>Ideas de cláusulas de fábrica</div><div style={{fontSize:11.5,color:"var(--dim)",marginBottom:9}}>Agregá una cláusula existente al catálogo. Revisá el texto antes de usarla.</div><div style={{display:"flex",flexDirection:"column",gap:6}}>{ideas.map(function(idea){return <div key={idea.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 9px",border:"1px solid var(--border)",borderRadius:8}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{idea.titulo}</div><div style={{fontSize:11,color:"var(--dim)",display:"-webkit-box",WebkitLineClamp:1,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{idea.contenido}</div></div><button type="button" className="btn btn-secondary btn-sm" onClick={function(){Promise.resolve(onAdd(Object.assign({},idea,{tipos:idea.tipos||["todos"],obligatoria:idea.obligatoria===true}))).then(function(r){if(r&&r.error)throw r.error;dwNotify("success","Cláusula agregada. Revisá su texto antes de usarla.");}).catch(function(){dwNotify("error","No se pudo agregar la cláusula.");});}}>Agregar</button></div>;})}</div></div>:null;})()}
+          {editable&&(()=>{var idsActuales=bibliotecaVisible.map(function(c){return c.id;});var ideas=CLAUSULAS_DEFAULT.filter(function(c){return !clausulaYaEnTextoBase(c)&&!c.obligatoria&&idsActuales.indexOf(c.id)===-1&&!bibliotecaVisible.some(function(actual){return String(actual.contenido||"").replace(/\s+/g," ").trim()===String(c.contenido||"").replace(/\s+/g," ").trim();})&&(!tipoFiltro||clausulaAplicaTipo(c,tipoFiltro));});return ideas.length>0?<div style={{border:"1px solid var(--border)",borderRadius:10,padding:10,background:"var(--card2, var(--card))"}}><div style={{fontSize:12,fontWeight:700,color:"var(--text)",marginBottom:7}}>Ideas de cláusulas de fábrica</div><div style={{fontSize:11.5,color:"var(--dim)",marginBottom:9}}>Agregá una cláusula existente al catálogo. Revisá el texto antes de usarla.</div><div style={{display:"flex",flexDirection:"column",gap:6}}>{ideas.map(function(idea){return <div key={idea.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 9px",border:"1px solid var(--border)",borderRadius:8}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{idea.titulo}</div><div style={{fontSize:11,color:"var(--dim)",display:"-webkit-box",WebkitLineClamp:1,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{idea.contenido}</div></div><button type="button" className="btn btn-secondary btn-sm" onClick={function(){abrirNueva(idea);}}>Usar esta idea</button></div>;})}</div></div>:null;})()}
           <div style={{fontSize:12,color:"var(--dim)"}}>{filtradas.length} de {bibliotecaVisible.length} cláusula{bibliotecaVisible.length===1?"":"s"}</div>
           <div style={{display:"flex",flexDirection:"column",gap:7}}>
             {bibliotecaVisible.length===0&&<div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:13}}>No hay cláusulas visibles para este rol.</div>}
@@ -201,7 +264,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
                     <div style={{display:"flex",gap:3,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
                       {puedeVerHistorial&&<button type="button" onClick={function(){setHistorialSeleccionado(c);}} className="btn btn-ghost btn-sm" style={{padding:"4px 6px",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}
                     {editable&&(
-                      <div style={{display:"flex",gap:3,flexShrink:0}}> 
+                      <div style={{display:"flex",gap:3,flexShrink:0}}>
                         <button onClick={function(){abrirEdicion(c);}} style={{padding:"4px 7px",borderRadius:6,background:"rgba(255,255,255,0.04)",border:"1px solid var(--border)",color:"var(--muted)",cursor:"pointer",fontSize:12,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><DWIcon name="edit" size={14}/></button>
                         <button onClick={function(){onDelete(c.id);}} style={{padding:"4px 7px",borderRadius:6,background:"rgba(248,113,113,0.05)",border:"1px solid rgba(248,113,113,0.15)",color:"var(--red)",cursor:"pointer",fontSize:12}}>✕</button>
                       </div>
@@ -221,7 +284,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
 }
 
 export function crearClausulasWorkspace(deps){
- const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, requestDwConfirm, useEffect, useState} = deps;
+ const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState} = deps;
 
 
 /* Componente legado de cláusulas personales eliminado: ya no forma parte del producto. */
@@ -232,7 +295,9 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   const [errorPapeleraClausulas,setErrorPapeleraClausulas]=useState("");
   const [seccion,setSeccionDirecto]=useState(perfil&&(perfil.rol==="dueno"||perfil.rol==="admin")?"modelos":"adicionales");
   function setSeccion(next){
+    if(next===seccion)return;
     function cambiar(){setModeloEditando(false);setIntroduccionEditando(false);setSeccionDirecto(next);}
+    if(seccion==="adicionales"){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando&&next!==seccion)requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",cambiar);else cambiar();
   }
   const [tipoDocSel,setTipoDocSel]=useState("reserva");
@@ -273,6 +338,11 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   useEffect(function(){if(!puedeEditar&&seccion!=="adicionales")setSeccion("adicionales");},[puedeEditar]);
   const rolLabel=(ROLES_DEF[perfil&&perfil.rol]&&ROLES_DEF[perfil.rol].label)||(perfil&&perfil.rol)||"usuario";
   function guardarPerfil(next){return onSavePerfil(next);}
+  const perfilActualRef=useRef(perfil);perfilActualRef.current=perfil;
+  function crearYHabilitar(clausula,opciones){
+    if(!puedeEditar)return Promise.resolve({error:{message:"Sin permisos para crear cláusulas."}});
+    return guardarClausulaConDisponibilidad(clausula,opciones||{habilitar:true},{crear:onAddClausula,getPerfil:function(){return perfilActualRef.current;},guardarPerfil:guardarPerfil,tipos:PLANTILLA_TIPOS,aplicaTipo:clausulaAplicaTipo,obtenerConfig:obtenerPlantillaConfig,catalogo:clausulas});
+  }
   function cambiarEstadoClausulaBiblioteca(clausula,estado){
     if(!puedeEditar||!clausula)return Promise.resolve({error:new Error("Sin permisos")});
     if(clausula.obligatoria===true&&estado!=="obligatoria")return Promise.resolve({error:new Error("Esta cláusula es esencial y no se puede desactivar desde este modelo.")});
@@ -287,8 +357,9 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   }
   function contarModelo(tipo){return contarBloquesCuerpo(perfil,tipo,bloquesReserva);}
   var protegidas=obtenerIdsProtegidosDePlantillas(perfil);
-  var protegidasConTipos=protegidas.map(function(id){var c=(clausulas||[]).find(function(x){return x.id===id;})||null;var tiposFijos=PLANTILLA_TIPOS.filter(function(tipo){var cfg=obtenerPlantillaConfig(perfil,tipo,clausulas);return !!cfg.locked&&((cfg.clausulas_ids||[]).indexOf(id)!==-1||(cfg.obligatorias_ids||[]).indexOf(id)!==-1);});return {id:id,clausula:c,tipos:tiposFijos};});
-  var adicionalesVisibles=(clausulas||[]).filter(function(c){if(protegidas.indexOf(c.id)!==-1)return false;return filtroAdicional==="todas"||clausulaAplicaTipo(c,filtroAdicional);});
+  // Los textos esenciales ya forman parte del cuerpo del documento. No se ofrecen como extras.
+  var titulosDelModelo=new Set(["multa por incumplimiento","libre de ocupantes","expensas y servicios","comisión inmobiliaria","comision inmobiliaria","jurisdicción","jurisdiccion","estado del inmueble","prohibición de subalquilar","prohibicion de subalquilar","servicios a cargo del locatario","obras y mejoras"]);
+  var adicionalesVisibles=(clausulas||[]).filter(function(c){if(protegidas.indexOf(c.id)!==-1)return false;var titulo=String(c.titulo||"").trim().toLocaleLowerCase("es-AR");if(titulosDelModelo.has(titulo))return false;if(clausulaYaEnTextoBase(c))return false;return filtroAdicional==="todas"||clausulaAplicaTipo(c,filtroAdicional);});
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":"Elegí un documento y editá su contenido."}</div></div></div>
     {puedeEditar&&<nav aria-label="Cláusulas y documentos" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -296,10 +367,10 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       <button type="button" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
     </nav>}
     {seccion==="adicionales"&&<div className="card" style={{padding:14}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:6}}><div style={{fontSize:14,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Biblioteca de cláusulas</div>{puedeEditar&&<button type="button" title="Papelera de cláusulas" aria-label="Abrir papelera de cláusulas" onClick={function(){var abrir=!mostrarPapeleraClausulas;setMostrarPapeleraClausulas(abrir);setErrorPapeleraClausulas("");if(abrir&&onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}} style={{border:"1px solid var(--border)",background:"var(--card)",color:"var(--muted)",borderRadius:9,padding:"7px 10px",cursor:"pointer"}}>♻ Papelera</button>}</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:6}}><div style={{fontSize:23,fontWeight:750,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Biblioteca de cláusulas</div>{puedeEditar&&<button type="button" title="Papelera de cláusulas" aria-label="Abrir papelera de cláusulas" onClick={function(){var abrir=!mostrarPapeleraClausulas;setMostrarPapeleraClausulas(abrir);setErrorPapeleraClausulas("");if(abrir&&onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}} style={{border:"1px solid var(--border)",background:"var(--card)",color:"var(--muted)",borderRadius:9,padding:"7px 10px",cursor:"pointer"}}>♻ Papelera</button>}</div>
       {puedeEditar&&mostrarPapeleraClausulas&&<div style={{padding:12,marginBottom:12,border:"1px solid var(--border)",borderRadius:12,background:"var(--card2,var(--card))"}}><div style={{fontWeight:700,fontSize:13,marginBottom:5}}>Papelera de cláusulas</div><div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>Podés restaurar cláusulas durante 30 días desde su eliminación. Las anteriores a esta función no tienen fecha verificable.</div>{(errorPapeleraClausulas||papeleraClausulasError)&&<div role="alert" style={{color:"var(--danger,#c94a4a)",fontSize:12,marginBottom:8}}>{errorPapeleraClausulas||papeleraClausulasError} <button type="button" onClick={onRecargarPapeleraClausulas}>Reintentar</button></div>}{papeleraClausulasLoading?<div style={{fontSize:12,color:"var(--muted)"}}>Cargando papelera…</div>:!(papeleraClausulas||[]).length?<div style={{fontSize:12,color:"var(--muted)"}}>No hay cláusulas recuperables.</div>:(papeleraClausulas||[]).map(function(c){return <div key={c.id} style={{display:"flex",gap:10,alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:"1px solid var(--border)"}}><div style={{minWidth:0}}><div style={{fontSize:13,fontWeight:650}}>{c.titulo||"Cláusula sin título"}</div><div style={{fontSize:11,color:"var(--muted)"}}>Eliminada: {c.eliminado_en?new Date(c.eliminado_en).toLocaleDateString("es-AR"):"sin fecha"}</div></div><button type="button" disabled={restaurandoClausula!==null} onClick={async function(){setRestaurandoClausula(c.id);setErrorPapeleraClausulas("");try{var r=await onRestaurarClausula(c.id);if(r&&r.error)throw r.error;}catch(e){setErrorPapeleraClausulas(e&&e.message?e.message:"No se pudo restaurar.");}finally{setRestaurandoClausula(null);}}} style={{padding:"7px 10px",borderRadius:8,border:"1px solid var(--border)",background:"var(--card)",color:"var(--text)",cursor:"pointer"}}>{restaurandoClausula===c.id?"Restaurando…":"Restaurar"}</button></div>;})}</div>}
 
-      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:11}}>Elegí las cláusulas que el asesor podrá sumar en cada operación. {puedeEditar?"Las cláusulas obligatorias se incorporan siempre; las adicionales quedan a elección del asesor.":"Las cláusulas obligatorias del modelo no aparecen en esta biblioteca."}</div>
+      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:11}}>Acá guardás condiciones especiales para reutilizar. Al guardarlas podés dejarlas disponibles para los asesores en los documentos elegidos. Cada asesor decide cuáles sumar al final de su operación; las condiciones esenciales ya están en el modelo.</div>
       <div style={{marginBottom:12}}>
         <label htmlFor="dw-biblioteca-documento" style={{display:"block",fontSize:12,fontWeight:750,marginBottom:6}}>Elegí tu documento</label>
         <select id="dw-biblioteca-documento" aria-label="Elegí tu documento en biblioteca" value={filtroAdicional} onChange={function(e){setFiltroAdicional(e.target.value);}} style={{width:"100%",minHeight:44,padding:"9px 12px",border:"1px solid var(--border2)",borderRadius:10,background:"var(--card)",color:"var(--text)",fontSize:14}}>
@@ -307,8 +378,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
           {PLANTILLA_TIPOS.map(function(tipo){return <option key={tipo} value={tipo}>{TIPOS[tipo]||tipo}</option>;})}
         </select>
       </div>
-      <ClausulasView clausulas={adicionalesVisibles} onAdd={onAddClausula} onEdit={onEditClausula} onDelete={onDeleteClausula} puedeEditar={puedeEditar} rolLabel={rolLabel} error={clausulasError} loading={!!clausulasLoading} onRetry={onRetryClausulas} modoIntegrado={true} ocultarProtegidasIds={protegidas} puedeVerHistorial={puedeEditar}/> 
-      {puedeEditar&&<div style={{marginTop:10,padding:"10px 12px",border:"1px solid var(--border)",borderRadius:10,background:"var(--card2, var(--card))"}}><div style={{fontSize:12.5,fontWeight:700,color:"var(--text)"}}>Obligatoria en: {protegidasConTipos.length} cláusulas</div><div style={{fontSize:11.5,color:"var(--dim)",marginTop:3}}>{protegidasConTipos.length?protegidasConTipos.map(function(item){return (item.clausula?(item.clausula.titulo||"Cláusula sin título"):"Cláusula no disponible en la biblioteca")+" · "+(item.tipos.length?item.tipos.map(function(tipo){return TIPOS[tipo]||tipo;}).join(", "):"modelo fijado");}).join("; "):"Todavía no hay cláusulas obligatorias en modelos fijados."}</div></div>}
+      <ClausulasView clausulas={adicionalesVisibles} clausulasParaComparar={clausulas} tipoFiltro={filtroAdicional==="todas"?null:filtroAdicional} onAdd={crearYHabilitar} onEdit={onEditClausula} onDelete={onDeleteClausula} puedeEditar={puedeEditar} rolLabel={rolLabel} error={clausulasError} loading={!!clausulasLoading} onRetry={onRetryClausulas} modoIntegrado={true} ocultarProtegidasIds={protegidas} puedeVerHistorial={puedeEditar}/>
     </div>}
     {seccion==="modelos"&&puedeEditar&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
       <style>{".dw-model-type-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.dw-model-type-chip{min-width:0;text-align:left}@media(max-width:640px){.dw-model-type-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dw-model-type-chip{width:100%;min-width:0;max-width:none}}@media(max-width:380px){.dw-model-type-grid{grid-template-columns:minmax(0,1fr)}}"}</style>

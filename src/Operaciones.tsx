@@ -21,7 +21,7 @@ export const EMPTY_OP = {
   alquiler_comision_locatario_modo:"porcentaje", alquiler_comision_locatario_valor:"", alquiler_comision_locatario_moneda:"ARS",
   alquiler_forma_pago:["transferencia"], alquiler_dia_pago:"1", alquiler_dia_pago_otro:"",
   alquiler_interes_punitorio:"5", alquiler_penalidad_meses:"2", alquiler_seguro_dias:"10", alquiler_aviso_meses:"1",
-  clausulas_ids:[], clausulas_custom:"", clausulas_custom_titulo:"",
+  clausulas_ids:[], clausulas_custom:"", clausulas_custom_titulo:"", entrega_aires_detalle:"", entrega_muebles_detalle:"",
   inmueble_tipo:"departamento", inmueble_tipo_otro:"", inmueble_unidad_funcional:"",
   alquiler_modo_plazo:"preset", alquiler_plazo_dias:"0",
   res_alq_aceptacion_dias:"2",

@@ -13,8 +13,10 @@ function Harness(){
 }
 function WorkspaceHarness(){
  const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[confirmacion,setConfirmacion]=useState(null),[guardados,setGuardados]=useState(0);
+ const [catalogo,setCatalogo]=useState([{id:'ejemplo-opcional',titulo:'Texto reutilizable de ejemplo',contenido:'Texto ficticio para comprobar la biblioteca.',tipos:['todos']}]);
+ const [altas,setAltas]=useState(0),[fallar,setFallar]=useState(false);
  useEffect(()=>{const listener=e=>setConfirmacion(e.detail);window.addEventListener('dw:confirm',listener);return ()=>window.removeEventListener('dw:confirm',listener);},[]);
- return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><output data-testid="guardados">{guardados}</output><ClausulasWorkspace perfil={perfil} onSavePerfil={async p=>{setPerfil(p);setGuardados(n=>n+1);return {};}} clausulas={[{id:'ejemplo-opcional',titulo:'Texto reutilizable de ejemplo',contenido:'Texto ficticio para comprobar la biblioteca.',tipos:['todos']}]} operaciones={[]} bloquesReserva={[]} onAddClausula={()=>{}} onEditClausula={()=>{}} onDeleteClausula={()=>{}}/><ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
+ return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><output data-testid="guardados">{guardados}</output><output data-testid="altas">{altas}</output><output data-testid="perfil" hidden>{JSON.stringify(perfil)}</output><button onClick={()=>setFallar(v=>!v)}>{fallar?'Restablecer guardado':'Simular fallo de habilitación'}</button><ClausulasWorkspace perfil={perfil} onSavePerfil={async p=>{if(fallar)return {error:{message:'Fallo simulado'}};setPerfil(p);setGuardados(n=>n+1);return {};}} clausulas={catalogo} operaciones={[]} bloquesReserva={[]} onAddClausula={async c=>{const id='catalogo-'+(altas+1);setAltas(n=>n+1);setCatalogo(xs=>xs.concat([{...c,id}]));return {data:id};}} onEditClausula={()=>({})} onDeleteClausula={()=>{}}/><ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
 }
 createRoot(document.getElementById('root')).render(location.pathname==='/workspace'?<WorkspaceHarness/>:<Harness/>);
 `;
@@ -116,6 +118,37 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   await page.getByRole('button',{name:'Confirmar',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
   assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
+  await page.getByRole('button',{name:'＋ Crear cláusula para biblioteca',exact:true}).click();
+  await page.locator('fieldset input.inp').fill('Texto reutilizable de ejemplo');
+  await page.locator('#dw-clausula-texto').fill('Condición especial válida durante 90 días.');
+  await page.locator('fieldset').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
+  assert.ok(await page.getByText('Hay títulos parecidos en la biblioteca',{exact:true}).isVisible());checks++;
+  await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
+  assert.equal(await page.locator('#dw-clausula-texto').inputValue(),'Condición especial válida durante 90 días.');checks++;
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' editor biblioteca overflow');checks++;
+  await page.screenshot({path:path.join(out,'biblioteca-editor-'+name+'.png'),fullPage:true});
+  await page.getByRole('button',{name:'Guardar y habilitar',exact:true}).click();
+  await page.locator('#dw-clausula-texto').waitFor({state:'detached'});
+  assert.equal(await page.getByTestId('altas').textContent(),'1');checks++;
+  const perfilGuardado=JSON.parse(await page.getByTestId('perfil').textContent());
+  assert.ok(perfilGuardado.plantillas.reserva.clausulas_ids.includes('catalogo-1'));checks++;
+  assert.ok(!perfilGuardado.plantillas.alquiler?.clausulas_ids?.includes('catalogo-1'));checks++;
+  assert.ok(await page.getByText('Texto ficticio para comprobar la biblioteca.',{exact:true}).isVisible());checks++;
+  await page.getByRole('button',{name:'＋ Crear cláusula para biblioteca',exact:true}).click();
+  await page.locator('fieldset input.inp').fill('Crédito hipotecario sin plazo');
+  await page.locator('#dw-clausula-texto').fill('Condición de crédito sin plazo determinado.');
+  await page.getByRole('button',{name:'Simular fallo de habilitación',exact:true}).click();
+  await page.getByRole('button',{name:'Guardar y habilitar',exact:true}).click();
+  await page.getByRole('button',{name:'Reintentar habilitación',exact:true}).waitFor();
+  assert.equal(await page.getByTestId('altas').textContent(),'2');checks++;
+  await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  assert.ok(await page.getByText('La cláusula está guardada en la biblioteca, pero falta habilitarla para los asesores. ¿Salir y dejar la habilitación pendiente?',{exact:true}).isVisible());checks++;
+  await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
+  await page.getByRole('button',{name:'Restablecer guardado',exact:true}).click();
+  await page.getByRole('button',{name:'Reintentar habilitación',exact:true}).click();
+  await page.locator('#dw-clausula-texto').waitFor({state:'detached'});
+  assert.equal(await page.getByTestId('altas').textContent(),'2');checks++;
   assert.deepEqual(errors,[]);checks++;await page.close();
  }
  console.log('APROBADAS',checks,'verificaciones '+engine+' en iPhone/iPad/escritorio emulados. Capturas:',out);
