@@ -101,7 +101,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
   await page.getByRole('button',{name:'Confirmar',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
-  assert.equal(await page.getByTestId('guardados').textContent(),'1');checks++;
+  assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
   assert.deepEqual(errors,[]);checks++;await page.close();
  }
  console.log('APROBADAS',checks,'verificaciones '+engine+' en iPhone/iPad/escritorio emulados. Capturas:',out);
