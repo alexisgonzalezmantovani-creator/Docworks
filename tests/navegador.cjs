@@ -5,6 +5,7 @@ const root=path.resolve(__dirname,'..'),out=process.env.DOCWORKS_BROWSER_OUTPUT|
 fs.mkdirSync(out,{recursive:true});
 const harness=`
 import {createRoot} from 'react-dom/client';
+${require('./superadmin-fixtures.cjs').source}
 function Harness(){
  const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[tipo,setTipo]=useState('reserva'),[abierto,setAbierto]=useState(true),[confirmacion,setConfirmacion]=useState(null);
  const [preview,setPreview]=useState(false);
@@ -19,10 +20,10 @@ function WorkspaceHarness(){
  return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><output data-testid="guardados">{guardados}</output><output data-testid="altas">{altas}</output><output data-testid="perfil" hidden>{JSON.stringify(perfil)}</output><button onClick={()=>setFallar(v=>!v)}>{fallar?'Restablecer guardado':'Simular fallo de habilitación'}</button><ClausulasWorkspace perfil={perfil} onSavePerfil={async p=>{if(fallar)return {error:{message:'Fallo simulado'}};setPerfil(p);setGuardados(n=>n+1);return {};}} clausulas={catalogo} operaciones={[]} bloquesReserva={[]} onAddClausula={async c=>{const id='catalogo-'+(altas+1);setAltas(n=>n+1);setCatalogo(xs=>xs.concat([{...c,id}]));return {data:id};}} onEditClausula={()=>({})} onDeleteClausula={()=>{}}/><ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
 }
 function EstadisticasHarness(){return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14}}><EstadisticasView operaciones={[]} equipo={[]} perfil={{rol:'dueno'}} currentUserRole="dueno"/></main></>;}
-createRoot(document.getElementById('root')).render(location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
+createRoot(document.getElementById('root')).render(location.pathname==='/superadmin'?<><GStyles/><PanelSuperadminPrueba contexto={{usuario:{nombre:'Administración de prueba'}}} onLogout={()=>{}}/></>:location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
 `;
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+harness,resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:path.join(out,'harness.js')});
-const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(out,'harness.js')));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/harness.js"></script></body></html>');}});
+const server=http.createServer((req,res)=>{if(req.url==='/docworks-header-logo.png'){res.setHeader('Content-Type','image/png');res.end(fs.readFileSync(path.join(root,'public/docworks-header-logo.png')));}else if(req.url==='/harness.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(out,'harness.js')));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/harness.js"></script></body></html>');}});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await browserType.launchPersistentContext(path.join(out,'profile'),{headless:true,...(engine==='chromium'?{executablePath:process.env.DOCWORKS_BROWSER_EXECUTABLE||undefined,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-zygote','--single-process','--use-gl=angle','--use-angle=swiftshader']}:{})});
@@ -173,6 +174,33 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   assert.equal(await page.getByText('No se pudieron cargar los gráficos.',{exact:false}).count(),0);checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' estadísticas overflow');checks++;
   await page.screenshot({path:path.join(out,'estadisticas-'+name+'.png'),fullPage:true});
+  await page.goto('http://127.0.0.1:'+server.address().port+'/superadmin');
+  await page.locator('.sa-overview button').first().waitFor();
+  assert.equal(await page.locator('.sa-overview button').count(),4);checks++;
+  assert.equal(await page.getByRole('navigation',{name:'Superadministración'}).getByRole('button').count(),6);checks++;
+  const sinOverflow=()=>page.locator('.sa-app').evaluate(el=>el.scrollWidth<=el.clientWidth+1);
+  assert.ok(await sinOverflow(),name+' superadmin resumen sin overflow');checks++;
+  await page.screenshot({path:path.join(out,'superadmin-resumen-'+name+'.png'),fullPage:true});
+  await page.getByRole('button',{name:'Vencen en 7 días 1',exact:true}).click();
+  await page.getByTestId('sa-org-card').waitFor();
+  assert.equal(await page.getByTestId('sa-org-card').count(),1);checks++;
+  assert.ok((await page.getByTestId('sa-org-card').textContent()).includes('Horizonte'));checks++;
+  await page.getByLabel('Estado de inmobiliaria',{exact:true}).selectOption('todas');
+  assert.equal(await page.getByTestId('sa-org-card').count(),4);checks++;
+  assert.ok(await sinOverflow(),name+' superadmin inmobiliarias sin overflow');checks++;
+  await page.screenshot({path:path.join(out,'superadmin-inmobiliarias-'+name+'.png'),fullPage:true});
+  await page.getByLabel('Buscar inmobiliarias por nombre o email',{exact:true}).fill('norte@example.test');
+  assert.equal(await page.getByTestId('sa-org-card').count(),1);checks++;
+  await page.getByRole('button',{name:'Ver detalle de Norte Inmuebles',exact:true}).click();
+  await page.getByRole('button',{name:'Extender 30 días',exact:true}).waitFor();
+  assert.ok(await sinOverflow(),name+' superadmin detalle sin overflow');checks++;
+  await page.screenshot({path:path.join(out,'superadmin-detalle-'+name+'.png'),fullPage:true});
+  await page.locator('.modal-close').click();
+  for(const destino of ['Solicitudes','Planes','Auditoría','Pagos']){
+   await page.getByRole('navigation',{name:'Superadministración'}).getByRole('button',{name:new RegExp('^'+destino)}).click();
+   await page.getByRole('heading',{name:destino,exact:true}).waitFor();
+   assert.ok(await sinOverflow(),name+' superadmin '+destino+' sin overflow');checks++;
+  }
   assert.deepEqual(errors,[]);checks++;await page.close();
  }
  console.log('APROBADAS',checks,'verificaciones '+engine+' en iPhone/iPad/escritorio emulados. Capturas:',out);
