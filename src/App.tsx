@@ -6552,15 +6552,15 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   function actualizarPlantilla(changes){
     if(!puedeEditar)return Promise.resolve({error:new Error("Sin permisos")});
     var mapa=Object.assign({},perfil.plantillas||{});
-    var actual=Object.assign({},mapa[tipoDocSel]||{}, {clausulas_ids:idsPlantilla.slice(),locked:!!cfg.locked,version:obtenerVersionPlantilla(perfil,tipoDocSel)});
+    var actual=Object.assign({},mapa[tipoDocSel]||{}, {clausulas_ids:idsPlantilla.slice(),locked:false,version:obtenerVersionPlantilla(perfil,tipoDocSel)});
     actual=Object.assign(actual,changes||{});
     var next=Object.assign({},perfil,{plantillas:Object.assign({},mapa,{[tipoDocSel]:actual}),clausulas_default_ids:actual.clausulas_ids.slice(),clausulas_default_locked:!!actual.locked});
     return persistir(next);
   }
-  function agregarClausula(id){if(!puedeEditar||cfg.locked||!id||idsPlantilla.indexOf(id)!==-1)return;actualizarPlantilla({clausulas_ids:idsPlantilla.concat([id]),locked:false});}
-  function quitarClausula(id){if(!puedeEditar||cfg.locked)return;actualizarPlantilla({clausulas_ids:idsPlantilla.filter(function(x){return x!==id;}),locked:false});}
+  function agregarClausula(id){if(!puedeEditar||!id||idsPlantilla.indexOf(id)!==-1)return;actualizarPlantilla({clausulas_ids:idsPlantilla.concat([id]),locked:false});}
+  function quitarClausula(id){if(!puedeEditar)return;actualizarPlantilla({clausulas_ids:idsPlantilla.filter(function(x){return x!==id;}),locked:false});}
   function moverClausula(id,delta){
-    if(!puedeEditar||cfg.locked)return;
+    if(!puedeEditar)return;
     var arr=idsPlantilla.slice(),i=arr.indexOf(id),j=i+delta;
     if(i<0||j<0||j>=arr.length)return;
     var tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;actualizarPlantilla({clausulas_ids:arr,locked:false});
