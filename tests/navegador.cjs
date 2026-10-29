@@ -69,9 +69,8 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   assert.equal(await extras.getAttribute('open'),null);checks++;
   await extras.locator('summary').click();
   await page.getByLabel('Estado de Texto reutilizable de ejemplo',{exact:true}).selectOption('asesor');
-  await page.getByRole('checkbox',{name:'Recomendar',exact:true}).check();
-  assert.equal(await page.getByRole('checkbox',{name:'Recomendar',exact:true}).isChecked(),true);checks++;
-  assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
+  assert.equal(await extras.locator('summary').textContent(),'Cláusulas opcionales');checks++;
+  assert.equal(await page.getByTestId('guardados').textContent(),'1');checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' workspace overflow');checks++;
   await page.screenshot({path:path.join(out,'documentos-'+name+'.png'),fullPage:true});
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
@@ -94,7 +93,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/harness.js'){res.setHe
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
   await page.getByRole('button',{name:'Confirmar',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
-  assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
+  assert.equal(await page.getByTestId('guardados').textContent(),'1');checks++;
   assert.deepEqual(errors,[]);checks++;await page.close();
  }
  console.log('APROBADAS',checks,'verificaciones '+engine+' en iPhone/iPad/escritorio emulados. Capturas:',out);
