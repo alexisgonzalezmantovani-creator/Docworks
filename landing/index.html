@@ -372,7 +372,7 @@ section{padding:102px 0}
 .signup-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:48px;align-items:start}
 .signup-card{padding:28px;border:1px solid #334155;border-radius:20px;background:#0b1730;display:grid;gap:16px;color:#f8fafc}
 .signup-card label{display:block;font-size:14px;line-height:1.5}.signup-card input:not([type=checkbox]){display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:13px;border:1px solid #526078;border-radius:10px;background:#070e1d;color:#fff;font:inherit;font-size:16px;min-height:48px}
-.signup-card input:focus-visible{outline:2px solid #d4a853;outline-offset:3px}.signup-card .signup-consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#cbd5e1}.signup-card input[type=checkbox]{margin-top:4px;min-width:18px;min-height:18px}.signup-card button{width:100%;font:inherit;cursor:pointer}.signup-card button:disabled{opacity:.65;cursor:wait}.signup-status{line-height:1.6;font-size:14px}.signup-status[data-error=true]{color:#fca5a5}
+.signup-card input:focus-visible{outline:2px solid #d4a853;outline-offset:3px}.signup-card button{width:100%;font:inherit;cursor:pointer}.signup-card button:disabled{opacity:.65;cursor:wait}.signup-status{line-height:1.6;font-size:14px}.signup-status[data-error=true]{color:#fca5a5}
 @media(max-width:760px){.signup-wrap{grid-template-columns:1fr;gap:24px}.signup-card{padding:20px}}
 
 /* Mobile layout: columns must shrink to their container, including form controls. */
@@ -542,8 +542,8 @@ section{padding:102px 0}
     <label for="signup-agency">Inmobiliaria<input id="signup-agency" name="inmobiliaria" autocomplete="organization" maxlength="160" required></label>
     <label for="signup-email">Email<input id="signup-email" type="email" name="email" autocomplete="email" maxlength="254" required></label>
     <label for="signup-password">Contraseña<input id="signup-password" type="password" name="password" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="signup-password-help"><small id="signup-password-help">Mínimo 8 caracteres.</small></label>
-    <label class="signup-consent"><input type="checkbox" name="acepto" required><span>Acepto iniciar una prueba de un mes sin cobro automático. Mis datos se usarán para crear y administrar mi cuenta e inmobiliaria.</span></label>
     <button type="submit" class="btn">Crear cuenta gratis</button>
+    <p style="font-size:12px;line-height:1.5;color:#cbd5e1">Usaremos estos datos para crear y administrar tu cuenta.</p>
     <div id="signup-status" class="signup-status" role="status" aria-live="polite"></div>
   </form>
  </div>
@@ -666,7 +666,7 @@ section{padding:102px 0}
   busy=true;button.disabled=true;button.textContent='Creando cuenta…';status.textContent='';status.dataset.error='false';
   var controller=new AbortController(), timer=setTimeout(function(){controller.abort();},20000);
   try{
-   var response=await fetch("https://xpjiydwjawjizubyldtk.supabase.co/auth/v1/signup?redirect_to=https%3A%2F%2Fdocworks-eight.vercel.app%2F",{method:'POST',headers:{apikey:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwaml5ZHdqYXdqaXp1YnlsZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDYzMzcsImV4cCI6MjEwMzc4MjMzN30.Mi5DilpMg_EGkNZX_ht6jtrmXX9_9Q-Xyo4hnWDEIvI",'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({email:String(values.get('email')).trim().toLowerCase(),password:String(values.get('password')),data:{nombre:nombre,inmobiliaria:inmobiliaria,docworks_registro:'trial_month_v1',consentimiento_prueba:true}})});
+   var response=await fetch("https://xpjiydwjawjizubyldtk.supabase.co/auth/v1/signup?redirect_to=https%3A%2F%2Fdocworks-eight.vercel.app%2F",{method:'POST',headers:{apikey:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwaml5ZHdqYXdqaXp1YnlsZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDYzMzcsImV4cCI6MjEwMzc4MjMzN30.Mi5DilpMg_EGkNZX_ht6jtrmXX9_9Q-Xyo4hnWDEIvI",'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({email:String(values.get('email')).trim().toLowerCase(),password:String(values.get('password')),data:{nombre:nombre,inmobiliaria:inmobiliaria,docworks_registro:'trial_month_v1'}})});
    var result=await response.json();
    if(!response.ok){
     if(response.status===429)throw new Error('Esperá unos minutos antes de volver a intentarlo.');

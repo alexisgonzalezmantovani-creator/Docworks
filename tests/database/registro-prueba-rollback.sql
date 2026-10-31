@@ -4,7 +4,7 @@ declare invited_uid uuid=gen_random_uuid(); uid uuid=gen_random_uuid(); tenant u
 begin
  select count(*) into prev_count from public.inmobiliarias;
  insert into auth.users(id,email,raw_user_meta_data,raw_app_meta_data,aud,role)
- values(uid,'qa-'||uid||'@example.invalid',jsonb_build_object('nombre','Prueba QA','inmobiliaria','Inmobiliaria QA','docworks_registro','trial_month_v1','consentimiento_prueba',true,'rol_base','super_admin','dias_prueba',999), '{}','authenticated','authenticated');
+ values(uid,'qa-'||uid||'@example.invalid',jsonb_build_object('nombre','Prueba QA','inmobiliaria','Inmobiliaria QA','docworks_registro','trial_month_v1','rol_base','super_admin','dias_prueba',999), '{}','authenticated','authenticated');
  if exists(select 1 from public.usuarios where id=uid) then raise exception 'Alta antes de verificar email'; end if;
  update auth.users set email_confirmed_at=start_at where id=uid;
  select inmobiliaria_id into tenant from public.usuarios where id=uid and rol_base='dueno';
@@ -46,7 +46,7 @@ begin
  perform set_config('request.jwt.claim.sub','',true);perform set_config('request.jwt.claims','{}',true);
  insert into public.invitaciones(inmobiliaria_id,email,rol_base,perfil_permisos) values(tenant,'qa-'||invited_uid||'@example.invalid','broker','junior');
  insert into auth.users(id,email,raw_user_meta_data,raw_app_meta_data,aud,role)
- values(invited_uid,'qa-'||invited_uid||'@example.invalid',jsonb_build_object('nombre','Invitado','inmobiliaria','No crear','docworks_registro','trial_month_v1','consentimiento_prueba',true),'{}','authenticated','authenticated');
+ values(invited_uid,'qa-'||invited_uid||'@example.invalid',jsonb_build_object('nombre','Invitado','inmobiliaria','No crear','docworks_registro','trial_month_v1'),'{}','authenticated','authenticated');
  update auth.users set email_confirmed_at=now() where id=invited_uid;
  if not exists(select 1 from public.usuarios where id=invited_uid and inmobiliaria_id=tenant and rol_base='broker') then raise exception 'Invitación perdió inmobiliaria o rol'; end if;
  if has_function_privilege('anon','public.fn_registrar_inmobiliaria(text,text)','execute') or has_function_privilege('authenticated','docworks_private.provisionar_prueba(uuid)','execute') then raise exception 'Función privada expuesta'; end if;
