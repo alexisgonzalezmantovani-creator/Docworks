@@ -6827,32 +6827,23 @@ function RegistroScreen({ onBack, onSubmit, loading, error, success }){
   var [nombre,setNombre]=useState("");
   var [email,setEmail]=useState("");
   var [inmobiliaria,setInmobiliaria]=useState("");
-  var [telefono,setTelefono]=useState("");
-  function submit(e){
-    e.preventDefault();
-    onSubmit({nombre:nombre.trim(),email:email.trim().toLowerCase(),inmobiliaria:inmobiliaria.trim(),telefono:telefono.trim()});
-  }
-  return (
-    <div style={{position:"fixed",inset:0,zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",padding:16,fontFamily:"'DM Sans',sans-serif",overflow:"auto"}}>
-      <form onSubmit={submit} style={{width:"100%",maxWidth:410,background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:28,display:"flex",flexDirection:"column",gap:13,boxShadow:"0 18px 55px rgba(0,0,0,0.38),0 0 0 1px rgba(212,168,83,0.035)"}}>
-        <div style={{textAlign:"center",marginBottom:5}}>
-          <img src={LOGO_B64} alt="DocWorks" style={{height:130,width:"auto",maxWidth:"300px",objectFit:"contain",marginBottom:8}}/>
-          <div style={{fontSize:16,fontWeight:700,color:AUTH_TEXT}}>Solicitá tu acceso</div>
-          <div style={{fontSize:12.5,color:AUTH_MUTED,marginTop:5,lineHeight:1.45}}>Completá tus datos. Un administrador de DocWorks revisará la solicitud y, si la aprueba, te enviará la invitación para activar tu cuenta.</div>
-        </div>
-        {error&&<div style={{fontSize:12.5,color:AUTH_RED,background:"rgba(248,113,113,.12)",padding:"8px 10px",borderRadius:8,fontWeight:600,lineHeight:1.4}}>{error}</div>}
-        {success&&<div style={{fontSize:12.5,color:"#15803d",background:"rgba(34,197,94,.10)",padding:"10px 12px",borderRadius:8,fontWeight:600,lineHeight:1.45}}>{success}</div>}
-        {!success&&<>
-          <div style={{display:"flex",flexDirection:"column",gap:5}}><label style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Nombre y apellido</label><input required value={nombre} onChange={function(e){setNombre(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} /></div>
-          <div style={{display:"flex",flexDirection:"column",gap:5}}><label htmlFor="dw-login-email" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED,cursor:"text",padding:"4px 0"}}>Correo electrónico</label><input type="email" required value={email} onChange={function(e){setEmail(e.target.value);}} style={{minHeight:48,width:"100%",boxSizing:"border-box",padding:"12px 14px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16,WebkitAppearance:"none",touchAction:"manipulation"}} /></div>
-          <div style={{display:"flex",flexDirection:"column",gap:5}}><label style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Inmobiliaria</label><input required value={inmobiliaria} onChange={function(e){setInmobiliaria(e.target.value);}} placeholder="Nombre de la inmobiliaria" style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} /></div>
-          <div style={{display:"flex",flexDirection:"column",gap:5}}><label style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Teléfono <span style={{fontWeight:400}}>(opcional)</span></label><input value={telefono} onChange={function(e){setTelefono(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} /></div>
-          <button type="submit" disabled={loading} style={{marginTop:4,padding:"11px 14px",borderRadius:10,border:"none",background:AUTH_GOLD,color:"#1a1206",fontWeight:700,fontSize:14,cursor:loading?"default":"pointer",opacity:loading?.6:1}}>{loading?"Enviando solicitud…":"Enviar solicitud"}</button>
-        </>}
-        <button type="button" onClick={onBack} style={{background:"transparent",border:"none",color:AUTH_MUTED,cursor:"pointer",fontSize:12,textDecoration:"underline",padding:0}}>{success?"Volver al inicio de sesión":"Volver a iniciar sesión"}</button>
-      </form>
-    </div>
-  );
+  var [password,setPassword]=useState("");
+  var [acepto,setAcepto]=useState(false);
+  var fields=[{id:"nombre",label:"Nombre y apellido",value:nombre,set:setNombre,type:"text",auto:"name",max:120},{id:"inmobiliaria",label:"Inmobiliaria",value:inmobiliaria,set:setInmobiliaria,type:"text",auto:"organization",max:160},{id:"email",label:"Correo electrónico",value:email,set:setEmail,type:"email",auto:"email",max:254},{id:"password",label:"Contraseña (mínimo 8 caracteres)",value:password,set:setPassword,type:"password",auto:"new-password",max:128}];
+  return <div style={{position:"fixed",inset:0,zIndex:400,overflowY:"auto",background:AUTH_BG,padding:16,fontFamily:"'DM Sans',sans-serif",display:"flex"}}>
+    <form onSubmit={function(e){e.preventDefault();if(!loading)onSubmit({nombre:nombre.trim(),email:email.trim().toLowerCase(),inmobiliaria:inmobiliaria.trim(),password:password,acepto:acepto});}} style={{margin:"auto",width:"100%",maxWidth:410,boxSizing:"border-box",background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:24,display:"flex",flexDirection:"column",gap:14,color:AUTH_TEXT}}>
+      <img src={LOGO_B64} alt="DocWorks" style={{height:90,width:"100%",objectFit:"contain"}}/>
+      <h1 style={{fontSize:22,margin:0}}>Probá DocWorks gratis</h1>
+      <p style={{fontSize:14,lineHeight:1.5,margin:0,color:AUTH_MUTED}}>14 días para tu inmobiliaria, sin tarjeta. La prueba empieza cuando verificás tu email.</p>
+      {error&&<div role="alert" style={{color:AUTH_RED}}>{error}</div>}
+      {success?<div role="status" style={{lineHeight:1.5}}>{success}</div>:<>
+        {fields.map(function(f){return <div key={f.id}><label htmlFor={"dw-reg-"+f.id} style={{display:"block",fontSize:13,marginBottom:6}}>{f.label}</label><input id={"dw-reg-"+f.id} name={f.id} autoComplete={f.auto} required type={f.type} minLength={f.id==="password"?8:1} maxLength={f.max} value={f.value} onChange={function(e){f.set(e.target.value);}} style={{width:"100%",boxSizing:"border-box",padding:12,borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16}}/></div>;})}
+        <label style={{fontSize:13,lineHeight:1.5,display:"flex",gap:9,alignItems:"flex-start"}}><input type="checkbox" required checked={acepto} onChange={function(e){setAcepto(e.target.checked);}}/>Acepto iniciar una prueba de 14 días sin cobro automático. Mis datos se usarán para crear y administrar mi cuenta e inmobiliaria.</label>
+        <button type="submit" disabled={loading} style={{padding:13,borderRadius:10,border:0,background:AUTH_GOLD,color:"#1a1206",fontSize:16,fontWeight:700,cursor:"pointer"}}>{loading?"Creando cuenta…":"Crear cuenta gratis"}</button>
+      </>}
+      <button type="button" onClick={onBack} style={{background:"transparent",border:0,color:AUTH_MUTED,cursor:"pointer",padding:8}}>Ya tengo cuenta · Ingresar</button>
+    </form>
+  </div>;
 }
 
 function LoginScreen({ onLogin, onRecover, onRegister, error, loading, connError }){
@@ -6917,8 +6908,8 @@ function MembresiaSuspendidaScreen({ onLogout, estado }){
       <div style={{width:"100%",maxWidth:380,background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:28,textAlign:"center",color:AUTH_TEXT,boxShadow:"0 18px 55px rgba(0,0,0,0.38),0 0 0 1px rgba(212,168,83,0.035)"}}>
         <div style={{fontSize:28,marginBottom:10}}>⛔</div>
         <div style={{fontWeight:700,marginBottom:8}}>Membresía {estado === "vencida" ? "vencida" : "suspendida"}</div>
-        <div style={{fontSize:13,color:AUTH_MUTED,lineHeight:1.5}}>Tu inmobiliaria tiene la membresía {estado === "vencida" ? "vencida" : "suspendida"}. Contactá al administrador de DocWorks.</div>
-        <button onClick={onLogout} style={{marginTop:18,padding:"9px 16px",borderRadius:9,border:"1px solid "+AUTH_BORDER,background:"transparent",color:AUTH_TEXT,fontSize:13,cursor:"pointer"}}>Cerrar sesión</button>
+        <div style={{fontSize:13,color:AUTH_MUTED,lineHeight:1.5}}>{estado === "vencida" ? "El período de acceso terminó. Tus datos se conservan. Elegí un plan para seguir trabajando." : "Tu membresía está suspendida. Contactá al administrador de DocWorks."}</div>
+        <a href="https://docworks-landing.vercel.app/#planes" style={{display:"block",marginTop:18,color:AUTH_GOLD}}>Ver planes</a><button onClick={onLogout} style={{marginTop:18,padding:"9px 16px",borderRadius:9,border:"1px solid "+AUTH_BORDER,background:"transparent",color:AUTH_TEXT,fontSize:13,cursor:"pointer"}}>Cerrar sesión</button>
       </div>
     </div>
   );
@@ -6993,6 +6984,14 @@ function useDocWorksSession(){
       }).catch(function(){ if(!silent){setContexto(null);setContextoLoading(false);} });
     });
   }
+
+  useEffect(function(){
+    var m=contexto&&contexto.membresia;
+    if(!m||!m.es_prueba||!m.fecha_vencimiento||!contexto.habilitado)return;
+    var remaining=new Date(m.fecha_vencimiento).getTime()-Date.now();
+    var timer=setTimeout(function(){loadSupabaseJs().then(function(sb){if(sb)cargarContexto(sb);});},Math.max(0,Math.min(remaining+250,2147483647)));
+    return function(){clearTimeout(timer);};
+  },[contexto]);
 
   function iniciar(){
     setConnError(null);
@@ -7076,16 +7075,17 @@ function useDocWorksSession(){
   }
 
   function solicitarRegistro(datos){
+    if(registroLoading)return Promise.resolve({error:true});
     setRegistroLoading(true); setRegistroError(null); setRegistroSuccess(null);
+    if(!datos.nombre||!datos.inmobiliaria||!datos.email||!datos.password||datos.password.length<8||!datos.acepto){setRegistroLoading(false);setRegistroError("Completá los datos y aceptá las condiciones de la prueba.");return Promise.resolve({error:true});}
     return loadSupabaseJs().then(function(sb){
-      if(!sb){ setRegistroLoading(false); setRegistroError("No se pudo conectar con DocWorks."); return {error:true}; }
-      return sb.rpc("fn_solicitar_registro_publico", { p_nombre:datos.nombre, p_email:datos.email, p_inmobiliaria:datos.inmobiliaria, p_telefono:datos.telefono||null }).then(function(res){
-        setRegistroLoading(false);
-        if(res.error){ setRegistroError(traducirError(res.error.message)); return {error:true}; }
-        setRegistroSuccess("Solicitud enviada correctamente. Un administrador de DocWorks la revisará y, si la aprueba, recibirás la invitación por correo electrónico.");
-        return {ok:true};
-      });
-    }).catch(function(err){ setRegistroLoading(false); setRegistroError(traducirError(err&&err.message?err.message:"No se pudo enviar la solicitud.")); return {error:true}; });
+      if(!sb)throw new Error("No se pudo conectar con DocWorks.");
+      return sb.auth.signUp({email:datos.email,password:datos.password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{nombre:datos.nombre,inmobiliaria:datos.inmobiliaria,docworks_registro:"trial_14_v1",consentimiento_prueba:true}}});
+    }).then(function(res){
+      if(res.error)throw res.error;
+      setRegistroSuccess("Revisá tu correo y verificá tu email para empezar. Si ya tenés cuenta, ingresá o recuperá tu contraseña. No hay cobro automático al finalizar la prueba.");
+      return {ok:true};
+    }).catch(function(err){setRegistroError(traducirError(err&&err.message||"No se pudo crear la cuenta."));return {error:true};}).finally(function(){setRegistroLoading(false);});
   }
 
   function login(email, password){
@@ -7581,7 +7581,7 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
 }
 
 function LoginGate({docworksAuth}){
-  var [registro,setRegistro]=useState(false);
+  var [registro,setRegistro]=useState(function(){return new URLSearchParams(window.location.search).get("registro")==="1";});
   var [showStartupSplash,setShowStartupSplash]=useState(false); // 4.27: lo muestra StartupSplashHost.
   return <>
     {registro ? <RegistroScreen onBack={function(){setRegistro(false);}} onSubmit={docworksAuth.solicitarRegistro} loading={docworksAuth.registroLoading} error={docworksAuth.registroError} success={docworksAuth.registroSuccess}/> : <LoginScreen onLogin={docworksAuth.login} onRecover={docworksAuth.recoverPassword} onRegister={function(){setRegistro(true);}} error={docworksAuth.loginError} loading={docworksAuth.loginLoading} connError={docworksAuth.connError}/>}
@@ -9001,6 +9001,7 @@ function DocWorksApp(){
           {/* ── Main content ── */}
           <div className="main">
             <div className="content">
+              {ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks-landing.vercel.app/#planes" style={{color:"inherit"}}>Ver planes</a></div>}
               {view==="dashboard"&&<DashboardView operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={function(){setFormFocusCampo(null);setEditOp(null);setFormTipo(null);setShowForm(true);}} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
               {view==="calendario"&&<CalendarioView operaciones={operaciones} onViewOp={function(op){abrirDoc(op);}}/>}
               {view==="clausulas"&&<ClausulasWorkspace key={perfilNube.contexto} perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
