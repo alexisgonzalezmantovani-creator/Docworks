@@ -9,6 +9,7 @@ declare global {
   }
   interface Navigator { standalone?: boolean; }
 }
+import { InicioInmobiliaria } from './PrimerosPasos';
 import { crearClausulasView, crearClausulasWorkspace } from './Clausulas';
 import { crearDocumentViewer, crearOperacionForm, crearPapeleraView, crearTareasPanel, crearNegociacionPanel, crearReservaDecisionPanel } from './Operaciones';
 import { crearSuperAdminDashboard, crearConfiguracionView, crearDashboardView , crearEstadisticasView , crearCalendarioView } from './Operaciones';
@@ -7594,168 +7595,6 @@ function LoginGate({docworksAuth}){
 // del segundo paso, el modal se convierte en un tooltip compacto que ilumina
 // exactamente el apartado que se está explicando. No usa blur para no degradar
 // la lectura ni desenfocar el contexto de la aplicación.
-function DocWorksOnboarding({ open, step, onStep, onClose, onNavigate, role }) {
-  var steps = [
-    { key:"inicio", title:"Bienvenido a DocWorks", text:"Te vamos a acompañar con un recorrido práctico: primero dónde empieza una operación, después cómo crear documentos, trabajar con cláusulas y usar DocWorks IA.", icon:"✦" },
-    { key:"operaciones", title:"1. Operaciones", text:"Acá empieza el trabajo. Cada operación funciona como una carpeta inteligente donde quedan reunidos los datos, documentos, estados y movimientos del negocio.", icon:"▦", view:"dashboard", targetText:"Operaciones", targetKind:"nav" },
-    { key:"nueva_operacion", title:"2. Crear una operación", text:"Desde «+ Nueva operación» elegís qué tipo de documento querés iniciar y cargás los datos una sola vez. DocWorks reutiliza esa información en las etapas siguientes.", icon:"＋", view:"dashboard", targetText:"+ Nueva operación", targetKind:"content" },
-    { key:"documentacion", title:"3. Documentación sin repetir datos", text:"Una vez creada la operación, los documentos derivados pueden reutilizar la información ya cargada. La idea es avanzar, no volver a copiar datos entre formularios.", icon:"▤", view:"dashboard", targetText:"Operaciones", targetKind:"nav" },
-    { key:"clausulas", title:"4. Cláusulas y plantillas", text:"La biblioteca guarda tu redacción profesional y permite reutilizarla por tipo de documento. Las cláusulas obligatorias pueden ser definidas por Dueño o Administrador.", icon:"§", view:"clausulas", targetText:"Cláusulas", targetKind:"nav" },
-    { key:"clausulas_ia", title:"5. Cláusulas con DocWorks IA", text:"Dentro de «Crear cláusula» podés describir brevemente la idea y DocWorks IA propone el título y la redacción jurídica. Después la revisás, la editás y decidís si querés reutilizarla.", icon:"✦", view:"clausulas", targetText:"Cláusulas", targetKind:"nav" },
-    { key:"calendario", title:"6. Calendario", text:"Aceptaciones, vencimientos y fechas clave quedan centralizados para que el seguimiento de cada operación tenga un lugar visible.", icon:"📅", view:"calendario", targetText:"Calendario", targetKind:"nav" },
-    { key:"estadisticas", title:"7. Estadísticas", text:"Consultá actividad y métricas según el rol y los permisos del usuario. El panel te ayuda a entender qué está pasando en la inmobiliaria.", icon:"◎", view:"estadisticas", targetText:"Panel", targetKind:"nav" },
-    { key:"configuracion", title:"8. Configuración y equipo", text:"Desde acá administrás equipo, permisos, apariencia, respaldo y personalización de la inmobiliaria. Las cláusulas se gestionan desde su propio menú.", icon:"⚙", view:"configuracion", targetText:"Configuración", targetKind:"nav" },
-    { key:"listo", title:"Listo para trabajar", text:"Ya conocés el recorrido principal. La ayuda queda siempre disponible abajo a la izquierda, justo encima de la lunita, para volver a ver esta guía cuando quieras.", icon:"✓" }
-  ];
-  if (!open) return null;
-  var safeStep=Math.max(0,Math.min(step,steps.length-1));
-  var current=steps[safeStep];
-  var last=safeStep===steps.length-1;
-  var compact=safeStep>0 && !last;
-  var [targetRect,setTargetRect]=useState(null);
-
-  function getText(el){ return ((el.innerText || el.textContent || "").replace(/\s+/g," ").trim()); }
-  function findTarget(){
-    if(!current.targetText) return null;
-    var candidates=[];
-    var nodes=document.querySelectorAll('button,a,[role="button"],input,label,h1,h2,h3,h4');
-    for(var i=0;i<nodes.length;i++){
-      var el=nodes[i];
-      var txt=getText(el);
-      if(!txt || txt.toLowerCase()!==current.targetText.toLowerCase()) continue;
-      var r=el.getBoundingClientRect();
-      if(r.width<8||r.height<8) continue;
-      var cs=window.getComputedStyle(el);
-      if(cs.display==='none'||cs.visibility==='hidden'||parseFloat(cs.opacity||'1')<0.1) continue;
-      if(r.bottom<0||r.top>window.innerHeight||r.right<0||r.left>window.innerWidth) continue;
-      candidates.push({el:el,rect:r});
-    }
-    if(!candidates.length) return null;
-    if(current.targetKind==='nav'){
-      candidates.sort(function(a,b){
-        var aNav=a.el.closest('nav')?1:0, bNav=b.el.closest('nav')?1:0;
-        if(aNav!==bNav) return bNav-aNav;
-        return a.rect.top-b.rect.top;
-      });
-    }else{
-      candidates.sort(function(a,b){ return (a.rect.top+b.rect.top)/2 - (b.rect.top+a.rect.top)/2; });
-    }
-    var best=candidates[0].rect;
-    return {left:Math.max(8,best.left-8),top:Math.max(8,best.top-8),width:Math.min(window.innerWidth-16,best.width+16),height:Math.min(window.innerHeight-16,best.height+16)};
-  }
-
-  useEffect(function(){
-    if(!compact){ setTargetRect(null); return; }
-    var cancelled=false;
-    var attempts=0;
-    function locate(){
-      if(cancelled) return;
-      var r=findTarget();
-      if(r){
-        setTargetRect(r);
-        return;
-      }
-      attempts+=1;
-      if(attempts<12) window.setTimeout(locate,80);
-      else setTargetRect(null);
-    }
-    var t=window.setTimeout(locate,50);
-    function refresh(){
-      var r=findTarget();
-      if(r) setTargetRect(r);
-    }
-    window.addEventListener('resize',refresh);
-    window.addEventListener('scroll',refresh,true);
-    return function(){ cancelled=true; clearTimeout(t); window.removeEventListener('resize',refresh); window.removeEventListener('scroll',refresh,true); };
-  },[safeStep,compact,current.targetText,current.targetKind]);
-
-  function avanzar(){
-    if(last){ onClose(true); return; }
-    var next=steps[safeStep+1];
-    if(next&&next.view&&onNavigate) onNavigate(next.view);
-    onStep(safeStep+1);
-  }
-  function retroceder(){
-    if(safeStep<=0) return;
-    var prev=steps[safeStep-1];
-    if(prev&&prev.view&&onNavigate) onNavigate(prev.view);
-    onStep(safeStep-1);
-  }
-
-  var spotlight = targetRect ? (
-    <>
-      <div style={{position:"fixed",left:targetRect.left,top:targetRect.top,width:targetRect.width,height:targetRect.height,zIndex:5001,borderRadius:14,boxShadow:"0 0 0 9999px rgba(3,8,18,0.70),0 0 0 1px rgba(212,168,83,0.78),0 10px 32px rgba(0,0,0,0.22)",pointerEvents:"none",transition:"left .22s ease,top .22s ease,width .22s ease,height .22s ease"}}/>
-    </>
-  ) : null;
-
-  var tooltipStyle: import("react").CSSProperties={
-    position:"fixed",zIndex:5002,width:"min(350px,calc(100vw - 28px))",padding:"17px 18px 16px",
-    border:"1px solid rgba(212,168,83,.34)",borderRadius:16,
-    background:"linear-gradient(145deg,rgba(16,25,43,.985),rgba(8,14,26,.995))",
-    boxShadow:"0 22px 60px rgba(0,0,0,.48),0 0 30px rgba(212,168,83,.08)",color:"#f8fafc"
-  };
-
-  function tooltipPosition(){
-    if(!targetRect) return {left:14,bottom:18};
-    var top=targetRect.top+targetRect.height+14;
-    var left=targetRect.left;
-    if(top+230>window.innerHeight) top=Math.max(14,targetRect.top-244);
-    left=Math.min(Math.max(14,left),Math.max(14,window.innerWidth-364));
-    return {left:left,top:top};
-  }
-
-  return (
-    <div style={{position:"fixed",inset:0,zIndex:5000,background:compact?"rgba(3,8,18,.06)":"rgba(3,8,18,.78)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px",pointerEvents:compact?"none":"auto"}}>
-      {compact&&spotlight}
-      {!compact ? (
-        <div role="dialog" aria-modal="true" aria-label="Introducción a DocWorks" style={{width:"min(620px,100%)",border:"1px solid rgba(212,168,83,.35)",borderRadius:24,background:"linear-gradient(145deg,rgba(16,25,43,.99),rgba(8,14,26,1))",boxShadow:"0 30px 90px rgba(0,0,0,.55),0 0 40px rgba(212,168,83,.08)",overflow:"hidden",pointerEvents:"auto"}}>
-          <div style={{height:4,background:"linear-gradient(90deg,var(--gold),var(--gold2),transparent)"}}/>
-          <div style={{padding:"26px 28px 24px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:22}}>
-              <div style={{display:"flex",alignItems:"center",gap:11}}>
-                <div style={{width:42,height:42,borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(212,168,83,.10)",border:"1px solid rgba(212,168,83,.25)",color:"var(--gold)",fontSize:21}}>{current.icon}</div>
-                <div>
-                  <div style={{fontSize:12,textTransform:"uppercase",letterSpacing:1.3,color:"var(--gold)",fontWeight:700}}>DocWorks · Introducción</div>
-                  <div style={{fontSize:12,color:"#cbd5e1",marginTop:3}}>Paso 1 de {steps.length}</div>
-                </div>
-              </div>
-              <button type="button" onClick={function(){onClose(false);}} aria-label="Cerrar recorrido" style={{width:34,height:34,borderRadius:10,border:"1px solid rgba(255,255,255,.20)",background:"rgba(255,255,255,.04)",color:"#dbe5f1",cursor:"pointer",fontSize:18}}>×</button>
-            </div>
-            <div style={{display:"flex",gap:5,marginBottom:24}}>{steps.map(function(_,i){return <div key={i} style={{height:4,flex:1,borderRadius:10,background:i===0?"var(--gold)":"rgba(255,255,255,.09)"}}/>;})}</div>
-            <h2 style={{margin:"0 0 12px",fontSize:28,lineHeight:1.14,color:"#f8fafc",letterSpacing:-.5}}>{current.title}</h2>
-            <p style={{margin:0,fontSize:15,lineHeight:1.75,color:"#dbe5f1",maxWidth:540}}>{current.text}</p>
-            <div style={{marginTop:20,padding:"12px 14px",borderRadius:12,background:"rgba(212,168,83,.07)",border:"1px solid rgba(212,168,83,.16)",fontSize:12.5,color:"#dbe5f1"}}>No necesitás memorizar nada. La idea es que DocWorks te acompañe y te muestre qué hacer en cada etapa.</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginTop:20}}>
-              <button type="button" onClick={function(){onClose(false);}} style={{border:0,background:"transparent",color:"#cbd5e1",cursor:"pointer",fontSize:12.5,padding:"10px 0"}}>Omitir recorrido</button>
-              <button type="button" onClick={avanzar} style={{height:42,padding:"0 21px",borderRadius:11,border:"1px solid rgba(212,168,83,.65)",background:"linear-gradient(135deg,var(--gold),var(--gold2))",color:"#101010",fontWeight:800,cursor:"pointer",boxShadow:"0 5px 18px rgba(212,168,83,.18)"}}>Comenzar recorrido</button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div role="dialog" aria-modal="true" aria-label={current.title} style={Object.assign({},tooltipStyle,tooltipPosition(),{pointerEvents:"auto" as const})}>
-          <div style={{display:"flex",alignItems:"flex-start",gap:11}}>
-            <div style={{width:32,height:32,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(212,168,83,.10)",border:"1px solid rgba(212,168,83,.22)",color:"var(--gold)",fontSize:16,flex:"0 0 auto"}}>{current.icon}</div>
-            <div style={{minWidth:0,flex:1}}>
-              <div style={{fontSize:12,textTransform:"uppercase",letterSpacing:1.1,color:"var(--gold)",fontWeight:800}}>DocWorks · Guía</div>
-              <div style={{fontSize:16,fontWeight:800,lineHeight:1.25,marginTop:2,color:"#f8fafc"}}>{current.title}</div>
-            </div>
-            <button type="button" onClick={function(){onClose(false);}} aria-label="Cerrar recorrido" style={{border:0,background:"transparent",color:"#cbd5e1",cursor:"pointer",fontSize:17,lineHeight:1,padding:2}}>×</button>
-          </div>
-          <p style={{margin:"11px 0 0",fontSize:12.5,lineHeight:1.58,color:"#dbe5f1"}}>{current.text}</p>
-          {!targetRect&&<div style={{marginTop:10,fontSize:12,color:"#cbd5e1"}}>Estoy ubicando este apartado…</div>}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:13}}>
-            <div style={{fontSize:12,color:"#94a3b8"}}>Paso {safeStep} de {steps.length-1}</div>
-            <div style={{display:"flex",gap:7}}>
-              <button type="button" onClick={retroceder} style={{height:34,padding:"0 11px",borderRadius:9,border:"1px solid rgba(255,255,255,.16)",background:"rgba(255,255,255,.04)",color:"#f8fafc",fontSize:12,fontWeight:700,cursor:"pointer"}}>Anterior</button>
-              <button type="button" onClick={avanzar} style={{height:34,padding:"0 13px",borderRadius:9,border:"1px solid rgba(212,168,83,.62)",background:"linear-gradient(135deg,var(--gold),var(--gold2))",color:"#101010",fontSize:12,fontWeight:800,cursor:"pointer"}}>Siguiente</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 const PapeleraView = crearPapeleraView({Btn, ConfirmModal, PAPELERA_DIAS, TIPOS, TIPO_ICON, nombreConSufijo, useState});
 const TareasPanel = crearTareasPanel({Btn, genId, getTareasDeOp, useState});
 const NegociacionPanel = crearNegociacionPanel({Btn, Inp, Slt, Txa, fechaHoyISO, fmt$, fmtD, genId, useState});
@@ -8862,21 +8701,20 @@ function DocWorksApp(){
   const onboardingStorageKey = "docworks_onboarding_seen_v1_" + ((docworksAuth.contexto && docworksAuth.contexto.usuario && docworksAuth.contexto.usuario.id) || "local");
   const [showOnboarding,setShowOnboarding]=useState(false);
   const [showHelpMenu,setShowHelpMenu]=useState(false);
-  const [onboardingStep,setOnboardingStep]=useState(0);
+  const [configDestino,setConfigDestino]=useState({tab:"cuenta",request:0});
+  function irAyuda(v,tab){if(v==="configuracion")setConfigDestino(p=>({tab:tab||"cuenta",request:p.request+1}));setView(v);}
   useEffect(function(){
-    if (!docworksAuth.session || !docworksAuth.contexto || !docworksAuth.contexto.usuario) return;
-    var seen=lsGet(onboardingStorageKey,false);
-    if(!seen){
-      var t=setTimeout(function(){setShowOnboarding(true);setOnboardingStep(0);},650);
-      return function(){clearTimeout(t);};
-    }
-  },[docworksAuth.session,docworksAuth.contexto,onboardingStorageKey]);
+    var c=docworksAuth.contexto;
+    if(!docworksAuth.session||!c||!c.usuario||!perfilNubeCargado||!c.habilitado||!['dueno','admin'].includes(c.usuario.rol_base))return;
+    if(!lsGet(onboardingStorageKey,false)&&!perfil.inicio_inmobiliaria?.completado){var timer=setTimeout(function(){setShowOnboarding(true);},650);return function(){clearTimeout(timer);};}
+  },[docworksAuth.session,docworksAuth.contexto,perfilNubeCargado,onboardingStorageKey,perfil.inicio_inmobiliaria?.completado]);
   function cerrarOnboarding(){
     lsSet(onboardingStorageKey,true);
     setShowOnboarding(false);
   }
   function abrirOnboarding(){
-    setOnboardingStep(0);
+    var role=docworksAuth.contexto?.usuario?.rol_base;
+    if(!["dueno","admin"].includes(role)){setView("dashboard");return;}
     setShowOnboarding(true);
   }
 
@@ -8990,7 +8828,7 @@ function DocWorksApp(){
             })}
             <div className="sidebar-spacer"/>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:7,paddingBottom:8}}>
-              <div style={{position:"relative"}}><button type="button" className="sidebar-bottom-icon" onClick={function(){setShowHelpMenu(function(v){return !v;});}} title="Ayuda" aria-label="Ayuda"><FormalIcon name="help" size={20}/></button>{showHelpMenu&&<div role="menu" style={{position:"absolute",left:42,bottom:0,width:190,zIndex:300,background:"var(--card)",border:"1px solid var(--border2)",borderRadius:10,padding:5,boxShadow:"0 12px 35px rgba(0,0,0,.22)"}}><button type="button" role="menuitem" onClick={function(){setShowHelpMenu(false);abrirOnboarding();}} style={{display:"block",width:"100%",textAlign:"left",padding:"9px 10px",border:0,borderRadius:7,background:"transparent",color:"var(--text)",fontSize:12,cursor:"pointer"}}>Recorrido de DocWorks</button><button type="button" role="menuitem" onClick={function(){setShowHelpMenu(false);setView("clausulas");}} style={{display:"block",width:"100%",textAlign:"left",padding:"9px 10px",border:0,borderRadius:7,background:"transparent",color:"var(--text)",fontSize:12,fontWeight:700,cursor:"pointer"}}>Editar cláusulas</button></div>}</div>
+              <div style={{position:"relative"}}><button type="button" className="sidebar-bottom-icon" onClick={function(){setShowHelpMenu(function(v){return !v;});}} title="Ayuda" aria-label="Ayuda"><FormalIcon name="help" size={20}/></button>{showHelpMenu&&<div role="menu" style={{position:"absolute",left:42,bottom:0,width:190,zIndex:300,background:"var(--card)",border:"1px solid var(--border2)",borderRadius:10,padding:5,boxShadow:"0 12px 35px rgba(0,0,0,.22)"}}><button type="button" role="menuitem" onClick={function(){setShowHelpMenu(false);abrirOnboarding();}} style={{display:"block",width:"100%",textAlign:"left",padding:"9px 10px",border:0,borderRadius:7,background:"transparent",color:"var(--text)",fontSize:12,cursor:"pointer"}}>Preparar mi inmobiliaria</button><button type="button" role="menuitem" onClick={function(){setShowHelpMenu(false);setView("clausulas");}} style={{display:"block",width:"100%",textAlign:"left",padding:"9px 10px",border:0,borderRadius:7,background:"transparent",color:"var(--text)",fontSize:12,fontWeight:700,cursor:"pointer"}}>Editar cláusulas</button><button type="button" role="menuitem" className="btn btn-ghost" style={{width:"100%",justifyContent:"flex-start"}} onClick={function(){setShowHelpMenu(false);irAyuda("configuracion","soporte");}}>Centro de ayuda y soporte</button></div>}</div>
               <button type="button" className="sidebar-bottom-icon" onClick={function(){toggleDark();}} title={darkMode?"Cambiar a modo claro":"Cambiar a modo oscuro"} aria-label={darkMode?"Cambiar a modo claro":"Cambiar a modo oscuro"}>
                 <FormalIcon name={darkMode?"sun":"moon"} size={20}/>
               </button>
@@ -9001,11 +8839,12 @@ function DocWorksApp(){
           <div className="main">
             <div className="content">
               {ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks-landing.vercel.app/#planes" style={{color:"inherit"}}>Ver planes</a></div>}
+              {view!=="configuracion"&&<details style={{marginBottom:14,fontSize:13,border:"1px solid var(--border)",borderRadius:10,padding:"10px 12px"}}><summary style={{cursor:"pointer",color:"var(--dim)"}}>Ayuda para esta pantalla</summary><p style={{lineHeight:1.6,margin:"9px 0"}}>{({dashboard:"Cada operación reúne los datos y documentos del negocio. Usá Nueva operación para empezar; guardá un borrador si todavía te falta información.",clausulas:"Acá se definen los modelos y las cláusulas disponibles. El dueño o administrador prepara la base; cada asesor suma los extras de su operación.",calendario:"Las fechas importantes se toman de las operaciones. Revisá sus datos para corregir un vencimiento o una fecha pendiente.",estadisticas:"Consultá la actividad del equipo según tu rol y permisos. Los resultados dependen de las operaciones cargadas."})[view]||"Encontrá guías y respuestas en el Centro de ayuda."}</p><button type="button" className="btn btn-ghost btn-sm" onClick={function(){irAyuda("configuracion","soporte");}}>Abrir centro de ayuda</button></details>}
               {view==="dashboard"&&<DashboardView operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={function(){setFormFocusCampo(null);setEditOp(null);setFormTipo(null);setShowForm(true);}} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
               {view==="calendario"&&<CalendarioView operaciones={operaciones} onViewOp={function(op){abrirDoc(op);}}/>}
               {view==="clausulas"&&<ClausulasWorkspace key={perfilNube.contexto} perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
               {view==="estadisticas"&&<EstadisticasView onExportarCSV={exportarOperacionesCSV} operaciones={operaciones} equipo={equipo} perfil={perfil} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol}/>}
-              {view==="configuracion"&&<ConfiguracionView onOpenBot={function(){setShowBot(true);}} perfil={perfil} onChange={function(p){ var anterior=perfil; setPerfil(p); return perfilNube.guardarAhora(p).then(function(res){ if(res&&res.error&&!res.contextoObsoleto){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(res.error.message||"Error de comunicación con Supabase.")); } return res; }).catch(function(err){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase.")); return {error:err}; }); }} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol} darkMode={darkMode} onToggleDark={toggleDark} equipo={equipo} equipoSupabase={equipoSupabase} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} onMoveClausula={moveClausula} onDuplicateClausula={duplicateClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} onRetryClausulas={recargarClausulas} papelera={papelera} auditLog={auditLog} auditoriaSupabase={auditoriaSupabase} onExportarRespaldo={exportarRespaldo} onImportarRespaldo={importarRespaldo} onVaciarAuditoria={function(){setAuditLog([]);}} puedeInstalar={!!deferredInstallPrompt} onInstalar={instalarApp} onStartTour={abrirOnboarding} ctx={ctx}/>}
+              {view==="configuracion"&&<ConfiguracionView requestedTab={configDestino} onHelpNavigate={irAyuda} onOpenBot={function(){setShowBot(true);}} perfil={perfil} onChange={function(p){ var anterior=perfil; setPerfil(p); return perfilNube.guardarAhora(p).then(function(res){ if(res&&res.error&&!res.contextoObsoleto){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(res.error.message||"Error de comunicación con Supabase.")); } return res; }).catch(function(err){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase.")); return {error:err}; }); }} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol} darkMode={darkMode} onToggleDark={toggleDark} equipo={equipo} equipoSupabase={equipoSupabase} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} onMoveClausula={moveClausula} onDuplicateClausula={duplicateClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} onRetryClausulas={recargarClausulas} papelera={papelera} auditLog={auditLog} auditoriaSupabase={auditoriaSupabase} onExportarRespaldo={exportarRespaldo} onImportarRespaldo={importarRespaldo} onVaciarAuditoria={function(){setAuditLog([]);}} puedeInstalar={!!deferredInstallPrompt} onInstalar={instalarApp} onStartTour={abrirOnboarding} ctx={ctx}/>}
             </div>
           </div>
         </div>
@@ -9071,14 +8910,11 @@ function DocWorksApp(){
         <button type="button" onClick={function(){setDwNotice(null);}} aria-label="Cerrar aviso" style={{marginLeft:"auto",border:"none",background:"transparent",color:"rgba(255,255,255,.65)",cursor:"pointer",fontSize:16,lineHeight:1}}>×</button>
       </div>}
 
-      <DocWorksOnboarding
-        open={showOnboarding}
-        step={onboardingStep}
-        onStep={setOnboardingStep}
+      {ctx.usuario&&["dueno","admin"].includes(ctx.usuario.rol_base)&&<InicioInmobiliaria key={perfilNube.contexto} open={showOnboarding} perfil={perfil} contexto={ctx}
+        onSave={async function(next){var result=await perfilNube.guardarAhora(next);if(result&&result.error)return result;setPerfil(next);return result;}}
+        onInvite={function(email){return equipoSupabase.invitar(email,"broker","junior");}}
         onClose={cerrarOnboarding}
-        onNavigate={function(v){setView(v);}}
-        role={ctx.usuario ? ctx.usuario.rol_base : perfil.rol}
-      />
+        onCreate={function(tipo){setView("dashboard");setFormFocusCampo(null);setEditOp(null);setFormTipo(tipo);setFormInitialOverride(Object.assign({},EMPTY_OP,{tipo:tipo}));setShowForm(true);}}/>}
 
       <Modal open={showForm} onClose={cerrarFormularioSeguro} closeOnBackdrop={false} title={editOp?"Editar operación":"Nueva operación"} wide={true} operationForm={true} formTipo={formTipo}>
         <OperacionForm initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
