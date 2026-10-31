@@ -310,7 +310,7 @@ body{letter-spacing:-.01em}
 .btn{border-radius:10px;padding:15px 24px;box-shadow:0 14px 34px -20px rgba(212,168,83,.8);letter-spacing:0;transition:transform .2s,box-shadow .2s}
 .btn.ghost{border-color:rgba(240,208,138,.4)}
 .hero{background:radial-gradient(900px 520px at 78% 24%,rgba(212,168,83,.16),transparent 64%),radial-gradient(600px 380px at 5% 95%,rgba(55,58,64,.13),transparent 68%),var(--black);padding:106px 0 114px}
-.hero .wrap{gap:78px;grid-template-columns:1.08fr .92fr}
+.hero .wrap{gap:78px;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}
 .slogan{letter-spacing:.24em;font-size:11px;font-weight:700}
 h1{font-size:clamp(44px,5.5vw,72px);line-height:1.08;letter-spacing:-.035em}
 h2{letter-spacing:-.025em}
@@ -361,7 +361,7 @@ section{padding:102px 0}
 .mobile-cta24{display:none}
 @media(max-width:860px){.trust-grid{grid-template-columns:1fr}.plans{grid-template-columns:1fr!important;max-width:560px;margin-left:auto;margin-right:auto}.plan{padding:26px}.trust-card{padding:24px}}
 @media(max-width:640px){
- body{overflow-x:hidden}.wrap{max-width:100%}.bar .wrap{height:62px}.bar nav{gap:8px}.bar nav .btn{padding:10px 13px;font-size:12px}
+ .wrap{max-width:100%}.bar .wrap{height:62px}.bar nav{gap:8px}.bar nav .btn{padding:10px 13px;font-size:12px}
  .mobile-cta24{display:flex;position:fixed;z-index:29;bottom:calc(10px + env(safe-area-inset-bottom));left:12px;right:12px;justify-content:center;align-items:center;min-height:50px;border-radius:12px;background:#d4a853;color:#111!important;text-decoration:none;font-size:15px;font-weight:800;box-shadow:0 8px 30px #000a}
  body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}.wa{bottom:calc(76px + env(safe-area-inset-bottom));right:12px}.wa .lbl{display:none}
  .plans24 .sub,.trust24 .sub{max-width:100%}.trust-card h3{font-size:18px}
@@ -369,11 +369,29 @@ section{padding:102px 0}
 @media(prefers-reduced-motion:reduce){.plan-action{transition:none}.plan-action:hover{transform:none}}
 </style>
 <style>
-.signup-wrap{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.signup-wrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:48px;align-items:start}
 .signup-card{padding:28px;border:1px solid #334155;border-radius:20px;background:#0b1730;display:grid;gap:16px;color:#f8fafc}
 .signup-card label{display:block;font-size:14px;line-height:1.5}.signup-card input:not([type=checkbox]){display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:13px;border:1px solid #526078;border-radius:10px;background:#070e1d;color:#fff;font:inherit;font-size:16px;min-height:48px}
 .signup-card input:focus-visible{outline:2px solid #d4a853;outline-offset:3px}.signup-card .signup-consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#cbd5e1}.signup-card input[type=checkbox]{margin-top:4px;min-width:18px;min-height:18px}.signup-card button{width:100%;font:inherit;cursor:pointer}.signup-card button:disabled{opacity:.65;cursor:wait}.signup-status{line-height:1.6;font-size:14px}.signup-status[data-error=true]{color:#fca5a5}
 @media(max-width:760px){.signup-wrap{grid-template-columns:1fr;gap:24px}.signup-card{padding:20px}}
+
+/* Mobile layout: columns must shrink to their container, including form controls. */
+.hero .wrap>*,.docs li>*,.signup-wrap>*,.signup-card>*,.two>*,.steps>*,.feat>*{min-width:0}
+.signup-card{min-width:0;max-width:100%}.signup-card input{min-width:0}
+.signup-card label,.signup-status{overflow-wrap:anywhere}
+.track{max-width:100%;min-width:0}.slide{min-width:0}
+@media(max-width:860px){
+ .hero .wrap,.docs li{grid-template-columns:minmax(0,1fr)}
+ .stage{width:100%;max-width:560px;min-width:0}.sheet{transform:none}
+ .docs li{gap:5px}.hero .wrap{gap:40px}
+}
+@media(max-width:640px){
+ body:has(#signup-form:focus-within) .mobile-cta24,body:has(#signup-form:focus-within) .wa{display:none}
+}
+@media(max-width:360px){
+ .bar .wm{font-size:19px}.bar .logo img{height:27px}.bar .logo{gap:5px}
+ .bar nav .btn{padding:9px 10px}.slogan{letter-spacing:.15em}
+}
 </style>
 </head>
 <body>
@@ -402,9 +420,10 @@ section{padding:102px 0}
       <p class="lead">Reservas, boletos y contratos con las cláusulas de tu inmobiliaria. Completá los datos, revisá lo que falta y exportá en PDF o Word desde cualquier dispositivo.</p>
       <div class="cta">
         <!-- WhatsApp: +54 9 11 4479-5880 -->
-        <a class="btn" href="#registro">Probá gratis 14 días</a>
+        <a class="btn" href="#registro">Probá gratis 1 mes</a>
         <a class="btn ghost" href="#app">Conocer la app</a>
       </div>
+      <small style="color:#f0d08a;font-weight:700">Un mes gratis. Sin tarjeta. Sin cobro automático.</small>
       <small>Pensado para inmobiliarias y corredores de Argentina.</small>
     </div>
 
@@ -517,13 +536,13 @@ section{padding:102px 0}
 
 <section id="registro" class="dark" style="scroll-margin-top:90px">
  <div class="wrap signup-wrap">
-  <div><div class="eyebrow">Empezá hoy</div><h2>Tu inmobiliaria, lista para trabajar</h2><p class="sub">Probá DocWorks durante 14 días, sin tarjeta y sin esperar una aprobación.</p><p>Verificá tu email y entrá con los modelos base listos para usar. La prueba comienza al confirmar tu correo.</p><p>Al finalizar, tus datos se conservan y podés elegir un plan para continuar. Sin cobro automático.</p><p>¿Ya tenés cuenta? <a href="https://docworks-eight.vercel.app" target="_self">Ingresar a DocWorks</a></p></div>
+  <div><div class="eyebrow">Empezá hoy</div><h2>Tu inmobiliaria, lista para trabajar</h2><p class="sub">Probá DocWorks durante un mes. Sin tarjeta, sin cobro automático y sin esperar una aprobación.</p><p>Verificá tu email y entrá con los modelos base listos para usar. La prueba comienza al confirmar tu correo.</p><p>Al finalizar, tus datos se conservan y podés elegir un plan para continuar. Sin cobro automático.</p><p>¿Ya tenés cuenta? <a href="https://docworks-eight.vercel.app" target="_self">Ingresar a DocWorks</a></p></div>
   <form id="signup-form" class="signup-card">
     <label for="signup-name">Nombre y apellido<input id="signup-name" name="nombre" autocomplete="name" maxlength="120" required></label>
     <label for="signup-agency">Inmobiliaria<input id="signup-agency" name="inmobiliaria" autocomplete="organization" maxlength="160" required></label>
     <label for="signup-email">Email<input id="signup-email" type="email" name="email" autocomplete="email" maxlength="254" required></label>
     <label for="signup-password">Contraseña<input id="signup-password" type="password" name="password" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="signup-password-help"><small id="signup-password-help">Mínimo 8 caracteres.</small></label>
-    <label class="signup-consent"><input type="checkbox" name="acepto" required><span>Acepto iniciar una prueba de 14 días sin cobro automático. Mis datos se usarán para crear y administrar mi cuenta e inmobiliaria.</span></label>
+    <label class="signup-consent"><input type="checkbox" name="acepto" required><span>Acepto iniciar una prueba de un mes sin cobro automático. Mis datos se usarán para crear y administrar mi cuenta e inmobiliaria.</span></label>
     <button type="submit" class="btn">Crear cuenta gratis</button>
     <div id="signup-status" class="signup-status" role="status" aria-live="polite"></div>
   </form>
@@ -608,7 +627,7 @@ section{padding:102px 0}
   <div class="wrap">
     <div class="lock"><img src="data:image/webp;base64,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" alt="" width="150" height="137"><div class="wm big">Doc<b>Works</b></div><div class="rule"></div><div class="slogan">Automatizá tus documentos</div></div>
     <h2>Probalo con tus propios contratos</h2>
-    <p class="t">Creá tu cuenta, verificá tu email y empezá con los modelos base de tu inmobiliaria. Tenés 14 días gratis, sin tarjeta.</p>
+    <p class="t">Creá tu cuenta, verificá tu email y empezá con los modelos base de tu inmobiliaria. Tenés un mes gratis, sin tarjeta y sin cobro automático.</p>
     <a class="btn" href="#registro">Crear mi cuenta gratis</a>
     <div class="nota">Los modelos son una base de trabajo: conviene que los revise un escribano o abogado de confianza.</div>
   </div>
@@ -636,7 +655,7 @@ section{padding:102px 0}
   tr.addEventListener('keydown',function(e){if(e.key==='ArrowRight')go(idx()+1);if(e.key==='ArrowLeft')go(idx()-1)});
 })();
 </script>
-<a class="mobile-cta24" href="#registro" aria-label="Probá DocWorks gratis">Probá gratis 14 días</a>
+<a class="mobile-cta24" href="#registro" aria-label="Probá DocWorks gratis">Probá gratis 1 mes</a>
 <script>
 (function(){
  var form=document.getElementById('signup-form'), status=document.getElementById('signup-status'), button=form.querySelector('button'), busy=false;
@@ -647,7 +666,7 @@ section{padding:102px 0}
   busy=true;button.disabled=true;button.textContent='Creando cuenta…';status.textContent='';status.dataset.error='false';
   var controller=new AbortController(), timer=setTimeout(function(){controller.abort();},20000);
   try{
-   var response=await fetch("https://xpjiydwjawjizubyldtk.supabase.co/auth/v1/signup?redirect_to=https%3A%2F%2Fdocworks-eight.vercel.app%2F",{method:'POST',headers:{apikey:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwaml5ZHdqYXdqaXp1YnlsZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDYzMzcsImV4cCI6MjEwMzc4MjMzN30.Mi5DilpMg_EGkNZX_ht6jtrmXX9_9Q-Xyo4hnWDEIvI",'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({email:String(values.get('email')).trim().toLowerCase(),password:String(values.get('password')),data:{nombre:nombre,inmobiliaria:inmobiliaria,docworks_registro:'trial_14_v1',consentimiento_prueba:true}})});
+   var response=await fetch("https://xpjiydwjawjizubyldtk.supabase.co/auth/v1/signup?redirect_to=https%3A%2F%2Fdocworks-eight.vercel.app%2F",{method:'POST',headers:{apikey:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwaml5ZHdqYXdqaXp1YnlsZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDYzMzcsImV4cCI6MjEwMzc4MjMzN30.Mi5DilpMg_EGkNZX_ht6jtrmXX9_9Q-Xyo4hnWDEIvI",'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({email:String(values.get('email')).trim().toLowerCase(),password:String(values.get('password')),data:{nombre:nombre,inmobiliaria:inmobiliaria,docworks_registro:'trial_month_v1',consentimiento_prueba:true}})});
    var result=await response.json();
    if(!response.ok){
     if(response.status===429)throw new Error('Esperá unos minutos antes de volver a intentarlo.');

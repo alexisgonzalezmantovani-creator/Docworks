@@ -2,6 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),asse
 const {JSDOM}=require('jsdom');
 (async()=>{
  const html=fs.readFileSync(path.resolve(__dirname,'../landing/index.html'),'utf8');
+ assert.ok(!html.includes('14 días'));assert.ok(html.includes('Probá gratis 1 mes'));assert.ok(html.includes('Un mes gratis. Sin tarjeta. Sin cobro automático.'));
  const dom=new JSDOM(html,{url:'https://docworks.ia',runScripts:'outside-only'});
  let calls=[],resolveRequest;
  dom.window.fetch=(url,options)=>{calls.push({url,options});return new Promise(resolve=>resolveRequest=resolve);};
@@ -10,7 +11,7 @@ const {JSDOM}=require('jsdom');
  const fill=()=>{form.elements.nombre.value=' Ale ';form.elements.inmobiliaria.value=' Prueba ';form.elements.email.value='ALE@example.invalid';form.elements.password.value='Password123';form.elements.acepto.checked=true;};
  const submit=()=>form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
  fill();submit();submit();assert.equal(calls.length,1);assert.equal(button.disabled,true);
- let body=JSON.parse(calls[0].options.body);assert.equal(body.email,'ale@example.invalid');assert.equal(body.data.inmobiliaria,'Prueba');assert.equal(body.data.docworks_registro,'trial_14_v1');assert.equal(body.data.consentimiento_prueba,true);assert.ok(!('rol_base' in body.data));assert.ok(calls[0].url.includes('redirect_to='));
+ let body=JSON.parse(calls[0].options.body);assert.equal(body.email,'ale@example.invalid');assert.equal(body.data.inmobiliaria,'Prueba');assert.equal(body.data.docworks_registro,'trial_month_v1');assert.equal(body.data.consentimiento_prueba,true);assert.ok(!('rol_base' in body.data));assert.ok(calls[0].url.includes('redirect_to='));
  resolveRequest({ok:false,status:429,json:async()=>({})});await new Promise(r=>setTimeout(r,0));assert.match(status.textContent,/Esperá/);assert.equal(button.disabled,false);
  submit();resolveRequest({ok:true,status:200,json:async()=>({id:'test'})});await new Promise(r=>setTimeout(r,0));assert.match(status.textContent,/verificá tu email/);assert.equal(button.hidden,true);assert.equal(form.elements.password.value,'');assert.equal(dom.window.localStorage.length,0);
  console.log('OK landing: formulario, validación, envío único, plazo, errores, confirmación y contraseña descartada');dom.window.close();
@@ -28,7 +29,7 @@ const {JSDOM}=require('jsdom');
  await React.act(async()=>root.render(React.createElement(Harness)));
  assert.match(document.body.textContent,/Probá DocWorks gratis/);
  await React.act(async()=>api.solicitarRegistro({nombre:'Ale',inmobiliaria:'Prueba',email:'ale@example.invalid',password:'Password123',acepto:true}));
- assert.equal(signup.length,1);assert.equal(signup[0].options.emailRedirectTo,'https://docworks-eight.vercel.app/');assert.equal(signup[0].options.data.docworks_registro,'trial_14_v1');assert.match(api.registroSuccess,/verificá tu email/);
+ assert.equal(signup.length,1);assert.equal(signup[0].options.emailRedirectTo,'https://docworks-eight.vercel.app/');assert.equal(signup[0].options.data.docworks_registro,'trial_month_v1');assert.match(api.registroSuccess,/verificá tu email/);
  await React.act(async()=>api.solicitarRegistro({nombre:'',password:'x',acepto:false}));assert.equal(signup.length,1);assert.ok(api.registroError);
  await React.act(async()=>root.unmount());fs.rmSync(tmp,{recursive:true,force:true});appDom.window.close();console.log('OK app: acceso directo, signup, confirmación y validación sin RPC manual');
  process.exit(0);

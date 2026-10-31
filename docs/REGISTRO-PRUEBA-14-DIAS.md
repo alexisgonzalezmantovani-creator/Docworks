@@ -1,4 +1,4 @@
-# Registro directo con prueba de 14 días
+# Registro directo con prueba de un mes
 
 La landing y el registro de la app crean una cuenta Supabase Auth con contraseña y requieren confirmar el email. La confirmación provisiona una inmobiliaria, dueño con permisos senior y membresía Inicial para hasta 3 usuarios. El plazo se calcula en el servidor desde `email_confirmed_at`; las fechas y roles enviados por el cliente no se aceptan.
 
@@ -17,3 +17,11 @@ Al vencer, el contexto bloquea la app y los triggers rechazan escrituras de la p
 - Auth: registro email habilitado y autoconfirmación desactivada, comprobados con la configuración pública del proyecto.
 
 La entrega real del correo y la apertura de su enlace desde un dispositivo necesitan una prueba con un buzón real. Las pruebas de base de datos simulan la confirmación dentro de una transacción revertida; no demuestran entregabilidad SMTP. Se inspeccionaron visualmente la landing y el registro de la app en Chrome de escritorio; falta una prueba en dispositivos iPhone/iPad reales.
+
+## Actualización: un mes de prueba
+
+La migración `prueba_un_mes` reemplaza el plazo por un mes calendario desde la confirmación del email. Acepta `trial_month_v1` y el marcador anterior para no romper enlaces pendientes. La migración original de 14 días se conserva como historial. No había membresías públicas de prueba al aplicar este cambio; las cinco membresías existentes no se modifican.
+
+## Corrección responsive
+
+La portada y los documentos tenían reglas de escritorio que sobrescribían el diseño de una columna en móvil. Se corrigieron las columnas, el ancho mínimo de los hijos de grid y el formulario, y la rotación de la hoja en móvil. Medición en Chrome a 320, 360, 375, 390, 430, 540, 640, 768, 820, 860, 1024 y 1440 px: ancho del documento igual al viewport, sin elementos fuera de pantalla (excluido el carrusel, que conserva su desplazamiento interno). Regresión en `tests/landing-responsive.cjs`, incluida en Chromium/WebKit de CI.

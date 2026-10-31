@@ -6834,11 +6834,11 @@ function RegistroScreen({ onBack, onSubmit, loading, error, success }){
     <form onSubmit={function(e){e.preventDefault();if(!loading)onSubmit({nombre:nombre.trim(),email:email.trim().toLowerCase(),inmobiliaria:inmobiliaria.trim(),password:password,acepto:acepto});}} style={{margin:"auto",width:"100%",maxWidth:410,boxSizing:"border-box",background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:24,display:"flex",flexDirection:"column",gap:14,color:AUTH_TEXT}}>
       <img src={LOGO_B64} alt="DocWorks" style={{height:90,width:"100%",objectFit:"contain"}}/>
       <h1 style={{fontSize:22,margin:0}}>Probá DocWorks gratis</h1>
-      <p style={{fontSize:14,lineHeight:1.5,margin:0,color:AUTH_MUTED}}>14 días para tu inmobiliaria, sin tarjeta. La prueba empieza cuando verificás tu email.</p>
+      <p style={{fontSize:14,lineHeight:1.5,margin:0,color:AUTH_MUTED}}>Un mes gratis para tu inmobiliaria. Sin tarjeta y sin cobro automático. La prueba empieza cuando verificás tu email.</p>
       {error&&<div role="alert" style={{color:AUTH_RED}}>{error}</div>}
       {success?<div role="status" style={{lineHeight:1.5}}>{success}</div>:<>
         {fields.map(function(f){return <div key={f.id}><label htmlFor={"dw-reg-"+f.id} style={{display:"block",fontSize:13,marginBottom:6}}>{f.label}</label><input id={"dw-reg-"+f.id} name={f.id} autoComplete={f.auto} required type={f.type} minLength={f.id==="password"?8:1} maxLength={f.max} value={f.value} onChange={function(e){f.set(e.target.value);}} style={{width:"100%",boxSizing:"border-box",padding:12,borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16}}/></div>;})}
-        <label style={{fontSize:13,lineHeight:1.5,display:"flex",gap:9,alignItems:"flex-start"}}><input type="checkbox" required checked={acepto} onChange={function(e){setAcepto(e.target.checked);}}/>Acepto iniciar una prueba de 14 días sin cobro automático. Mis datos se usarán para crear y administrar mi cuenta e inmobiliaria.</label>
+        <label style={{fontSize:13,lineHeight:1.5,display:"flex",gap:9,alignItems:"flex-start"}}><input type="checkbox" required checked={acepto} onChange={function(e){setAcepto(e.target.checked);}}/>Acepto iniciar una prueba de un mes sin cobro automático. Mis datos se usarán para crear y administrar mi cuenta e inmobiliaria.</label>
         <button type="submit" disabled={loading} style={{padding:13,borderRadius:10,border:0,background:AUTH_GOLD,color:"#1a1206",fontSize:16,fontWeight:700,cursor:"pointer"}}>{loading?"Creando cuenta…":"Crear cuenta gratis"}</button>
       </>}
       <button type="button" onClick={onBack} style={{background:"transparent",border:0,color:AUTH_MUTED,cursor:"pointer",padding:8}}>Ya tengo cuenta · Ingresar</button>
@@ -7080,7 +7080,7 @@ function useDocWorksSession(){
     if(!datos.nombre||!datos.inmobiliaria||!datos.email||!datos.password||datos.password.length<8||!datos.acepto){setRegistroLoading(false);setRegistroError("Completá los datos y aceptá las condiciones de la prueba.");return Promise.resolve({error:true});}
     return loadSupabaseJs().then(function(sb){
       if(!sb)throw new Error("No se pudo conectar con DocWorks.");
-      return sb.auth.signUp({email:datos.email,password:datos.password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{nombre:datos.nombre,inmobiliaria:datos.inmobiliaria,docworks_registro:"trial_14_v1",consentimiento_prueba:true}}});
+      return sb.auth.signUp({email:datos.email,password:datos.password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{nombre:datos.nombre,inmobiliaria:datos.inmobiliaria,docworks_registro:"trial_month_v1",consentimiento_prueba:true}}});
     }).then(function(res){
       if(res.error)throw res.error;
       setRegistroSuccess("Revisá tu correo y verificá tu email para empezar. Si ya tenés cuenta, ingresá o recuperá tu contraseña. No hay cobro automático al finalizar la prueba.");
