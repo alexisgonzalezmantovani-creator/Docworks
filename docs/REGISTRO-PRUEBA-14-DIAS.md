@@ -25,3 +25,7 @@ La migración `prueba_un_mes` reemplaza el plazo por un mes calendario desde la 
 ## Corrección responsive
 
 La portada y los documentos tenían reglas de escritorio que sobrescribían el diseño de una columna en móvil. Se corrigieron las columnas, el ancho mínimo de los hijos de grid y el formulario, y la rotación de la hoja en móvil. Medición en Chrome a 320, 360, 375, 390, 430, 540, 640, 768, 820, 860, 1024 y 1440 px: ancho del documento igual al viewport, sin elementos fuera de pantalla (excluido el carrusel, que conserva su desplazamiento interno). Regresión en `tests/landing-responsive.cjs`, incluida en Chromium/WebKit de CI.
+
+## Registro sin checkbox
+
+Se elimina el checkbox de inicio de prueba en landing y app. El envío del formulario inicia el registro; el mes de prueba sigue comenzando al verificar el email. Ya no se envía `consentimiento_prueba: true` ni se exige esa propiedad en la base de datos. La auditoría registra el origen del alta, sin atribuir una aceptación adicional. Se conserva una nota informativa de uso de los datos. No se agregan enlaces a términos o privacidad inexistentes.
