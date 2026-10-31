@@ -1,3 +1,4 @@
+import { CentroAyuda } from './PrimerosPasos';
 // Módulo extraído sin modificar las declaraciones originales.
 export const EMPTY_OP = {
   tipo:"reserva", estado:"borrador", proceso_estado:"pendiente_aceptacion", reserva_aceptacion_dias:"5", reserva_aceptacion_vencimiento:"", negociacion_historial:[],
@@ -2392,8 +2393,9 @@ return SuperAdminDashboard;
 
 export function crearConfiguracionView(deps){
  const {Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
-function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, currentUserRole, darkMode, onToggleDark, equipo, equipoSupabase, operaciones, clausulas, onAddClausula, onEditClausula, onDeleteClausula, onMoveClausula, onDuplicateClausula, bloquesReserva, onUpdateBloqueReserva, onMoveBloqueReserva, bloquesError, bloquesLoading, onRetryBloques, clausulasError, onRetryClausulas, papelera, auditLog, auditoriaSupabase, onExportarRespaldo, onImportarRespaldo, onVaciarAuditoria, puedeInstalar, onInstalar, onStartTour, ctx }) {
-  const [tab, setTab] = useState("cuenta");
+function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, onChange, currentUserId, currentUserRole, darkMode, onToggleDark, equipo, equipoSupabase, operaciones, clausulas, onAddClausula, onEditClausula, onDeleteClausula, onMoveClausula, onDuplicateClausula, bloquesReserva, onUpdateBloqueReserva, onMoveBloqueReserva, bloquesError, bloquesLoading, onRetryBloques, clausulasError, onRetryClausulas, papelera, auditLog, auditoriaSupabase, onExportarRespaldo, onImportarRespaldo, onVaciarAuditoria, puedeInstalar, onInstalar, onStartTour, ctx }) {
+  const [tab, setTab] = useState(requestedTab?.tab||"cuenta");
+  useEffect(function(){if(requestedTab?.tab)pedirCambioTab(requestedTab.tab);},[requestedTab?.request]);
   const [showInvite, setShowInvite] = useState(false);
   const [editM, setEditM] = useState(null);
   const [form, setForm] = useState({ email:"", rol:"broker", nivel:"junior" });
@@ -2429,10 +2431,13 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
 
   useEffect(function(){ setLocalPerfil(perfil); }, [perfil]);
 
+  function cuerpoSoporte(){return ["Inmobiliaria: "+(perfil.nombre||""),"Usuario: "+(currentUserId||""),"Rol: "+(currentUserRole||perfil.rol||""),"Versión: "+document.title,"Dispositivo: "+navigator.userAgent,"","Mensaje:",supportMessage.trim()].join("\n");}
+  function whatsappSoporte(){if(!supportMessage.trim()){dwNotify("error","Describí el problema antes de continuar.");return;}window.open("https://wa.me/5491144795880?text="+encodeURIComponent(cuerpoSoporte()+(supportPhoto?"\nCaptura: "+supportPhoto.name+" (adjuntar manualmente).":"")),"_blank","noopener,noreferrer");}
   async function enviarSoporte(){
+    if(!supportMessage.trim()){dwNotify("error","Describí el problema antes de continuar.");return;}
     var email=(perfil&&perfil.soporte_email)||(perfil&&perfil.super_admin_email)||"";
     var asunto=(supportSubject||"Soporte DocWorks").trim();
-    var cuerpo=["Usuario: "+(currentUserId||""),"Rol: "+(currentUserRole||perfil.rol||""),"","Mensaje:",supportMessage||""].join("\n");
+    var cuerpo=cuerpoSoporte();
     try{
       // En móviles compatibles, compartir el archivo adjunto directamente permite incluir la captura.
       if(supportPhoto&&typeof navigator!=="undefined"&&navigator.share&&navigator.canShare){
@@ -2440,6 +2445,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
         var shareData={title:asunto,text:cuerpo,files:[file]};
         if(navigator.canShare({files:[file]})){await navigator.share(shareData);setShowSupport(false);setSupportPhoto(null);return;}
       }
+      if(!email){dwNotify("info","Usá WhatsApp para contactar soporte. No hay un correo configurado.");return;}
       var cuerpoFallback=cuerpo+(supportPhoto?"\n\nAdjunto pendiente: "+supportPhoto.name+". Este correo no puede adjuntar archivos automáticamente desde el navegador; adjuntá la imagen manualmente.":"");
       var url="mailto:"+encodeURIComponent(email)+"?subject="+encodeURIComponent(asunto)+"&body="+encodeURIComponent(cuerpoFallback);
       window.location.href=url;setShowSupport(false);
@@ -2612,7 +2618,8 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
   var puedeEditarInstitucional = !esBroker;
   var puedeVerFacturacion = !esBroker && !!perfil && (perfil.rol==="dueno" || perfil.rol==="admin" || rolActual==="dueno" || rolActual==="admin");
   var TABS_CFG = esBroker ? [
-    {id:"cuenta", label:"Mi perfil", icon:"👤"}
+    {id:"cuenta", label:"Mi perfil", icon:"👤"},
+    {id:"soporte", label:"Soporte", icon:"🛟"}
   ] : [
     {id:"cuenta",    label:"Mi cuenta",           icon:"👤"},
     {id:"equipo",    label:"Equipo",               icon:"👥"},
@@ -2840,6 +2847,7 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
 
                 <div className="cuenta-info-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:"12px 14px",alignItems:"start"}}>
                   <Inp label="Nombre de la inmobiliaria" value={localPerfil.nombre||""} onChange={fP("nombre")} placeholder="Inmobiliaria XYZ"/>
+                  <Inp label="Corredor responsable" value={localPerfil.corredor_responsable||""} onChange={fP("corredor_responsable")}/>
                   <Inp label="Matrícula / CMCPSI" value={localPerfil.matricula||""} onChange={fP("matricula")} placeholder="Mat. 1234"/>
                   <Inp label="CUIT de la inmobiliaria" value={localPerfil.cuit||""} onChange={fP("cuit")} placeholder="30-12345678-9"/>
                   <Inp label="Teléfono" value={localPerfil.telefono||""} onChange={fP("telefono")} placeholder="+54 11 1234-5678"/>
@@ -2885,38 +2893,22 @@ function ConfiguracionView({ onOpenBot, perfil, onChange, currentUserId, current
         </div>
       )}
 
-      {tab==="soporte"&&(
-        <div className="config-support-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12,marginTop:16}}>
-          <div className="card" style={{padding:18}}>
-            <div style={{fontSize:22,marginBottom:8}}>✉️</div><div style={{fontSize:15,fontWeight:700,color:"var(--text)"}}>Contactar con soporte</div>
-            <div style={{fontSize:12.5,color:"var(--dim)",lineHeight:1.55,margin:"6px 0 14px"}}>Contanos qué pasó y en qué pantalla. Podés indicar un asunto y describir el problema.</div>
-            <Btn v="primary" onClick={function(){setSupportSubject("");setSupportMessage("");setSupportPhoto(null);setShowSupport(true);}}>Crear consulta</Btn>
-          </div>
-          <div className="card" style={{padding:18}}>
-            <div style={{fontSize:22,marginBottom:8}}>🧭</div><div style={{fontSize:15,fontWeight:700,color:"var(--text)"}}>Primeros pasos</div>
-            <div style={{fontSize:12.5,color:"var(--dim)",lineHeight:1.55,margin:"6px 0 14px"}}>Volvé a recorrer la guía inicial de DocWorks.</div>
-            <Btn v="secondary" onClick={function(){if(typeof onStartTour==="function")onStartTour();else dwNotify("info","El recorrido inicial no está disponible desde esta pantalla.");}}>Iniciar recorrido</Btn>
-          </div>
-          <div className="card" style={{padding:18}}>
-            <div style={{fontSize:22,marginBottom:8}}>✦</div><div style={{fontSize:15,fontWeight:700,color:"var(--text)"}}>Ayuda de IA</div>
-            <div style={{fontSize:12.5,color:"var(--dim)",lineHeight:1.55,margin:"6px 0 14px"}}>Encontrá orientación para usar las funciones y preparar documentos.</div>
-            <Btn v="secondary" onClick={function(){if(typeof onOpenBot==="function")onOpenBot();else dwNotify("info","Abrí el asistente IA desde el botón flotante.");}}>Abrir asistente IA</Btn>
-          </div>
-        </div>
-      )}
+      {tab==="soporte"&&<CentroAyuda role={rolActual} onTour={onStartTour} onOpenBot={onOpenBot}
+        onNavigate={function(v,t){if(v==="configuracion"){pedirCambioTab(t||"cuenta");}else if(onHelpNavigate)onHelpNavigate(v,t);}}
+        onContact={function(){setSupportSubject("");setSupportMessage("");setSupportPhoto(null);setShowSupport(true);}}/>}
 
       {showSupport&&<Modal open={true} onClose={function(){setShowSupport(false);}} title="Contactar soporte">
-        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.55,marginBottom:12}}>Completá el motivo y el detalle. Se abrirá tu correo con el mensaje listo para enviar al canal de soporte configurado por el Super Admin.</div>
+        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.55,marginBottom:12}}>Completá el motivo y el detalle. Elegí el canal para enviar tu consulta. Agregamos la versión y el dispositivo para facilitar el diagnóstico; no incluimos documentos ni contraseñas.</div>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           <Inp label="Asunto" value={supportSubject} onChange={function(e){setSupportSubject(e.target.value);}}/>
           <Field label="Mensaje"><textarea className="inp" rows={7} value={supportMessage} onChange={function(e){setSupportMessage(e.target.value);}} placeholder="Contanos qué ocurrió, en qué pantalla y qué estabas haciendo…" style={{resize:"vertical",minHeight:140}}/></Field>
           <label style={{display:"flex",flexDirection:"column",gap:7,fontSize:12,color:"var(--dim)"}}>Adjuntar captura o foto (opcional)
-            <input type="file" accept="image/*" capture="environment" onChange={function(e){var f=e.target.files&&e.target.files[0];if(!f)return;if(f.size>8*1024*1024){dwNotify("error","La imagen supera los 8 MB. Elegí una más liviana.");e.target.value="";return;}setSupportPhoto(f);}} style={{width:"100%",fontSize:12}}/>
+            <input type="file" accept="image/*" onChange={function(e){var f=e.target.files&&e.target.files[0];if(!f)return;if(f.size>8*1024*1024){dwNotify("error","La imagen supera los 8 MB. Elegí una más liviana.");e.target.value="";return;}setSupportPhoto(f);}} style={{width:"100%",fontSize:12}}/>
             {supportPhoto&&<span style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:8,overflowWrap:"anywhere"}}><span>📎 {supportPhoto.name}</span><button type="button" className="btn btn-ghost" onClick={function(){setSupportPhoto(null);}}>Quitar</button></span>}
           </label>
         </div>
-        {!(perfil&&perfil.soporte_email)&&<div style={{marginTop:10,padding:"9px 11px",borderRadius:9,background:"rgba(251,191,36,.08)",border:"1px solid rgba(251,191,36,.22)",color:"var(--amber)",fontSize:12}}>Si el Super Admin todavía no configuró un correo de soporte, se abrirá el correo sin destinatario para que pueda completarse.</div>}
-        <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:14,flexWrap:"wrap"}}><Btn v="ghost" onClick={function(){setShowSupport(false);}}>Cancelar</Btn><Btn v="success" onClick={enviarSoporte}>Abrir correo para enviar →</Btn></div>
+        {!(perfil&&(perfil.soporte_email||perfil.super_admin_email))&&<div style={{marginTop:10,padding:"9px 11px",borderRadius:9,background:"rgba(251,191,36,.08)",border:"1px solid rgba(251,191,36,.22)",color:"var(--amber)",fontSize:12}}>No hay un correo de soporte configurado. Podés enviar tu consulta por WhatsApp. Las capturas se adjuntan manualmente o desde Compartir.</div>}
+        <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:14,flexWrap:"wrap"}}><Btn v="ghost" onClick={function(){setShowSupport(false);}}>Cancelar</Btn><Btn v="secondary" onClick={whatsappSoporte}>Abrir WhatsApp</Btn><Btn v="success" disabled={!supportMessage.trim()||(!(perfil.soporte_email||perfil.super_admin_email)&&!(supportPhoto&&navigator.share&&navigator.canShare))} onClick={enviarSoporte}>{supportPhoto&&navigator.share&&navigator.canShare?"Compartir consulta y captura":"Abrir correo para enviar"}</Btn></div>
       </Modal>}
 
       {/* ── MODAL: confirmar importación de respaldo ── */}
