@@ -6834,7 +6834,7 @@ function RegistroScreen({ onBack, onSubmit, loading, error, success }){
     <form onSubmit={function(e){e.preventDefault();if(!loading)onSubmit({nombre:nombre.trim(),email:email.trim().toLowerCase(),inmobiliaria:inmobiliaria.trim(),password:password,acepto:acepto});}} style={{margin:"auto",width:"100%",maxWidth:410,boxSizing:"border-box",background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:24,display:"flex",flexDirection:"column",gap:14,color:AUTH_TEXT}}>
       <img src={LOGO_B64} alt="DocWorks" style={{height:90,width:"100%",objectFit:"contain"}}/>
       <h1 style={{fontSize:22,margin:0}}>Probá DocWorks gratis</h1>
-      <p style={{fontSize:14,lineHeight:1.5,margin:0,color:AUTH_MUTED}}>Un mes para tu inmobiliaria, sin tarjeta. La prueba empieza cuando verificás tu email.</p>
+      <p style={{fontSize:14,lineHeight:1.5,margin:0,color:AUTH_MUTED}}>Un mes gratis para tu inmobiliaria. Sin tarjeta y sin cobro automático. La prueba empieza cuando verificás tu email.</p>
       {error&&<div role="alert" style={{color:AUTH_RED}}>{error}</div>}
       {success?<div role="status" style={{lineHeight:1.5}}>{success}</div>:<>
         {fields.map(function(f){return <div key={f.id}><label htmlFor={"dw-reg-"+f.id} style={{display:"block",fontSize:13,marginBottom:6}}>{f.label}</label><input id={"dw-reg-"+f.id} name={f.id} autoComplete={f.auto} required type={f.type} minLength={f.id==="password"?8:1} maxLength={f.max} value={f.value} onChange={function(e){f.set(e.target.value);}} style={{width:"100%",boxSizing:"border-box",padding:12,borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16}}/></div>;})}

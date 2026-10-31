@@ -19,6 +19,11 @@ const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/ht
    assert.match(await page.locator('#registro').innerText(),/durante un mes/);assert.ok(!(await page.locator('body').innerText()).includes('14 días'));
    console.log(`OK ${engine} landing ${width}px: sin desborde, formulario y prueba de un mes`);
   }
+  for(const viewport of [{width:844,height:390},{width:1180,height:820}]){
+   await page.setViewportSize(viewport);await page.goto('http://127.0.0.1:'+server.address().port);
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),`${engine} horizontal ${viewport.width}x${viewport.height}`);
+   console.log(`OK ${engine} landing horizontal ${viewport.width}x${viewport.height}`);
+  }
   // Gallery keeps its own horizontal scroll without widening the document.
   assert.ok(await page.locator('#track').evaluate(e=>e.scrollWidth>e.clientWidth));
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}

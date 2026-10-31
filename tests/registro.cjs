@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),asse
 const {JSDOM}=require('jsdom');
 (async()=>{
  const html=fs.readFileSync(path.resolve(__dirname,'../landing/index.html'),'utf8');
- assert.ok(!html.includes('14 días'));assert.ok(html.includes('Probá gratis 1 mes'));
+ assert.ok(!html.includes('14 días'));assert.ok(html.includes('Probá gratis 1 mes'));assert.ok(html.includes('Un mes gratis. Sin tarjeta. Sin cobro automático.'));
  const dom=new JSDOM(html,{url:'https://docworks.ia',runScripts:'outside-only'});
  let calls=[],resolveRequest;
  dom.window.fetch=(url,options)=>{calls.push({url,options});return new Promise(resolve=>resolveRequest=resolve);};
