@@ -12,7 +12,7 @@ export function InicioInmobiliaria({open,perfil,contexto,onSave,onInvite,onClose
  if(!open)return null;
  async function guardar(next:number,finished=false){
   setBusy(true);setError('');
-  try{const p={...perfil,...datos,inicio_inmobiliaria:{paso:next,completado:finished,version:1}};const r=await onSave(p);if(r?.error)throw r.error;setStep(next);if(finished)localStorage.removeItem(key);return true;}
+  try{const p={...perfil,...datos,inicio_inmobiliaria:{paso:next,completado:finished,version:1}};const r=await onSave(p);if(r?.error)throw r.error;setStep(next);if(finished)try{localStorage.removeItem(key);}catch{}return true;}
   catch(e:any){setError(e.message||'No se pudo guardar. Revisá tu conexión e intentá de nuevo.');return false;}finally{setBusy(false);}
  }
  async function invitar(){if(!email.trim())return;setBusy(true);setError('');try{const address=email.trim().toLowerCase();const r=await onInvite(address);if(r?.error)throw r.error;setInvites(xs=>xs.includes(address)?xs:xs.concat(address));setEmail('');}catch(e:any){setError(e.message||'No se pudo crear la invitación.');}finally{setBusy(false);}}
