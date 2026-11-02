@@ -1,0 +1,195 @@
+[
+  {
+    "tipo": "constraints",
+    "datos": [
+      {
+        "tabla": "auditoria",
+        "nombre": "auditoria_autorizado_por_fkey",
+        "definicion": "FOREIGN KEY (autorizado_por) REFERENCES usuarios(id)"
+      },
+      {
+        "tabla": "auditoria",
+        "nombre": "auditoria_inmobiliaria_id_fkey",
+        "definicion": "FOREIGN KEY (inmobiliaria_id) REFERENCES inmobiliarias(id) ON DELETE CASCADE"
+      },
+      {
+        "tabla": "auditoria",
+        "nombre": "auditoria_pkey",
+        "definicion": "PRIMARY KEY (id)"
+      },
+      {
+        "tabla": "auditoria",
+        "nombre": "auditoria_solicitud_id_fkey",
+        "definicion": "FOREIGN KEY (solicitud_id) REFERENCES solicitudes_autorizacion(id)"
+      },
+      {
+        "tabla": "auditoria",
+        "nombre": "auditoria_usuario_id_fkey",
+        "definicion": "FOREIGN KEY (usuario_id) REFERENCES usuarios(id)"
+      },
+      {
+        "tabla": "documento_versiones",
+        "nombre": "documento_versiones_creado_por_fkey",
+        "definicion": "FOREIGN KEY (creado_por) REFERENCES usuarios(id)"
+      },
+      {
+        "tabla": "documento_versiones",
+        "nombre": "documento_versiones_inmobiliaria_id_fkey",
+        "definicion": "FOREIGN KEY (inmobiliaria_id) REFERENCES inmobiliarias(id) ON DELETE CASCADE"
+      },
+      {
+        "tabla": "documento_versiones",
+        "nombre": "documento_versiones_operacion_id_fkey",
+        "definicion": "FOREIGN KEY (operacion_id) REFERENCES operaciones(id) ON DELETE CASCADE"
+      },
+      {
+        "tabla": "documento_versiones",
+        "nombre": "documento_versiones_operacion_version_key",
+        "definicion": "UNIQUE (operacion_id, version)"
+      },
+      {
+        "tabla": "documento_versiones",
+        "nombre": "documento_versiones_pkey",
+        "definicion": "PRIMARY KEY (id)"
+      },
+      {
+        "tabla": "operaciones",
+        "nombre": "operaciones_actualizado_por_fkey",
+        "definicion": "FOREIGN KEY (actualizado_por) REFERENCES usuarios(id)"
+      },
+      {
+        "tabla": "operaciones",
+        "nombre": "operaciones_creado_por_fkey",
+        "definicion": "FOREIGN KEY (creado_por) REFERENCES usuarios(id)"
+      },
+      {
+        "tabla": "operaciones",
+        "nombre": "operaciones_eliminado_por_fkey",
+        "definicion": "FOREIGN KEY (eliminado_por) REFERENCES usuarios(id)"
+      },
+      {
+        "tabla": "operaciones",
+        "nombre": "operaciones_inmobiliaria_id_fkey",
+        "definicion": "FOREIGN KEY (inmobiliaria_id) REFERENCES inmobiliarias(id)"
+      },
+      {
+        "tabla": "operaciones",
+        "nombre": "operaciones_parent_id_fkey",
+        "definicion": "FOREIGN KEY (parent_id) REFERENCES operaciones(id)"
+      },
+      {
+        "tabla": "operaciones",
+        "nombre": "operaciones_pkey",
+        "definicion": "PRIMARY KEY (id)"
+      },
+      {
+        "tabla": "usuarios",
+        "nombre": "usuarios_id_fkey",
+        "definicion": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      },
+      {
+        "tabla": "usuarios",
+        "nombre": "usuarios_inmobiliaria_id_fkey",
+        "definicion": "FOREIGN KEY (inmobiliaria_id) REFERENCES inmobiliarias(id) ON DELETE CASCADE"
+      },
+      {
+        "tabla": "usuarios",
+        "nombre": "usuarios_pkey",
+        "definicion": "PRIMARY KEY (id)"
+      }
+    ]
+  },
+  {
+    "tipo": "schema_usage",
+    "datos": [
+      {
+        "authenticated": false
+      }
+    ]
+  },
+  {
+    "tipo": "table_privileges",
+    "datos": [
+      {
+        "rol": "authenticated",
+        "tabla": "auditoria",
+        "privilegio": "SELECT"
+      },
+      {
+        "rol": "anon",
+        "tabla": "documento_versiones",
+        "privilegio": "INSERT"
+      },
+      {
+        "rol": "anon",
+        "tabla": "documento_versiones",
+        "privilegio": "SELECT"
+      },
+      {
+        "rol": "anon",
+        "tabla": "documento_versiones",
+        "privilegio": "UPDATE"
+      },
+      {
+        "rol": "anon",
+        "tabla": "documento_versiones",
+        "privilegio": "DELETE"
+      },
+      {
+        "rol": "anon",
+        "tabla": "documento_versiones",
+        "privilegio": "TRUNCATE"
+      },
+      {
+        "rol": "anon",
+        "tabla": "documento_versiones",
+        "privilegio": "REFERENCES"
+      },
+      {
+        "rol": "anon",
+        "tabla": "documento_versiones",
+        "privilegio": "TRIGGER"
+      },
+      {
+        "rol": "authenticated",
+        "tabla": "documento_versiones",
+        "privilegio": "INSERT"
+      },
+      {
+        "rol": "authenticated",
+        "tabla": "documento_versiones",
+        "privilegio": "SELECT"
+      },
+      {
+        "rol": "authenticated",
+        "tabla": "documento_versiones",
+        "privilegio": "UPDATE"
+      },
+      {
+        "rol": "authenticated",
+        "tabla": "documento_versiones",
+        "privilegio": "DELETE"
+      },
+      {
+        "rol": "authenticated",
+        "tabla": "documento_versiones",
+        "privilegio": "TRUNCATE"
+      },
+      {
+        "rol": "authenticated",
+        "tabla": "documento_versiones",
+        "privilegio": "REFERENCES"
+      },
+      {
+        "rol": "authenticated",
+        "tabla": "documento_versiones",
+        "privilegio": "TRIGGER"
+      },
+      {
+        "rol": "authenticated",
+        "tabla": "operaciones",
+        "privilegio": "SELECT"
+      }
+    ]
+  }
+]

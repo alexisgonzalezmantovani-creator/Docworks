@@ -1,0 +1,30 @@
+{
+  "fecha": "2026-11-02",
+  "navegador": "Chromium, iframe con dimensiones controladas",
+  "datos": "ficticios",
+  "servicios": "simulados",
+  "produccion_modificada": false,
+  "combinaciones_preview": 24,
+  "modelos_por_dimension": 8,
+  "dimensiones_preview": [[390,844],[820,1180],[1180,820]],
+  "desbordamientos_horizontales_preview_observados": 0,
+  "control_cerrar_visible_en_las_24": true,
+  "listado_anchos_adicionales": [
+    {"viewport": 430, "contenido": 424},
+    {"viewport": 1440, "contenido": 1434}
+  ],
+  "solo_lectura": {
+    "menu_390": ["Compartir","Historial de acciones"],
+    "papelera_820": {"restaurar":0,"eliminar_o_vaciar":0}
+  },
+  "asesor_listado_820_estable": {"operaciones":8,"botones_editar":8},
+  "constructor_sintaxis": "node --check: exit 0",
+  "constructor_bundle": "esbuild: exit 0",
+  "limites": [
+    "No dispositivo físico, Safari ni iOS",
+    "No autenticación real ni backend Supabase de prueba",
+    "No concurrencia entre conexiones",
+    "No prueba real de Gemini",
+    "Los conteos transitorios durante cambios de rol no se usan para acreditar permisos"
+  ]
+}

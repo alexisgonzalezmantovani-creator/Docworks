@@ -1,3 +1,4 @@
+import { permisosOperacion } from './AccionesOperaciones';
 import { CentroAyuda } from './PrimerosPasos';
 // Módulo extraído sin modificar las declaraciones originales.
 export const EMPTY_OP = {
@@ -3648,8 +3649,10 @@ export function crearDashboardView(deps){
 
 
 
-function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExport,onNew,onEdit,onEditField,onDelete,onChangeEstado,onConvertir,onConvertirComodato,onConvertirRefuerzo,onConvertirBoleto,onConvertirDevolucion,onDuplicar,onViewDoc,onPerfil,onExportarCSV,onRestoreVersion,searchOverride,papelera,onRestore,onDeletePermanente,onVaciarPapelera,confirmVaciarPapelera,setConfirmVaciarPapelera,papeleraJump,error,papeleraError,onRetry,loading}){
+function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,bloquesReserva,onAuditExport,onNew,onEdit,onEditField,onDelete,onChangeEstado,onConvertir,onConvertirComodato,onConvertirRefuerzo,onConvertirBoleto,onConvertirDevolucion,onDuplicar,onViewDoc,onPerfil,onExportarCSV,onRestoreVersion,searchOverride,papelera,onRestore,onDeletePermanente,onVaciarPapelera,confirmVaciarPapelera,setConfirmVaciarPapelera,papeleraJump,error,papeleraError,onRetry,loading}){
 
+  var actor=usuarioActual||{rol_base:perfil&&perfil.rol};
+  var permisosGenerales=permisosOperacion(actor);
   const [search,setSearch]=useState("");
   const [filtroTipo,setFiltroTipo]=useState(function(){return lsGet("dashboard_filtro_tipo_v1","todos");});
   useEffect(function(){lsSet("dashboard_filtro_tipo_v1",filtroTipo||"todos");},[filtroTipo]);
@@ -3776,7 +3779,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
     if(validacion.errores.length&&!forzar){
       var campo=campoPrincipalErrorExport(op,perfil,validacion.errores);
       var detalle=<div><div style={{fontWeight:700,color:"var(--red)",marginBottom:6}}>Al documento le faltan estos datos:</div><ul style={{margin:"0 0 8px",paddingLeft:18,display:"flex",flexDirection:"column",gap:4}}>{validacion.errores.map(function(e,i){return <li key={i} style={{fontSize:13}}>{e}</li>;})}</ul><div style={{fontSize:12,color:"var(--dim)"}}>Podés completarlos ahora o compartirlo igual (puede salir incompleto).</div></div>;
-      requestDwConfirm(detalle,function(){shareWhatsApp(op,true);},"Compartir borrador",{label:"Completar datos",onClick:function(){if(onEditField)onEditField(op,campo);else onEdit(op);}});
+      requestDwConfirm(detalle,function(){shareWhatsApp(op,true);},"Compartir borrador",{label:permisosOperacion(actor,op).editar?"Completar datos":"Abrir documento",onClick:function(){if(!permisosOperacion(actor,op).editar){onViewDoc(op);return;}if(onEditField)onEditField(op,campo);else onEdit(op);}});
       return;
     }
     setSharingId(op.id);
@@ -3802,6 +3805,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
   const enPapelera = estadoTab==="papelera";
 
   function renderOpRow(op,nested,folder=undefined){
+    var permisos=permisosOperacion(actor,op);
     const monto=getMonto(op),esResAlq=op.tipo==="reserva_alquiler",esReserva=op.tipo==="reserva";
     const hijosOp=childrenMap[op.id]||[];
     const compartiendo=sharingId===op.id;
@@ -3810,17 +3814,17 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
     const menuItems=[
       {label:"Compartir",icon:<DWIcon name="share" size={13}/>,onClick:function(){shareWhatsApp(op);}},
       {label:"Historial de acciones",icon:<DWIcon name="clock" size={13}/>,onClick:function(){setHistorialOp(op);}},
-      {label:"Duplicar",icon:<DWIcon name="duplicate" size={13}/>,onClick:function(){onDuplicar(op);}},
-      op.estado!=="activo"?{label:"Marcar activo",icon:<DWIcon name="check" size={13}/>,onClick:function(){onChangeEstado(op.id,"activo");}}:null,
-      op.estado!=="cerrado"?{label:"Marcar cerrado",icon:<DWIcon name="ban" size={13}/>,onClick:function(){onChangeEstado(op.id,"cerrado");}}:null,
-      {label:"Eliminar",icon:<DWIcon name="trash" size={13}/>,red:true,onClick:function(){eliminarConEfecto(op.id);}},
+      permisosGenerales.crear?{label:"Duplicar",icon:<DWIcon name="duplicate" size={13}/>,onClick:function(){onDuplicar(op);}}:null,
+      permisos.editar&&op.estado!=="activo"?{label:"Marcar activo",icon:<DWIcon name="check" size={13}/>,onClick:function(){onChangeEstado(op.id,"activo");}}:null,
+      permisos.editar&&op.estado!=="cerrado"?{label:"Marcar cerrado",icon:<DWIcon name="ban" size={13}/>,onClick:function(){onChangeEstado(op.id,"cerrado");}}:null,
+      permisos.papelera?{label:"Eliminar",icon:<DWIcon name="trash" size={13}/>,red:true,onClick:function(){eliminarConEfecto(op.id);}}:null,
     ].filter(Boolean);
     var removiendo = !!removingIds[op.id];
 
     const acciones=(
       <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
         <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
-        <Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>
+        {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}
         <Dropdown items={menuItems}/>
       </div>
     );
@@ -3899,7 +3903,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
             </div>
             {(()=>{var pp=getProximoPasoOperacion(op,operaciones);return <div style={{marginTop:9,padding:"7px 9px",borderRadius:8,background:"rgba(212,168,83,.045)",border:"1px solid rgba(212,168,83,.12)",fontSize:12,color:pp.tone,fontWeight:750,display:"inline-flex",alignItems:"center",gap:5}}><span>{pp.icon}</span>{pp.texto}</div>;})()}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginTop:10}}>
-              {(esReserva||esResAlq)?(function(){var opts=opcionesDoc(op);var faltan=opts.filter(function(o){return !hijosOp.some(function(h){return h.tipo===o.tipo;});}).length;return <Btn v={faltan>0?"orange":"secondary"} s="sm" onClick={function(){setAddDocFor(op);}}><DWIcon name="link" size={12} strokeWidth={2}/> {hijosOp.length>0?"Vinculados ("+hijosOp.length+")":"Agregar documento"}</Btn>;})():<span/>}
+              {(esReserva||esResAlq)&&permisos.convertir?(function(){var opts=opcionesDoc(op);var faltan=opts.filter(function(o){return !hijosOp.some(function(h){return h.tipo===o.tipo;});}).length;return <Btn v={faltan>0?"orange":"secondary"} s="sm" onClick={function(){setAddDocFor(op);}}><DWIcon name="link" size={12} strokeWidth={2}/> {hijosOp.length>0?"Vinculados ("+hijosOp.length+")":"Agregar documento"}</Btn>;})():<span/>}
             </div>
           </div>
           <div className="op-card-side">
@@ -3918,7 +3922,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
     <div className="dw-dashboard-root">
       <div className="section-header" style={{marginBottom:18}}>
         <div><div className="section-title">Operaciones</div><div className="section-sub">Tus carpetas de trabajo, con todos sus documentos vinculados en un solo lugar.</div></div>
-        {!enPapelera&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
+        {!enPapelera&&permisosGenerales.crear&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
       </div>
       <div className="dw-dashboard-overview" aria-label="Resumen de operaciones">
         {[{label:"Todas",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"},{label:"Papelera",value:papelera.length,icon:"trash",tab:"papelera"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat"+(estadoTab===item.tab?" is-selected":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value">{item.value}</span></button>;})}
@@ -3928,7 +3932,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
       {loading && operaciones.length===0 && <div style={{marginBottom:16,fontSize:12.5,color:"var(--muted)"}}>Cargando tus operaciones…</div>}
 
       {enPapelera ? (
-        <PapeleraView embedded={true} papelera={papelera} onRestore={onRestore} onDeletePermanente={onDeletePermanente} onVaciar={onVaciarPapelera} confirmVaciar={confirmVaciarPapelera} setConfirmVaciar={setConfirmVaciarPapelera}/>
+        <PapeleraView puedeGestionar={permisosGenerales.papelera} embedded={true} papelera={papelera} onRestore={onRestore} onDeletePermanente={onDeletePermanente} onVaciar={onVaciarPapelera} confirmVaciar={confirmVaciarPapelera} setConfirmVaciar={setConfirmVaciarPapelera}/>
       ) : (
       <>
       <div className="filter-row dw-dashboard-toolbar">
@@ -4016,7 +4020,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
                           )}
                         </div>
                         <Btn v={creado?"secondary":"primary"} s="sm" onClick={function(){
-                          if(creado){ setAddDocFor(null); onEdit(creado); }
+                          if(creado){ setAddDocFor(null); if(permisosOperacion(actor,creado).editar)onEdit(creado);else onViewDoc(creado); }
                           else { setAddDocFor(null); o.accion(addDocFor); }
                         }}>
                           {creado?"Abrir":"Crear"}
@@ -4041,7 +4045,7 @@ function DashboardView({operaciones,clausulas,perfil,bloquesReserva,onAuditExpor
         <div style={{marginTop:18,paddingTop:16,borderTop:"1px solid var(--border)"}}>
           <div style={{fontSize:13,fontWeight:800,color:"var(--text)",marginBottom:4}}>Versiones recuperables del documento</div>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:10}}>Cada edición real guarda automáticamente la versión anterior en Supabase. Podés restaurarla; la versión actual también quedará conservada como una nueva versión.</div>
-          {versionesLoading?<div style={{fontSize:12,color:"var(--dim)",padding:"10px 0"}}>Cargando versiones…</div>:versionesOp.length===0?<div style={{fontSize:12,color:"var(--dim)",padding:"10px 0"}}>Todavía no hay versiones anteriores guardadas.</div>:<div style={{display:"flex",flexDirection:"column",gap:7}}>{versionesOp.map(function(v){var snap=v.documento||{},sd=snap.datos||{};return <div key={v.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 11px",border:"1px solid var(--border)",borderRadius:10}}><div style={{minWidth:0}}><div style={{fontSize:12,fontWeight:700,color:"var(--text)"}}>Versión {v.version} · {TIPOS[v.tipo_documento]||v.tipo_documento||"Documento"}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{v.creado_en?new Date(v.creado_en).toLocaleString("es-AR"):"—"}{sd.inmueble_direccion?" · "+sd.inmueble_direccion:""}</div></div><Btn v="secondary" s="sm" onClick={function(){requestDwConfirm("¿Restaurar la versión "+v.version+"? La versión actual quedará guardada en el historial.",function(){onRestoreVersion(v);});}}>Restaurar</Btn></div>;})}</div>}
+          {versionesLoading?<div style={{fontSize:12,color:"var(--dim)",padding:"10px 0"}}>Cargando versiones…</div>:versionesOp.length===0?<div style={{fontSize:12,color:"var(--dim)",padding:"10px 0"}}>Todavía no hay versiones anteriores guardadas.</div>:<div style={{display:"flex",flexDirection:"column",gap:7}}>{versionesOp.map(function(v){var snap=v.documento||{},sd=snap.datos||{};return <div key={v.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 11px",border:"1px solid var(--border)",borderRadius:10}}><div style={{minWidth:0}}><div style={{fontSize:12,fontWeight:700,color:"var(--text)"}}>Versión {v.version} · {TIPOS[v.tipo_documento]||v.tipo_documento||"Documento"}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{v.creado_en?new Date(v.creado_en).toLocaleString("es-AR"):"—"}{sd.inmueble_direccion?" · "+sd.inmueble_direccion:""}</div></div>{permisosOperacion(actor,historialOp).editar&&<Btn v="secondary" s="sm" onClick={function(){requestDwConfirm("¿Restaurar la versión "+v.version+"? La versión actual quedará guardada en el historial.",function(){onRestoreVersion(v);});}}>Restaurar</Btn>}</div>;})}</div>}
         </div>
       </Modal>
       <ConfirmModal
@@ -4825,7 +4829,7 @@ export function crearOperacionForm(deps){
  const {AutosaveIndicator, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
-function OperacionForm({initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
+function OperacionForm({contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
   const [grupo,setGrupo]=useState(initial ? (
     ["reserva","boleto"].includes(initial.tipo)?"compra":
     ["alquiler","reserva_alquiler"].includes(initial.tipo)?"alquiler":
@@ -4908,12 +4912,12 @@ function OperacionForm({initial,clausulas,perfil,equipo,operaciones,onSave,onCan
   const dataRef = useRef(data);
   useEffect(function(){ dataRef.current=data; }, [data]);
   const draftPayload = useMemo(function(){
-    return draftTieneContenido(data) ? { data:data, editId:initialIdRef.current } : null;
-  }, [data]);
+    return draftTieneContenido(data) ? { data:data, editId:initialIdRef.current, contexto:contextoBorrador||null } : null;
+  }, [data,contextoBorrador&&contextoBorrador.inmobiliariaId,contextoBorrador&&contextoBorrador.usuarioId]);
   function guardarDraftLocalAhora(){
     var actual=dataRef.current;
     if(!draftTieneContenido(actual)) return true;
-    return lsSet("draftOperacion", {data:actual, editId:initialIdRef.current, ts:Date.now()});
+    return lsSet("draftOperacion", {data:actual, editId:initialIdRef.current, contexto:contextoBorrador||null, ts:Date.now()});
   }
   // En el formulario el guardado es inmediato (sin debounce): cada cambio de un
   // campo se escribe en el navegador antes de seguir con el siguiente paso.
@@ -5147,7 +5151,7 @@ export function crearPapeleraView(deps){
 // ── PAPELERA VIEW ──────────────────────────────────────────────────────────────
 // Operaciones eliminadas: quedan acá 30 días (recuperables) antes de purgarse
 // automáticamente. También se pueden restaurar o eliminar en forma definitiva.
-function PapeleraView({papelera,onRestore,onDeletePermanente,onVaciar,confirmVaciar,setConfirmVaciar,embedded}){
+function PapeleraView({puedeGestionar=false,papelera,onRestore,onDeletePermanente,onVaciar,confirmVaciar,setConfirmVaciar,embedded}){
   const [confirmDelId,setConfirmDelId]=useState(null);
   function diasRestantes(deletedAt){
     var venc=new Date(deletedAt).getTime()+PAPELERA_DIAS*24*60*60*1000;
@@ -5160,13 +5164,13 @@ function PapeleraView({papelera,onRestore,onDeletePermanente,onVaciar,confirmVac
       {!embedded&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18,flexWrap:"wrap",gap:10}}>
         <div>
           <h2 style={{fontFamily:"DM Serif Display,serif",fontSize:24,color:"var(--text)",margin:0}}>🗑 Papelera</h2>
-          <p style={{fontSize:12.5,color:"var(--muted)",marginTop:4}}>Las operaciones eliminadas se conservan 30 días y después se borran solas. Podés restaurarlas antes de eso.</p>
+          <p style={{fontSize:12.5,color:"var(--muted)",marginTop:4}}>La purga de operaciones con más de 30 días en papelera se solicita al recargar con un rol autorizado.</p>
         </div>
-        {papelera.length>0&&<Btn v="danger" s="sm" onClick={function(){setConfirmVaciar(true);}}>Vaciar papelera</Btn>}
+        {puedeGestionar&&papelera.length>0&&<Btn v="danger" s="sm" onClick={function(){setConfirmVaciar(true);}}>Vaciar papelera</Btn>}
       </div>}
       {embedded&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:10}}>
-        <p style={{fontSize:12.5,color:"var(--muted)",margin:0}}>Las operaciones eliminadas se conservan 30 días y después se borran solas. Podés restaurarlas antes de eso.</p>
-        {papelera.length>0&&<Btn v="danger" s="sm" onClick={function(){setConfirmVaciar(true);}}>Vaciar papelera</Btn>}
+        <p style={{fontSize:12.5,color:"var(--muted)",margin:0}}>La purga de operaciones con más de 30 días en papelera se solicita al recargar con un rol autorizado.</p>
+        {puedeGestionar&&papelera.length>0&&<Btn v="danger" s="sm" onClick={function(){setConfirmVaciar(true);}}>Vaciar papelera</Btn>}
       </div>}
       {papelera.length===0&&(
         <div className="op-card" style={{textAlign:"center",padding:"40px 20px",color:"var(--dim)"}}>
@@ -5184,22 +5188,22 @@ function PapeleraView({papelera,onRestore,onDeletePermanente,onVaciar,confirmVac
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:5}}>
                     <span className="badge badge-tipo">{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]}</span>
                     <span style={{fontSize:12,color:"var(--dim)"}}>Eliminada el {new Date(op.deleted_at).toLocaleDateString("es-AR")}</span>
-                    <span style={{fontSize:12,padding:"1px 8px",borderRadius:20,background:dias<=5?"rgba(248,113,113,0.12)":"rgba(255,255,255,0.06)",color:dias<=5?"var(--red)":"var(--dim)"}}>{dias>0?dias+" días restantes":"Se elimina hoy"}</span>
+                    <span style={{fontSize:12,padding:"1px 8px",borderRadius:20,background:dias<=5?"rgba(248,113,113,0.12)":"rgba(255,255,255,0.06)",color:dias<=5?"var(--red)":"var(--dim)"}}>{dias>0?dias+" días restantes":"Pendiente de purga"}</span>
                   </div>
                   <div style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>{getName(op)}</div>
                   <div style={{fontSize:12,color:"var(--dim)"}}>{op.inmueble_direccion?"📍 "+op.inmueble_direccion:"Sin dirección"}</div>
                 </div>
-                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                {puedeGestionar&&<div style={{display:"flex",gap:6,flexShrink:0}}>
                   <Btn v="secondary" s="sm" onClick={function(){onRestore(op.id);}}>↩ Restaurar</Btn>
                   <Btn v="danger" s="sm" onClick={function(){setConfirmDelId(op.id);}}>Eliminar def.</Btn>
-                </div>
+                </div>}
               </div>
             </div>
           );
         })}
       </div>
       <ConfirmModal
-        open={!!confirmDelId}
+        open={puedeGestionar&&!!confirmDelId}
         title="Eliminar definitivamente"
         message="Esta operación se borrará para siempre y no se podrá recuperar. ¿Confirmás?"
         confirmLabel="Eliminar para siempre"
@@ -5208,7 +5212,7 @@ function PapeleraView({papelera,onRestore,onDeletePermanente,onVaciar,confirmVac
         onConfirm={function(){onDeletePermanente(confirmDelId);setConfirmDelId(null);}}
       />
       <ConfirmModal
-        open={!!confirmVaciar}
+        open={puedeGestionar&&!!confirmVaciar}
         title="Vaciar papelera"
         message={"Se eliminarán definitivamente las "+papelera.length+" operaciones de la papelera. Esta acción no se puede deshacer."}
         confirmLabel="Vaciar papelera"
@@ -5255,7 +5259,7 @@ function TareasPanel({op,onToggleTarea,onUpdateOperation}){
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:3}}>
       {tareas.map(function(t){var hecha=!!tareasDone[t[0]];return <div key={t[0]} onClick={function(){onToggleTarea&&onToggleTarea(op.id,t[0]);}} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 6px",cursor:onToggleTarea?"pointer":"default",borderRadius:8}}>
-        <span className={"dw-ios-round"+(hecha?" on":"")} role="checkbox" aria-checked={hecha}>{hecha&&<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3.2 8.6l3.1 3L12.8 4.9" fill="none" stroke="#0a0f1a" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}</span>
+        <span className={"dw-ios-round"+(hecha?" on":"")} role="checkbox" aria-disabled={!onToggleTarea} aria-checked={hecha}>{hecha&&<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3.2 8.6l3.1 3L12.8 4.9" fill="none" stroke="#0a0f1a" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>}</span>
         <span style={{flex:1,minWidth:0,fontSize:13,color:hecha?"var(--dim)":"var(--text)",textDecoration:hecha?"line-through":"none",overflowWrap:"anywhere"}}>{t[1]}</span>
         {t[2]&&<span style={{fontSize:11,padding:"1px 8px",borderRadius:20,background:"rgba(212,168,83,.12)",color:"var(--gold)",fontWeight:700,flexShrink:0}}>Propia</span>}
         {t[2]&&onUpdateOperation&&<button type="button" aria-label="Quitar tarea" title="Quitar tarea" onClick={function(e){e.stopPropagation();quitar(t[0]);}} style={{border:"none",background:"transparent",color:"var(--dim)",cursor:"pointer",fontSize:15,padding:"2px 6px",flexShrink:0}}>✕</button>}
@@ -5282,12 +5286,13 @@ function NegociacionPanel({op,onUpdate}){
   const [venc,setVenc]=useState(ultimo&&ultimo.vencimiento||op.reserva_aceptacion_vencimiento||"");
   const [obs,setObs]=useState("");
   function agregar(){
+    if(!onUpdate)return;
     if(!String(monto).trim() && !String(obs).trim() && !venc) return;
     var item={id:genId(),fecha:fechaHoyISO(),parte:parte,monto:String(monto||""),moneda:moneda,vencimiento:venc,observacion:String(obs||"").trim()};
     var next=Object.assign({},op,{negociacion_historial:historial.concat([item]),reserva_aceptacion_vencimiento:venc||op.reserva_aceptacion_vencimiento,proceso_estado:"en_negociacion"});
     onUpdate(next); setObs("");
   }
-  return <div className="card negociacion-panel" style={{padding:16,marginBottom:12,border:"1px solid rgba(96,165,250,.20)",background:"rgba(96,165,250,.035)"}}>
+  return <fieldset aria-label="Edición de la negociación" disabled={!onUpdate} className="card negociacion-panel" style={{minWidth:0,padding:16,marginBottom:12,border:"1px solid rgba(96,165,250,.20)",background:"rgba(96,165,250,.035)"}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
       <div><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".08em"}}>Negociación</div><div style={{fontSize:12,color:"#cbd5e1",marginTop:3}}>Registrá cada propuesta sin crear otra operación.</div></div>
       {ultimo&&<span style={{fontSize:12,fontWeight:700,color:"var(--gold)"}}>Último valor: {ultimo.moneda||"USD"} {ultimo.monto||"—"}</span>}
@@ -5299,7 +5304,7 @@ function NegociacionPanel({op,onUpdate}){
       <Inp label="Nuevo vencimiento de aceptación" type="date" value={venc} onChange={function(e){setVenc(e.target.value);}} className="col2"/>
       <Txa label="Observación" rows={2} value={obs} onChange={function(e){setObs(e.target.value);}} placeholder="Ej. El Vendedor acepta este valor y solicita 3 días más…" className="col2"/>
     </div><div style={{display:"flex",justifyContent:"flex-end",marginTop:9}}><Btn v="primary" s="sm" onClick={agregar}>+ Registrar contraoferta</Btn></div></div>}
-  </div>;
+  </fieldset>;
 }
  return NegociacionPanel;
 }
@@ -5315,18 +5320,21 @@ function ReservaDecisionPanel({op,onUpdate,onAction}){
   const [guardando,setGuardando]=useState(false);
 
   async function aceptar(){
+    if(!onUpdate)return;
     setGuardando(true); setMensaje("");
     var res=await onUpdate(Object.assign({},op,{proceso_estado:"aceptada"}));
     setGuardando(false);
     if(!res || !res.error) setMensaje("Reserva aceptada. La aceptación queda asentada en esta misma Reserva de Compra.");
   }
   async function rechazar(){
+    if(!onUpdate)return;
     setGuardando(true); setMensaje("");
     var res=await onUpdate(Object.assign({},op,{proceso_estado:"rechazada"}));
     setGuardando(false);
     if(!res || !res.error) setConfirmarRechazo(true);
   }
   async function seguirNegociando(){
+    if(!onUpdate)return;
     setGuardando(true); setMensaje("");
     var res=await onUpdate(Object.assign({},op,{proceso_estado:"en_negociacion"}));
     setGuardando(false);
@@ -5334,12 +5342,12 @@ function ReservaDecisionPanel({op,onUpdate,onAction}){
   }
   return <div className="card reserva-decision-panel">
     <div className="reserva-decision-title">Estado de la reserva</div>
-    <div className="reserva-decision-sub">Elegí el próximo paso sin crear otro documento para la aceptación.</div>
+    <div className="reserva-decision-sub">{onUpdate?"Elegí el próximo paso sin crear otro documento para la aceptación.":"Consulta del estado de la reserva."}</div>
     {!confirmarRechazo ? (
       <div className="reserva-decision-actions">
-        <Btn v="success" s="sm" onClick={aceptar} disabled={guardando}>Aceptar reserva</Btn>
-        <Btn v="danger" s="sm" onClick={rechazar} disabled={guardando}>Reserva rechazada</Btn>
-        <Btn v="secondary" s="sm" onClick={seguirNegociando} disabled={guardando}>Seguir negociando</Btn>
+        <Btn v="success" s="sm" onClick={aceptar} disabled={guardando||!onUpdate}>Aceptar reserva</Btn>
+        <Btn v="danger" s="sm" onClick={rechazar} disabled={guardando||!onUpdate}>Reserva rechazada</Btn>
+        <Btn v="secondary" s="sm" onClick={seguirNegociando} disabled={guardando||!onUpdate}>Seguir negociando</Btn>
       </div>
     ) : (
       <div className="reserva-rechazo-confirm">

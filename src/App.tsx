@@ -1,3 +1,4 @@
+import { permisosOperacion, prepararAltaOperacion, claveContextoOperaciones, crearControlContextoOperaciones, ejecutarCambioConfirmado, contextoBorradorOperacion, borradorDelContexto, mismoBorrador } from './AccionesOperaciones';
 // Tipos de extensiones de navegador utilizadas por DocWorks.
 declare global {
   interface Window {
@@ -463,7 +464,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.17";
+var DOCWORKS_VERSION = "6.18";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -5715,7 +5716,7 @@ function DocumentHeaderActions({onEdit,onPDF,onDOCX,onShare}){
   function choose(fn){ setDownloadOpen(false); fn&&fn(); }
   return (
     <div className="doc-header-actions">
-      <Btn v="secondary" s="sm" className="doc-action doc-action-edit" onClick={onEdit} title="Editar operación"><DWIcon name="edit" size={14}/> <span>Editar</span></Btn>
+      {onEdit&&<Btn v="secondary" s="sm" className="doc-action doc-action-edit" onClick={onEdit} title="Editar operación"><DWIcon name="edit" size={14}/> <span>Editar</span></Btn>}
       <Btn v="secondary" s="sm" className="doc-action doc-action-share" onClick={onShare} title="Compartir documento"><DWIcon name="share" size={14}/> <span>Compartir</span></Btn>
       <div className="doc-download-wrap" ref={menuRef}>
         <button type="button" className="doc-action doc-action-download" onClick={function(){setDownloadOpen(function(v){return !v;});}} aria-expanded={downloadOpen} aria-haspopup="menu" title="Descargar documento">
@@ -7129,16 +7130,23 @@ function useOperacionesSupabase(ctx){
   var [error,setError]=useState(null);
   var [papeleraError,setPapeleraError]=useState(null);
   var inmobId = ctx && ctx.inmobiliaria ? ctx.inmobiliaria.id : null;
+  var contextoClave = claveContextoOperaciones(ctx);
+  var controlRef = useRef(crearControlContextoOperaciones(contextoClave));
+  controlRef.current.actualizar(contextoClave);
+  useEffect(function(){controlRef.current.activar();return function(){controlRef.current.invalidar();};},[]);
   // Descarta respuestas tardías al cambiar de inmobiliaria o cerrar sesión.
-  var contextoActivoRef = useRef(inmobId);
-  contextoActivoRef.current = inmobId;
+  var contextoActivoRef = useRef(contextoClave);
+  contextoActivoRef.current = contextoClave;
   var peticionListaRef = useRef(0);
+  var mutacionesPendientesRef=useRef(new Map());
 
   function mapRow(r, extra=undefined){
     return Object.assign({}, r.datos, { id:r.id, tipo:r.tipo, estado:r.estado, parent_id:r.parent_id }, extra||{});
   }
   function rpc(nombre, params){
+    var vigente=controlRef.current.capturar();
     return loadSupabaseJs().then(function(sb){
+      if(!vigente()) return {contextoObsoleto:true};
       if (!sb) return { error:{ message:"No se pudo conectar con Supabase." } };
       return sb.rpc(nombre, params);
     });
@@ -7147,6 +7155,7 @@ function useOperacionesSupabase(ctx){
   function recargar(){
     var inmobiliariaSolicitada = inmobId;
     var numeroPeticion = ++peticionListaRef.current;
+    var vigente=controlRef.current.capturar();
     if (!inmobiliariaSolicitada) { setOperaciones([]); setPapelera([]); setLoading(false); setError(null); setPapeleraError(null); return; }
     setLoading(true); setError(null); setPapeleraError(null);
     // allSettled permite mostrar cada resultado aunque la otra RPC rechace
@@ -7155,7 +7164,7 @@ function useOperacionesSupabase(ctx){
       var res=resultados.map(function(r){
         return r.status==="fulfilled" ? r.value : {error:{message:r.reason&&r.reason.message?r.reason.message:"No se pudo conectar con Supabase."}};
       });
-      if (contextoActivoRef.current !== inmobiliariaSolicitada || numeroPeticion !== peticionListaRef.current) return;
+      if (!vigente() || contextoActivoRef.current !== contextoClave || numeroPeticion !== peticionListaRef.current) return;
       setLoading(false);
       // Las dos lecturas son independientes: un error en Operaciones no debe
       // ocultar una respuesta válida de Papelera, ni viceversa.
@@ -7175,7 +7184,7 @@ function useOperacionesSupabase(ctx){
         setPapelera((res[1].data||[]).map(function(r){ return mapRow(r, {deleted_at:r.eliminado_en}); }));
       }
     }).catch(function(err){
-      if (contextoActivoRef.current !== inmobiliariaSolicitada || numeroPeticion !== peticionListaRef.current) return;
+      if (!vigente() || contextoActivoRef.current !== contextoClave || numeroPeticion !== peticionListaRef.current) return;
       setLoading(false);
       setError(traducirError(err && err.message ? err.message : "No se pudieron cargar las operaciones."));
       setPapeleraError("No se pudo consultar la papelera. Conservamos la última información cargada; reintentá cuando vuelva la conexión.");
@@ -7187,8 +7196,8 @@ function useOperacionesSupabase(ctx){
     ++peticionListaRef.current;
     setOperaciones([]); setPapelera([]); setError(null); setPapeleraError(null);
     recargar();
-    if (inmobId) rpc("fn_operaciones_purgar_vencidas", {});
-  }, [inmobId]);
+    if (inmobId && permisosOperacion(ctx&&ctx.usuario).papelera) rpc("fn_operaciones_purgar_vencidas", {}).catch(function(){});
+  }, [contextoClave]);
 
   // Realtime: si otro dispositivo/usuario de la misma inmobiliaria crea, edita,
   // borra o restaura una operación, acá se entera y refresca solo.
@@ -7202,18 +7211,39 @@ function useOperacionesSupabase(ctx){
         .subscribe();
     });
     return function(){ cancelado=true; if (channel) loadSupabaseJs().then(function(sb){ if (sb) sb.removeChannel(channel); }); };
-  }, [inmobId]);
+  }, [contextoClave]);
 
+  async function mutar(nombre,params,permitida){
+    var vigente=controlRef.current.capturar();
+    if(!permitida || ctx&&ctx.habilitado===false) return {error:{message:"No tenés permiso para realizar esta acción."}};
+    var claveMutacion=contextoClave+"|"+nombre+"|"+(params.p_id||"*");
+    if(mutacionesPendientesRef.current.has(claveMutacion))return mutacionesPendientesRef.current.get(claveMutacion);
+    var promesa=ejecutarCambioConfirmado({vigente:vigente,solicitar:async function(){
+      var sb=await loadSupabaseJs();
+      if(!vigente())return {contextoObsoleto:true};
+      if(!sb)return {error:{message:"No se pudo conectar con Supabase."}};
+      var sesion=await sb.auth.getSession();
+      if(!vigente())return {contextoObsoleto:true};
+      if(sesion.error || !sesion.data||!sesion.data.session||sesion.data.session.user.id!==(ctx&&ctx.usuario&&ctx.usuario.id))return {error:{message:"La sesión cambió. Volvé a abrir la operación."}};
+      return sb.rpc(nombre,params);
+    },confirmar:function(){recargar();},fallar:function(e){setError(traducirError(e&&e.message||"No se pudo completar la acción."));}});
+    mutacionesPendientesRef.current.set(claveMutacion,promesa);
+    try{return await promesa;}finally{if(mutacionesPendientesRef.current.get(claveMutacion)===promesa)mutacionesPendientesRef.current.delete(claveMutacion);}
+  }
   function guardar(op){
-    return rpc("fn_operacion_guardar", { p_id:op.id, p_tipo:op.tipo, p_estado:op.estado||"borrador", p_parent_id:op.parent_id||null, p_datos:op }).then(function(res){
-      if (res.error) { setError(traducirError(res.error.message)); } else { recargar(); }
+    var anterior=operaciones.concat(papelera).find(function(o){return o.id===op.id;});
+    var permisos=permisosOperacion(ctx&&ctx.usuario,anterior);
+    var datos=anterior?op:prepararAltaOperacion(ctx&&ctx.usuario,op);
+    var asignacionValida=!datos.broker_id||["dueno","admin"].includes(ctx&&ctx.usuario&&ctx.usuario.rol_base)||datos.broker_id===(ctx&&ctx.usuario&&ctx.usuario.id);
+    return mutar("fn_operacion_guardar", {p_id:datos.id,p_tipo:datos.tipo,p_estado:datos.estado||"borrador",p_parent_id:datos.parent_id||null,p_datos:datos},(anterior?permisos.editar:permisos.crear)&&asignacionValida).then(function(res){
+      if(res&&!res.error&&!res.contextoObsoleto&&Array.isArray(res.data)&&res.data[0])return Object.assign({},res,{operacion:mapRow(res.data[0])});
       return res;
     });
   }
-  function eliminar(id){ return rpc("fn_operacion_eliminar", { p_id:id }).then(function(res){ if(res.error) setError(traducirError(res.error.message)); else recargar(); return res; }); }
-  function restaurar(id){ return rpc("fn_operacion_restaurar", { p_id:id }).then(function(res){ if(res.error) setError(traducirError(res.error.message)); else recargar(); return res; }); }
-  function eliminarPermanente(id){ return rpc("fn_operacion_eliminar_permanente", { p_id:id }).then(function(res){ if(res.error) setError(traducirError(res.error.message)); else recargar(); return res; }); }
-  function vaciarPapelera(){ return rpc("fn_operaciones_vaciar_papelera", {}).then(function(res){ if(res.error) setError(traducirError(res.error.message)); else recargar(); return res; }); }
+  function eliminar(id){ return mutar("fn_operacion_eliminar",{p_id:id},permisosOperacion(ctx&&ctx.usuario).papelera); }
+  function restaurar(id){ return mutar("fn_operacion_restaurar",{p_id:id},permisosOperacion(ctx&&ctx.usuario).papelera); }
+  function eliminarPermanente(id){ return mutar("fn_operacion_eliminar_permanente",{p_id:id},permisosOperacion(ctx&&ctx.usuario).papelera); }
+  function vaciarPapelera(){ return mutar("fn_operaciones_vaciar_papelera",{},permisosOperacion(ctx&&ctx.usuario).papelera); }
 
   return { operaciones:operaciones, papelera:papelera, loading:loading, error:error, papeleraError:papeleraError, recargar:recargar,
     guardar:guardar, eliminar:eliminar, restaurar:restaurar, eliminarPermanente:eliminarPermanente, vaciarPapelera:vaciarPapelera };
@@ -7465,6 +7495,9 @@ const ConfiguracionView = crearConfiguracionView({Btn, CLAUSULAS_DEFAULT, Clausu
 
 function DocWorksApp(){
   var docworksAuth = useDocWorksSession();
+  const accionesContextoRef=useRef(crearControlContextoOperaciones(claveContextoOperaciones(docworksAuth.contexto)));
+  accionesContextoRef.current.actualizar(claveContextoOperaciones(docworksAuth.contexto));
+  useEffect(function(){accionesContextoRef.current.activar();return function(){accionesContextoRef.current.invalidar();};},[]);
   var equipoSupabase = useEquipoSupabase(docworksAuth.contexto);
   var opsSupabase = useOperacionesSupabase(docworksAuth.contexto);
   var auditoriaSupabase = useAuditoriaSupabase(docworksAuth.contexto);
@@ -7666,14 +7699,20 @@ function DocWorksApp(){
     window.addEventListener("scroll",onScroll,{capture:true,passive:true});
     return function(){ window.removeEventListener("scroll",onScroll,true); document.body.classList.remove("dw-fab-hide"); };
   },[]);
-  const [showForm,setShowForm]=useState(false);
+  const [showFormEstado,setShowFormEstado]=useState(false);
+  const [formContexto,setFormContexto]=useState("");
+  const showForm=showFormEstado&&formContexto===claveContextoOperaciones(docworksAuth.contexto);
+  function setShowForm(visible){if(visible)setFormContexto(claveContextoOperaciones(docworksAuth.contexto));setShowFormEstado(visible);}
   const [editOp,setEditOp]=useState(null);
   const [formInitialOverride,setFormInitialOverride]=useState(null); // prefill de un borrador recuperado (operación nueva, sin guardar aún)
   const [draftPrompt,setDraftPrompt]=useState(null); // borrador pendiente detectado al abrir la app
   const [confirmCloseForm,setConfirmCloseForm]=useState(false);
   const [formTipo,setFormTipo]=useState(null);
   const [formFocusCampo,setFormFocusCampo]=useState(null);
-  const [viewDoc,setViewDoc]=useState(null);
+  const [viewDocEstado,setViewDocEstado]=useState(null);
+  const [viewDocContexto,setViewDocContexto]=useState("");
+  const viewDoc=viewDocContexto===claveContextoOperaciones(docworksAuth.contexto)?viewDocEstado:null;
+  function setViewDoc(valor){if(valor&&typeof valor!=="function")setViewDocContexto(claveContextoOperaciones(docworksAuth.contexto));setViewDocEstado(valor);}
   const [docTab,setDocTab]=useState("resumen");
   const [docAutoAction,setDocAutoAction]=useState(null); // "pdf"|"docx"|"whatsapp"|null — acción a disparar automáticamente al abrir el visor (menú "Finalizar")
   // En Android, el botón Atrás debe cerrar primero la capa interna abierta.
@@ -8020,6 +8059,8 @@ function DocWorksApp(){
   const [confirmVaciarPapelera,setConfirmVaciarPapelera]=useState(false);
   const [operaciones,setOperaciones]=useState([]);
   const pendingOperacionIds=useRef({});
+  const documentosPendientesRef=useRef(new Map());
+  useEffect(function(){pendingOperacionIds.current={};documentosPendientesRef.current.clear();setViewDoc(null);setShowForm(false);setEditOp(null);setDraftPrompt(null);},[claveContextoOperaciones(docworksAuth.contexto)]);
   function marcarOperacionPendiente(id){ if(id) pendingOperacionIds.current[id]=Date.now(); }
   function desmarcarOperacionPendiente(id){ if(id) delete pendingOperacionIds.current[id]; }
   const globalSearchIndex=useMemo(function(){var out=[],clientes={};(operaciones||[]).forEach(function(o){out.push({kind:"documento",id:"doc-"+o.id,op:o,title:(TIPOS[o.tipo]||o.tipo||"Documento")+(o.inmueble_direccion?" · "+o.inmueble_direccion:""),text:valoresBusquedaOperacion(o).join(" ")});[["Comprador",o.comprador_nombre,o.comprador_dni,o.comprador_cuit,o.comprador_email],["Vendedor",o.vendedor_nombre,o.vendedor_dni,o.vendedor_cuit,o.vendedor_email],["Locador",o.locador_nombre,o.locador_dni,o.locador_cuit,o.locador_email],["Locatario",o.locatario_nombre,o.locatario_dni,o.locatario_cuit,o.locatario_email]].forEach(function(x){if(!x[1])return;var key=normalizarBusqueda(x.slice(1).filter(Boolean).join("|"));if(!key)return;if(!clientes[key])clientes[key]={kind:"cliente",id:"cli-"+Object.keys(clientes).length,op:o,title:String(x[1]),subtitle:x[0],text:x.slice(1).filter(Boolean).join(" ")};});});Object.keys(clientes).forEach(function(k){out.push(clientes[k]);});return out;},[operaciones]);
@@ -8143,7 +8184,7 @@ function DocWorksApp(){
   // recuperarlo en vez de perderlo silenciosamente.
   useEffect(function(){
     var d = lsGet("draftOperacion", null);
-    if (d && d.data && draftTieneContenido(d.data)) setDraftPrompt(d);
+    if (d && d.data && draftTieneContenido(d.data) && (!d.contexto || borradorDelContexto(d,docworksAuth.contexto))) setDraftPrompt(d);
   }, []);
 
   // ── Exportar / Importar respaldo completo (JSON) ──
@@ -8197,6 +8238,9 @@ function DocWorksApp(){
   }
 
   async function saveOp(data,accion,estadoFinal){
+    var vigente=accionesContextoRef.current.capturar();
+    var permisosGuardado=permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,editOp);
+    if(editOp?!permisosGuardado.editar:!permisosGuardado.crear){var errorPermiso={message:"No tenés permiso para guardar esta operación."};dwNotify("error",errorPermiso.message);return {error:errorPermiso};}
     var esNueva=!editOp;
     if(esNueva && !draftTieneContenido(data)){
       dwNotify("warning","Todavía no cargaste datos de la operación. Completá al menos un dato antes de guardarla.");
@@ -8221,11 +8265,15 @@ function DocWorksApp(){
     // Al editar un contrato existente conservamos la versión histórica.
     opGuardada=sellarVersionPlantillaOperacion(opGuardada,perfil,!editOp,clausulas,bloquesReserva);
     var parentParaCerrar=(opGuardada.tipo==="devolucion_reserva" && opGuardada.parent_id && opGuardada.estado!=="borrador") ? operaciones.find(function(o){return o.id===opGuardada.parent_id;}) : null;
+    if(parentParaCerrar&&!permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,parentParaCerrar).editar){
+      var errorPermiso={message:"No tenés permiso para cerrar la reserva vinculada."};dwNotify("error",errorPermiso.message);return {error:errorPermiso};
+    }
     marcarOperacionPendiente(opGuardada.id);
     if(parentParaCerrar) marcarOperacionPendiente(parentParaCerrar.id);
     reportSave("saving");
     try {
       var res=await opsSupabase.guardar(opGuardada);
+      if(!vigente()||res&&res.contextoObsoleto)return Object.assign({},res,{contextoObsoleto:true});
       if(res&&res.error){
         reportSave("error");
         desmarcarOperacionPendiente(opGuardada.id);
@@ -8233,6 +8281,8 @@ function DocWorksApp(){
         dwNotify("error","No se pudo guardar la operación. "+traducirError(res.error.message||"Error de comunicación con Supabase."));
         return res;
       }
+      if(res&&res.contextoObsoleto)return res;
+      if(res&&res.operacion)opGuardada=res.operacion;
       setOperaciones(function(ops){
         var base = esNueva ? [opGuardada].concat(ops) : ops.map(function(o){return o.id===editOp.id?opGuardada:o;});
         if(opGuardada.tipo==="devolucion_reserva" && opGuardada.parent_id && opGuardada.estado!=="borrador") {
@@ -8249,6 +8299,7 @@ function DocWorksApp(){
         var errorCierrePadre=null;
         try {
           var parentRes=await opsSupabase.guardar(parentCerrado);
+          if(!vigente()||parentRes&&parentRes.contextoObsoleto)return Object.assign({},parentRes,{contextoObsoleto:true});
           if(parentRes&&parentRes.error) errorCierrePadre=parentRes.error;
         } catch(errCierrePadre) { errorCierrePadre=errCierrePadre; }
         if(errorCierrePadre) {
@@ -8269,6 +8320,7 @@ function DocWorksApp(){
         abrirDoc(opGuardada);
       }
     } catch(e) {
+      if(!vigente())return {contextoObsoleto:true};
       // Si la devolución ya se guardó/localizó pero el cierre del padre falla por
       // desconexión o excepción de red, persistimos una marca local para reintentar.
       if(parentParaCerrar) {
@@ -8294,9 +8346,10 @@ function DocWorksApp(){
     // eso duplicaba operaciones y borraba el borrador en uso.
     if(showFormRef.current||draftPromptRef.current)return;
     var draft=lsGet("draftOperacion",null);if(!draft||!draft.data||!draftTieneContenido(draft.data))return;
+    if(!borradorDelContexto(draft,docworksAuth.contexto))return;
     var existingId=draft.editId||null,existente=existingId?operaciones.find(function(o){return o.id===existingId;}):null;
     var op=Object.assign({},existente||{},draft.data,{id:existingId||genId(),created_at:(existente&&existente.created_at)||new Date().toISOString(),estado:(existente&&existente.estado)||"borrador"});
-    try{var res=await opsSupabase.guardar(op);if(res&&!res.error){setOperaciones(function(ops){return existingId?ops.map(function(o){return o.id===existingId?op:o;}):[op].concat(ops);});lsRemove("draftOperacion");dwNotify("success","La operación cargada sin conexión ya fue sincronizada con DocWorks.");}}catch(e){console.warn("DocWorks: no se pudo sincronizar el borrador offline.",e);}
+    try{var res=await opsSupabase.guardar(op);if(res&&!res.error&&!res.contextoObsoleto){op=res.operacion||op;setOperaciones(function(ops){return existingId?ops.map(function(o){return o.id===existingId?op:o;}):[op].concat(ops);});if(mismoBorrador(draft,lsGet("draftOperacion",null)))lsRemove("draftOperacion");dwNotify("success","La operación cargada sin conexión ya fue sincronizada con DocWorks.");}}catch(e){console.warn("DocWorks: no se pudo sincronizar el borrador offline.",e);}
   }
   // Reintenta cierres de reservas que quedaron pendientes después de guardar
   // una devolución. La devolución ya existe; este proceso solo completa el cierre
@@ -8313,9 +8366,11 @@ function DocWorksApp(){
       // El estado pendiente en la operación es suficiente para recuperar el reintento
       // si la marca auxiliar de localStorage se perdió; no se crea otra devolución.
       var cerrado=Object.assign({},padre,{estado:"cerrado",proceso_estado:"rechazada"});
+      if(!permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,padre).editar)continue;
       marcarOperacionPendiente(cerrado.id);
       try{
         var resultado=await opsSupabase.guardar(cerrado);
+        if(resultado&&resultado.contextoObsoleto)return;
         if(resultado && resultado.error) continue;
         try{lsRemove("docworks:devolucion:cierre-pendiente:"+padre.id);}catch(_e2){}
         setOperaciones(function(prev){return prev.map(function(o){return o.id===cerrado.id?cerrado:o;});});
@@ -8337,24 +8392,28 @@ function DocWorksApp(){
   // 4.08 — Eliminación directa: la lista de Operaciones ya pide confirmación propia,
   // así que no se vuelve a preguntar (antes aparecía una segunda confirmación y la tarjeta
   // reaparecía a medio animar).
-  function eliminarOpDirecto(id){
-    setOperaciones(function(ops){
-      var op=ops.find(function(o){return o.id===id;});
-      if(op)setPapelera(function(p){return [Object.assign({},op,{deleted_at:new Date().toISOString()})].concat(p);});
-      return ops.filter(function(o){return o.id!==id;});
-    });
-    opsSupabase.eliminar(id);
+  async function accionPapeleraConfirmada(accion,id){
+    var vigente=accionesContextoRef.current.capturar();
+    var resultado;
+    try{resultado=await opsSupabase[accion](id);}catch(e){resultado={error:e};}
+    if(!vigente()||resultado&&resultado.contextoObsoleto)return Object.assign({},resultado,{contextoObsoleto:true});
+    if(!resultado||resultado.error){dwNotify("error",traducirError(resultado&&resultado.error&&resultado.error.message||"No se pudo completar la acción."));return resultado;}
+    if(accion==="eliminar"){
+      var original=operaciones.find(function(o){return o.id===id;});
+      setOperaciones(function(ops){return ops.filter(function(o){return o.id!==id;});});
+      if(original)setPapelera(function(p){return [Object.assign({},original,{deleted_at:new Date().toISOString()})].concat(p.filter(function(o){return o.id!==id;}));});
+    }else if(accion==="restaurar"){
+      var original=papelera.find(function(o){return o.id===id;});
+      setPapelera(function(p){return p.filter(function(o){return o.id!==id;});});
+      if(original){var restaurada=Object.assign({},original);delete restaurada.deleted_at;setOperaciones(function(ops){return [restaurada].concat(ops.filter(function(o){return o.id!==id;}));});}
+    }else if(accion==="eliminarPermanente")setPapelera(function(p){return p.filter(function(o){return o.id!==id;});});
+    else if(accion==="vaciarPapelera"){setPapelera([]);setConfirmVaciarPapelera(false);}
+    return resultado;
   }
-  function restoreOp(id){
-    setPapelera(function(p){
-      var op=p.find(function(o){return o.id===id;});
-      if(op){var restored=Object.assign({},op);delete restored.deleted_at;setOperaciones(function(ops){return [restored].concat(ops);});}
-      return p.filter(function(o){return o.id!==id;});
-    });
-    opsSupabase.restaurar(id);
-  }
-  function deleteOpPermanente(id){ setPapelera(function(p){return p.filter(function(o){return o.id!==id;});}); opsSupabase.eliminarPermanente(id); }
-  function vaciarPapelera(){ setPapelera([]); setConfirmVaciarPapelera(false); opsSupabase.vaciarPapelera(); }
+  function eliminarOpDirecto(id){return accionPapeleraConfirmada("eliminar",id);}
+  function restoreOp(id){return accionPapeleraConfirmada("restaurar",id);}
+  function deleteOpPermanente(id){return accionPapeleraConfirmada("eliminarPermanente",id);}
+  function vaciarPapelera(){return accionPapeleraConfirmada("vaciarPapelera",undefined);}
   // Purga automática: al abrir la app, lo que lleva más de 30 días en la
   // papelera se elimina definitivamente sin intervención del usuario.
   // (La purga real ahora la hace fn_operaciones_purgar_vencidas() en el
@@ -8379,6 +8438,7 @@ function DocWorksApp(){
     var res;
     try { res=await opsSupabase.guardar(next); } catch(e) { res={error:e}; }
     desmarcarOperacionPendiente(next.id);
+    if(res&&res.contextoObsoleto)return res;
     if(res&&res.error){
       dwNotify("error","No se pudo guardar la operación. "+traducirError(res.error.message||"Error de comunicación con Supabase."));
       if(previo){
@@ -8393,7 +8453,7 @@ function DocWorksApp(){
     var snap=version&&version.documento?version.documento:null;
     if(!snap||!snap.id||!snap.datos){dwNotify("error","La versión seleccionada no tiene un respaldo válido.");return;}
     var op=Object.assign({},snap.datos,{id:snap.id,tipo:snap.tipo||version.tipo_documento,estado:snap.estado||"borrador",parent_id:snap.parent_id||null,created_at:snap.creado_en||undefined});
-    try{var res=await opsSupabase.guardar(op);if(res&&res.error){dwNotify("error","No se pudo restaurar la versión. "+traducirError(res.error.message));return;}setOperaciones(function(ops){return ops.map(function(o){return o.id===op.id?op:o;});});dwNotify("success","Versión "+version.version+" restaurada. La versión anterior quedó conservada en el historial.");}catch(e){console.warn("DocWorks: error restaurando versión.",e);dwNotify("error","No se pudo restaurar la versión.");}
+    try{var res=await opsSupabase.guardar(op);if(res&&res.contextoObsoleto)return res;if(res&&res.error){dwNotify("error","No se pudo restaurar la versión. "+traducirError(res.error.message));return;}setOperaciones(function(ops){return ops.map(function(o){return o.id===op.id?op:o;});});dwNotify("success","Versión "+version.version+" restaurada. La versión anterior quedó conservada en el historial.");}catch(e){console.warn("DocWorks: error restaurando versión.",e);dwNotify("error","No se pudo restaurar la versión.");}
   }
   function changeEstado(id,estado){
     var previo=operaciones.find(function(o){return o.id===id;});
@@ -8414,11 +8474,31 @@ function DocWorksApp(){
       return Object.assign({},v,{tareas_done:td});
     });
     var res=await persistirOperacionConRollback(actualizado);
+    if(res&&res.contextoObsoleto)return res;
     if(res&&res.error){
       setViewDoc(function(v){return v&&v.id===opId?Object.assign({},v,{tareas_done:previo.tareas_done||{}}):v;});
     }
   }
-  function duplicarOp(op){var copia=Object.assign({},op,{id:genId(),estado:"borrador",created_at:new Date().toISOString()});marcarOperacionPendiente(copia.id);setOperaciones(function(ops){return[copia].concat(ops);});Promise.resolve(opsSupabase.guardar(copia)).finally(function(){desmarcarOperacionPendiente(copia.id);});}
+  async function crearDocumentoConfirmado(datos,tipo,abrir){
+    var usuario=docworksAuth.contexto&&docworksAuth.contexto.usuario;
+    var padre=datos.parent_id&&operaciones.find(function(o){return o.id===datos.parent_id;});
+    if(!permisosOperacion(usuario).crear || (padre&&!permisosOperacion(usuario,padre).convertir)){
+      var error={message:"No tenés permiso para crear este documento vinculado."};dwNotify("error",error.message);return {error:error};
+    }
+    var claveDocumento=claveContextoOperaciones(docworksAuth.contexto)+"|"+tipo+"|"+(datos.parent_id||datos.id||"nuevo");
+    if(documentosPendientesRef.current.has(claveDocumento))return documentosPendientesRef.current.get(claveDocumento);
+    var vigente=accionesContextoRef.current.capturar();
+    var op=prepararAltaOperacion(usuario,Object.assign({},datos,{id:genId(),estado:"borrador",created_at:new Date().toISOString()}));
+    var promesa=ejecutarCambioConfirmado({vigente:vigente,solicitar:function(){return opsSupabase.guardar(op);},fallar:function(e){dwNotify("error",traducirError(e&&e.message||"No se pudo crear el documento."));},confirmar:function(res){
+      op=res.operacion||op;
+      setOperaciones(function(ops){return [op].concat(ops.filter(function(o){return o.id!==op.id;}));});
+      if(abrir){setEditOp(op);setFormTipo(tipo);setShowForm(true);}
+    }});
+    documentosPendientesRef.current.set(claveDocumento,promesa);
+    try{return await promesa;}finally{if(documentosPendientesRef.current.get(claveDocumento)===promesa)documentosPendientesRef.current.delete(claveDocumento);}
+  }
+  function duplicarOp(op){return crearDocumentoConfirmado(Object.assign({},op),op.tipo,false);}
+
   // Una operación sólo puede dar origen a UN documento derivado de cada tipo (un solo
   // Comodato, un solo Refuerzo, un solo Contrato desde Reserva de Locación). Esto evita
   // duplicados y mantiene la "carpeta" de la operación prolija.
@@ -8426,11 +8506,7 @@ function DocWorksApp(){
   function convertirAContrato(op){
     if(yaConvertido(op.id,"alquiler")) return;
     var nuevo=Object.assign({},EMPTY_OP,{tipo:"alquiler",estado:"borrador",parent_id:op.id,locador_nombre:op.locador_nombre,locador_dni:op.locador_dni,locador_domicilio:op.locador_domicilio,locador_email:op.locador_email,locatario_nombre:op.locatario_nombre,locatario_dni:op.locatario_dni,locatario_domicilio:op.locatario_domicilio,locatario_email:op.locatario_email,inmueble_direccion:op.inmueble_direccion,inmueble_partido:op.inmueble_partido,inmueble_provincia:op.inmueble_provincia,nomenclatura_catastral:op.nomenclatura_catastral,descripcion_inmueble:op.descripcion_inmueble,inmueble_tipo:op.inmueble_tipo||"departamento",alquiler_monto_inicial:op.res_alq_monto_mensual||"",alquiler_moneda:op.res_alq_moneda||op.res_alq_monto_mensual_moneda||"ARS",alquiler_plazo_meses:String(plazoReservaAlquiler(op).meses),alquiler_plazo_dias:String(plazoReservaAlquiler(op).dias),alquiler_inicio:op.res_alq_inicio_estimado||"",alquiler_destino:op.res_alq_destino||"vivienda",alquiler_comision:valorComisionPredeterminado(op.res_alq_comision,"1"),clausulas_ids:op.clausulas_ids||[],clausulas_custom:op.clausulas_custom||""});
-    var conId=Object.assign({},nuevo,{id:genId(),created_at:new Date().toISOString()});
-    marcarOperacionPendiente(conId.id);
-    setOperaciones(function(ops){return[conId].concat(ops);});
-    Promise.resolve(opsSupabase.guardar(conId)).finally(function(){desmarcarOperacionPendiente(conId.id);});
-    setEditOp(conId); setFormTipo("alquiler"); setShowForm(true);
+    return crearDocumentoConfirmado(nuevo,"alquiler",true);
   }
   function convertirARefuerzo(op){
     if(yaConvertido(op.id,"refuerzo_reserva")) return;
@@ -8445,17 +8521,14 @@ function DocWorksApp(){
       refuerzo_trayectoria:"Reserva original firmada el "+new Date(op.created_at).toLocaleDateString("es-AR")+" por "+fmt$(op.anticipo,op.moneda)+" de seña sobre precio total "+fmt$(op.precio,op.moneda)+".",
       clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"",
     });
-    var conId=Object.assign({},nuevo,{id:genId(),created_at:new Date().toISOString()});
-    marcarOperacionPendiente(conId.id);
-    setOperaciones(function(ops){return[conId].concat(ops);});
-    Promise.resolve(opsSupabase.guardar(conId)).finally(function(){desmarcarOperacionPendiente(conId.id);});
-    setEditOp(conId); setFormTipo("refuerzo_reserva"); setShowForm(true);
+    return crearDocumentoConfirmado(nuevo,"refuerzo_reserva",true);
   }
   async function onUpdateOperationGlobal(next){
     if(!next||!next.id) return;
     var previo=operaciones.find(function(o){return o.id===next.id;});
     setViewDoc(function(v){return v&&v.id===next.id?next:v;});
     var res=await persistirOperacionConRollback(next);
+    if(res&&res.contextoObsoleto)return res;
     if(res&&res.error&&previo){
       setViewDoc(function(v){return v&&v.id===next.id?previo:v;});
     }
@@ -8469,11 +8542,7 @@ function DocWorksApp(){
   function onConvertirDevolucion(op){
     if(yaConvertido(op.id,"devolucion_reserva")) return;
     var nuevo=Object.assign({},EMPTY_OP,{tipo:"devolucion_reserva",estado:"borrador",parent_id:op.id,proceso_estado:"pendiente_devolucion",comprador_nombre:op.comprador_nombre||"",comprador_dni:op.comprador_dni||"",comprador_domicilio:op.comprador_domicilio||"",vendedor_nombre:op.vendedor_nombre||"",vendedor_dni:op.vendedor_dni||"",vendedor_domicilio:op.vendedor_domicilio||"",inmueble_direccion:op.inmueble_direccion||"",inmueble_partido:op.inmueble_partido||"",inmueble_provincia:op.inmueble_provincia||"",precio:op.anticipo||op.precio||"",moneda:op.moneda||"USD",devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",negociacion_historial:op.negociacion_historial||[],clausulas_ids:op.clausulas_ids||[]});
-    var conId=Object.assign({},nuevo,{id:genId(),created_at:new Date().toISOString()});
-    marcarOperacionPendiente(conId.id);
-    setOperaciones(function(ops){return[conId].concat(ops);});
-    Promise.resolve(opsSupabase.guardar(conId)).finally(function(){desmarcarOperacionPendiente(conId.id);});
-    setEditOp(conId);setFormTipo("devolucion_reserva");setShowForm(true);
+    return crearDocumentoConfirmado(nuevo,"devolucion_reserva",true);
   }
   function convertirABoleto(op){
     if(yaConvertido(op.id,"boleto")) return;
@@ -8497,11 +8566,7 @@ function DocWorksApp(){
       entrega_aires_detalle_id:op.entrega_aires_detalle_id||"", entrega_muebles_detalle_id:op.entrega_muebles_detalle_id||"",
       clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"",
     });
-    var conId=Object.assign({},nuevo,{id:genId(),created_at:new Date().toISOString()});
-    marcarOperacionPendiente(conId.id);
-    setOperaciones(function(ops){return[conId].concat(ops);});
-    Promise.resolve(opsSupabase.guardar(conId)).finally(function(){desmarcarOperacionPendiente(conId.id);});
-    setEditOp(conId); setFormTipo("boleto"); setShowForm(true);
+    return crearDocumentoConfirmado(nuevo,"boleto",true);
   }
   function convertirAComodato(op){
     if(yaConvertido(op.id,"comodato")) return;
@@ -8521,11 +8586,7 @@ function DocWorksApp(){
       descripcion_inmueble:op.descripcion_inmueble||"",
       clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"",
     });
-    var conId=Object.assign({},nuevo,{id:genId(),created_at:new Date().toISOString()});
-    marcarOperacionPendiente(conId.id);
-    setOperaciones(function(ops){return[conId].concat(ops);});
-    Promise.resolve(opsSupabase.guardar(conId)).finally(function(){desmarcarOperacionPendiente(conId.id);});
-    setEditOp(conId); setFormTipo("comodato"); setShowForm(true);
+    return crearDocumentoConfirmado(nuevo,"comodato",true);
   }
 
   const navItems=[
@@ -8694,7 +8755,7 @@ function DocWorksApp(){
             <div className="content">
               {ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks-landing.vercel.app/#planes" style={{color:"inherit"}}>Ver planes</a></div>}
               {view!=="configuracion"&&<details style={{marginBottom:14,fontSize:13,border:"1px solid var(--border)",borderRadius:10,padding:"10px 12px"}}><summary style={{cursor:"pointer",color:"var(--dim)"}}>Ayuda para esta pantalla</summary><p style={{lineHeight:1.6,margin:"9px 0"}}>{({dashboard:"Cada operación reúne los datos y documentos del negocio. Usá Nueva operación para empezar; guardá un borrador si todavía te falta información.",clausulas:"Acá se definen los modelos y las cláusulas disponibles. El dueño o administrador prepara la base; cada asesor suma los extras de su operación.",calendario:"Las fechas importantes se toman de las operaciones. Revisá sus datos para corregir un vencimiento o una fecha pendiente.",estadisticas:"Consultá la actividad del equipo según tu rol y permisos. Los resultados dependen de las operaciones cargadas."})[view]||"Encontrá guías y respuestas en el Centro de ayuda."}</p><button type="button" className="btn btn-ghost btn-sm" onClick={function(){irAyuda("configuracion","soporte");}}>Abrir centro de ayuda</button></details>}
-              {view==="dashboard"&&<DashboardView operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={function(){setFormFocusCampo(null);setEditOp(null);setFormTipo(null);setShowForm(true);}} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
+              {view==="dashboard"&&<DashboardView key={claveContextoOperaciones(docworksAuth.contexto)} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario} operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={function(){setFormFocusCampo(null);setEditOp(null);setFormTipo(null);setShowForm(true);}} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
               {view==="calendario"&&<CalendarioView operaciones={operaciones} onViewOp={function(op){abrirDoc(op);}}/>}
               {view==="clausulas"&&<ClausulasWorkspace key={perfilNube.contexto} perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
               {view==="estadisticas"&&<EstadisticasView onExportarCSV={exportarOperacionesCSV} operaciones={operaciones} equipo={equipo} perfil={perfil} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol}/>}
@@ -8771,17 +8832,17 @@ function DocWorksApp(){
         onCreate={function(tipo){setView("dashboard");setFormFocusCampo(null);setEditOp(null);setFormTipo(tipo);setFormInitialOverride(Object.assign({},EMPTY_OP,{tipo:tipo}));setShowForm(true);}}/>}
 
       <Modal open={showForm} onClose={cerrarFormularioSeguro} closeOnBackdrop={false} title={editOp?"Editar operación":"Nueva operación"} wide={true} operationForm={true} formTipo={formTipo}>
-        <OperacionForm initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
+        <OperacionForm key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
       </Modal>
       <Modal open={!!viewDoc} onClose={function(){setViewDoc(null);setDocAutoAction(null);}} title={viewDoc?<span className="dw-viewer-heading"><span className="dw-viewer-heading-type">{TIPOS[viewDoc.tipo]||viewDoc.tipo||"Documento"}</span><span className="dw-viewer-heading-operation">{viewDoc.nombre||viewDoc.titulo_operacion||viewDoc.inmueble_direccion||"Operación sin nombre"}</span></span>:"DocWorks"} wide={true} viewerMode={true}
         headerExtra={null}
         headerRight={viewDoc?<DocumentHeaderActions
-          onEdit={function(){var op=viewDoc;setViewDoc(null);setDocAutoAction(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}}
+          onEdit={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(){var op=viewDoc;setViewDoc(null);setDocAutoAction(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}:undefined}
           onPDF={function(){setDocAutoAction("pdf");}}
           onDOCX={function(){setDocAutoAction("docx");}}
           onShare={function(){setDocAutoAction("whatsapp");}}
         />:null}>
-        {viewDoc&&<DocumentViewer op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={toggleTarea} onUpdateOperation={onUpdateOperationGlobal} onActionWorkflow={function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}} onCompleteData={function(op,campo){setViewDoc(null);setDocAutoAction(null);setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
+        {viewDoc&&<DocumentViewer op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?toggleTarea:undefined} onUpdateOperation={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?onUpdateOperationGlobal:undefined} onActionWorkflow={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}:undefined} onCompleteData={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(op,campo){setViewDoc(null);setDocAutoAction(null);setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}:undefined} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
       </Modal>
       <ConfirmModal open={confirmCloseForm} title="Salir de la operación" message="Ya cargaste datos. ¿Querés guardar un borrador antes de salir?" confirmLabel="Guardar borrador" cancelLabel="Salir sin guardar" onCancel={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}/>
       <ConfirmModal

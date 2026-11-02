@@ -1,0 +1,434 @@
+{
+  "fecha": "2026-11-02",
+  "funciones": [
+    {
+      "proname": "fn_es_admin",
+      "argumentos": "p_usuario_id uuid",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_es_admin(p_usuario_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\n  select coalesce((select rol_base in ('dueno','admin') from usuarios where id = p_usuario_id and activo), false);\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_mi_contexto",
+      "argumentos": "",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_mi_contexto()\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_es_super boolean;\n  v_usuario  usuarios;\n  v_inmob    inmobiliarias;\n  v_mem      jsonb;\n  v_habilitado boolean;\nbegin\n  v_es_super := fn_es_super_admin(auth.uid());\n  if v_es_super then\n    return jsonb_build_object('es_super_admin', true, 'usuario', null, 'inmobiliaria', null, 'membresia', null, 'habilitado', true);\n  end if;\n\n  select * into v_usuario from usuarios where id = auth.uid() and activo;\n  if v_usuario.id is null then\n    return jsonb_build_object('es_super_admin', false, 'usuario', null, 'inmobiliaria', null, 'membresia', null, 'habilitado', false);\n  end if;\n\n  select * into v_inmob from inmobiliarias where id = v_usuario.inmobiliaria_id;\n\n  select jsonb_build_object(\n    'plan_codigo', pl.codigo, 'plan_nombre', pl.nombre,\n    'limite_usuarios', pl.limite_usuarios,\n    'usuarios_activos', fn_usuarios_activos_count(v_usuario.inmobiliaria_id),\n    'estado', case when m.es_prueba and m.fecha_vencimiento<=now() and m.estado in ('activa','pendiente') then 'vencida' else m.estado::text end, 'es_prueba', m.es_prueba, 'fecha_inicio', m.fecha_inicio,\n    'fecha_renovacion', m.fecha_renovacion, 'fecha_vencimiento', m.fecha_vencimiento\n  ), (m.estado = 'activa' or m.estado = 'pendiente') and (not m.es_prueba or m.fecha_vencimiento > now())\n  into v_mem, v_habilitado\n  from membresias m join planes pl on pl.id = m.plan_id\n  where m.inmobiliaria_id = v_usuario.inmobiliaria_id;\n\n  return jsonb_build_object(\n    'es_super_admin', false,\n    'usuario', jsonb_build_object('id', v_usuario.id, 'nombre', v_usuario.nombre, 'email', v_usuario.email, 'rol_base', v_usuario.rol_base, 'perfil_permisos', v_usuario.perfil_permisos),\n    'inmobiliaria', jsonb_build_object('id', v_inmob.id, 'nombre', v_inmob.nombre),\n    'membresia', v_mem,\n    'habilitado', coalesce(v_habilitado, false)\n  );\nend;\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_mi_inmobiliaria",
+      "argumentos": "",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_mi_inmobiliaria()\n RETURNS uuid\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\n  select inmobiliaria_id from usuarios where id = auth.uid() and activo;\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_operacion_eliminar",
+      "argumentos": "p_id text",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_operacion_eliminar(p_id text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare v_inmob uuid;\nbegin\n  v_inmob := fn_mi_inmobiliaria();\n  update operaciones set eliminado_en = now(), eliminado_por = auth.uid()\n  where id = p_id and inmobiliaria_id = v_inmob and eliminado_en is null;\n  if not found then raise exception 'La operación no existe, no pertenece a tu inmobiliaria o ya estaba eliminada'; end if;\n  insert into auditoria(inmobiliaria_id, usuario_id, entidad_tipo, accion, valor_nuevo, origen)\n  values (v_inmob, auth.uid(), 'operacion', 'eliminar', jsonb_build_object('id',p_id), 'directa');\nend;\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_operacion_eliminar_permanente",
+      "argumentos": "p_id text",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_operacion_eliminar_permanente(p_id text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_inmob uuid;\nbegin\n  if not fn_es_admin(auth.uid()) then\n    raise exception 'Solo Admin/Dueño puede eliminar operaciones permanentemente';\n  end if;\n\n  v_inmob := fn_mi_inmobiliaria();\n  if v_inmob is null then\n    raise exception 'No se pudo resolver tu inmobiliaria';\n  end if;\n\n  delete from operaciones\n   where id = p_id\n     and inmobiliaria_id = v_inmob\n     and eliminado_en is not null;\n\n  if not found then\n    raise exception 'La operación no existe, no pertenece a tu inmobiliaria o no está en la papelera';\n  end if;\nend;\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_operacion_guardar",
+      "argumentos": "p_id text, p_tipo text, p_estado text, p_parent_id text, p_datos jsonb",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_operacion_guardar(p_id text, p_tipo text, p_estado text, p_parent_id text, p_datos jsonb)\n RETURNS TABLE(id text, tipo text, estado text, parent_id text, datos jsonb, creado_en timestamp with time zone, actualizado_en timestamp with time zone)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_inmob uuid;\n  v_existe boolean;\nbegin\n  v_inmob := fn_mi_inmobiliaria();\n  if v_inmob is null then raise exception 'No se pudo resolver tu inmobiliaria'; end if;\n  if p_id is null or trim(p_id)='' then raise exception 'id requerido'; end if;\n  if p_parent_id is not null then\n    if p_parent_id = p_id then raise exception 'Una operación no puede ser su propia operación padre'; end if;\n    if not exists(select 1 from operaciones o where o.id=p_parent_id and o.inmobiliaria_id=v_inmob and o.eliminado_en is null) then\n      raise exception 'La operación padre no existe o no pertenece a tu inmobiliaria';\n    end if;\n  end if;\n\n  select exists(select 1 from operaciones o where o.id=p_id) into v_existe;\n  if v_existe then\n    update operaciones o set tipo=p_tipo,estado=coalesce(p_estado,'borrador'),parent_id=p_parent_id,datos=p_datos,actualizado_por=auth.uid(),actualizado_en=now()\n    where o.id=p_id and o.inmobiliaria_id=v_inmob;\n    if not found then raise exception 'La operación no existe o no pertenece a tu inmobiliaria'; end if;\n  else\n    insert into operaciones(id,inmobiliaria_id,tipo,estado,parent_id,datos,creado_por,actualizado_por)\n    values(p_id,v_inmob,p_tipo,coalesce(p_estado,'borrador'),p_parent_id,p_datos,auth.uid(),auth.uid());\n    insert into auditoria(inmobiliaria_id,usuario_id,entidad_tipo,accion,valor_nuevo,origen)\n    values(v_inmob,auth.uid(),'operacion','crear',jsonb_build_object('id',p_id,'tipo',p_tipo),'directa');\n  end if;\n  return query select o.id,o.tipo,o.estado,o.parent_id,o.datos,o.creado_en,o.actualizado_en from operaciones o where o.id=p_id;\nend;\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_operacion_restaurar",
+      "argumentos": "p_id text",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_operacion_restaurar(p_id text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare v_inmob uuid;\nbegin\n  v_inmob := fn_mi_inmobiliaria();\n  update operaciones set eliminado_en = null, eliminado_por = null\n  where id = p_id and inmobiliaria_id = v_inmob and eliminado_en is not null;\n  if not found then raise exception 'La operación no existe, no pertenece a tu inmobiliaria o no está en la papelera'; end if;\n  insert into auditoria(inmobiliaria_id, usuario_id, entidad_tipo, accion, valor_nuevo, origen)\n  values (v_inmob, auth.uid(), 'operacion', 'restaurar', jsonb_build_object('id',p_id), 'directa');\nend;\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_operaciones_listar",
+      "argumentos": "",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_operaciones_listar()\n RETURNS TABLE(id text, tipo text, estado text, parent_id text, datos jsonb, creado_en timestamp with time zone, actualizado_en timestamp with time zone)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\n  select o.id, o.tipo, o.estado, o.parent_id, o.datos, o.creado_en, o.actualizado_en\n  from operaciones o\n  where o.inmobiliaria_id = fn_mi_inmobiliaria() and o.eliminado_en is null\n  order by o.creado_en desc;\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_operaciones_papelera",
+      "argumentos": "",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_operaciones_papelera()\n RETURNS TABLE(id text, tipo text, estado text, parent_id text, datos jsonb, creado_en timestamp with time zone, eliminado_en timestamp with time zone)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\n  select o.id, o.tipo, o.estado, o.parent_id, o.datos, o.creado_en, o.eliminado_en\n  from operaciones o\n  where o.inmobiliaria_id = fn_mi_inmobiliaria() and o.eliminado_en is not null\n  order by o.eliminado_en desc;\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_operaciones_purgar_vencidas",
+      "argumentos": "",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_operaciones_purgar_vencidas()\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_inmob uuid;\nbegin\n  if not fn_es_admin(auth.uid()) then\n    raise exception 'Solo Admin/Dueño puede purgar operaciones';\n  end if;\n\n  v_inmob := fn_mi_inmobiliaria();\n  if v_inmob is null then\n    raise exception 'No se pudo resolver tu inmobiliaria';\n  end if;\n\n  delete from operaciones\n   where inmobiliaria_id = v_inmob\n     and eliminado_en is not null\n     and eliminado_en < now() - interval '30 days';\nend;\n$function$\n",
+      "authenticated_execute": true,
+      "anon_execute": false
+    },
+    {
+      "proname": "fn_auditoria_registrar",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_auditoria_registrar(p_accion text, p_operacion_id text, p_valor_nuevo jsonb)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_usuario_id uuid;\n  v_inmobiliaria_id uuid;\n  v_inmobiliaria_operacion uuid;\n  v_valor_nuevo jsonb;\nbegin\n  v_usuario_id := auth.uid();\n  if v_usuario_id is null then\n    raise exception 'Se requiere una sesión autenticada.' using errcode = '42501';\n  end if;\n\n  select u.inmobiliaria_id into v_inmobiliaria_id\n    from public.usuarios u\n   where u.id = v_usuario_id and u.activo = true;\n\n  if v_inmobiliaria_id is null then\n    raise exception 'El usuario no está activo o no tiene inmobiliaria.' using errcode = '42501';\n  end if;\n\n  if coalesce(btrim(p_accion), '') <> 'exportar_con_faltantes' then\n    raise exception 'Acción de auditoría no permitida.' using errcode = '42501';\n  end if;\n\n  if nullif(btrim(p_operacion_id), '') is null then\n    raise exception 'Falta el identificador de la operación.' using errcode = '22023';\n  end if;\n\n  if pg_column_size(coalesce(p_valor_nuevo, '{}'::jsonb)) > 20000 then\n    raise exception 'El detalle de auditoría es demasiado grande.' using errcode = '22023';\n  end if;\n\n  select o.inmobiliaria_id into v_inmobiliaria_operacion\n    from public.operaciones o\n   where o.id = p_operacion_id and o.eliminado_en is null;\n\n  if not found or v_inmobiliaria_operacion is distinct from v_inmobiliaria_id then\n    raise exception 'La operación no pertenece a la inmobiliaria de la sesión.' using errcode = '42501';\n  end if;\n\n  v_valor_nuevo := (coalesce(p_valor_nuevo, '{}'::jsonb)\n                    - 'usuario_id' - 'usuario_email' - 'usuario_nombre' - 'inmobiliaria_id')\n                   || jsonb_build_object('operacion_id', p_operacion_id);\n\n  insert into public.auditoria (inmobiliaria_id, usuario_id, entidad_tipo, entidad_id,\n                                accion, valor_nuevo, origen)\n  values (v_inmobiliaria_id, v_usuario_id, 'operacion', null,\n          p_accion, v_valor_nuevo, 'directa');\nend;\n$function$\n"
+    },
+    {
+      "proname": "fn_operaciones_vaciar_papelera",
+      "definicion": "CREATE OR REPLACE FUNCTION public.fn_operaciones_vaciar_papelera()\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_inmob uuid;\nbegin\n  if not fn_es_admin(auth.uid()) then\n    raise exception 'Solo Admin/Dueño puede vaciar la papelera';\n  end if;\n\n  v_inmob := fn_mi_inmobiliaria();\n  if v_inmob is null then\n    raise exception 'No se pudo resolver tu inmobiliaria';\n  end if;\n\n  delete from operaciones\n   where inmobiliaria_id = v_inmob\n     and eliminado_en is not null;\nend;\n$function$\n"
+    }
+  ],
+  "catalogo": [
+    {
+      "tipo": "columnas",
+      "datos": [
+        {
+          "tipo": "uuid",
+          "tabla": "auditoria",
+          "columna": "id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "auditoria",
+          "columna": "inmobiliaria_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "auditoria",
+          "columna": "usuario_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "text",
+          "tabla": "auditoria",
+          "columna": "entidad_tipo",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "auditoria",
+          "columna": "entidad_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "text",
+          "tabla": "auditoria",
+          "columna": "accion",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "jsonb",
+          "tabla": "auditoria",
+          "columna": "valor_anterior",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "jsonb",
+          "tabla": "auditoria",
+          "columna": "valor_nuevo",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "auditoria_origen_t",
+          "tabla": "auditoria",
+          "columna": "origen",
+          "default": "'directa'::auditoria_origen_t",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "auditoria",
+          "columna": "solicitud_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "auditoria",
+          "columna": "autorizado_por",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "timestamptz",
+          "tabla": "auditoria",
+          "columna": "creada_en",
+          "default": "now()",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "documento_versiones",
+          "columna": "id",
+          "default": "gen_random_uuid()",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "documento_versiones",
+          "columna": "inmobiliaria_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "text",
+          "tabla": "documento_versiones",
+          "columna": "operacion_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "int4",
+          "tabla": "documento_versiones",
+          "columna": "version",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "text",
+          "tabla": "documento_versiones",
+          "columna": "tipo_documento",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "jsonb",
+          "tabla": "documento_versiones",
+          "columna": "documento",
+          "default": "'{}'::jsonb",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "documento_versiones",
+          "columna": "creado_por",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "timestamptz",
+          "tabla": "documento_versiones",
+          "columna": "creado_en",
+          "default": "now()",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "text",
+          "tabla": "operaciones",
+          "columna": "id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "operaciones",
+          "columna": "inmobiliaria_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "text",
+          "tabla": "operaciones",
+          "columna": "tipo",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "text",
+          "tabla": "operaciones",
+          "columna": "estado",
+          "default": "'borrador'::text",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "text",
+          "tabla": "operaciones",
+          "columna": "parent_id",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "jsonb",
+          "tabla": "operaciones",
+          "columna": "datos",
+          "default": "'{}'::jsonb",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "operaciones",
+          "columna": "creado_por",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "timestamptz",
+          "tabla": "operaciones",
+          "columna": "creado_en",
+          "default": "now()",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "operaciones",
+          "columna": "actualizado_por",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "timestamptz",
+          "tabla": "operaciones",
+          "columna": "actualizado_en",
+          "default": "now()",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "timestamptz",
+          "tabla": "operaciones",
+          "columna": "eliminado_en",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "operaciones",
+          "columna": "eliminado_por",
+          "default": null,
+          "nullable": "YES"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "usuarios",
+          "columna": "id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "uuid",
+          "tabla": "usuarios",
+          "columna": "inmobiliaria_id",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "text",
+          "tabla": "usuarios",
+          "columna": "email",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "text",
+          "tabla": "usuarios",
+          "columna": "nombre",
+          "default": null,
+          "nullable": "NO"
+        },
+        {
+          "tipo": "rol_base_t",
+          "tabla": "usuarios",
+          "columna": "rol_base",
+          "default": "'broker'::rol_base_t",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "perfil_permisos_t",
+          "tabla": "usuarios",
+          "columna": "perfil_permisos",
+          "default": "'junior'::perfil_permisos_t",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "bool",
+          "tabla": "usuarios",
+          "columna": "activo",
+          "default": "true",
+          "nullable": "NO"
+        },
+        {
+          "tipo": "timestamptz",
+          "tabla": "usuarios",
+          "columna": "creado_en",
+          "default": "now()",
+          "nullable": "NO"
+        }
+      ]
+    },
+    {
+      "tipo": "policies",
+      "datos": [
+        {
+          "cmd": "SELECT",
+          "qual": "(inmobiliaria_id = fn_mi_inmobiliaria())",
+          "roles": [
+            "public"
+          ],
+          "tablename": "auditoria",
+          "permissive": "PERMISSIVE",
+          "policyname": "auditoria_select",
+          "schemaname": "public",
+          "with_check": null
+        },
+        {
+          "cmd": "SELECT",
+          "qual": "(inmobiliaria_id = ( SELECT fn_mi_inmobiliaria() AS fn_mi_inmobiliaria))",
+          "roles": [
+            "authenticated"
+          ],
+          "tablename": "documento_versiones",
+          "permissive": "PERMISSIVE",
+          "policyname": "documento_versiones_select",
+          "schemaname": "public",
+          "with_check": null
+        },
+        {
+          "cmd": "SELECT",
+          "qual": "(inmobiliaria_id = fn_mi_inmobiliaria())",
+          "roles": [
+            "public"
+          ],
+          "tablename": "operaciones",
+          "permissive": "PERMISSIVE",
+          "policyname": "operaciones_select",
+          "schemaname": "public",
+          "with_check": null
+        }
+      ]
+    },
+    {
+      "tipo": "triggers",
+      "datos": [
+        {
+          "tabla": "operaciones",
+          "nombre": "dw_validar_prueba",
+          "funcion": "CREATE OR REPLACE FUNCTION docworks_private.validar_escritura_prueba()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare v_id uuid;\nbegin\n  if auth.uid() is not null and not public.fn_es_super_admin(auth.uid()) then\n    select inmobiliaria_id into v_id from public.usuarios where id=auth.uid();\n    if exists(select 1 from public.membresias where inmobiliaria_id=v_id and es_prueba and\n      (estado not in ('activa','pendiente') or fecha_vencimiento is null or fecha_vencimiento<=statement_timestamp())) then\n      raise exception 'Tu prueba terminó. Elegí un plan para seguir trabajando.';\n    end if;\n  end if;\n  if tg_op='DELETE' then return old; end if;\n  return new;\nend; $function$\n",
+          "definicion": "CREATE TRIGGER dw_validar_prueba BEFORE INSERT OR DELETE OR UPDATE ON public.operaciones FOR EACH ROW EXECUTE FUNCTION docworks_private.validar_escritura_prueba()"
+        },
+        {
+          "tabla": "operaciones",
+          "nombre": "trg_documento_versiones_snapshot",
+          "funcion": "CREATE OR REPLACE FUNCTION public.fn_documento_versiones_snapshot()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_version integer;\nbegin\n  if tg_op = 'UPDATE'\n     and (\n       old.datos is distinct from new.datos\n       or old.tipo is distinct from new.tipo\n       or old.parent_id is distinct from new.parent_id\n     ) then\n    select coalesce(max(v.version), 0) + 1\n      into v_version\n      from public.documento_versiones v\n     where v.operacion_id = old.id;\n\n    insert into public.documento_versiones (\n      inmobiliaria_id,\n      operacion_id,\n      version,\n      tipo_documento,\n      documento,\n      creado_por\n    )\n    values (\n      old.inmobiliaria_id,\n      old.id,\n      v_version,\n      old.tipo,\n      jsonb_build_object(\n        'id', old.id,\n        'tipo', old.tipo,\n        'estado', old.estado,\n        'parent_id', old.parent_id,\n        'datos', old.datos,\n        'creado_en', old.creado_en,\n        'actualizado_en', old.actualizado_en,\n        'actualizado_por', old.actualizado_por\n      ),\n      coalesce(new.actualizado_por, old.actualizado_por)\n    );\n  end if;\n\n  return new;\nend;\n$function$\n",
+          "definicion": "CREATE TRIGGER trg_documento_versiones_snapshot AFTER UPDATE ON public.operaciones FOR EACH ROW EXECUTE FUNCTION fn_documento_versiones_snapshot()"
+        },
+        {
+          "tabla": "operaciones",
+          "nombre": "trg_docworks_auditoria_operaciones",
+          "funcion": "CREATE OR REPLACE FUNCTION public.fn_docworks_auditoria_trigger()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_new jsonb;\n  v_old jsonb;\n  v_row jsonb;\n  v_tenant uuid;\n  v_entity uuid;\n  v_actor uuid := auth.uid();\n  v_accion text;\n  v_entidad text := TG_TABLE_NAME;\n  v_inmob_txt text;\n  v_usuario_txt text;\n  v_plantilla_txt text;\nbegin\n  if TG_TABLE_NAME = 'auditoria' then\n    return coalesce(NEW, OLD);\n  end if;\n\n  -- auditoria.inmobiliaria_id es NOT NULL y referencia inmobiliarias(id).\n  -- Si se elimina la propia inmobiliaria, no podemos insertar después del DELETE\n  -- un registro que apunte a una fila que ya no existe. La operación queda fuera\n  -- de esta auditoría para evitar romper el DELETE de la inmobiliaria.\n  if TG_TABLE_NAME = 'inmobiliarias' and TG_OP = 'DELETE' then\n    return OLD;\n  end if;\n\n  v_new := case when TG_OP <> 'DELETE' then to_jsonb(NEW) else null end;\n  v_old := case when TG_OP <> 'INSERT' then to_jsonb(OLD) else null end;\n  v_row := coalesce(v_new, v_old);\n\n  -- ID de la entidad, solo si tiene formato UUID.\n  if v_row ? 'id' and (v_row->>'id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then\n    v_entity := (v_row->>'id')::uuid;\n  end if;\n\n  -- Caso normal: la tabla tiene inmobiliaria_id.\n  if v_row ? 'inmobiliaria_id' then\n    v_inmob_txt := v_row->>'inmobiliaria_id';\n    if v_inmob_txt ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then\n      v_tenant := v_inmob_txt::uuid;\n    end if;\n  end if;\n\n  -- inmobiliarias es una entidad global, pero cada cambio pertenece a esa inmobiliaria.\n  if TG_TABLE_NAME = 'inmobiliarias' and v_entity is not null then\n    v_tenant := v_entity;\n  end if;\n\n  -- bloques -> tenant por plantilla.\n  if v_tenant is null and TG_TABLE_NAME = 'bloques' and v_row ? 'plantilla_id' then\n    v_plantilla_txt := v_row->>'plantilla_id';\n    if v_plantilla_txt ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then\n      select p.inmobiliaria_id into v_tenant from plantillas p where p.id = v_plantilla_txt::uuid;\n    end if;\n  end if;\n\n  -- permisos_broker -> tenant por usuario.\n  if v_tenant is null and TG_TABLE_NAME = 'permisos_broker' and v_row ? 'usuario_id' then\n    v_usuario_txt := v_row->>'usuario_id';\n    if v_usuario_txt ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then\n      select u.inmobiliaria_id into v_tenant from usuarios u where u.id = v_usuario_txt::uuid;\n    end if;\n  end if;\n\n  -- Si el cambio no se puede asociar a una inmobiliaria, no se inserta en la auditoría\n  -- de tenants porque la columna inmobiliaria_id es NOT NULL.\n  if v_tenant is null then\n    return coalesce(NEW, OLD);\n  end if;\n\n  -- No registrar UPDATE que no cambió ningún dato.\n  if TG_OP = 'UPDATE' and v_old = v_new then\n    return NEW;\n  end if;\n\n  v_accion := case TG_OP\n    when 'INSERT' then 'crear_' || v_entidad\n    when 'UPDATE' then 'actualizar_' || v_entidad\n    when 'DELETE' then 'eliminar_' || v_entidad\n    else lower(TG_OP) || '_' || v_entidad\n  end;\n\n  insert into auditoria(\n    inmobiliaria_id,\n    usuario_id,\n    entidad_tipo,\n    entidad_id,\n    accion,\n    valor_anterior,\n    valor_nuevo,\n    origen\n  ) values (\n    v_tenant,\n    v_actor,\n    v_entidad,\n    v_entity,\n    v_accion,\n    v_old,\n    v_new,\n    'trigger'\n  );\n\n  return coalesce(NEW, OLD);\nend;\n$function$\n",
+          "definicion": "CREATE TRIGGER trg_docworks_auditoria_operaciones AFTER INSERT OR DELETE OR UPDATE ON public.operaciones FOR EACH ROW EXECUTE FUNCTION fn_docworks_auditoria_trigger()"
+        }
+      ]
+    }
+  ]
+}
