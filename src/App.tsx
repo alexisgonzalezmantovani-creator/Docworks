@@ -10,6 +10,7 @@ declare global {
   interface Navigator { standalone?: boolean; }
 }
 import { InicioInmobiliaria } from './PrimerosPasos';
+import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
 import { crearClausulasView, crearClausulasWorkspace } from './Clausulas';
 import { crearDocumentViewer, crearOperacionForm, crearPapeleraView, crearTareasPanel, crearNegociacionPanel, crearReservaDecisionPanel } from './Operaciones';
 import { crearSuperAdminDashboard, crearConfiguracionView, crearDashboardView , crearEstadisticasView , crearCalendarioView } from './Operaciones';
@@ -461,7 +462,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.12";
+var DOCWORKS_VERSION = "6.13";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -3679,7 +3680,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
       // 13. Incumplimiento / arrepentimiento — honorarios
       {titulo:esUSD?"13. HONORARIOS POR INCUMPLIMIENTO":"12. HONORARIOS POR INCUMPLIMIENTO", items:["En caso de incumplimiento o arrepentimiento de alguna de Las Partes, una vez cumplidos todos los Ad Referéndum de la presente Reserva, la parte incumplidora deberá abonar los honorarios pactados en concepto de labor de intermediación realizada hasta el momento, sin necesidad de formalidad judicial alguna.-"]},
       // 14. Asesoramiento individual
-      {titulo:esUSD?"14. ASESORAMIENTO LEGAL E IMPOSITIVO":"13. ASESORAMIENTO LEGAL E IMPOSITIVO", items:["El Oferente manifiesta expresamente que para realizar la presente oferta se ha asesorado en forma individual con sus propios asesores legales e impositivos, declarando conocer en todos sus términos los riesgos e implicancias de la presente oferta.-"]},
+      {titulo:esUSD?"14. ASESORAMIENTO LEGAL E IMPOSITIVO":"13. ASESORAMIENTO LEGAL E IMPOSITIVO", items:[RECOMENDACION_ASESORAMIENTO]},
       // 15. Refuerzo
       (!op.reserva_incluye_refuerzo?null:{titulo:esUSD?"15. REFUERZO":"14. REFUERZO", items:["El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva dentro de los 7 días corridos a partir de su conformidad, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-"]}),
     ].filter(Boolean);

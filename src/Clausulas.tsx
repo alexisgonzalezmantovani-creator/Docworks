@@ -1,3 +1,4 @@
+import { AvisoModelos, RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
 // Módulo extraído sin modificar las declaraciones originales.
 export const CLAUSULAS_DEFAULT = [
   { id:"especial.credito_hipotecario", titulo:"Operación supeditada a crédito hipotecario", categoria:"financiación", tipos:["reserva","boleto"], obligatoria:false, contenido:"La presente operación queda supeditada a la aprobación del crédito hipotecario solicitado por la parte compradora." },
@@ -56,7 +57,7 @@ export var DEFAULT_BLOQUES_RESERVA = [
     contenido:"En caso de incumplimiento o arrepentimiento de alguna de Las Partes, una vez cumplidos todos los Ad Referéndum de la presente Reserva, la parte incumplidora deberá abonar los honorarios pactados en concepto de labor de intermediación realizada hasta el momento, sin necesidad de formalidad judicial alguna.-",
     variables:[], condicion:null, orden:13, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.asesoramiento", titulo:"ASESORAMIENTO LEGAL E IMPOSITIVO", sinTitulo:false,
-    contenido:"El Oferente manifiesta expresamente que para realizar la presente oferta se ha asesorado en forma individual con sus propios asesores legales e impositivos, declarando conocer en todos sus términos los riesgos e implicancias de la presente oferta.-",
+    contenido:RECOMENDACION_ASESORAMIENTO,
     variables:[], condicion:null, orden:14, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.refuerzo", titulo:"REFUERZO", sinTitulo:false,
     contenido:"El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva dentro de los 7 días corridos a partir de su conformidad, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-",
@@ -375,6 +376,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var opcionalesDocumento=catalogoBiblioteca.filter(function(c){return clausulaAplicaTipo(c,tipoDocSel);});
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":"Elegí un documento y editá su contenido."}</div></div></div>
+    {seccion!=="papelera"&&<AvisoModelos/>}
     {puedeEditar&&<nav aria-label="Cláusulas y documentos" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       <button type="button" aria-pressed={seccion==="modelos"} className={seccion==="modelos"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
       <button type="button" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>

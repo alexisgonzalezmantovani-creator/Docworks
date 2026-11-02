@@ -1,4 +1,5 @@
 import { CentroAyuda } from './PrimerosPasos';
+import { AvisoModelos } from './AvisoModelos';
 // Módulo extraído sin modificar las declaraciones originales.
 export const EMPTY_OP = {
   tipo:"reserva", estado:"borrador", proceso_estado:"pendiente_aceptacion", reserva_aceptacion_dias:"5", reserva_aceptacion_vencimiento:"", negociacion_historial:[],
@@ -4693,6 +4694,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
         <div className="doc-reading-scroll">
+          <AvisoModelos compacto/>
           <div className="pdf-preview" style={{marginBottom:14}}>
             <div className="pdf-chrome">
               <div className="pdf-dot" style={{background:"#ff5f57"}}/><div className="pdf-dot" style={{background:"#ffbd2e"}}/><div className="pdf-dot" style={{background:"#28c840"}}/>
@@ -4737,6 +4739,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         open={!!pendingWarnings}
         title={pendingWarnings&&pendingWarnings.errors&&pendingWarnings.errors.length ? "Borrador: faltan datos en el documento" : "Revisá las advertencias"}
         message={pendingWarnings&&<span>
+          <AvisoModelos compacto/>
           {pendingWarnings.errors&&pendingWarnings.errors.length>0&&<><div style={{fontSize:12.5,color:"var(--red)",marginBottom:4,fontWeight:700}}>Al documento le faltan estos datos:</div><div style={{fontSize:12,color:"var(--dim)",marginBottom:8}}>Podés completarlos ahora o continuar igual: en ese caso el documento puede salir con campos vacíos o información legal incompleta.</div><ul style={{margin:0,paddingLeft:18,display:"flex",flexDirection:"column",gap:5}}>{pendingWarnings.errors.map(function(w,i){return <li key={i} style={{fontSize:13}}>{w}</li>;})}</ul></>}
           {pendingWarnings.avisos&&pendingWarnings.avisos.length>0&&<><div style={{fontSize:12.5,color:"var(--gold)",margin:"12px 0 8px",fontWeight:700}}>Avisos:</div><ul style={{margin:0,paddingLeft:18,display:"flex",flexDirection:"column",gap:5}}>{pendingWarnings.avisos.map(function(w,i){return <li key={i} style={{fontSize:13}}>{w}</li>;})}</ul></>}
           {pendingWarnings.datosFaltantes&&pendingWarnings.datosFaltantes.length>0&&<div style={{marginTop:12}}>
@@ -4813,7 +4816,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           }
           if(pw&&pw.fn)setPendingFinalConfirm({fn:pw.fn,doc:pw.doc});
         }}
-      />      <ConfirmModal open={!!pendingFinalConfirm} title="Revisá los datos críticos antes de generar" message={pendingFinalConfirm?(function(){var r=resumenFinal();return <div><div style={{padding:"10px 11px",borderRadius:10,background:"var(--surface2)",border:"1px solid var(--border)",marginBottom:8}}><div style={{fontSize:12,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>Precio / canon</div><div style={{fontSize:15,fontWeight:800,color:"var(--text)"}}>{r.precio}</div></div><div style={{padding:"10px 11px",borderRadius:10,background:"var(--surface2)",border:"1px solid var(--border)",marginBottom:8}}><div style={{fontSize:12,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>Partes</div>{r.partes.length?r.partes.map(function(x,i){return <div key={i} style={{fontSize:12.5,fontWeight:650,color:"var(--text)"}}>{x}</div>}):<div style={{fontSize:12,color:"var(--red)"}}>Sin partes cargadas</div>}</div><div style={{padding:"10px 11px",borderRadius:10,background:"var(--surface2)",border:"1px solid var(--border)"}}><div style={{fontSize:12,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>Comisión</div><div style={{fontSize:13,fontWeight:750,color:"var(--text)"}}>{r.comision}</div></div></div>})():""} confirmLabel="Generar documento final" danger={false} onCancel={function(){setPendingFinalConfirm(null);}} onConfirm={function(){var fn=pendingFinalConfirm&&pendingFinalConfirm.fn,docConfirm=pendingFinalConfirm&&pendingFinalConfirm.doc;setPendingFinalConfirm(null);if(fn)fn(docConfirm);}}
+      />      <ConfirmModal open={!!pendingFinalConfirm} title="Revisá los datos críticos antes de generar" message={pendingFinalConfirm?(function(){var r=resumenFinal();return <div><AvisoModelos compacto/><div style={{padding:"10px 11px",borderRadius:10,background:"var(--surface2)",border:"1px solid var(--border)",marginBottom:8}}><div style={{fontSize:12,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>Precio / canon</div><div style={{fontSize:15,fontWeight:800,color:"var(--text)"}}>{r.precio}</div></div><div style={{padding:"10px 11px",borderRadius:10,background:"var(--surface2)",border:"1px solid var(--border)",marginBottom:8}}><div style={{fontSize:12,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>Partes</div>{r.partes.length?r.partes.map(function(x,i){return <div key={i} style={{fontSize:12.5,fontWeight:650,color:"var(--text)"}}>{x}</div>}):<div style={{fontSize:12,color:"var(--red)"}}>Sin partes cargadas</div>}</div><div style={{padding:"10px 11px",borderRadius:10,background:"var(--surface2)",border:"1px solid var(--border)"}}><div style={{fontSize:12,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:3}}>Comisión</div><div style={{fontSize:13,fontWeight:750,color:"var(--text)"}}>{r.comision}</div></div></div>})():""} confirmLabel="Generar documento final" danger={false} onCancel={function(){setPendingFinalConfirm(null);}} onConfirm={function(){var fn=pendingFinalConfirm&&pendingFinalConfirm.fn,docConfirm=pendingFinalConfirm&&pendingFinalConfirm.doc;setPendingFinalConfirm(null);if(fn)fn(docConfirm);}}
       />
     </div>
   );
