@@ -304,13 +304,6 @@ export const GS = `
 .dw-operation-page-breadcrumb{font-size:12px;font-weight:650;color:var(--dim);}
 .dw-operation-page .grid2>.field{min-width:0;max-width:none;}
 
-/* Las tres categorías iniciales quedan agrupadas y centradas en escritorio. */
-.dw-operation-group-picker{width:100%;max-width:1020px;margin-inline:auto;}
-.dw-operation-group-picker > *{max-width:100%;}
-@media(min-width:900px){
-  .dw-operation-group-picker{max-width:900px;}
-  .dw-operation-group-picker button{min-width:0;}
-}
 
 
 /* Formulario compacto en monitores: evita campos exageradamente anchos y reduce el desplazamiento vertical. */
@@ -5084,7 +5077,7 @@ function OperacionForm({contextoBorrador=undefined,initial,clausulas,perfil,equi
   if(!grupo){
     return(
       <div>
-        <div className="dw-operation-group-picker" style={{minHeight:260,paddingTop:4}}>
+        <div style={{minHeight:260,paddingTop:4}}>
           <StepGrupo onSelect={function(g){setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);}}/>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:14}}>
