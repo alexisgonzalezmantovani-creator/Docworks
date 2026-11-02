@@ -463,7 +463,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.16";
+var DOCWORKS_VERSION = "6.17";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -1165,7 +1165,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
             onRestablecer();
           }
         }}>Restablecer valor predeterminado</button>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={conIA} disabled={status==="ia"}>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={conIA} disabled={!IA_DOCUMENTOS_HABILITADA||status==="ia"} title={!IA_DOCUMENTOS_HABILITADA?MENSAJE_IA_PAUSADA:undefined}>
           {status==="ia"?"IA…":"Mejorar con IA"}
         </button>
         <button type="button" className="btn btn-primary btn-sm" onClick={guardar} disabled={status==="saving"}>
@@ -5192,7 +5192,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
         <Inp label="Título" value={tituloCustom} onChange={function(e){setTituloCustom(e.target.value);}} placeholder="Ej.: Prohibición de mascotas"/>
         <Txa label="Texto" value={contenidoCustom} onChange={function(e){setContenidoCustom(e.target.value);}} placeholder="Escribí la cláusula…" rows={4}/>
         <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){setContenidoCustom(function(v){return (v?v+" ":"")+t;});}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictado opcional</span><Btn s="sm" v="secondary" onClick={narrarConIA} disabled={!IA_HABILITADA||!ideaIA.trim()||loadingIA} title={!IA_HABILITADA?MENSAJE_IA_PAUSADA:undefined}>{loadingIA?"Redactando…":"✦ IA"}</Btn></div>
-        <input className="inp" value={ideaIA} onChange={function(e){setIdeaIA(e.target.value);}} placeholder="Idea para IA (opcional)" style={{marginTop:8}}/>
+        <input className="inp" aria-label="Idea genérica para IA sin datos reales" maxLength={6000} value={ideaIA} onChange={function(e){setIdeaIA(e.target.value);}} placeholder="Idea genérica, sin datos personales ni confidenciales" style={{marginTop:8}}/>
         {errorIA&&<div style={{fontSize:12,color:"var(--red)",marginTop:5}}>{errorIA}</div>}
         <div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Esta cláusula se guarda únicamente en esta operación; no modifica la biblioteca de la inmobiliaria.</div>
       </div>}
@@ -5917,7 +5917,7 @@ function BotIAActivo({onClose,onAddClausula}){
       if(!respuesta)throw new Error("La IA no devolvió una respuesta.");
       var parsed=modoClausula?parseClauseResponse(respuesta):null;
       setMsgs(function(m){return m.concat([{role:"assistant",content:respuesta,clauseDraft:parsed&&parsed.obj||null}]);});
-    }catch(e){setError(e&&e.message?e.message:"No se pudo completar la consulta.");}
+    }catch(e){setMsgs(msgs);setInput(texto);setError(e&&e.message?e.message:"No se pudo completar la consulta.");}
     finally{setLoading(false);}
   }
   async function guardarClausula(i,draft){
@@ -5933,14 +5933,14 @@ function BotIAActivo({onClose,onAddClausula}){
   return <div role="dialog" aria-modal="false" aria-label="Asistente DocWorks" style={{position:"fixed",bottom:80,right:20,width:380,maxWidth:"calc(100vw - 40px)",maxHeight:"calc(100dvh - 110px)",zIndex:200,display:"flex",flexDirection:"column",borderRadius:16,overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.4)",border:"1px solid var(--border2)",background:"var(--surface)",color:"var(--text)"}}>
     <div style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}><strong style={{fontSize:14}}>Asistente DocWorks</strong><button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Cerrar asistente">✕</button></div>
     <p style={{fontSize:11.5,lineHeight:1.5,color:"var(--muted)",margin:"10px 12px 6px"}}>{AVISO_IA_GENERICA}</p>
-    <div style={{display:"flex",gap:6,padding:"0 12px 8px"}}><button type="button" className="btn btn-ghost btn-sm" aria-pressed={!modoClausula} disabled={loading} onClick={function(){setModoClausula(false);}}>Consulta general</button><button type="button" className="btn btn-ghost btn-sm" aria-pressed={modoClausula} disabled={loading} onClick={function(){setModoClausula(true);}}>Redactar cláusula</button></div>
+    <div style={{display:"flex",flexWrap:"wrap",gap:6,padding:"0 12px 8px"}}><button type="button" className="btn btn-ghost btn-sm" aria-pressed={!modoClausula} disabled={loading} onClick={function(){setModoClausula(false);}}>Consulta general</button><button type="button" className="btn btn-ghost btn-sm" aria-pressed={modoClausula} disabled={loading} onClick={function(){setModoClausula(true);}}>Redactar cláusula</button><button type="button" className="btn btn-ghost btn-sm" disabled={loading} onClick={function(){setMsgs([]);setInput("");setError("");setModoClausula(false);}}>Nueva consulta</button></div>
     <div style={{height:300,minHeight:80,overflowY:"auto",padding:"8px 12px",display:"flex",flexDirection:"column",gap:10}}>
       {msgs.map(function(m,i){var draft=m.clauseDraft;return <div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"94%",padding:"9px 12px",borderRadius:10,background:m.role==="user"?"rgba(212,168,83,.13)":"rgba(128,128,128,.08)",fontSize:12.5,lineHeight:1.6,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{draft?<><strong>{draft.titulo}</strong><div>{draft.contenido}</div>{onAddClausula&&<button type="button" className="btn btn-secondary btn-sm" style={{marginTop:8}} disabled={loading||m.added} onClick={function(){guardarClausula(i,draft);}}>{m.added?"Guardada en biblioteca":"Guardar en biblioteca"}</button>}</>:m.content}</div>;})}
       {loading&&<div role="status" style={{fontSize:12,color:"var(--muted)"}}>Procesando…</div>}<div ref={bottomRef}/>
     </div>
     {error&&<div role="alert" style={{padding:"6px 12px",fontSize:12,color:"var(--red)"}}>{error}</div>}
     <div style={{display:"flex",gap:8,alignItems:"flex-end",padding:12,borderTop:"1px solid var(--border)"}}>
-      <textarea aria-label="Consulta general sin datos reales" value={input} maxLength={6000} onChange={function(e){setInput(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder={modoClausula?"Ej.: entrega amoblada con inventario":"Ej.: ¿Qué diferencia hay entre reserva y seña?"} rows={2} className="inp" style={{flex:1,minWidth:0,resize:"none"}}/>
+      <textarea aria-label="Consulta general sin datos reales" disabled={loading} value={input} maxLength={6000} onChange={function(e){setInput(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder={modoClausula?"Ej.: entrega amoblada con inventario":"Ej.: ¿Qué diferencia hay entre reserva y seña?"} rows={2} className="inp" style={{flex:1,minWidth:0,resize:"none"}}/>
       <button type="button" className="btn btn-primary btn-sm" disabled={!input.trim()||loading} onClick={send}>Enviar</button>
     </div>
   </div>;

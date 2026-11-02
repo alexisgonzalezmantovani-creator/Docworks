@@ -20,7 +20,7 @@ const CLAUSULA_SYSTEM = `
 Sos un asistente especializado en redacción de cláusulas para documentos inmobiliarios argentinos.
 Contexto principal: Argentina, especialmente CABA y Provincia de Buenos Aires.
 El usuario te dará una idea breve y genérica de una cláusula. No incluyas nombres, identificadores ni domicilios de personas: utilizá marcadores como [NOMBRE], [DNI] y [DOMICILIO].
-Tenés que convertir esa idea en una cláusula profesional, clara y jurídicamente coherente para utilizar en un documento inmobiliario.
+Convertí esa idea en un borrador orientativo claro, sujeto a revisión de un abogado antes de utilizarlo. No afirmes validez jurídica garantizada ni que las partes ya recibieron asesoramiento.
 Respondé EXCLUSIVAMENTE con JSON válido, exactamente con esta estructura:
 {"titulo":"Título breve de la cláusula","categoria":"general|posesion|pago|rescision|impuestos|alquiler","contenido":"Texto completo de la cláusula"}
 No agregues markdown ni explicaciones fuera del JSON.
@@ -31,27 +31,10 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 function normalizeMessages(messages: any[]) {
-  if (!Array.isArray(messages)) return [];
-  return messages.filter((m) => m && m.content != null).map((m) => {
-    const role = m.role === "assistant" || m.role === "model" ? "model" : "user";
-    const content = m.content;
-    if (typeof content === "string") return { role, parts: [{ text: content }] };
-    if (Array.isArray(content)) {
-      const parts = content.flatMap((part: any) => {
-        if (!part) return [];
-        if (part.type === "text" && typeof part.text === "string") return [{ text: part.text }];
-        if (part.type === "image" && part.source?.type === "base64" && part.source?.data) {
-          return [{ inlineData: { mimeType: part.source.media_type || "image/jpeg", data: part.source.data } }];
-        }
-        if (part.type === "document" && part.source?.type === "base64" && part.source?.data) {
-          return [{ inlineData: { mimeType: part.source.media_type || "application/pdf", data: part.source.data } }];
-        }
-        return [];
-      });
-      return { role, parts };
-    }
-    return { role, parts: [{ text: String(content) }] };
-  }).filter((m) => m.parts.length > 0);
+  return messages.map((m) => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
 }
 
 async function verifyUser(req: Request) {
@@ -66,7 +49,21 @@ async function verifyUser(req: Request) {
     headers: { Authorization: `Bearer ${token}`, apikey: supabaseAnonKey },
   });
   if (!response.ok) throw new Error("La sesión de usuario no es válida.");
-  return await response.json();
+  const user = await response.json();
+  if (!user?.id) throw new Error("La sesión de usuario no es válida.");
+  // El JWT autentica; el contexto del servidor verifica acceso vigente.
+  const contextResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/fn_mi_contexto`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, apikey: supabaseAnonKey, "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!contextResponse.ok) throw new Error("No se pudo verificar el acceso a DocWorks.");
+  const context = await contextResponse.json();
+  if (context?.habilitado !== true || (context.es_super_admin !== true &&
+      (context.usuario?.id !== user.id || !context.inmobiliaria?.id))) {
+    throw new Error("Tu usuario o inmobiliaria no tiene acceso habilitado a DocWorks.");
+  }
+  return user;
 }
 
 async function callGemini(apiKey: string, model: string, systemInstruction: string, messages: any[], maxOutputTokens: number) {
@@ -91,7 +88,7 @@ async function callGemini(apiKey: string, model: string, systemInstruction: stri
       console.warn("Gemini model fallback:", model, "-> gemini-2.5-flash", response.status);
       return await callGemini(apiKey, "gemini-2.5-flash", systemInstruction, messages, maxOutputTokens);
     }
-    throw new Error(data?.error?.message || "Gemini no pudo procesar la solicitud.");
+    throw new Error("El proveedor de IA no pudo completar la consulta. Intentá nuevamente más tarde.");
   }
   const text = data?.candidates?.[0]?.content?.parts?.filter((p: any) => typeof p?.text === "string").map((p: any) => p.text).join("") || "";
   if (!text) throw new Error("Gemini no devolvió texto.");
@@ -103,6 +100,17 @@ function cleanJsonText(text: string) {
   if (cleaned.startsWith("```")) cleaned = cleaned.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
   return cleaned;
 }
+
+// Solo mensajes propios y constantes pueden exponerse al cliente.
+const publicErrors = new Set([
+  "No se encontró una sesión válida.", "Faltan las variables de Supabase.",
+  "La sesión de usuario no es válida.", "No se pudo verificar el acceso a DocWorks.",
+  "Tu usuario o inmobiliaria no tiene acceso habilitado a DocWorks.",
+  "El proveedor de IA no pudo completar la consulta. Intentá nuevamente más tarde.",
+  "Gemini no devolvió texto.",
+  "Gemini generó una cláusula pero la respuesta no tuvo un formato válido.",
+  "La IA no devolvió una cláusula con formato válido. Intentá una consulta nueva.",
+]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -126,6 +134,7 @@ Deno.serve(async (req) => {
         if (!m || !["user","assistant"].includes(m.role) || Object.keys(m).some(k=>!["role","content"].includes(k))) throw new Error("Solo se admite texto genérico, sin archivos ni datos de operaciones.");
         return {role:m.role,content:validarConsultaGenerica(m.content)};
       });
+      if (messages[messages.length - 1].role !== "user") throw new Error("La consulta debe terminar con un mensaje del usuario.");
       if(messages.reduce((n,m)=>n+m.content.length,0)>16000) throw new Error("La conversación es demasiado extensa. Iniciá una conversación nueva.");
     } catch (error) {
       return jsonResponse({ok:false,code:"IA_DATOS_NO_ADMITIDOS",error:error instanceof Error?error.message:"Usá una consulta genérica sin datos personales."});
@@ -146,12 +155,18 @@ Deno.serve(async (req) => {
       const cleaned = cleanJsonText(text);
       let parsed;
       try { parsed = JSON.parse(cleaned); } catch { throw new Error("Gemini generó una cláusula pero la respuesta no tuvo un formato válido."); }
-      return jsonResponse({ ok: true, mode: "generic_clause", text: JSON.stringify(parsed) });
+      if (!parsed || Array.isArray(parsed) || typeof parsed.titulo !== "string" || !parsed.titulo.trim() || parsed.titulo.length > 200 ||
+          typeof parsed.contenido !== "string" || !parsed.contenido.trim() || parsed.contenido.length > 12000 ||
+          !["general","posesion","pago","rescision","impuestos","alquiler"].includes(parsed.categoria)) {
+        throw new Error("La IA no devolvió una cláusula con formato válido. Intentá una consulta nueva.");
+      }
+      const clause = { titulo: parsed.titulo.trim(), categoria: parsed.categoria, contenido: parsed.contenido.trim() };
+      return jsonResponse({ ok: true, mode: "generic_clause", text: JSON.stringify(clause) });
     }
 
     throw new Error("Modo de IA no reconocido");
   } catch (error) {
     console.error("ia-docworks: solicitud no completada");
-    return jsonResponse({ ok: false, error: error instanceof Error ? error.message : "Error desconocido en la función de IA.", text: error instanceof Error ? error.message : "Error desconocido en la función de IA." }, 200);
+    return jsonResponse({ ok: false, error: error instanceof Error && publicErrors.has(error.message) ? error.message : "No se pudo completar la consulta de IA. Intentá nuevamente más tarde.", text: error instanceof Error && publicErrors.has(error.message) ? error.message : "No se pudo completar la consulta de IA. Intentá nuevamente más tarde." }, 200);
   }
 });
