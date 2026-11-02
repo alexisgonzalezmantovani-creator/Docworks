@@ -303,6 +303,11 @@ export const GS = `
 .dw-operation-page-heading p{margin:0;color:var(--muted);font-size:13px;}
 .dw-operation-page-breadcrumb{font-size:12px;font-weight:650;color:var(--dim);}
 .dw-operation-page .grid2>.field{min-width:0;max-width:none;}
+/* Selector integrado: ocupa buena parte del espacio sin márgenes laterales excesivos. */
+.dw-operation-groups-balanced{width:100%;max-width:1320px;margin-inline:auto;}
+@media(min-width:1200px){.dw-operation-groups-balanced{width:92%;}}
+@media(max-width:1199px){.dw-operation-groups-balanced{max-width:none;}}
+
 
 
 
@@ -5077,7 +5082,7 @@ function OperacionForm({contextoBorrador=undefined,initial,clausulas,perfil,equi
   if(!grupo){
     return(
       <div>
-        <div style={{minHeight:260,paddingTop:4}}>
+        <div className="dw-operation-groups-balanced" style={{minHeight:260,paddingTop:4}}>
           <StepGrupo onSelect={function(g){setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);}}/>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:14}}>
