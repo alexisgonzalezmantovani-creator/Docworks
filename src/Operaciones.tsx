@@ -294,6 +294,17 @@ export const GS = `
   select.inp{cursor:pointer;}
   select.inp option{background:#1e293b;color:#f1f5f9;}
 
+
+/* Editor de operaciones como página completa. */
+.dw-operation-page-content{width:100%;max-width:none!important;box-sizing:border-box;}
+.dw-operation-page{width:100%;max-width:none;min-width:0;display:flex;flex-direction:column;gap:16px;}
+.dw-operation-page-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:4px 0 16px;border-bottom:1px solid var(--border);}
+.dw-operation-page-heading h1{font-family:var(--font-serif);font-size:clamp(24px,2.1vw,34px);margin:5px 0;color:var(--text);}
+.dw-operation-page-heading p{margin:0;color:var(--muted);font-size:13px;}
+.dw-operation-page-breadcrumb{font-size:12px;font-weight:650;color:var(--dim);}
+.dw-operation-page .grid2>.field{min-width:0;max-width:none;}
+@media(max-width:640px){.dw-operation-page-heading{align-items:flex-start;}.dw-operation-page-heading h1{font-size:24px;}.dw-operation-page{gap:12px;}}
+
   /* ── Modal ── */
   .modal-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);height:100vh;height:100dvh;overflow:hidden;overscroll-behavior:contain;}
   .modal-box{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-lg);width:100%;max-height:92vh;max-height:92dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
