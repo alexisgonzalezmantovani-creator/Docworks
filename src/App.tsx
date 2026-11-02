@@ -7656,6 +7656,7 @@ function DocWorksApp(){
     return function(){ window.removeEventListener("popstate",onBack); };
   },[dwConfirm,confirmCloseForm,draftPrompt,showForm,viewDoc,view]);
   function abrirDoc(op){ setViewDoc(op); setDocTab(op&&op.tipo==="reserva" ? "reserva" : "resumen"); }
+  const [navPendiente,setNavPendiente]=useState(null);
   function cerrarFormularioSeguro(){
     var draft=lsGet("draftOperacion",null);
     if(draft&&draft.data&&draftTieneContenido(draft.data)){setConfirmCloseForm(true);return;}
@@ -7688,9 +7689,9 @@ function DocWorksApp(){
         return;
       }
     }
-    lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);
+    lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);if(navPendiente){setView(navPendiente);setNavPendiente(null);}
   }
-  function salirSinGuardarFormulario(){lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);}
+  function salirSinGuardarFormulario(){lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);if(navPendiente){setView(navPendiente);setNavPendiente(null);}}
 
   const [clausulas,setClausulas]=useState([]);
   const [papeleraClausulas,setPapeleraClausulas]=useState([]);
@@ -8652,7 +8653,7 @@ function DocWorksApp(){
           <aside className="sidebar">
             {navItems.map(function(n){
               return(
-                <button key={n.id} className={"nav-item premium-nav-item "+(view===n.id?"active":"")} onClick={function(){setView(n.id);}} aria-label={n.label} aria-current={view===n.id?"page":undefined}>
+                <button key={n.id} className={"nav-item premium-nav-item "+(view===n.id?"active":"")} onClick={function(){if(showForm){var draft=lsGet("draftOperacion",null);if(draft&&draft.data&&draftTieneContenido(draft.data)){setNavPendiente(n.id);setConfirmCloseForm(true);return;}setShowForm(false);setEditOp(null);setFormInitialOverride(null);}setView(n.id);}} aria-label={n.label} aria-current={view===n.id?"page":undefined}>
                   <span>{n.ico?<FormalIcon name={n.ico} size={22}/>:n.icon}</span>
                   <span className="tooltip">{n.label}</span>
                 </button>
