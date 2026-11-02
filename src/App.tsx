@@ -5276,22 +5276,19 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
   );
 }
 function StepGrupo({onSelect}){
-  return(
-    <div>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>¿Qué tipo de operación querés gestionar?</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+  return (
+    <div className="dw-grupo-selector">
+      <p className="dw-grupo-intro">Elegí el tipo de documento que querés generar.</p>
+      <div className="dw-grupo-grid">
         {Object.entries(TIPO_GRUPOS).map(function([key,g]){
-          var colors={compra:"rgba(212,168,83,0.08)",alquiler:"rgba(45,212,191,0.07)",otros:"rgba(148,163,184,0.07)"};
-          var borders={compra:"rgba(212,168,83,0.3)",alquiler:"rgba(45,212,191,0.25)",otros:"rgba(148,163,184,0.2)"};
-          return(
-            <button type="button" key={key} className="grupo-card" onClick={function(){onSelect(key);}}
-              style={{padding:"20px 16px",borderRadius:14,textAlign:"left",cursor:"pointer",
-                border:"2px solid "+borders[key],background:colors[key],outline:"none",
-                transition:"all 0.15s",display:"flex",flexDirection:"column",gap:6,
-                gridColumn:key==="otros"?"span 2":"span 1"}}>
-              <div style={{fontSize:28}}>{g.label.split(" ")[0]}</div>
-              <div style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>{g.label.slice(2)}</div>
-              <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{g.label==="📌 Otros"?g.tipos.map(function(t){return t.label;}).join(" · "):g.desc}</div>
+          var labels={compra:"Compra",alquiler:"Alquiler",otros:"Otros documentos"};
+          var icons={compra:"⌂",alquiler:"⚿",otros:"▤"};
+          var desc={compra:"Reservas y boletos de compraventa",alquiler:"Reservas y contratos de alquiler",otros:"Comodatos, exclusividades y documentos adicionales"};
+          return (
+            <button type="button" key={key} className={"dw-grupo-card dw-grupo-"+key} onClick={function(){onSelect(key);}}>
+              <span className="dw-grupo-icon" aria-hidden="true">{icons[key]}</span>
+              <span className="dw-grupo-text"><strong>{labels[key]}</strong><small>{desc[key]}</small></span>
+              <span className="dw-grupo-chevron" aria-hidden="true">›</span>
             </button>
           );
         })}
