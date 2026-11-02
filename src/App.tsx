@@ -11,6 +11,7 @@ declare global {
 }
 import { InicioInmobiliaria } from './PrimerosPasos';
 import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
+import { IA_HABILITADA, MENSAJE_IA_PAUSADA, asegurarIAHabilitada } from './PrivacidadIA';
 import { crearClausulasView, crearClausulasWorkspace } from './Clausulas';
 import { crearDocumentViewer, crearOperacionForm, crearPapeleraView, crearTareasPanel, crearNegociacionPanel, crearReservaDecisionPanel } from './Operaciones';
 import { crearSuperAdminDashboard, crearConfiguracionView, crearDashboardView , crearEstadisticasView , crearCalendarioView } from './Operaciones';
@@ -462,7 +463,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.14";
+var DOCWORKS_VERSION = "6.15";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -3141,6 +3142,7 @@ function aplicarEncabezadoPersonalizado(doc, op, tipo, perfil) {
 }
 
 async function mejorarEncabezadoIA(textoActual, tipo) {
+  asegurarIAHabilitada();
   var sb = await loadSupabaseJs();
   if (!sb) throw new Error("No se pudo conectar con Supabase.");
   var nombreTipo = (typeof TIPOS !== "undefined" && TIPOS[tipo]) ? TIPOS[tipo] : (tipo || "documento");
@@ -5172,7 +5174,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
   var [loadingIA,setLoadingIA]=useState(false);
   var [errorIA,setErrorIA]=useState("");
   useEffect(function(){onChange("clausulas_custom_titulo",showAdd?tituloCustom:"");onChange("clausulas_custom",showAdd?contenidoCustom:"");},[tituloCustom,contenidoCustom,showAdd]);
-  async function narrarConIA(){if(!ideaIA.trim()||loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA("Error al conectar con el asistente. Verificá tu conexión.");}setLoadingIA(false);}
+  async function narrarConIA(){if(!ideaIA.trim()||loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}setLoadingIA(false);}
   return <div>
     <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.55,marginBottom:14}}>Tu documento se completa automáticamente con los datos del formulario. Si esta operación necesita una condición adicional, podés elegirla acá.</p>
     <div style={{fontSize:12,fontWeight:750,color:"var(--text)",margin:"2px 0 8px"}}>Cláusulas adicionales</div>
@@ -5189,7 +5191,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
       {showAdd&&<div style={{marginTop:9,padding:12,borderRadius:12,border:"1px solid var(--border2)",background:"rgba(212,168,83,.035)"}}>
         <Inp label="Título" value={tituloCustom} onChange={function(e){setTituloCustom(e.target.value);}} placeholder="Ej.: Prohibición de mascotas"/>
         <Txa label="Texto" value={contenidoCustom} onChange={function(e){setContenidoCustom(e.target.value);}} placeholder="Escribí la cláusula…" rows={4}/>
-        <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){setContenidoCustom(function(v){return (v?v+" ":"")+t;});}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictado opcional</span><Btn s="sm" v="secondary" onClick={narrarConIA} disabled={!ideaIA.trim()||loadingIA}>{loadingIA?"Redactando…":"✦ IA"}</Btn></div>
+        <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){setContenidoCustom(function(v){return (v?v+" ":"")+t;});}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictado opcional</span><Btn s="sm" v="secondary" onClick={narrarConIA} disabled={!IA_HABILITADA||!ideaIA.trim()||loadingIA} title={!IA_HABILITADA?MENSAJE_IA_PAUSADA:undefined}>{loadingIA?"Redactando…":"✦ IA"}</Btn></div>
         <input className="inp" value={ideaIA} onChange={function(e){setIdeaIA(e.target.value);}} placeholder="Idea para IA (opcional)" style={{marginTop:8}}/>
         {errorIA&&<div style={{fontSize:12,color:"var(--red)",marginTop:5}}>{errorIA}</div>}
         <div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Esta cláusula se guarda únicamente en esta operación; no modifica la biblioteca de la inmobiliaria.</div>
@@ -5585,7 +5587,7 @@ function DocSummaryPanel({op, perfil, tabsDocs, onLeer, operaciones, onToggleTar
         </div>
         <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
           <span className={"badge "+(estadoBadgeCls[op.estado]||"badge-activo")}>{ESTADOS[op.estado]||op.estado}</span>
-          <button type="button" className="dw-chip-btn dw-chip-ia" onClick={onRevisionIA} disabled={!!(aiReview&&aiReview.loading)} title="Revisar con IA: detecta datos faltantes, diferencias y contradicciones. No modifica el documento."><span aria-hidden="true">✦</span>{aiReview&&aiReview.loading?"Revisando…":"Revisar con IA"}</button>
+          <button type="button" className="dw-chip-btn dw-chip-ia" onClick={onRevisionIA} disabled={!IA_HABILITADA||!!(aiReview&&aiReview.loading)} title={IA_HABILITADA?"Revisar con IA: detecta datos faltantes, diferencias y contradicciones. No modifica el documento.":MENSAJE_IA_PAUSADA}><span aria-hidden="true">✦</span>{!IA_HABILITADA?"IA en pausa":aiReview&&aiReview.loading?"Revisando…":"Revisar con IA"}</button>
         </div>
       </div>
       {(()=>{var pp=getProximoPasoOperacion(op,operaciones||[]);return <div className="card" style={{padding:"10px 12px",marginBottom:12,border:"1px solid rgba(212,168,83,.18)",display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:15,color:pp.tone}}>{pp.icon}</span><div><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em"}}>Próximo paso</div><div style={{fontSize:12.5,color:"var(--text)",fontWeight:700,marginTop:2}}>{pp.texto}</div></div></div>;})()}
@@ -5812,6 +5814,7 @@ function parseClauseJson(text){
 // Llama a Gemini para narrar una cláusula a partir de una idea breve del usuario.
 // Devuelve {titulo, categoria, contenido} o null si no pudo interpretar la respuesta.
 async function narrarClausulaIA(ideaBreve){
+  asegurarIAHabilitada();
   var sb=await loadSupabaseJs();
   if(!sb) throw new Error("No se pudo conectar con Supabase.");
   var res=await sb.functions.invoke("ia-docworks",{
@@ -5827,6 +5830,7 @@ async function narrarClausulaIA(ideaBreve){
 // punto de exportar y devuelve observaciones, sin modificar automáticamente
 // ningún dato ni cláusula. Sirve como segunda revisión antes de PDF/Word.
 async function revisarDocumentoIA(op, doc){
+  asegurarIAHabilitada();
   var sb=await loadSupabaseJs();
   if(!sb) throw new Error("No se pudo conectar con Supabase.");
   var tipo=TIPOS[(op||{}).tipo] || (op||{}).tipo || "Documento inmobiliario";
@@ -5880,8 +5884,13 @@ function fileToText(file){
   });
 }
 
-function BotIA({onClose,operaciones,clausulas,bloquesReserva,onAddClausula}){
-  const [msgs,setMsgs]=useState<any[]>([{role:"assistant",content:"¡Hola! Soy tu asistente legal de DocWorks. Puedo revisar una operación cargada y avisarte si falta algo, leer un contrato que adjuntes (PDF, imagen o .txt) y sugerir correcciones, o redactar una cláusula nueva para tu biblioteca. ¿En qué te ayudo?"}]);
+function BotIA(props){
+  if(IA_HABILITADA)return <BotIAActivo {...props}/>;
+  return <div role="dialog" aria-modal="false" aria-label="Asistente DocWorks" style={{position:"fixed",bottom:80,right:20,width:350,maxWidth:"calc(100vw - 40px)",zIndex:200,borderRadius:16,padding:16,boxShadow:"0 20px 60px rgba(0,0,0,.3)",border:"1px solid var(--border2)",background:"var(--surface)",color:"var(--text)"}}><div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center"}}><strong style={{fontSize:14}}>Asistente IA en pausa</strong><button type="button" className="btn btn-ghost btn-sm" onClick={props.onClose} aria-label="Cerrar asistente">✕</button></div><p style={{fontSize:13,lineHeight:1.6,margin:"10px 0 0",color:"var(--muted)"}}>{MENSAJE_IA_PAUSADA}</p></div>;
+}
+
+function BotIAActivo({onClose,operaciones,clausulas,bloquesReserva,onAddClausula}){
+  const [msgs,setMsgs]=useState<any[]>([{role:"assistant",content:"¡Hola! Soy tu asistente de documentos de DocWorks. Puedo revisar una operación cargada y avisarte si falta algo, leer un contrato que adjuntes (PDF, imagen o .txt) y sugerir correcciones, o redactar una cláusula nueva para tu biblioteca. ¿En qué te ayudo?"}]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
   const [attachment,setAttachment]=useState(null); // {name, kind:"pdf"|"image"|"text", mediaType, data}
@@ -5894,6 +5903,7 @@ function BotIA({onClose,operaciones,clausulas,bloquesReserva,onAddClausula}){
   useEffect(function(){if(bottomRef.current)bottomRef.current.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
 
   async function callGemini(newMsgs, systemExtra){
+    asegurarIAHabilitada();
     var sb=await loadSupabaseJs();
     if(!sb) throw new Error("No se pudo conectar con Supabase.");
     var mode=systemExtra?"clause":"chat";
@@ -6266,7 +6276,7 @@ function ClausulaIAComposer({onDraft}){
       if(draft){ onDraft(draft); setIdea(""); }
       else setError("No pude interpretar la respuesta. Probá reformular la idea.");
     }catch(e){
-      setError("Error al conectar con el asistente. Verificá tu conexión.");
+      setError(e&&e.message?e.message:"No se pudo usar el asistente.");
     }
     setLoading(false);
   }
@@ -6282,7 +6292,7 @@ function ClausulaIAComposer({onDraft}){
           onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();generar();}}}
           placeholder="Ej: que el inquilino no pueda tener mascotas sin autorización" style={{flex:1,resize:"none"}}/>
         <VozATextoButton onText={function(t){setIdea(function(v){return (v?v+" ":"")+t;});}} disabled={loading}/>
-        <Btn s="sm" onClick={generar} disabled={!idea.trim()||loading}>{loading?"Narrando…":"Redactar con IA"}</Btn>
+        <Btn s="sm" onClick={generar} disabled={!IA_HABILITADA||!idea.trim()||loading} title={!IA_HABILITADA?MENSAJE_IA_PAUSADA:undefined}>{!IA_HABILITADA?"IA en pausa":loading?"Narrando…":"Redactar con IA"}</Btn>
       </div>
       {error&&<div style={{fontSize:12,color:"var(--red)",marginTop:6}}>{error}</div>}
     </div>

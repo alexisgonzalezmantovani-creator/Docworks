@@ -1,3 +1,4 @@
+import { IA_HABILITADA, MENSAJE_IA_PAUSADA } from './PrivacidadIA';
 import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
 // Módulo extraído sin modificar las declaraciones originales.
 export const CLAUSULAS_DEFAULT = [
@@ -236,7 +237,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
           <label className="field-label" style={{display:"block",marginBottom:7}}>Contá en una frase qué querés que diga</label>
           <textarea className="inp" rows={2} value={ideaInicial} onChange={function(e){setIdeaInicial(e.target.value);setErrorIdea("");}} placeholder="Ej.: establecer cómo se distribuyen los gastos de reparación." style={{width:"100%",resize:"vertical",boxSizing:"border-box"}}/>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:9}}>
-            <button type="button" className="btn btn-primary" disabled={!ideaInicial.trim()||generandoIdea} onClick={redactarIdea}>{generandoIdea?"Redactando…":"Redactar con IA"}</button>
+            <button type="button" className="btn btn-primary" disabled={!IA_HABILITADA||!ideaInicial.trim()||generandoIdea} title={!IA_HABILITADA?MENSAJE_IA_PAUSADA:undefined} onClick={redactarIdea}>{!IA_HABILITADA?"IA en pausa":generandoIdea?"Redactando…":"Redactar con IA"}</button>
             <button type="button" className="btn btn-secondary" onClick={function(){setErrorIdea("");setForm(function(f){return Object.assign({},f,{contenido:f.contenido||ideaInicial.trim()});});setTimeout(function(){var el=document.getElementById("dw-clausula-texto");if(el)el.focus();},0);}}>Escribirla yo</button>
           </div>
           {errorIdea&&<div style={{fontSize:12,color:"var(--red)",marginTop:7}}>{errorIdea}</div>}
