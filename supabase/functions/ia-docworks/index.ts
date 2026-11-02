@@ -1,16 +1,14 @@
+import { validarConsultaGenerica } from "../../../src/PrivacidadIA.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Pausa preventiva mientras se utiliza un proveedor gratuito no apto para datos reales.
-const IA_DATOS_REALES_HABILITADA = false;
-const MENSAJE_IA_PAUSADA = "La asistencia con IA está temporalmente pausada. Podés seguir editando y exportando tus documentos.";
-
 const BOTIA_SYSTEM = `
 Sos el asistente de IA de DocWorks, una aplicación profesional para gestión y documentación inmobiliaria en Argentina.
-Tu función es asistir a profesionales inmobiliarios con contratos, reservas, boletos, comodatos, alquileres, cláusulas, operaciones inmobiliarias y negociaciones.
+Tu función es responder consultas generales y ayudar con cláusulas genéricas. No revises contratos ni operaciones concretas, no solicites datos personales o confidenciales y usá marcadores como [NOMBRE], [DNI] y [DOMICILIO] en los ejemplos.
 Contexto principal: Argentina, especialmente CABA y Provincia de Buenos Aires.
 Respondé siempre en español argentino profesional, claro y directo.
 Cuando corresponda, podés mencionar legislación, artículos o conceptos jurídicos, pero no inventes normas ni números de artículos.
@@ -21,7 +19,7 @@ No seas excesivamente verborrágico. Priorizá respuestas útiles, prácticas y 
 const CLAUSULA_SYSTEM = `
 Sos un asistente especializado en redacción de cláusulas para documentos inmobiliarios argentinos.
 Contexto principal: Argentina, especialmente CABA y Provincia de Buenos Aires.
-El usuario te dará una idea breve de una cláusula.
+El usuario te dará una idea breve y genérica de una cláusula. No incluyas nombres, identificadores ni domicilios de personas: utilizá marcadores como [NOMBRE], [DNI] y [DOMICILIO].
 Tenés que convertir esa idea en una cláusula profesional, clara y jurídicamente coherente para utilizar en un documento inmobiliario.
 Respondé EXCLUSIVAMENTE con JSON válido, exactamente con esta estructura:
 {"titulo":"Título breve de la cláusula","categoria":"general|posesion|pago|rescision|impuestos|alquiler","contenido":"Texto completo de la cláusula"}
@@ -86,7 +84,7 @@ async function callGemini(apiKey: string, model: string, systemInstruction: stri
   });
   const data = await response.json();
   if (!response.ok) {
-    console.error("Gemini API error:", data);
+    console.error("Gemini API error; status:", response.status);
     // Si el modelo principal está saturado o alcanza un límite temporal,
     // reintentar una vez con un modelo Flash alternativo antes de fallar.
     if ((response.status === 429 || response.status === 503) && model !== "gemini-2.5-flash") {
@@ -110,43 +108,50 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ ok: false, error: "Método no permitido.", text: "Método no permitido." }, 200);
 
-  // No leer el cuerpo ni contactar al proveedor mientras la función esté pausada.
-  if (!IA_DATOS_REALES_HABILITADA) {
-    return jsonResponse({ ok: false, code: "IA_PRIVACIDAD_PAUSADA", error: MENSAJE_IA_PAUSADA, text: MENSAJE_IA_PAUSADA });
-  }
-
   try {
+    // Rechazar formatos de clientes anteriores y adjuntos antes de contactar a Gemini.
+    const rawBody = await req.text();
+    if (rawBody.length > 60000) return jsonResponse({ok:false,code:"IA_SOLO_GENERICA",error:"Usá una consulta breve y genérica, sin contratos ni adjuntos."});
+    let payload: any;
+    try { payload=JSON.parse(rawBody); } catch { return jsonResponse({ok:false,code:"IA_SOLICITUD_INVALIDA",error:"Solicitud de IA inválida."}); }
+    if (!payload || !["generic_chat","generic_clause"].includes(payload.mode) || Object.keys(payload).some(k=>!["mode","messages"].includes(k))) {
+      return jsonResponse({ok:false,code:"IA_SOLO_GENERICA",error:"Solo están habilitadas las consultas y cláusulas genéricas. La revisión de operaciones y los adjuntos no están disponibles."});
+    }
+    if (!Array.isArray(payload.messages) || !payload.messages.length || payload.messages.length>12) {
+      return jsonResponse({ok:false,code:"IA_SOLICITUD_INVALIDA",error:"La consulta es demasiado extensa. Iniciá una conversación nueva."});
+    }
+    let messages: any[];
+    try {
+      messages=payload.messages.map((m: any)=>{
+        if (!m || !["user","assistant"].includes(m.role) || Object.keys(m).some(k=>!["role","content"].includes(k))) throw new Error("Solo se admite texto genérico, sin archivos ni datos de operaciones.");
+        return {role:m.role,content:validarConsultaGenerica(m.content)};
+      });
+      if(messages.reduce((n,m)=>n+m.content.length,0)>16000) throw new Error("La conversación es demasiado extensa. Iniciá una conversación nueva.");
+    } catch (error) {
+      return jsonResponse({ok:false,code:"IA_DATOS_NO_ADMITIDOS",error:error instanceof Error?error.message:"Usá una consulta genérica sin datos personales."});
+    }
     await verifyUser(req);
     const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
     if (!geminiApiKey) throw new Error("No está configurado el secreto GEMINI_API_KEY en Supabase.");
 
-    const rawBody = await req.text();
-    if (rawBody.length > 18_000_000) throw new Error("La solicitud es demasiado grande.");
-    let payload: any;
-    try { payload = JSON.parse(rawBody); } catch { throw new Error("El cuerpo de la solicitud no es JSON válido."); }
-
-    const mode = payload?.mode || "chat";
-    const messages = Array.isArray(payload?.messages) ? payload.messages : [];
-    if (!messages.length) throw new Error("No se recibieron mensajes.");
-
     const model = "gemini-3.6-flash";
 
-    if (mode === "chat") {
+    if (payload.mode === "generic_chat") {
       const text = await callGemini(geminiApiKey, model, BOTIA_SYSTEM, messages, 4096);
-      return jsonResponse({ ok: true, mode: "chat", text });
+      return jsonResponse({ ok: true, mode: "generic_chat", text });
     }
 
-    if (mode === "clause") {
+    if (payload.mode === "generic_clause") {
       const text = await callGemini(geminiApiKey, model, CLAUSULA_SYSTEM, messages, 3000);
       const cleaned = cleanJsonText(text);
       let parsed;
       try { parsed = JSON.parse(cleaned); } catch { throw new Error("Gemini generó una cláusula pero la respuesta no tuvo un formato válido."); }
-      return jsonResponse({ ok: true, mode: "clause", text: JSON.stringify(parsed) });
+      return jsonResponse({ ok: true, mode: "generic_clause", text: JSON.stringify(parsed) });
     }
 
-    throw new Error(`Modo de IA no reconocido: ${mode}`);
+    throw new Error("Modo de IA no reconocido");
   } catch (error) {
-    console.error("ia-docworks error:", error);
+    console.error("ia-docworks: solicitud no completada");
     return jsonResponse({ ok: false, error: error instanceof Error ? error.message : "Error desconocido en la función de IA.", text: error instanceof Error ? error.message : "Error desconocido en la función de IA." }, 200);
   }
 });

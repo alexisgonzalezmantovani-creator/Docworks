@@ -186,7 +186,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
     if(!ideaInicial.trim()||generandoIdea)return;
     setGenerandoIdea(true);setErrorIdea("");
     try{var draft=await narrarClausulaIA(ideaInicial.trim());if(draft){aplicarBorrador(draft);}else{setErrorIdea("No pude interpretar la respuesta. Probá reformular la idea.");}}
-    catch(e){setErrorIdea("No se pudo conectar con el asistente. Podés escribir la cláusula manualmente.");}
+    catch(e){setErrorIdea(e&&e.message?e.message:"No se pudo usar el asistente. Podés escribir la cláusula manualmente.");}
     finally{setGenerandoIdea(false);}
   }
   var esPersonalizada=function(c){return !CLAUSULAS_DEFAULT.find(function(d){return d.id===c.id;});};
@@ -235,7 +235,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
         </div>
         {!editId&&!clausulaCreadaId&&!creacionSinConfirmar&&<div style={{padding:12,border:"1px solid var(--border)",borderRadius:10,marginBottom:14,background:"var(--card2, var(--card))"}}>
           <label className="field-label" style={{display:"block",marginBottom:7}}>Contá en una frase qué querés que diga</label>
-          <textarea className="inp" rows={2} value={ideaInicial} onChange={function(e){setIdeaInicial(e.target.value);setErrorIdea("");}} placeholder="Ej.: establecer cómo se distribuyen los gastos de reparación." style={{width:"100%",resize:"vertical",boxSizing:"border-box"}}/>
+          <textarea className="inp" rows={2} value={ideaInicial} onChange={function(e){setIdeaInicial(e.target.value);setErrorIdea("");}} placeholder="Idea genérica, sin datos personales. Ej.: distribución de gastos de reparación." style={{width:"100%",resize:"vertical",boxSizing:"border-box"}}/>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:9}}>
             <button type="button" className="btn btn-primary" disabled={!IA_HABILITADA||!ideaInicial.trim()||generandoIdea} title={!IA_HABILITADA?MENSAJE_IA_PAUSADA:undefined} onClick={redactarIdea}>{!IA_HABILITADA?"IA en pausa":generandoIdea?"Redactando…":"Redactar con IA"}</button>
             <button type="button" className="btn btn-secondary" onClick={function(){setErrorIdea("");setForm(function(f){return Object.assign({},f,{contenido:f.contenido||ideaInicial.trim()});});setTimeout(function(){var el=document.getElementById("dw-clausula-texto");if(el)el.focus();},0);}}>Escribirla yo</button>

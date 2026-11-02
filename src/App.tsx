@@ -11,7 +11,7 @@ declare global {
 }
 import { InicioInmobiliaria } from './PrimerosPasos';
 import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
-import { IA_HABILITADA, MENSAJE_IA_PAUSADA, asegurarIAHabilitada } from './PrivacidadIA';
+import { IA_HABILITADA, IA_DOCUMENTOS_HABILITADA, MENSAJE_IA_PAUSADA, AVISO_IA_GENERICA, asegurarIAHabilitada, validarConsultaGenerica } from './PrivacidadIA';
 import { crearClausulasView, crearClausulasWorkspace } from './Clausulas';
 import { crearDocumentViewer, crearOperacionForm, crearPapeleraView, crearTareasPanel, crearNegociacionPanel, crearReservaDecisionPanel } from './Operaciones';
 import { crearSuperAdminDashboard, crearConfiguracionView, crearDashboardView , crearEstadisticasView , crearCalendarioView } from './Operaciones';
@@ -463,7 +463,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.15";
+var DOCWORKS_VERSION = "6.16";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -3142,7 +3142,7 @@ function aplicarEncabezadoPersonalizado(doc, op, tipo, perfil) {
 }
 
 async function mejorarEncabezadoIA(textoActual, tipo) {
-  asegurarIAHabilitada();
+  asegurarIAHabilitada("documento");
   var sb = await loadSupabaseJs();
   if (!sb) throw new Error("No se pudo conectar con Supabase.");
   var nombreTipo = (typeof TIPOS !== "undefined" && TIPOS[tipo]) ? TIPOS[tipo] : (tipo || "documento");
@@ -5587,7 +5587,7 @@ function DocSummaryPanel({op, perfil, tabsDocs, onLeer, operaciones, onToggleTar
         </div>
         <div style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
           <span className={"badge "+(estadoBadgeCls[op.estado]||"badge-activo")}>{ESTADOS[op.estado]||op.estado}</span>
-          <button type="button" className="dw-chip-btn dw-chip-ia" onClick={onRevisionIA} disabled={!IA_HABILITADA||!!(aiReview&&aiReview.loading)} title={IA_HABILITADA?"Revisar con IA: detecta datos faltantes, diferencias y contradicciones. No modifica el documento.":MENSAJE_IA_PAUSADA}><span aria-hidden="true">✦</span>{!IA_HABILITADA?"IA en pausa":aiReview&&aiReview.loading?"Revisando…":"Revisar con IA"}</button>
+          <button type="button" className="dw-chip-btn dw-chip-ia" onClick={onRevisionIA} disabled={!IA_DOCUMENTOS_HABILITADA||!!(aiReview&&aiReview.loading)} title={IA_DOCUMENTOS_HABILITADA?"Revisar con IA: detecta datos faltantes, diferencias y contradicciones. No modifica el documento.":MENSAJE_IA_PAUSADA}><span aria-hidden="true">✦</span>{!IA_DOCUMENTOS_HABILITADA?"Revisión no disponible":aiReview&&aiReview.loading?"Revisando…":"Revisar con IA"}</button>
         </div>
       </div>
       {(()=>{var pp=getProximoPasoOperacion(op,operaciones||[]);return <div className="card" style={{padding:"10px 12px",marginBottom:12,border:"1px solid rgba(212,168,83,.18)",display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:15,color:pp.tone}}>{pp.icon}</span><div><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em"}}>Próximo paso</div><div style={{fontSize:12.5,color:"var(--text)",fontWeight:700,marginTop:2}}>{pp.texto}</div></div></div>;})()}
@@ -5815,10 +5815,11 @@ function parseClauseJson(text){
 // Devuelve {titulo, categoria, contenido} o null si no pudo interpretar la respuesta.
 async function narrarClausulaIA(ideaBreve){
   asegurarIAHabilitada();
+  ideaBreve=validarConsultaGenerica(ideaBreve);
   var sb=await loadSupabaseJs();
   if(!sb) throw new Error("No se pudo conectar con Supabase.");
   var res=await sb.functions.invoke("ia-docworks",{
-    body:{mode:"clause",messages:[{role:"user",content:ideaBreve}]}
+    body:{mode:"generic_clause",messages:[{role:"user",content:ideaBreve}]}
   });
   if(res.error) throw new Error(traducirError(res.error.message||"No se pudo conectar con el asistente."));
   var data=res.data||{};
@@ -5830,7 +5831,7 @@ async function narrarClausulaIA(ideaBreve){
 // punto de exportar y devuelve observaciones, sin modificar automáticamente
 // ningún dato ni cláusula. Sirve como segunda revisión antes de PDF/Word.
 async function revisarDocumentoIA(op, doc){
-  asegurarIAHabilitada();
+  asegurarIAHabilitada("documento");
   var sb=await loadSupabaseJs();
   if(!sb) throw new Error("No se pudo conectar con Supabase.");
   var tipo=TIPOS[(op||{}).tipo] || (op||{}).tipo || "Documento inmobiliario";
@@ -5885,222 +5886,64 @@ function fileToText(file){
 }
 
 function BotIA(props){
-  if(IA_HABILITADA)return <BotIAActivo {...props}/>;
-  return <div role="dialog" aria-modal="false" aria-label="Asistente DocWorks" style={{position:"fixed",bottom:80,right:20,width:350,maxWidth:"calc(100vw - 40px)",zIndex:200,borderRadius:16,padding:16,boxShadow:"0 20px 60px rgba(0,0,0,.3)",border:"1px solid var(--border2)",background:"var(--surface)",color:"var(--text)"}}><div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center"}}><strong style={{fontSize:14}}>Asistente IA en pausa</strong><button type="button" className="btn btn-ghost btn-sm" onClick={props.onClose} aria-label="Cerrar asistente">✕</button></div><p style={{fontSize:13,lineHeight:1.6,margin:"10px 0 0",color:"var(--muted)"}}>{MENSAJE_IA_PAUSADA}</p></div>;
+  return <BotIAActivo onClose={props.onClose} onAddClausula={props.onAddClausula}/>;
 }
 
-function BotIAActivo({onClose,operaciones,clausulas,bloquesReserva,onAddClausula}){
-  const [msgs,setMsgs]=useState<any[]>([{role:"assistant",content:"¡Hola! Soy tu asistente de documentos de DocWorks. Puedo revisar una operación cargada y avisarte si falta algo, leer un contrato que adjuntes (PDF, imagen o .txt) y sugerir correcciones, o redactar una cláusula nueva para tu biblioteca. ¿En qué te ayudo?"}]);
+function BotIAActivo({onClose,onAddClausula}){
+  const [msgs,setMsgs]=useState<any[]>([{role:"assistant",content:"¡Hola! Puedo responder consultas generales y ayudarte a redactar cláusulas genéricas. Usá marcadores como [NOMBRE] o [DOMICILIO] en lugar de datos reales."}]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
-  const [attachment,setAttachment]=useState(null); // {name, kind:"pdf"|"image"|"text", mediaType, data}
-  const [attError,setAttError]=useState("");
-  const [showOpPicker,setShowOpPicker]=useState(false);
+  const [error,setError]=useState("");
   const [modoClausula,setModoClausula]=useState(false);
   const bottomRef=useRef<HTMLDivElement>(null);
-  const fileRef=useRef<HTMLInputElement>(null);
-
   useEffect(function(){if(bottomRef.current)bottomRef.current.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
 
-  async function callGemini(newMsgs, systemExtra){
-    asegurarIAHabilitada();
-    var sb=await loadSupabaseJs();
-    if(!sb) throw new Error("No se pudo conectar con Supabase.");
-    var mode=systemExtra?"clause":"chat";
-    var res=await sb.functions.invoke("ia-docworks",{
-      body:{mode:mode,messages:newMsgs.map(function(m){return {role:m.role,content:(m.apiContent!==undefined?m.apiContent:m.content)};})}
-    });
-    if(res.error) throw new Error(traducirError(res.error.message||"No se pudo conectar con el asistente."));
-    var data=res.data||{};
-    if(data.error) throw new Error(traducirError(typeof data.error==="string"?data.error:(data.error&&data.error.message?data.error.message:JSON.stringify(data.error))));
-    return data.text||"No pude procesar la respuesta.";
-  }
-
-  async function enviar(display, apiContentOverride, opts){
-    if(loading) return;
-    var userMsg:any={role:"user",content:display};
-    if(apiContentOverride!==undefined) userMsg.apiContent=apiContentOverride;
-    var newMsgs=msgs.concat([userMsg]);
-    setMsgs(newMsgs);
-    setInput("");
-    setAttachment(null);
-    setAttError("");
-    var enModoClausula = !!(opts&&opts.clausula);
-    setModoClausula(false);
-    setLoading(true);
+  async function send(){
+    if(loading||!input.trim())return;
+    let texto;
+    try{texto=validarConsultaGenerica(input);}catch(e){setError(e&&e.message?e.message:"Usá una consulta genérica.");return;}
+    var nuevos=msgs.concat([{role:"user",content:texto}]);
+    setMsgs(nuevos);setInput("");setError("");setLoading(true);
     try{
-      var reply=await callGemini(newMsgs, enModoClausula?BOTIA_CLAUSULA_SYSTEM:"");
-      var parsedClauseResponse = parseClauseResponse(reply);
-      var draft = parsedClauseResponse && parsedClauseResponse.obj && parsedClauseResponse.obj.titulo && parsedClauseResponse.obj.contenido ? parsedClauseResponse.obj : null;
-      setMsgs(function(m){return m.concat([{role:"assistant",content:reply,clauseDraft:draft||undefined,clauseNote:parsedClauseResponse&&parsedClauseResponse.note?parsedClauseResponse.note:undefined}]);});
-    }catch(e){
-      setMsgs(function(m){return m.concat([{role:"assistant",content:"Error al conectar con el asistente. Verificá tu conexión."}]);});
-    }
-    setLoading(false);
+      asegurarIAHabilitada();
+      var mensajes=nuevos.slice(-10).map(function(m){return {role:m.role,content:validarConsultaGenerica(m.content)};});
+      var sb=await loadSupabaseJs();
+      if(!sb)throw new Error("No se pudo conectar con el asistente.");
+      var res=await sb.functions.invoke("ia-docworks",{body:{mode:modoClausula?"generic_clause":"generic_chat",messages:mensajes}});
+      if(res.error)throw new Error(traducirError(res.error.message||"No se pudo conectar con el asistente."));
+      var data=res.data||{};
+      if(data.error)throw new Error(typeof data.error==="string"?data.error:"No se pudo completar la consulta.");
+      var respuesta=String(data.text||"").trim();
+      if(!respuesta)throw new Error("La IA no devolvió una respuesta.");
+      var parsed=modoClausula?parseClauseResponse(respuesta):null;
+      setMsgs(function(m){return m.concat([{role:"assistant",content:respuesta,clauseDraft:parsed&&parsed.obj||null}]);});
+    }catch(e){setError(e&&e.message?e.message:"No se pudo completar la consulta.");}
+    finally{setLoading(false);}
   }
-
-  function send(){
-    if(loading) return;
-    if(attachment){
-      var blocks=[];
-      if(attachment.kind==="pdf") blocks.push({type:"document",source:{type:"base64",media_type:"application/pdf",data:attachment.data}});
-      else if(attachment.kind==="image") blocks.push({type:"image",source:{type:"base64",media_type:attachment.mediaType,data:attachment.data}});
-      else if(attachment.kind==="text") blocks.push({type:"text",text:"[Archivo adjunto: "+attachment.name+"]\n\n"+attachment.data});
-      blocks.push({type:"text",text:input.trim()||"Revisá este documento y avisame si falta algo o hay algo para corregir."});
-      var display=(input.trim()?input.trim()+"\n\n":"")+"📎 "+attachment.name;
-      enviar(display, blocks, {clausula:modoClausula});
-      return;
-    }
-    if(!input.trim()) return;
-    enviar(input.trim(), undefined, {clausula:modoClausula});
-  }
-
-  function revisarOperacion(op){
-    setShowOpPicker(false);
-    var faltantes=getCamposFaltantes(op);
-    var fechas=getProblemasFechas(op);
-    var doc=null, docTexto="";
-    try{ doc=buildDocSections(opParaDocumento(limpiarComisionesIncompatibles(op)), clausulas||[], op.tipo, bloquesReserva||[]); docTexto=docToPlainText(doc); }catch(e){ docTexto="(No se pudo generar el texto del documento.)"; }
-    var advertencias=[];
-    faltantes.forEach(function(c){advertencias.push("Falta completar: "+c+".");});
-    fechas.forEach(function(p){advertencias.push(p);});
-    var contexto = "Revisá la siguiente operación (" + (TIPOS[op.tipo]||op.tipo) + ") cargada en DocWorks y decime concretamente qué falta o qué convendría corregir antes de generar el documento final.\n\n"
-      + "CHEQUEOS AUTOMÁTICOS DEL SISTEMA:\n" + (advertencias.length?advertencias.join("\n"):"Ninguno detectado.") + "\n\n"
-      + "CLÁUSULAS YA INCLUIDAS: " + ((op.clausulas_ids||[]).length ? (op.clausulas_ids||[]).map(function(id){var c=(clausulas||[]).find(function(x){return x.id===id;});return c?c.titulo:id;}).join(", ") : "Ninguna") + "\n\n"
-      + "TEXTO DEL DOCUMENTO GENERADO:\n" + docTexto;
-    enviar("🔍 Revisar operación: "+botiaOpLabel(op), contexto, {clausula:false});
-  }
-
-  async function handleFile(e){
-    var file=e.target.files&&e.target.files[0];
-    if(fileRef.current) fileRef.current.value="";
-    if(!file) return;
-    setAttError("");
-    if(file.size>10*1024*1024){ setAttError("El archivo es muy grande (máx. 10MB)."); return; }
+  async function guardarClausula(i,draft){
+    if(!onAddClausula||loading)return;
+    setLoading(true);setError("");
     try{
-      if(file.type==="application/pdf"){
-        var b64=await fileToBase64(file);
-        setAttachment({name:file.name,kind:"pdf",mediaType:"application/pdf",data:b64});
-      }else if(file.type.indexOf("image/")===0){
-        var b64i=await fileToBase64(file);
-        setAttachment({name:file.name,kind:"image",mediaType:file.type,data:b64i});
-      }else if(file.type==="text/plain"||/\.txt$/i.test(file.name)){
-        var txt=await fileToText(file);
-        if(txt.length>18000) txt=txt.slice(0,18000)+"\n\n[...texto recortado por longitud...]";
-        setAttachment({name:file.name,kind:"text",mediaType:"text/plain",data:txt});
-      }else{
-        setAttError("Formato no soportado. Podés adjuntar PDF, imagen (JPG/PNG) o .txt.");
-      }
-    }catch(err){
-      setAttError(traducirError(err.message||"No se pudo leer el archivo."));
-    }
+      var r=await onAddClausula(Object.assign({},draft,{id:genId(),tipos:["todos"]}));
+      if(r&&r.error)throw r.error;
+      setMsgs(function(m){return m.map(function(msg,j){return j===i?Object.assign({},msg,{added:true}):msg;});});
+    }catch(e){setError(e&&e.message?e.message:"No se pudo guardar la cláusula.");}
+    finally{setLoading(false);}
   }
-
-  function addClauseFromDraft(i,obj){
-    onAddClausula(Object.assign({},obj,{id:genId(),tipos:["todos"]}));
-    setMsgs(function(m){return m.map(function(msg,idx){return idx===i?Object.assign({},msg,{added:true}):msg;});});
-  }
-
-  var quickBtnStyle={padding:"5px 9px",borderRadius:8,border:"1px solid var(--border2)",background:"rgba(255,255,255,0.04)",color:"var(--muted)",cursor:"pointer",fontSize:12,whiteSpace:"nowrap"};
-
-  return(
-    <div style={{position:"fixed",bottom:80,right:20,width:380,maxWidth:"calc(100vw - 40px)",zIndex:200,display:"flex",flexDirection:"column",borderRadius:16,overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.4)",border:"1px solid var(--border2)",background:"var(--surface)"}}>
-      {/* Header */}
-      <div style={{padding:"12px 16px",background:"linear-gradient(135deg,#1e293b,#0f172a)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:32,height:32,borderRadius:"50%",background:"linear-gradient(135deg,var(--gold),var(--gold2))",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>✦</div>
-          <div>
-            <div style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>Asistente DocWorks</div>
-            <div style={{fontSize:12,color:"var(--green)"}}>● En línea</div>
-          </div>
-        </div>
-        <button onClick={onClose} style={{background:"none",border:"none",color:"var(--dim)",cursor:"pointer",fontSize:18,padding:4}}>✕</button>
-      </div>
-
-      {/* Acciones rápidas */}
-      <div style={{padding:"8px 12px 0",display:"flex",gap:6,flexWrap:"wrap",position:"relative"}}>
-        <button style={Object.assign({},quickBtnStyle,showOpPicker?{borderColor:"var(--gold)",color:"var(--gold)"}:{})} onClick={function(){setShowOpPicker(function(v){return !v;});}}>🔍 Revisar operación</button>
-        <button style={Object.assign({},quickBtnStyle,modoClausula?{borderColor:"var(--gold)",color:"var(--gold)"}:{})} onClick={function(){setModoClausula(function(v){return !v;});}}>✍️ {modoClausula?"Cláusula: escribí el tema ↓":"Redactar cláusula"}</button>
-        {showOpPicker&&(
-          <div style={{position:"absolute",top:"100%",left:12,right:12,marginTop:4,background:"var(--surface2, #16202f)",border:"1px solid var(--border2)",borderRadius:10,maxHeight:180,overflowY:"auto",zIndex:5,boxShadow:"0 10px 30px rgba(0,0,0,0.4)"}}>
-            {(!operaciones||operaciones.length===0)&&<div style={{padding:10,fontSize:12,color:"var(--dim)"}}>No hay operaciones cargadas.</div>}
-            {(operaciones||[]).map(function(op){
-              return(
-                <div key={op.id} onClick={function(){revisarOperacion(op);}} style={{padding:"8px 10px",fontSize:12,color:"var(--text)",cursor:"pointer",borderBottom:"1px solid var(--border)"}}
-                  onMouseEnter={function(e){e.currentTarget.style.background="rgba(255,255,255,0.05)";}} onMouseLeave={function(e){e.currentTarget.style.background="transparent";}}>
-                  {botiaOpLabel(op)}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Messages */}
-      <div style={{height:340,overflowY:"auto",padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
-        {msgs.map(function(m,i){
-          var isUser=m.role==="user";
-          if(m.clauseDraft){
-            var cd=m.clauseDraft;
-            return(
-              <div key={i} style={{display:"flex",justifyContent:"flex-start"}}>
-                <div style={{maxWidth:"92%",padding:"11px 13px",borderRadius:"12px 12px 12px 3px",background:"rgba(255,255,255,0.06)",border:"1px solid var(--border2)",color:"var(--text)",fontSize:12.5,lineHeight:1.55}}>
-                  <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:0.4,marginBottom:4}}>Propuesta de cláusula</div>
-                  <div style={{fontWeight:700,marginBottom:3}}>{cd.titulo}</div>
-                  <div style={{fontSize:12,color:"var(--dim)",textTransform:"capitalize",marginBottom:6}}>{cd.categoria}</div>
-                  <div style={{whiteSpace:"pre-wrap",marginBottom:9}}>{cd.contenido}</div>
-                  {m.clauseNote&&<div style={{padding:"8px 9px",marginBottom:9,borderRadius:8,background:"rgba(212,168,83,.06)",border:"1px solid rgba(212,168,83,.16)",fontSize:12,color:"var(--muted)",lineHeight:1.45}}><b style={{color:"var(--gold)"}}>Nota:</b> {m.clauseNote}</div>}
-                  <button disabled={!!m.added} onClick={function(){addClauseFromDraft(i,cd);}}
-                    style={{padding:"6px 11px",borderRadius:8,border:"none",background:m.added?"rgba(255,255,255,0.08)":"var(--gold)",color:m.added?"var(--dim)":"#0a0f1a",fontWeight:700,fontSize:12,cursor:m.added?"default":"pointer"}}>
-                    {m.added?"✓ Agregada a la biblioteca":"+ Agregar a la biblioteca"}
-                  </button>
-                </div>
-              </div>
-            );
-          }
-          return(
-            <div key={i} style={{display:"flex",justifyContent:isUser?"flex-end":"flex-start"}}>
-              <div style={{maxWidth:"85%",padding:"9px 13px",borderRadius:isUser?"12px 12px 3px 12px":"12px 12px 12px 3px",background:isUser?"var(--gold)":"rgba(255,255,255,0.06)",color:isUser?"#0a0f1a":"var(--text)",fontSize:12.5,lineHeight:1.55,whiteSpace:"pre-wrap"}}>
-                {m.content}
-              </div>
-            </div>
-          );
-        })}
-        {loading&&(
-          <div style={{display:"flex",justifyContent:"flex-start"}}>
-            <div style={{padding:"9px 14px",borderRadius:"12px 12px 12px 3px",background:"rgba(255,255,255,0.06)",fontSize:12}}>
-              <span style={{animation:"pulse 1s infinite"}}>Escribiendo...</span>
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef}/>
-      </div>
-
-      {/* Adjunto pendiente */}
-      {attachment&&(
-        <div style={{padding:"0 12px 6px",display:"flex",alignItems:"center",gap:6}}>
-          <span style={{fontSize:12,color:"var(--muted)",background:"rgba(255,255,255,0.05)",border:"1px solid var(--border2)",borderRadius:8,padding:"4px 8px",display:"flex",alignItems:"center",gap:6}}>
-            📎 {attachment.name}
-            <button onClick={function(){setAttachment(null);}} style={{background:"none",border:"none",color:"var(--dim)",cursor:"pointer",fontSize:12,padding:0}}>✕</button>
-          </span>
-        </div>
-      )}
-      {attError&&<div style={{padding:"0 12px 6px",fontSize:12,color:"var(--red)"}}>{attError}</div>}
-
-      {/* Input */}
-      <div style={{padding:"10px 12px",borderTop:"1px solid var(--border)",display:"flex",gap:8,alignItems:"flex-end"}}>
-        <button onClick={function(){fileRef.current&&fileRef.current.click();}} title="Adjuntar archivo (PDF, imagen o .txt)"
-          style={{width:36,height:36,borderRadius:10,border:"1px solid var(--border2)",background:"rgba(255,255,255,0.05)",color:"var(--muted)",cursor:"pointer",fontSize:15,flexShrink:0}}>📎</button>
-        <input ref={fileRef} type="file" accept=".pdf,.txt,image/*" style={{display:"none"}} onChange={handleFile}/>
-        <textarea value={input} onChange={function(e){setInput(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
-          placeholder={modoClausula?"Ej: Cláusula sobre tenencia de mascotas...":"Preguntá sobre el contrato, pegá texto a revisar..."}
-          style={{flex:1,resize:"none",height:52,padding:"8px 10px",borderRadius:10,border:"1px solid var(--border2)",background:"rgba(255,255,255,0.05)",color:"var(--text)",fontSize:12.5,fontFamily:"DM Sans,sans-serif",outline:"none"}} rows={2}/>
-        <VozATextoButton onText={function(t){setInput(function(v){return (v?v+" ":"")+t;});}} disabled={loading}/>
-        <button onClick={send} disabled={(!input.trim()&&!attachment)||loading}
-          style={{padding:"0 14px",height:36,borderRadius:10,border:"none",background:(input.trim()||attachment)&&!loading?"var(--gold)":"rgba(255,255,255,0.1)",color:(input.trim()||attachment)&&!loading?"#0a0f1a":"var(--dim)",cursor:(input.trim()||attachment)&&!loading?"pointer":"default",fontWeight:700,fontSize:18,transition:"all 0.15s",flexShrink:0}}>↑</button>
-      </div>
+  return <div role="dialog" aria-modal="false" aria-label="Asistente DocWorks" style={{position:"fixed",bottom:80,right:20,width:380,maxWidth:"calc(100vw - 40px)",maxHeight:"calc(100dvh - 110px)",zIndex:200,display:"flex",flexDirection:"column",borderRadius:16,overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.4)",border:"1px solid var(--border2)",background:"var(--surface)",color:"var(--text)"}}>
+    <div style={{padding:"12px 16px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}><strong style={{fontSize:14}}>Asistente DocWorks</strong><button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Cerrar asistente">✕</button></div>
+    <p style={{fontSize:11.5,lineHeight:1.5,color:"var(--muted)",margin:"10px 12px 6px"}}>{AVISO_IA_GENERICA}</p>
+    <div style={{display:"flex",gap:6,padding:"0 12px 8px"}}><button type="button" className="btn btn-ghost btn-sm" aria-pressed={!modoClausula} disabled={loading} onClick={function(){setModoClausula(false);}}>Consulta general</button><button type="button" className="btn btn-ghost btn-sm" aria-pressed={modoClausula} disabled={loading} onClick={function(){setModoClausula(true);}}>Redactar cláusula</button></div>
+    <div style={{height:300,minHeight:80,overflowY:"auto",padding:"8px 12px",display:"flex",flexDirection:"column",gap:10}}>
+      {msgs.map(function(m,i){var draft=m.clauseDraft;return <div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"94%",padding:"9px 12px",borderRadius:10,background:m.role==="user"?"rgba(212,168,83,.13)":"rgba(128,128,128,.08)",fontSize:12.5,lineHeight:1.6,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{draft?<><strong>{draft.titulo}</strong><div>{draft.contenido}</div>{onAddClausula&&<button type="button" className="btn btn-secondary btn-sm" style={{marginTop:8}} disabled={loading||m.added} onClick={function(){guardarClausula(i,draft);}}>{m.added?"Guardada en biblioteca":"Guardar en biblioteca"}</button>}</>:m.content}</div>;})}
+      {loading&&<div role="status" style={{fontSize:12,color:"var(--muted)"}}>Procesando…</div>}<div ref={bottomRef}/>
     </div>
-  );
+    {error&&<div role="alert" style={{padding:"6px 12px",fontSize:12,color:"var(--red)"}}>{error}</div>}
+    <div style={{display:"flex",gap:8,alignItems:"flex-end",padding:12,borderTop:"1px solid var(--border)"}}>
+      <textarea aria-label="Consulta general sin datos reales" value={input} maxLength={6000} onChange={function(e){setInput(e.target.value);}} onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder={modoClausula?"Ej.: entrega amoblada con inventario":"Ej.: ¿Qué diferencia hay entre reserva y seña?"} rows={2} className="inp" style={{flex:1,minWidth:0,resize:"none"}}/>
+      <button type="button" className="btn btn-primary btn-sm" disabled={!input.trim()||loading} onClick={send}>Enviar</button>
+    </div>
+  </div>;
 }
 
 // Menú desplegable para insertar variables ({{campo}}) en un texto de cláusula.
@@ -6286,7 +6129,7 @@ function ClausulaIAComposer({onDraft}){
         <span style={{fontSize:15}}>✦</span>
         <p style={{fontFamily:"DM Serif Display,serif",fontSize:14,color:"var(--text)",margin:0}}>Redactar con IA</p>
       </div>
-      <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Contá en una frase qué querés que diga. Revisá el título y el texto antes de guardar.</div>
+      <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Usá una idea genérica, sin datos personales ni confidenciales. Revisá el texto antes de guardar.</div>
       <div style={{display:"flex",gap:7,alignItems:"flex-start"}}>
         <textarea className="inp" rows={2} value={idea} onChange={function(e){setIdea(e.target.value);}}
           onKeyDown={function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();generar();}}}
