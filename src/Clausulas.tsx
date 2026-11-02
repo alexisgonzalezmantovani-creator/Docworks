@@ -1,4 +1,4 @@
-import { AvisoModelos, RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
+import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
 // Módulo extraído sin modificar las declaraciones originales.
 export const CLAUSULAS_DEFAULT = [
   { id:"especial.credito_hipotecario", titulo:"Operación supeditada a crédito hipotecario", categoria:"financiación", tipos:["reserva","boleto"], obligatoria:false, contenido:"La presente operación queda supeditada a la aprobación del crédito hipotecario solicitado por la parte compradora." },
@@ -376,7 +376,6 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var opcionalesDocumento=catalogoBiblioteca.filter(function(c){return clausulaAplicaTipo(c,tipoDocSel);});
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":"Elegí un documento y editá su contenido."}</div></div></div>
-    {seccion!=="papelera"&&<AvisoModelos/>}
     {puedeEditar&&<nav aria-label="Cláusulas y documentos" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       <button type="button" aria-pressed={seccion==="modelos"} className={seccion==="modelos"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
       <button type="button" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
