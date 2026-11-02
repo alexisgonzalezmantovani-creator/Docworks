@@ -464,7 +464,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.18";
+var DOCWORKS_VERSION = "6.19";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -4289,75 +4289,6 @@ async function pruebaParidadPDFDOCX(doc, perfil){
   return {ok:!!(pdf&&pdf.blob&&docx&&docx.blob),paragraphCount:parrafos,sectionOrder:orden,pdfFilename:pdf.filename,docxFilename:docx.filename};
 }
 
-// ── SPLASH / CARGA DE INICIO ─────────────────────────────────────────────────
-// El video se sirve desde /Loading.MP4 (carpeta public del proyecto). Si todavía
-// no existe o el navegador no puede reproducirlo, se conserva una pantalla fallback.
-var DOCWORKS_STARTUP_SPLASH_SHOWN = false;
-function SplashScreen({onDone}){
-  const [fade,setFade]=useState(false);
-  const [videoFailed,setVideoFailed]=useState(false);
-  const [videoEnded,setVideoEnded]=useState(false);
-  const videoRef=useRef(null);
-  useEffect(function(){
-    if(videoFailed){
-      var t1=setTimeout(function(){setFade(true);},1500);
-      var t2=setTimeout(function(){DOCWORKS_STARTUP_SPLASH_SHOWN=true;onDone();},2000);
-      return function(){clearTimeout(t1);clearTimeout(t2);};
-    }
-    var video=videoRef.current;
-    var safety=setTimeout(function(){setFade(true);setTimeout(function(){DOCWORKS_STARTUP_SPLASH_SHOWN=true;onDone();},500);},9000);
-    // 4.27: iPhone/PWA bloquea el autoplay y muestra un botón Play. Si el video no arranca solo
-    // en ~1,3 s, no se le pide nada al usuario: se pasa a la pantalla con logo, que no necesita toque.
-    var arranque=setTimeout(function(){
-      var v=videoRef.current;
-      if(v && (v.paused || v.currentTime===0)) setVideoFailed(true);
-    },1300);
-    // Autoplay compatible con iOS/Android: el video debe estar silenciado
-    // desde el atributo HTML y reproducirse inline. No desmontar el video por
-    // un rechazo transitorio de play(); onCanPlay vuelve a intentar iniciarlo.
-    if(video){
-      video.setAttribute("muted", "");
-      video.setAttribute("playsinline", "");
-      video.setAttribute("webkit-playsinline", "");
-      video.muted=true;
-      video.defaultMuted=true;
-      video.volume=0;
-      video.playsInline=true;
-      try{
-        var playResult=video.play();
-        if(playResult&&typeof playResult.catch==="function") playResult.catch(function(err){
-          // Si la política del navegador bloquea autoplay, conservar el video
-          // visible y reintentar en los eventos de carga; no reemplazarlo por logo.
-          if(err&&err.name!=="NotAllowedError") console.warn("DocWorks: no se pudo iniciar Loading.MP4 automáticamente.",err);
-        });
-      }catch(e){console.warn("DocWorks: autoplay de Loading.MP4 pendiente.",e);}
-    }
-    return function(){clearTimeout(safety);clearTimeout(arranque);};
-  },[videoFailed]);
-  function finishVideo(){
-    if(videoEnded)return;
-    setVideoEnded(true);
-    setFade(true);
-    setTimeout(function(){DOCWORKS_STARTUP_SPLASH_SHOWN=true;onDone();},500);
-  }
-  return(
-    <div style={{position:"fixed",inset:0,zIndex:99999,background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",opacity:fade?0:1,transition:"opacity 0.5s ease",overflow:"hidden"}}>
-      {!videoFailed ? <>
-        <video ref={videoRef} className="dw-splash-video" controls={false} disablePictureInPicture={true} disableRemotePlayback={true} src="/Loading.MP4" autoPlay={true} muted={true} playsInline={true} webkit-playsinline="true" preload="auto" onLoadedMetadata={function(){var v=videoRef.current;if(v){v.muted=true;v.defaultMuted=true;v.volume=0;try{var r=v.play();if(r&&typeof r.catch==="function")r.catch(function(){});}catch(e){}}}} onCanPlay={function(){var v=videoRef.current;if(v&&v.paused){v.muted=true;v.volume=0;try{var r=v.play();if(r&&typeof r.catch==="function")r.catch(function(){});}catch(e){}}}} onPlaying={function(){setVideoFailed(false);}} onEnded={finishVideo} onError={function(){setVideoFailed(true);}} style={{width:"min(72vmin,544px)",height:"min(72vmin,544px)",maxWidth:"88vw",maxHeight:"62vh",objectFit:"contain",borderRadius:18,filter:"drop-shadow(0 14px 44px rgba(0,0,0,.28))"}} />
-        <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:600,color:"#e8edf6",letterSpacing:"0.04em",marginTop:22}}>Cargando<span style={{color:"#d4a853"}}>…</span></div>
-        
-      </> : <div style={{animation:"splashPop 0.7s cubic-bezier(0.175,0.885,0.32,1.275) both",display:"flex",flexDirection:"column",alignItems:"center",gap:0}}>
-        <img src={LOGO_B64} alt="DocWorks" style={{width:"clamp(220px,46vmin,420px)",height:"clamp(220px,46vmin,420px)",objectFit:"contain",filter:"drop-shadow(0 0 38px rgba(212,168,83,0.42))"}}/>
-        
-        <div style={{fontSize:13,color:"#e8edf6",marginTop:14,fontWeight:600}}>Cargando<span style={{color:"#d4a853"}}>…</span></div>
-        <div style={{marginTop:20,display:"flex",gap:8}}>{[0,1,2].map(function(i){return <div key={i} style={{width:7,height:7,borderRadius:"50%",background:"rgba(212,168,83,0.8)",animation:"splashDot 1.2s "+(i*0.2)+"s ease-in-out infinite"}}/>;})}</div>
-      </div>}
-      <style>{`@keyframes splashPop{from{opacity:0;transform:scale(0.75)}to{opacity:1;transform:scale(1)}}@keyframes splashDot{0%,80%,100%{transform:scale(0.5);opacity:0.3}40%{transform:scale(1.1);opacity:1}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}`}</style>
-    </div>
-  );
-}
-
-
 function GStyles() {
   useEffect(function(){
     var s=document.getElementById("dci-styles");
@@ -6580,26 +6511,16 @@ var AUTH_GOLD   = "var(--gold,#d4a853)";
 var AUTH_RED    = "var(--red,#f87171)";
 
 function AuthLoadingScreen({ error, onRetry }){
-  return (
-    <div style={{position:"fixed",inset:0,zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",color:AUTH_TEXT,fontFamily:"'DM Sans',sans-serif"}}>
-      <div style={{textAlign:"center",fontSize:13,maxWidth:320,padding:16}}>
-        {error ? (
-          <>
-            <div style={{fontSize:26,marginBottom:10}}>⚠️</div>
-            <div style={{color:AUTH_RED,fontWeight:600,marginBottom:14}}>{error}</div>
-            <button onClick={onRetry} style={{padding:"9px 16px",borderRadius:9,border:"1px solid "+AUTH_BORDER,background:"transparent",color:AUTH_TEXT,fontSize:13,cursor:"pointer"}}>Reintentar</button>
-          </>
-        ) : (
-          <>
-            <div style={{fontFamily:"'DM Serif Display',serif",fontSize:30,color:"#d4a853",letterSpacing:".01em",marginBottom:6}}>DocWorks</div>
-            <div className="dw-spin" style={{margin:"10px auto 12px"}}/>
-            <div style={{color:AUTH_MUTED}}>Conectando…</div>
-            <div style={{color:AUTH_MUTED,opacity:.55,fontSize:11,marginTop:8}}>v{DOCWORKS_VERSION}</div>
-          </>
-        )}
-      </div>
-    </div>
-  );
+  return <div className="dw-startup" aria-label="Iniciando DocWorks" aria-busy={!error}>
+    <img className="dw-startup-logo" src={LOGO_B64} alt="DocWorks" width="1254" height="1254"/>
+    {error ? <div className="dw-startup-error">
+      <div role="alert">{error}</div>
+      <button type="button" className="dw-startup-retry" onClick={onRetry}>Reintentar</button>
+    </div> : <div className="dw-startup-status" role="status" aria-live="polite">
+      <span className="dw-startup-spinner" aria-hidden="true"/>
+      <span>Cargando…</span>
+    </div>}
+  </div>;
 }
 
 // Traduce mensajes de error crudos (de Postgres, PostgREST o del navegador,
@@ -7466,10 +7387,8 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
 
 function LoginGate({docworksAuth}){
   var [registro,setRegistro]=useState(function(){return new URLSearchParams(window.location.search).get("registro")==="1";});
-  var [showStartupSplash,setShowStartupSplash]=useState(false); // 4.27: lo muestra StartupSplashHost.
   return <>
     {registro ? <RegistroScreen onBack={function(){setRegistro(false);}} onSubmit={docworksAuth.solicitarRegistro} loading={docworksAuth.registroLoading} error={docworksAuth.registroError} success={docworksAuth.registroSuccess}/> : <LoginScreen onLogin={docworksAuth.login} onRecover={docworksAuth.recoverPassword} onRegister={function(){setRegistro(true);}} error={docworksAuth.loginError} loading={docworksAuth.loginLoading} connError={docworksAuth.connError}/>}
-    {showStartupSplash&&<SplashScreen onDone={function(){DOCWORKS_STARTUP_SPLASH_SHOWN=true;setShowStartupSplash(false);}}/>}
   </>;
 }
 
@@ -7543,7 +7462,6 @@ function DocWorksApp(){
       document.removeEventListener("keydown",onKey);
     };
   },[mobilePerfilMenuOpen]);
-  const [showSplash,setShowSplash]=useState(false); // 4.27: el splash lo muestra StartupSplashHost (en paralelo a la carga).
   const [dwNotice,setDwNotice]=useState(null);
   const [dwConfirm,setDwConfirm]=useState(null);
   useEffect(function(){
@@ -8660,7 +8578,6 @@ function DocWorksApp(){
         onSecondary={dwConfirm&&dwConfirm.onSecondary?function(){var fn=dwConfirm.onSecondary;setDwConfirm(null);if(fn)fn();}:null}
       />
       <GStyles/>
-      {showSplash&&<SplashScreen onDone={function(){DOCWORKS_STARTUP_SPLASH_SHOWN=true;setShowSplash(false);}}/>}
       <div className="app-bg"/>
 
       {/* ── Banner de estado offline: los datos siguen disponibles y editables
@@ -8889,25 +8806,6 @@ class DWErrorBoundary extends Component<any,any> {
   }
 }
 
-// 4.40 — Pantalla inicial liviana: muestra el logo principal sin depender del video ni del autoplay de iOS.
-// Se mantiene breve para que no retrase el login ni la carga de datos.
-function StartupSplashHost(){
-  const [visible,setVisible]=useState(true);
-  const [fade,setFade]=useState(false);
-  useEffect(function(){
-    var t1=setTimeout(function(){setFade(true);},1050);
-    var t2=setTimeout(function(){setVisible(false);DOCWORKS_STARTUP_SPLASH_SHOWN=true;},1280);
-    return function(){clearTimeout(t1);clearTimeout(t2);};
-  },[]);
-  if(!visible)return null;
-  return <div aria-label="Iniciando DocWorks" role="status" style={{position:"fixed",inset:0,zIndex:99999,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:15,background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 52%, #03060d 100%)",opacity:fade?0:1,transition:"opacity .22s ease",pointerEvents:"none"}}>
-    <img src={LOGO_B64} alt="DocWorks" style={{display:"block",width:"min(80vw,400px)",height:"auto",maxHeight:"48vh",objectFit:"contain",filter:"drop-shadow(0 8px 28px rgba(212,168,83,.16))"}}/>
-    <div style={{fontFamily:"DM Sans,sans-serif",fontSize:13,fontWeight:600,color:"#e8edf6"}}>Cargando<span style={{color:"#d4a853"}}>…</span></div>
-    <div style={{width:30,height:3,borderRadius:99,background:"rgba(212,168,83,.18)",overflow:"hidden"}}><div style={{width:"55%",height:"100%",borderRadius:99,background:"#d4a853",animation:"dwStartupProgress .85s ease-in-out infinite alternate"}}/></div>
-    <style>{"@keyframes dwStartupProgress{from{transform:translateX(-25%)}to{transform:translateX(95%)}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}"}</style>
-  </div>;
-}
-
 export default function App(){
-  return <DWErrorBoundary><DocWorksApp/><StartupSplashHost/></DWErrorBoundary>;
+  return <DWErrorBoundary><DocWorksApp/></DWErrorBoundary>;
 }

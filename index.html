@@ -9,11 +9,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/startup.css" />
+    <link rel="preload" as="image" href="/docworks-startup-logo.png" />
 
     <title>DocWorks — Gestión inmobiliaria</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="dw-startup" aria-label="Iniciando DocWorks" aria-busy="true">
+        <img class="dw-startup-logo" src="/docworks-startup-logo.png" alt="DocWorks" width="1254" height="1254" />
+        <div class="dw-startup-status" role="status" aria-live="polite">
+          <span class="dw-startup-spinner" aria-hidden="true"></span>
+          <span>Cargando…</span>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
