@@ -5,10 +5,11 @@ Preparado el 2 de noviembre de 2026. No sustituye una revisión jurídica.
 
 ## Información que falta confirmar
 
-- Titular que presta el servicio: persona humana o sociedad, nombre legal completo,
-  CUIT y domicilio para notificaciones.
+- Titular confirmado por el usuario: Alexis, persona humana. Falta verificar
+  nombre legal completo, CUIT y domicilio para notificaciones.
 - Correo para consultas y ejercicio de derechos sobre datos personales.
-- Modalidad de Gemini API: proyecto con facturación activa o servicio gratuito.
+- Modalidad de Gemini API confirmada por el usuario: gratuita. La función no
+  debe transmitir datos personales en esa modalidad.
 - Garantías para transferencias internacionales y acuerdos con proveedores.
 - Plazos y procedimiento de conservación y eliminación al cerrar una cuenta,
   incluyendo auditoría, versiones históricas, respaldos y cachés locales.
@@ -16,7 +17,8 @@ Preparado el 2 de noviembre de 2026. No sustituye una revisión jurídica.
 
 ## 1. Responsable y contacto
 
-El servicio DocWorks es prestado por [TITULAR LEGAL], CUIT [CUIT], con domicilio
+El servicio DocWorks es prestado por [NOMBRE LEGAL COMPLETO DE ALEXIS], persona
+humana, CUIT [CUIT], con domicilio
 en [DOMICILIO]. Las consultas relativas a datos personales y solicitudes de
 ejercicio de derechos podrán dirigirse a [CORREO DE PRIVACIDAD].
 
@@ -60,7 +62,12 @@ seleccionada puede enviarse a ese proveedor, incluyendo los datos personales
 que contenga. Los textos, imágenes o archivos adjuntos al asistente también
 pueden transmitirse para procesar la solicitud.
 
-[COMPLETAR antes de publicar: modalidad contractual efectiva de Google,
+[COMPLETAR antes de publicar: la modalidad gratuita fue confirmada por el titular.
+La función de IA quedó pausada en su versión 9 y se verificó su respuesta
+IA_PRIVACIDAD_PAUSADA con una solicitud sintética sin datos personales. El
+cliente incorpora la pausa desde DocWorks 6.15. Actualizar esta sección pública
+para reflejar la pausa. Antes de una reactivación,
+revisar modalidad contractual efectiva de Google,
 condiciones aplicables al uso y conservación de entradas y respuestas,
 información al usuario previa al envío y garantías del tratamiento. No afirmar
 que Google nunca usa los datos para mejorar modelos sin verificar la modalidad.]
