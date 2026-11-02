@@ -56,21 +56,25 @@ Las funciones de cobro integradas utilizan Mercado Pago cuando se activan.
 Los enlaces de soporte o para compartir pueden abrir servicios de terceros,
 como WhatsApp o el correo seleccionado por el usuario.
 
-Las funciones de inteligencia artificial utilizan Google Gemini. Cuando el
-usuario solicita una revisión, el contenido del documento o de la operación
-seleccionada puede enviarse a ese proveedor, incluyendo los datos personales
-que contenga. Los textos, imágenes o archivos adjuntos al asistente también
-pueden transmitirse para procesar la solicitud.
+Las funciones de inteligencia artificial utilizan Google Gemini en modalidad
+gratuita. Desde DocWorks 6.16, su uso se limita a consultas generales y redacción
+de cláusulas a partir de ideas genéricas, sin datos personales ni información
+confidencial. El asistente no permite seleccionar operaciones ni adjuntar
+archivos. El contenido escrito por el usuario se transmite al proveedor cuando
+solicita la respuesta, tras los controles disponibles.
 
-[COMPLETAR antes de publicar: la modalidad gratuita fue confirmada por el titular.
-La función de IA quedó pausada en su versión 9 y se verificó su respuesta
-IA_PRIVACIDAD_PAUSADA con una solicitud sintética sin datos personales. El
-cliente incorpora la pausa desde DocWorks 6.15. Actualizar esta sección pública
-para reflejar la pausa. Antes de una reactivación,
-revisar modalidad contractual efectiva de Google,
-condiciones aplicables al uso y conservación de entradas y respuestas,
-información al usuario previa al envío y garantías del tratamiento. No afirmar
-que Google nunca usa los datos para mejorar modelos sin verificar la modalidad.]
+El cliente y el servidor aplican un filtro básico de identificadores frecuentes.
+Ese filtro no reconoce toda información personal o confidencial, ni constituye
+anonimización. Deben utilizarse marcadores como [NOMBRE], [DNI] o [DOMICILIO].
+
+Los modos anteriores de revisión documental y envío de adjuntos permanecen
+bloqueados por el servidor. No afirmar que los documentos o archivos se revisan
+con IA en la configuración actual.
+
+[COMPLETAR antes de publicar: condiciones aplicables de Google al uso y
+conservación de entradas y respuestas, información previa al envío y garantías
+del tratamiento. No afirmar que Google nunca usa los datos para mejorar modelos:
+la modalidad gratuita tiene condiciones diferentes de las de facturación activa.]
 
 ## 5. Almacenamiento y transferencias internacionales
 
@@ -121,7 +125,9 @@ Ley 25.326, recibe reclamos sobre el incumplimiento de esa normativa.
   para operaciones, usuarios, versiones y auditoría filtran por inmobiliaria.
   Esto no sustituye pruebas de aislamiento de todos los roles y funciones.
 - La función activa de IA utiliza Google Gemini y valida al usuario autenticado.
-  El cliente transmite texto documental y puede transmitir archivos adjuntos.
+  La configuración 6.16 permite únicamente texto genérico y rechaza los modos
+  anteriores, adjuntos y algunos identificadores frecuentes. No se garantiza
+  detección exhaustiva de datos personales ni información confidencial.
 - Existe una función de purga de operaciones eliminadas hace más de 30 días,
   invocada al recargar operaciones. No se verificó una purga global programada.
 - Google Analytics conserva un identificador de ejemplo y no se activa en la
