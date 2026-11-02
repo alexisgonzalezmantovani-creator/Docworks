@@ -303,6 +303,22 @@ export const GS = `
 .dw-operation-page-heading p{margin:0;color:var(--muted);font-size:13px;}
 .dw-operation-page-breadcrumb{font-size:12px;font-weight:650;color:var(--dim);}
 .dw-operation-page .grid2>.field{min-width:0;max-width:none;}
+
+/* Categorías como tarjetas equilibradas, sin espacios laterales artificiales. */
+.dw-grupo-selector{width:100%;}
+.dw-grupo-intro{font-size:14px;color:var(--muted);margin:0 0 22px;}
+.dw-grupo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+.dw-grupo-card{min-width:0;display:flex;align-items:center;gap:14px;text-align:left;padding:22px 18px;border-radius:16px;min-height:136px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);transition:border-color .15s,transform .15s,background .15s;}
+.dw-grupo-card:hover{border-color:var(--gold);transform:translateY(-2px);}
+.dw-grupo-icon{flex:none;width:60px;height:60px;border-radius:14px;display:grid;place-items:center;font-size:32px;font-weight:700;background:rgba(80,146,220,.14);color:#60a5fa;}
+.dw-grupo-alquiler .dw-grupo-icon{background:rgba(52,211,153,.13);color:#34d399;}
+.dw-grupo-otros .dw-grupo-icon{background:rgba(167,139,250,.14);color:#a78bfa;}
+.dw-grupo-text{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;}
+.dw-grupo-text strong{font-size:19px;line-height:1.2;}
+.dw-grupo-text small{font-size:13px;color:var(--muted);line-height:1.45;}
+.dw-grupo-chevron{font-size:30px;font-weight:300;color:var(--dim);}
+@media(max-width:980px){.dw-grupo-grid{grid-template-columns:1fr;}.dw-grupo-card{min-height:94px;padding:14px 16px;}}
+
 /* Selector integrado: ocupa buena parte del espacio sin márgenes laterales excesivos. */
 .dw-operation-groups-balanced{width:100%;max-width:1320px;margin-inline:auto;}
 @media(min-width:1200px){.dw-operation-groups-balanced{width:92%;}}
