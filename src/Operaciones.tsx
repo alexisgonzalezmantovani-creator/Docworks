@@ -303,6 +303,21 @@ export const GS = `
 .dw-operation-page-heading p{margin:0;color:var(--muted);font-size:13px;}
 .dw-operation-page-breadcrumb{font-size:12px;font-weight:650;color:var(--dim);}
 .dw-operation-page .grid2>.field{min-width:0;max-width:none;}
+
+/* Formulario compacto en monitores: evita campos exageradamente anchos y reduce el desplazamiento vertical. */
+@media(min-width:1100px){
+  .dw-operation-page{gap:10px;}
+  .dw-operation-page-heading{padding:2px 0 9px;gap:12px;}
+  .dw-operation-page-heading h1{font-size:clamp(22px,1.8vw,29px);margin:2px 0;}
+  .dw-operation-page .grid2,.dw-operation-page .grid3{max-width:1120px;gap:9px 12px;}
+  .dw-operation-page .grid2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .dw-operation-page .grid3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .dw-operation-page .field{gap:3px;min-width:0;}
+  .dw-operation-page .inp{min-height:36px;padding:7px 10px;font-size:14px;}
+  .dw-operation-page textarea.inp{min-height:74px;resize:vertical;}
+  .dw-operation-page .field-label{font-size:12px;}
+}
+
 @media(max-width:640px){.dw-operation-page-heading{align-items:flex-start;}.dw-operation-page-heading h1{font-size:24px;}.dw-operation-page{gap:12px;}}
 
   /* ── Modal ── */
