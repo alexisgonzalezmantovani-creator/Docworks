@@ -5282,7 +5282,7 @@ function StepGrupo({onSelect}){
       <div className="dw-grupo-grid">
         {Object.entries(TIPO_GRUPOS).map(function([key,g]){
           var labels={compra:"Compra",alquiler:"Alquiler",otros:"Otros documentos"};
-          var icons={compra:"⌂",alquiler:"⚿",otros:"▤"};
+          var icons={compra:"🏡",alquiler:"🏠",otros:"📌"};
           var desc={compra:"Reservas y boletos de compraventa",alquiler:"Reservas y contratos de alquiler",otros:"Comodatos, exclusividades y documentos adicionales"};
           return (
             <button type="button" key={key} className={"dw-grupo-card dw-grupo-"+key} onClick={function(){onSelect(key);}}>
