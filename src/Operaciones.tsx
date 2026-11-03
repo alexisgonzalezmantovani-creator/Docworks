@@ -2942,8 +2942,8 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               {perfilSaveStatus==="error"&&<span style={{color:"var(--red)",fontSize:12}}>No se pudo guardar</span>}
               {perfilSaveStatus==="saved"&&<span style={{color:"var(--green)",fontSize:12}}>✓ Guardado</span>}
-              <Btn v="success" onClick={savePerfil} disabled={perfilSaveStatus==="saving"}>{perfilSaveStatus==="saving"?"Guardando…":"Guardar mi perfil"}</Btn>
               <button type="button" className="btn btn-secondary" onClick={function(){setCuentaSubtab("seguridad");}}>Cambiar contraseña</button>
+              <Btn v="success" onClick={savePerfil} disabled={perfilSaveStatus==="saving"}>{perfilSaveStatus==="saving"?"Guardando…":"Guardar mi perfil"}</Btn>
             </div>
           </div></div>
         </div>
