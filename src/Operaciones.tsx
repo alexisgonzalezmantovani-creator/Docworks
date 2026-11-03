@@ -3185,7 +3185,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
           </details>}
 
           {/* Tabla de roles */}
-          <div style={{background:"linear-gradient(135deg,#14243b,#101b2f)",border:"1px solid rgba(212,168,83,0.30)",borderRadius:14,padding:16,marginBottom:20}}>
+          <div style={{background:"linear-gradient(135deg,rgba(212,168,83,0.075),rgba(212,168,83,0.025)),var(--card)",border:"1px solid rgba(212,168,83,0.23)",borderRadius:14,padding:16,marginBottom:20}}>
             <div style={{fontSize:12,fontWeight:700,color:"var(--gold)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12}}>Permisos por rol</div>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
@@ -3198,11 +3198,11 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
                 <tbody>
                   {["todo","crear","editar","eliminar","ver_todos","ver_propios","configurar"].map(function(p,i){
                     return(
-                      <tr key={p} style={{borderTop:"1px solid var(--border)",background:i%2===0?"rgba(255,255,255,0.055)":"rgba(255,255,255,0.025)"}}>
+                      <tr key={p} style={{borderTop:"1px solid var(--border)",background:i%2===0?"rgba(212,168,83,0.045)":"transparent"}}>
                         <td style={{padding:"7px 10px",color:"var(--muted)",fontSize:12}}>{PERMS_LABELS[p]}</td>
                         {Object.entries(ROLES_DEF as Record<string,{color:string;label:string;perms:string[]}>).map(function(e){
                           var has = e[1].perms.includes("todo")||e[1].perms.includes(p);
-                          return <td key={e[0]} style={{padding:"7px 10px",textAlign:"center"}}><span style={{color:has?"var(--green)":"rgba(210,220,235,0.55)",fontSize:14}}>{has?"✓":"—"}</span></td>;
+                          return <td key={e[0]} style={{padding:"7px 10px",textAlign:"center"}}><span style={{color:has?"var(--green)":"var(--muted)",fontSize:14}}>{has?"✓":"—"}</span></td>;
                         })}
                       </tr>
                     );
