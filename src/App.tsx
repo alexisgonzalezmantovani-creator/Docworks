@@ -5136,10 +5136,11 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
   var [tituloCustom,setTituloCustom]=useState(data.clausulas_custom_titulo||"");
   var [contenidoCustom,setContenidoCustom]=useState(data.clausulas_custom||"");
   var [ideaIA,setIdeaIA]=useState("");
+  var ideaIARef=useRef(null);
   var [loadingIA,setLoadingIA]=useState(false);
   var [errorIA,setErrorIA]=useState("");
   useEffect(function(){onChange("clausulas_custom_titulo",showAdd?tituloCustom:"");onChange("clausulas_custom",showAdd?contenidoCustom:"");},[tituloCustom,contenidoCustom,showAdd]);
-  async function narrarConIA(){if(!ideaIA.trim()||loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}setLoadingIA(false);}
+  async function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
   return <div>
     <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.55,marginBottom:14}}>Tu documento se completa automáticamente con los datos del formulario. Si esta operación necesita una condición adicional, podés elegirla acá.</p>
     <div style={{fontSize:12,fontWeight:750,color:"var(--text)",margin:"2px 0 8px"}}>Cláusulas adicionales</div>
@@ -5163,8 +5164,16 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
       {showAdd&&<div style={{marginTop:9,padding:12,borderRadius:12,border:"1px solid var(--border2)",background:"rgba(212,168,83,.035)"}}>
         <Inp label="Título" value={tituloCustom} onChange={function(e){setTituloCustom(e.target.value);}} placeholder="Ej.: Prohibición de mascotas"/>
         <Txa label="Texto" value={contenidoCustom} onChange={function(e){setContenidoCustom(e.target.value);}} placeholder="Escribí la cláusula…" rows={4}/>
-        <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){setContenidoCustom(function(v){return (v?v+" ":"")+t;});}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictado opcional</span><Btn s="sm" v="secondary" onClick={narrarConIA} disabled={!IA_HABILITADA||!ideaIA.trim()||loadingIA} title={!IA_HABILITADA?MENSAJE_IA_PAUSADA:undefined}>{loadingIA?"Redactando…":"✦ IA"}</Btn></div>
-        <input className="inp" aria-label="Idea genérica para IA sin datos reales" maxLength={6000} value={ideaIA} onChange={function(e){setIdeaIA(e.target.value);}} placeholder="Idea genérica, sin datos personales ni confidenciales" style={{marginTop:8}}/>
+        <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){setContenidoCustom(function(v){return (v?v+" ":"")+t;});}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictar texto de la cláusula</span></div>
+        <div style={{marginTop:14,padding:"12px 13px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
+          <div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginBottom:5}}>✦ Redactar con IA</div>
+          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:9}}>Describí en pocas palabras la condición que querés agregar. No incluyas nombres, DNI, domicilios ni datos de la operación.</div>
+          <textarea ref={ideaIARef} className="inp" aria-label="Idea para redactar una cláusula con IA" maxLength={6000} rows={2} value={ideaIA} onChange={function(e){setIdeaIA(e.target.value);if(errorIA)setErrorIA("");}} placeholder="Ej.: El inmueble se entrega recién pintado y con los aires funcionando" style={{width:"100%",minHeight:70,resize:"vertical",boxSizing:"border-box"}}/>
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end",alignItems:"center",marginTop:8,flexWrap:"wrap"}}>
+            <VozATextoButton onText={function(t){setIdeaIA(function(v){return (v?v+" ":"")+t;});}} disabled={loadingIA}/>
+            <Btn s="sm" v="primary" onClick={narrarConIA} disabled={!IA_HABILITADA||loadingIA} title={!IA_HABILITADA?MENSAJE_IA_PAUSADA:undefined}>{loadingIA?"Redactando…":"✦ Redactar con IA"}</Btn>
+          </div>
+        </div>
         {errorIA&&<div style={{fontSize:12,color:"var(--red)",marginTop:5}}>{errorIA}</div>}
         <div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Esta cláusula se guarda únicamente en esta operación; no modifica la biblioteca de la inmobiliaria.</div>
       </div>}
