@@ -4714,10 +4714,18 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
             <Inp id="dw-field-reserva_fecha_refuerzo" label="Fecha límite para tomar refuerzo" value={data.reserva_fecha_refuerzo||""} onChange={function(e){onChange("reserva_fecha_refuerzo",e.target.value);}} type="date" hint="Opcional — si cargás esta fecha, aparecerá en el Calendario."/>
           </div>}
         </div>}
-        {data.tipo==="reserva"&&<Slt id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva" value={data.reserva_vigencia_dias||"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} className="col2" hint="Días corridos, desde que el Vendedor conforma la reserva, para firmar el boleto y/o la escritura. Figura en la cláusula «Vigencia de la reserva».">{["5","7","10","15","20","30","45","60","90"].map(function(d){return <option key={d} value={d}>{d} días corridos</option>;})}</Slt>}
-        {data.tipo==="reserva"&&<div className="col2" style={{marginTop:2,padding:"12px 14px",borderRadius:12,border:"1px solid rgba(212,168,83,.22)",background:"rgba(212,168,83,.045)"}}>
-          <div style={{fontSize:12.2,fontWeight:700,color:"var(--text)",marginBottom:3}}>Plazo de aceptación</div>
-          <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>El asesor elige cómo vence la aceptación: por horas desde la firma, por días, o en una fecha fija. Se refleja en la cláusula y en el Calendario.</div>
+        {data.tipo==="reserva"&&<div className="col2 dw-economic-term">
+          <Inp id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva (días corridos)" type="number" min="1" step="1" value={data.reserva_vigencia_dias??"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} placeholder="30" hint="Sugerido: 30 días corridos desde la conformidad del vendedor. Podés escribir otro plazo, incluso más de 90 días."/>
+          <button type="button" className="dw-economic-term-reset" onClick={function(){onChange("reserva_vigencia_dias","30");}}>Usar 30 días sugeridos</button>
+        </div>}
+        {data.tipo==="reserva"&&<details className="col2 dw-economic-advanced dw-economic-acceptance" defaultOpen={!!((data.reserva_aceptacion_modo||"dias")!=="dias"||Number(data.reserva_aceptacion_dias||5)!==5)}>
+          <summary>
+            <span className="dw-economic-advanced-title">Plazo de aceptación</span>
+            <span className="dw-economic-advanced-caption">{(data.reserva_aceptacion_modo||"dias")==="horas"?(data.reserva_aceptacion_horas||48)+" horas desde la firma":(data.reserva_aceptacion_modo||"dias")==="fecha"?"Fecha fija":(data.reserva_aceptacion_dias||5)+" días para aceptar · sugerido 5 días"}</span>
+            <span className="dw-economic-advanced-symbol" aria-hidden="true"></span>
+          </summary>
+          <div className="dw-economic-acceptance-content">
+            <div className="dw-economic-acceptance-help">Podés cambiar la aceptación por horas, días o fecha fija. Se refleja en el documento y en el Calendario.</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
             {[
               {id:"horas",label:"Horas"},
@@ -4750,7 +4758,8 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
           {(data.reserva_aceptacion_modo||"dias")==="fecha" && (
             <Inp id="dw-field-reserva_aceptacion_vencimiento" label="Fecha de vencimiento" type="date" value={data.reserva_aceptacion_vencimiento||""} onChange={function(e){onChange("reserva_aceptacion_vencimiento",e.target.value);}}/>
           )}
-        </div>}
+          </div>
+        </details>}
         {data.tipo!=="reserva"&&<Inp id="dw-field-escribania" label="Escribanía" value={data.escribania||""} onChange={function(e){onChange("escribania",e.target.value);}} placeholder="Escribanía García" className="col2"/>}
         {data.tipo!=="reserva"&&<Inp id="dw-field-fecha_posesion" label="Fecha de posesión" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2" {...estiloCampoFaltante(faltantes,"fecha_posesion")}/>}
         <details className="col2 dw-economic-advanced" defaultOpen={!!(data.compra_modalidad_pago&&data.compra_modalidad_pago!=="habitual"||data.compra_medio_pago&&data.compra_medio_pago!=="sin_definir"||data.compra_condiciones_pago)}>
