@@ -1526,15 +1526,18 @@ function draftTieneContenido(d) {
     if(Array.isArray(v)) return v.length>0;
     return false;
   }
+  // Los datos de la inmobiliaria insertados automáticamente al seleccionar Exclusividad
+  // no son progreso escrito por el usuario y nunca deben crear un borrador vacío.
+  function esDatoInstitucionalAutomatico(c){return d.tipo==="exclusividad" && d.exclusividad_inmobiliaria_autofill===true && /^comprador_(?:nombre|dni|domicilio|email|telefono)$/.test(c);}
   if(campos.some(function(c){
-    if(!tieneValor(d[c])) return false;
+    if(esDatoInstitucionalAutomatico(c)||!tieneValor(d[c])) return false;
     var def=EMPTY_OP && EMPTY_OP[c];
     return String(d[c])!==String(def==null?"":def);
   })) return true;
   // Campos de usuario fuera de la lista explícita: solo cuentan si difieren del default.
   var metadatosIgnorados={tipo:true,estado:true,id:true,parent_id:true,created_at:true,updated_at:true,plantilla_version:true,clausulas_ids:true,tareas_done:true,tareas_custom:true};
   if(Object.keys(d).some(function(k){
-    if(metadatosIgnorados[k] || !( /nombre|dni|cuit|cuil|email|e_mail|correo|telefono|teléfono|celular|mobile|phone|direccion|domicilio|precio|monto|fecha|plazo|uso|motivo|partido|provincia/i.test(k))) return false;
+    if(metadatosIgnorados[k] || esDatoInstitucionalAutomatico(k) || !( /nombre|dni|cuit|cuil|email|e_mail|correo|telefono|teléfono|celular|mobile|phone|direccion|domicilio|precio|monto|fecha|plazo|uso|motivo|partido|provincia/i.test(k))) return false;
     if(!tieneValor(d[k])) return false;
     var def=EMPTY_OP && EMPTY_OP[k];
     return String(d[k])!==String(def==null?"":def);
@@ -1543,7 +1546,7 @@ function draftTieneContenido(d) {
   // personales. Detectamos también DNI/CUIT, email y teléfono aunque el resto
   // del borrador esté vacío, sin considerar valores de configuración genéricos.
   if(Object.keys(d).some(function(k){
-    return /(?:dni|cuit|cuil|email|e_mail|correo|telefono|teléfono|celular|mobile|phone|contacto)/i.test(k) && tieneValor(d[k]);
+    return !esDatoInstitucionalAutomatico(k) && /(?:dni|cuit|cuil|email|e_mail|correo|telefono|teléfono|celular|mobile|phone|contacto)/i.test(k) && tieneValor(d[k]) && String(d[k])!==String(EMPTY_OP&&EMPTY_OP[k]==null?"":EMPTY_OP[k]);
   })) return true;
   // Las cláusulas precargadas por el modelo no son datos ingresados por el broker.
   // Elegir un tipo y recorrer el asistente nunca crea un borrador por sí solo.
@@ -4460,7 +4463,7 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
     <div>
       <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:3}} title={ayudaRolForm(data.tipo,prefix)}>{tituloRolForm(data.tipo,prefix)}</div>
       <p style={{fontSize:13,color:"var(--muted)",marginBottom:ayudaRolForm(data.tipo,prefix)?6:12}}>Completá los datos de {tituloRolForm(data.tipo,prefix).toLowerCase()}.</p>
-      {ayudaRolForm(data.tipo,prefix)&&<div className="dw-rol-ayuda" style={{fontSize:12,color:"var(--gold)",background:"rgba(212,168,83,0.07)",border:"1px solid rgba(212,168,83,0.2)",borderRadius:9,padding:"7px 10px",marginBottom:12}}>ⓘ {ayudaRolForm(data.tipo,prefix)}</div>}
+      {ayudaRolForm(data.tipo,prefix)&&<div className="dw-rol-ayuda" style={{fontSize:12.5,fontWeight:600,lineHeight:1.55,color:"var(--text)",background:"var(--surface2)",border:"1px solid rgba(212,168,83,0.38)",borderLeft:"3px solid var(--gold)",borderRadius:9,padding:"9px 12px",marginBottom:12}}>ⓘ {ayudaRolForm(data.tipo,prefix)}</div>}
       <div className="dw-persona-fields">
         <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
         <div className="dw-persona-half dw-persona-identificacion"><IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="20-12345678-9" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/></div>
@@ -7720,6 +7723,7 @@ function DocWorksApp(){
     if(draft&&draft.data&&draftTieneContenido(draft.data)){setConfirmCloseForm(true);return;}
     lsRemove("draftOperacion");
     setShowForm(false);setEditOp(null);setFormInitialOverride(null);
+    dwNotify("info","No se guardó ninguna operación: el formulario estaba vacío.");
   }
   async function guardarBorradorYSalir(){
     var draft=lsGet("draftOperacion",null);
@@ -7747,9 +7751,9 @@ function DocWorksApp(){
         return;
       }
     }
-    lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);if(navPendiente){setView(navPendiente);setNavPendiente(null);}
+    lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("success","Borrador guardado en Operaciones.");if(navPendiente){setView(navPendiente);setNavPendiente(null);}
   }
-  function salirSinGuardarFormulario(){lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);if(navPendiente){setView(navPendiente);setNavPendiente(null);}}
+  function salirSinGuardarFormulario(){lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("info","Se descartaron los cambios sin guardar. No se creó ningún elemento en Papelera.");if(navPendiente){setView(navPendiente);setNavPendiente(null);}}
 
   const [clausulas,setClausulas]=useState([]);
   const [papeleraClausulas,setPapeleraClausulas]=useState([]);
