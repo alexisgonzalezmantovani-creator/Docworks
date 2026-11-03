@@ -4393,8 +4393,8 @@ function navegarConProteccionModelo(continuar){
 function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,onConfirm,onCancel,secondaryLabel=null,onSecondary=null,secondaryDisabled=false}){
   useBodyScrollLock(!!open);
   if(!open)return null;
-  return(
-    <div className="modal-overlay dw-confirm-overlay" style={{zIndex:3100}} onClick={function(e){if(e.target===e.currentTarget)onCancel();}}>
+  return createPortal(
+    <div className="modal-overlay dw-confirm-overlay" role="dialog" aria-modal="true" aria-label={title||"Confirmar acción"} style={{position:"fixed",inset:0,zIndex:3100,display:"flex",alignItems:"center",justifyContent:"center",padding:"max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px))",boxSizing:"border-box",overflowY:"auto"}} onClick={function(e){if(e.target===e.currentTarget)onCancel();}}>
       <div className="modal-box narrow fade-up dw-confirm-box" style={{maxWidth:380,maxHeight:"calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 20px)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <div className="modal-head">
           <span className="modal-title">{title||"Confirmar"}</span>
@@ -4410,7 +4410,7 @@ function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,
         </div>
       </div>
     </div>
-  );
+  , document.body);
 }
 
 const STEPS_COMPRA=[{id:1,l:"Tipo"},{id:2,l:"Comprador"},{id:3,l:"Vendedor"},{id:4,l:"Inmueble"},{id:5,l:"Económico"},{id:6,l:"Cláusulas opcionales"}];
