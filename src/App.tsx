@@ -1535,7 +1535,11 @@ function draftTieneContenido(d) {
     return String(d[c])!==String(def==null?"":def);
   })) return true;
   // Campos de usuario fuera de la lista explícita: solo cuentan si difieren del default.
+  // La app precarga la fecha de aceptación al entrar en Económico; recorrer pasos
+  // no es completar datos. Una fecha personalizada SÍ cuenta como progreso.
+  var aceptacionAuto=sumarDiasISO(d.reserva_fecha_reserva||fechaHoyISO(),d.reserva_aceptacion_dias||5);
   var metadatosIgnorados={tipo:true,estado:true,id:true,parent_id:true,created_at:true,updated_at:true,plantilla_version:true,clausulas_ids:true,tareas_done:true,tareas_custom:true};
+  if(d.tipo==="reserva" && (!d.reserva_aceptacion_vencimiento || d.reserva_aceptacion_vencimiento===aceptacionAuto)) metadatosIgnorados.reserva_aceptacion_vencimiento=true;
   if(Object.keys(d).some(function(k){
     if(metadatosIgnorados[k] || esDatoInstitucionalAutomatico(k) || !( /nombre|dni|cuit|cuil|email|e_mail|correo|telefono|teléfono|celular|mobile|phone|direccion|domicilio|precio|monto|fecha|plazo|uso|motivo|partido|provincia/i.test(k))) return false;
     if(!tieneValor(d[k])) return false;
@@ -1548,8 +1552,9 @@ function draftTieneContenido(d) {
   if(Object.keys(d).some(function(k){
     return !esDatoInstitucionalAutomatico(k) && /(?:dni|cuit|cuil|email|e_mail|correo|telefono|teléfono|celular|mobile|phone|contacto)/i.test(k) && tieneValor(d[k]) && String(d[k])!==String(EMPTY_OP&&EMPTY_OP[k]==null?"":EMPTY_OP[k]);
   })) return true;
-  // Las cláusulas precargadas por el modelo no son datos ingresados por el broker.
-  // Elegir un tipo y recorrer el asistente nunca crea un borrador por sí solo.
+  // Una cláusula redactada o un refuerzo elegido manualmente sí son avances reales.
+  if(tieneValor(d.clausulas_custom)||tieneValor(d.clausulas_custom_titulo)||!!d.reserva_incluye_refuerzo) return true;
+  // Las cláusulas del modelo no son datos escritos por el broker.
   return false;
 }
 
