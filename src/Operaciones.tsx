@@ -2883,11 +2883,10 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
       {tab==="cuenta"&&<div className="dw-account-nav" role="tablist" aria-label="Secciones de Mi cuenta">
         <button type="button" role="tab" aria-selected={cuentaSubtab==="resumen"} className={"dw-account-nav-item"+(cuentaSubtab==="resumen"?" active":"")} onClick={function(){setCuentaSubtab("resumen");}}>Mi perfil</button>
         {puedeEditarInstitucional&&<button type="button" role="tab" aria-selected={cuentaSubtab==="inmobiliaria"} className={"dw-account-nav-item"+(cuentaSubtab==="inmobiliaria"?" active":"")} onClick={function(){setCuentaSubtab("inmobiliaria");}}>Información de la inmobiliaria</button>}
-        <button type="button" role="tab" aria-selected={cuentaSubtab==="seguridad"} className={"dw-account-nav-item"+(cuentaSubtab==="seguridad"?" active":"")} onClick={function(){setCuentaSubtab("seguridad");}}>Seguridad y contraseña</button>
       </div>}
       {/* ── TAB: MI CUENTA (DUEÑO) ── */}
       {tab==="cuenta"&&cuentaSubtab==="resumen"&&(
-        <div className="card cuenta-profile-card" style={{width:"100%",maxWidth:840,margin:"0 auto",borderRadius:16,padding:22}}>
+        <div className="card cuenta-profile-card" style={{width:"100%",maxWidth:"none",margin:0,borderRadius:16,padding:22}}>
           <div style={{fontFamily:"DM Serif Display,serif",fontSize:22,color:"var(--text)",marginBottom:5}}>Mi perfil</div>
           <p style={{fontSize:12.5,color:"var(--muted)",margin:"0 0 18px"}}>Tus datos personales y tu foto. Cada usuario administra únicamente su propio perfil.</p>
           {function(){
@@ -2927,6 +2926,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
               </div>
             </>;
           }()}
+          <div style={{display:"flex",justifyContent:"flex-start",marginTop:18}}><button type="button" className="btn btn-secondary" onClick={function(){setCuentaSubtab("seguridad");}}>Cambiar contraseña</button></div>
           <div className="cuenta-save-panel" style={{marginTop:18}}>
             <div><div className="cuenta-save-title">Perfil personal</div><div className="cuenta-save-copy">La información institucional se administra por separado.</div></div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -3026,6 +3026,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
 
       {/* Seguridad de la cuenta: disponible para todos los roles, sin tocar datos corporativos. */}
       {tab==="cuenta"&&cuentaSubtab==="seguridad"&&<div className="dw-account-security" role="tabpanel">
+        <button type="button" className="btn btn-ghost btn-sm" style={{marginBottom:16}} onClick={function(){setCuentaSubtab("resumen");}}>← Volver a Mi perfil</button>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <div><div style={{fontSize:16,fontWeight:750,color:"var(--text)"}}>Seguridad y contraseña</div>
           <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>Cambiá la contraseña de tu usuario para ingresar a DocWorks.</div></div>
