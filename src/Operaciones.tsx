@@ -90,7 +90,7 @@ export const GS = `
     --bg:#eef2f7;--surface:#ffffff;--card:#ffffff;--border:rgba(15,23,42,0.07);--border2:rgba(15,23,42,0.12);
     --gold:#d4a853;--gold2:#e8c06a;--gold-soft:rgba(212,168,83,0.10);--gold-line:rgba(212,168,83,0.22);
     --text:#0f172a;--muted:#3f4c5e;--dim:#64748b;
-    --teal:#2dd4bf;--red:#f87171;--green:#4ade80;--amber:#fbbf24;
+    --teal:#0f766e;--red:#b91c1c;--green:#15803d;--amber:#92400e;
     --mobile-nav-h:60px;
     /* Superficies neutras (inputs, secundarios, hovers) — se recalculan en applyTheme(). */
     --surface2:rgba(15,23,42,0.035);
