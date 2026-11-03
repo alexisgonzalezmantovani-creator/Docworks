@@ -4704,6 +4704,19 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
         <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
         <Inp id="dw-field-anticipo" label="Seña / Anticipo" value={data.anticipo||""} onChange={function(e){onChange("anticipo",e.target.value);}} placeholder="10000" type="number" {...estiloCampoFaltante(faltantes,"anticipo")}/>
         <Field label="Saldo restante"><div className="val-box">{fmt$(data.saldo||(precio-anticipo),data.moneda)}</div></Field>
+        {data.tipo==="reserva"&&<details className="col2 dw-economic-advanced dw-economic-refuerzo" defaultOpen={!!data.reserva_incluye_refuerzo}>
+          <summary><span className="dw-economic-advanced-title">Refuerzo de reserva</span><span className="dw-economic-advanced-caption">Activar la cláusula y definir una fecha límite, si corresponde</span><span className="dw-economic-advanced-symbol" aria-hidden="true"></span></summary>
+          <div className="grid2 dw-economic-advanced-content">
+        {data.tipo==="reserva"&&<div className="col2" style={{padding:"12px 14px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
+          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--text)"}}>
+            <input id="dw-field-reserva_incluye_refuerzo" type="checkbox" checked={!!data.reserva_incluye_refuerzo} onChange={function(e){onChange("reserva_incluye_refuerzo",e.target.checked);}}/>
+            ¿Se pactó la posibilidad de un refuerzo de reserva?
+          </label>
+          <div style={{fontSize:12,color:"var(--muted)",marginTop:6}}>Si lo activás, DocWorks incorpora la cláusula correspondiente al documento. El refuerzo efectivo se documenta en una operación de Refuerzo de reserva.</div>
+        </div>}
+        {data.tipo==="reserva"&&!!data.reserva_incluye_refuerzo&&<Inp id="dw-field-reserva_fecha_refuerzo" label="Fecha límite para tomar refuerzo" value={data.reserva_fecha_refuerzo||""} onChange={function(e){onChange("reserva_fecha_refuerzo",e.target.value);}} type="date" className="col2" hint="Opcional — si la cargás, la app te avisa en el Calendario cuando se acerca. La fecha de posesión y la escribanía suelen definirse recién en el boleto."/>}
+          </div>
+        </details>}
         {data.tipo==="reserva"&&<Slt id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva" value={data.reserva_vigencia_dias||"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} className="col2" hint="Días corridos, desde que el Vendedor conforma la reserva, para firmar el boleto y/o la escritura. Figura en la cláusula «Vigencia de la reserva».">{["5","7","10","15","20","30","45","60","90"].map(function(d){return <option key={d} value={d}>{d} días corridos</option>;})}</Slt>}
         {data.tipo==="reserva"&&<div className="col2" style={{marginTop:2,padding:"12px 14px",borderRadius:12,border:"1px solid rgba(212,168,83,.22)",background:"rgba(212,168,83,.045)"}}>
           <div style={{fontSize:12.2,fontWeight:700,color:"var(--text)",marginBottom:3}}>Plazo de aceptación</div>
@@ -4743,8 +4756,8 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
         </div>}
         {data.tipo!=="reserva"&&<Inp id="dw-field-escribania" label="Escribanía" value={data.escribania||""} onChange={function(e){onChange("escribania",e.target.value);}} placeholder="Escribanía García" className="col2"/>}
         {data.tipo!=="reserva"&&<Inp id="dw-field-fecha_posesion" label="Fecha de posesión" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2" {...estiloCampoFaltante(faltantes,"fecha_posesion")}/>}
-        <details className="col2 dw-economic-advanced" defaultOpen={!!(data.compra_modalidad_pago&&data.compra_modalidad_pago!=="habitual"||data.compra_medio_pago&&data.compra_medio_pago!=="sin_definir"||data.compra_condiciones_pago||data.reserva_incluye_refuerzo||data.reserva_fecha_refuerzo)}>
-          <summary><span className="dw-economic-advanced-title">Opciones avanzadas</span><span className="dw-economic-advanced-caption">Financiación, cuotas, medios de pago y refuerzos especiales</span><span className="dw-economic-advanced-symbol" aria-hidden="true"></span></summary>
+        <details className="col2 dw-economic-advanced" defaultOpen={!!(data.compra_modalidad_pago&&data.compra_modalidad_pago!=="habitual"||data.compra_medio_pago&&data.compra_medio_pago!=="sin_definir"||data.compra_condiciones_pago)}>
+          <summary><span className="dw-economic-advanced-title">Opciones avanzadas</span><span className="dw-economic-advanced-caption">Financiación, cuotas y condiciones especiales de pago</span><span className="dw-economic-advanced-symbol" aria-hidden="true"></span></summary>
           <div className="grid2 dw-economic-advanced-content">
         <div className="col2" style={{padding:"12px 14px",border:"1px solid var(--border)",borderRadius:12,background:"var(--surface2)"}}>
           <div style={{fontSize:13,fontWeight:700,color:"var(--text)",marginBottom:4}}>¿Cómo se realizará el pago?</div>
@@ -4808,14 +4821,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
           </div>}
           {(data.compra_modalidad_pago!=="habitual"||data.compra_medio_pago==="mixto")&&<Txa id="dw-field-compra_condiciones_pago" label="Detalle de lo acordado" value={data.compra_condiciones_pago||""} onChange={function(e){onChange("compra_condiciones_pago",e.target.value);}} rows={3} placeholder="Ej. Una parte en efectivo al firmar y el resto por transferencia al escriturar."/>}
         </div>
-        {data.tipo==="reserva"&&<div className="col2" style={{padding:"12px 14px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
-          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--text)"}}>
-            <input id="dw-field-reserva_incluye_refuerzo" type="checkbox" checked={!!data.reserva_incluye_refuerzo} onChange={function(e){onChange("reserva_incluye_refuerzo",e.target.checked);}}/>
-            ¿Se pactó la posibilidad de un refuerzo de reserva?
-          </label>
-          <div style={{fontSize:12,color:"var(--muted)",marginTop:6}}>Si lo activás, DocWorks incorpora la cláusula correspondiente al documento. El refuerzo efectivo se documenta en una operación de Refuerzo de reserva.</div>
-        </div>}
-        {data.tipo==="reserva"&&!!data.reserva_incluye_refuerzo&&<Inp id="dw-field-reserva_fecha_refuerzo" label="Fecha límite para tomar refuerzo" value={data.reserva_fecha_refuerzo||""} onChange={function(e){onChange("reserva_fecha_refuerzo",e.target.value);}} type="date" className="col2" hint="Opcional — si la cargás, la app te avisa en el Calendario cuando se acerca. La fecha de posesión y la escribanía suelen definirse recién en el boleto."/>}
+
 
           </div>
         </details>
