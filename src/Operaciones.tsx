@@ -319,6 +319,11 @@ export const GS = `
 .dw-grupo-chevron{font-size:30px;font-weight:300;color:var(--dim);}
 @media(max-width:980px){.dw-grupo-grid{grid-template-columns:1fr;}.dw-grupo-card{min-height:94px;padding:14px 16px;}}
 
+/* Seguridad de cuenta: tres campos alineados sin scroll lateral. */
+.dw-account-password-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dw-account-password-grid>*{min-width:0}
+@media(max-width:800px){.dw-account-password-grid{grid-template-columns:minmax(0,1fr)}}
+
 /* Segunda pantalla: mismo lenguaje visual de tarjetas que el selector de grupos. */
 .dw-grupo-tipo-sections{display:flex;flex-direction:column;gap:20px;width:100%;}
 .dw-grupo-tipo-heading{font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;}
@@ -2462,7 +2467,7 @@ return SuperAdminDashboard;
 }
 
 export function crearConfiguracionView(deps){
- const {Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
+ const {Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
 function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, onChange, currentUserId, currentUserRole, darkMode, onToggleDark, equipo, equipoSupabase, operaciones, clausulas, onAddClausula, onEditClausula, onDeleteClausula, onMoveClausula, onDuplicateClausula, bloquesReserva, onUpdateBloqueReserva, onMoveBloqueReserva, bloquesError, bloquesLoading, onRetryBloques, clausulasError, onRetryClausulas, papelera, auditLog, auditoriaSupabase, onExportarRespaldo, onImportarRespaldo, onVaciarAuditoria, puedeInstalar, onInstalar, onStartTour, ctx }) {
   const [tab, setTab] = useState(requestedTab?.tab||"cuenta");
   useEffect(function(){if(requestedTab?.tab)pedirCambioTab(requestedTab.tab);},[requestedTab?.request]);
@@ -2474,6 +2479,13 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
   const fileRef = useRef();
   const [localPerfil, setLocalPerfil] = useState(perfil);
   const [cuentaSubtab, setCuentaSubtab] = useState("resumen");
+  const [claveActual,setClaveActual]=useState("");
+  const [claveNueva,setClaveNueva]=useState("");
+  const [claveConfirmar,setClaveConfirmar]=useState("");
+  const [claveVisible,setClaveVisible]=useState(false);
+  const [claveGuardando,setClaveGuardando]=useState(false);
+  const [claveError,setClaveError]=useState("");
+  const [claveExito,setClaveExito]=useState(false);
   const [histBroker, setHistBroker] = useState("todos");
   const [confirmDelMiembro, setConfirmDelMiembro] = useState(null);
   const [histEstado, setHistEstado] = useState("todos");
@@ -2500,6 +2512,34 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
   const [supportPhoto,setSupportPhoto] = useState(null);
 
   useEffect(function(){ setLocalPerfil(perfil); }, [perfil]);
+
+  async function cambiarMiContrasena(e){
+    if(e&&e.preventDefault)e.preventDefault();
+    if(claveGuardando)return;
+    setClaveError("");setClaveExito(false);
+    if(!claveActual||claveNueva.length<8){setClaveError("Ingresá la contraseña actual y una nueva de al menos 8 caracteres.");return;}
+    if(claveNueva!==claveConfirmar){setClaveError("Las contraseñas nuevas no coinciden.");return;}
+    if(claveNueva===claveActual){setClaveError("La contraseña nueva debe ser diferente de la actual.");return;}
+    setClaveGuardando(true);
+    try{
+      var sb=await loadSupabaseJs();
+      if(!sb)throw new Error("No se pudo conectar con el servicio de autenticación.");
+      var identificacion=await sb.auth.getUser();
+      var usuario=identificacion&&identificacion.data&&identificacion.data.user;
+      if(!usuario||!usuario.email)throw new Error("La sesión no está disponible. Volvé a iniciar sesión.");
+      // Verificamos la contraseña actual en Supabase y el mismo usuario antes de actualizarla.
+      var verificacion=await sb.auth.signInWithPassword({email:usuario.email,password:claveActual});
+      if(verificacion.error){setClaveError("La contraseña actual no es correcta, o no se pudo verificar.");return;}
+      if(!verificacion.data||!verificacion.data.user||verificacion.data.user.id!==usuario.id)throw new Error("No se pudo verificar la identidad de esta sesión.");
+      var actualizado=await sb.auth.updateUser({password:claveNueva});
+      if(actualizado.error)throw actualizado.error;
+      setClaveActual("");setClaveNueva("");setClaveConfirmar("");
+      setClaveExito(true);
+      dwNotify("success","Tu contraseña se actualizó correctamente.");
+    }catch(err){
+      setClaveError(traducirError(err&&err.message||"No se pudo cambiar la contraseña."));
+    }finally{setClaveGuardando(false);}
+  }
 
   function cuerpoSoporte(){return ["Inmobiliaria: "+(perfil.nombre||""),"Usuario: "+(currentUserId||""),"Rol: "+(currentUserRole||perfil.rol||""),"Versión: "+document.title,"Dispositivo: "+navigator.userAgent,"","Mensaje:",supportMessage.trim()].join("\n");}
   function whatsappSoporte(){if(!supportMessage.trim()){dwNotify("error","Describí el problema antes de continuar.");return;}window.open("https://wa.me/5491144795880?text="+encodeURIComponent(cuerpoSoporte()+(supportPhoto?"\nCaptura: "+supportPhoto.name+" (adjuntar manualmente).":"")),"_blank","noopener,noreferrer");}
@@ -2943,6 +2983,28 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
           </div>
         </div>
       )}
+
+      {/* Seguridad de la cuenta: disponible para todos los roles, sin tocar datos corporativos. */}
+      {tab==="cuenta"&&<div className="card" style={{padding:"18px 20px",maxWidth:760,margin:"18px auto 0",borderRadius:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div><div style={{fontSize:16,fontWeight:750,color:"var(--text)"}}>Seguridad y contraseña</div>
+          <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>Cambiá la contraseña de tu usuario para ingresar a DocWorks.</div></div>
+          <span style={{fontSize:19,color:"var(--gold)"}} aria-hidden="true">🔒</span>
+        </div>
+        <form onSubmit={cambiarMiContrasena} style={{marginTop:14,display:"flex",flexDirection:"column",gap:10}}>
+          <div className="dw-account-password-grid">
+            <Inp label="Contraseña actual" type={claveVisible?"text":"password"} autoComplete="current-password" value={claveActual} onChange={function(e){setClaveActual(e.target.value);setClaveExito(false);}} required/>
+            <Inp label="Contraseña nueva" type={claveVisible?"text":"password"} autoComplete="new-password" value={claveNueva} onChange={function(e){setClaveNueva(e.target.value);setClaveExito(false);}} minLength={8} required/>
+            <Inp label="Repetir contraseña nueva" type={claveVisible?"text":"password"} autoComplete="new-password" value={claveConfirmar} onChange={function(e){setClaveConfirmar(e.target.value);setClaveExito(false);}} minLength={8} required/>
+          </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+            <label style={{display:"flex",alignItems:"center",gap:7,fontSize:12,color:"var(--muted)",cursor:"pointer"}}><input type="checkbox" checked={claveVisible} onChange={function(e){setClaveVisible(e.target.checked);}}/> Mostrar contraseñas</label>
+            <button type="submit" className="btn btn-primary" disabled={claveGuardando}>{claveGuardando?"Actualizando…":"Cambiar contraseña"}</button>
+          </div>
+          {claveError&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{claveError}</div>}
+          {claveExito&&<div role="status" style={{fontSize:12,color:"var(--green)"}}>✓ Contraseña actualizada correctamente.</div>}
+        </form>
+      </div>}
 
       {/* Respaldo / Respaldo y migración */}
       {tab==="backup"&&(
