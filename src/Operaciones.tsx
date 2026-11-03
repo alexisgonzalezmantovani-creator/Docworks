@@ -319,6 +319,13 @@ export const GS = `
 .dw-grupo-chevron{font-size:30px;font-weight:300;color:var(--dim);}
 @media(max-width:980px){.dw-grupo-grid{grid-template-columns:1fr;}.dw-grupo-card{min-height:94px;padding:14px 16px;}}
 
+/* Navegación discreta para Mi cuenta, sin tarjetas ni fondos de colores adicionales. */
+.dw-account-nav{display:flex;gap:4px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);margin:-6px 0 18px;padding:0 0 1px}
+.dw-account-nav-item{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);padding:11px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.dw-account-nav-item.active{color:var(--text);border-bottom-color:var(--gold)}
+.dw-account-nav-item:hover:not(.active){color:var(--text)}
+.dw-account-nav-item:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.dw-account-security{max-width:820px;margin:8px auto 0;padding:16px 4px;color:var(--text)}
 /* Seguridad de cuenta: tres campos alineados sin scroll lateral. */
 .dw-account-password-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .dw-account-password-grid>*{min-width:0}
@@ -2847,8 +2854,13 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
         })}
       </div>
 
+      {/* Mi cuenta: separar perfil y contraseña en vistas independientes. */}
+      {tab==="cuenta"&&<div className="dw-account-nav" role="tablist" aria-label="Secciones de Mi cuenta">
+        <button type="button" role="tab" aria-selected={cuentaSubtab==="resumen"} className={"dw-account-nav-item"+(cuentaSubtab==="resumen"?" active":"")} onClick={function(){setCuentaSubtab("resumen");}}>Mi perfil</button>
+        <button type="button" role="tab" aria-selected={cuentaSubtab==="seguridad"} className={"dw-account-nav-item"+(cuentaSubtab==="seguridad"?" active":"")} onClick={function(){setCuentaSubtab("seguridad");}}>Seguridad y contraseña</button>
+      </div>}
       {/* ── TAB: MI CUENTA (DUEÑO) ── */}
-      {tab==="cuenta"&&esBroker&&(
+      {tab==="cuenta"&&cuentaSubtab==="resumen"&&esBroker&&(
         <div style={{width:"100%",maxWidth:720,margin:"0 auto"}}>
           <div className="card cuenta-profile-card" style={{padding:0,overflow:"hidden",borderRadius:18}}>
             <div style={{padding:"18px 20px",borderBottom:"1px solid var(--border)",background:"linear-gradient(180deg,rgba(212,168,83,.075),rgba(212,168,83,.015))"}}>
@@ -2878,7 +2890,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
         </div>
       )}
 
-      {tab==="cuenta"&&!esBroker&&(
+      {tab==="cuenta"&&cuentaSubtab==="resumen"&&!esBroker&&(
         <div style={{width:"100%",maxWidth:"none",margin:"0 auto"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:10,flexWrap:"wrap"}}><div><div style={{fontSize:12,fontWeight:750,color:"var(--gold)",textTransform:"uppercase",letterSpacing:".10em"}}>Panel de la inmobiliaria</div><div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>Identidad, actividad y equipo en una sola vista.</div></div></div>
           <div className="card cuenta-profile-card" style={{padding:0,overflow:"hidden",borderRadius:18}}>
@@ -2985,11 +2997,11 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
       )}
 
       {/* Seguridad de la cuenta: disponible para todos los roles, sin tocar datos corporativos. */}
-      {tab==="cuenta"&&<div className="card" style={{padding:"18px 20px",maxWidth:760,margin:"18px auto 0",borderRadius:14}}>
+      {tab==="cuenta"&&cuentaSubtab==="seguridad"&&<div className="dw-account-security" role="tabpanel">
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <div><div style={{fontSize:16,fontWeight:750,color:"var(--text)"}}>Seguridad y contraseña</div>
           <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>Cambiá la contraseña de tu usuario para ingresar a DocWorks.</div></div>
-          <span style={{fontSize:19,color:"var(--gold)"}} aria-hidden="true">🔒</span>
+          <span style={{fontSize:19,color:"var(--muted)"}} aria-hidden="true">🔒</span>
         </div>
         <form onSubmit={cambiarMiContrasena} style={{marginTop:14,display:"flex",flexDirection:"column",gap:10}}>
           <div className="dw-account-password-grid">
