@@ -320,6 +320,21 @@ export const GS = `
 .dw-operation-page .dw-grupo-chevron{color:var(--muted);}
 .dw-operation-page .dw-grupo-tipo-heading{color:var(--muted);}
 
+/* Económico: opciones atípicas accesibles sin abrumar el flujo habitual. */
+.dw-operation-page .dw-economic-advanced{min-width:0;border:1px solid var(--border2);border-radius:13px;background:var(--card);overflow:hidden}
+.dw-operation-page .dw-economic-advanced>summary{display:flex;align-items:center;gap:10px;min-height:60px;list-style:none;cursor:pointer;padding:12px 15px;color:var(--text)}
+.dw-operation-page .dw-economic-advanced>summary::-webkit-details-marker{display:none}
+.dw-operation-page .dw-economic-advanced-title{font-size:13px;font-weight:750;white-space:nowrap}
+.dw-operation-page .dw-economic-advanced-caption{font-size:11.5px;color:var(--muted);line-height:1.4;flex:1}
+.dw-operation-page .dw-economic-advanced-symbol{display:flex;align-items:center;justify-content:center;border:1px solid var(--border2);background:var(--surface2);border-radius:9px;width:30px;height:30px;flex:0 0 30px;color:var(--gold);font-size:21px}
+.dw-operation-page .dw-economic-advanced-symbol:before{content:"+"}
+.dw-operation-page .dw-economic-advanced[open] .dw-economic-advanced-symbol:before{content:"−"}
+.dw-operation-page .dw-economic-advanced[open]>summary{border-bottom:1px solid var(--border)}
+.dw-operation-page .dw-economic-advanced-content{padding:14px;gap:12px}
+.dw-operation-page .dw-economic-advanced>summary:hover{background:var(--surface2)}
+.dw-operation-page .dw-economic-advanced>summary:focus-visible{outline:2px solid var(--gold);outline-offset:-3px}
+@media(max-width:640px){.dw-operation-page .dw-economic-advanced>summary{flex-wrap:wrap;gap:6px}.dw-operation-page .dw-economic-advanced-title{flex:1}.dw-operation-page .dw-economic-advanced-caption{order:3;flex:1 0 100%}.dw-operation-page .dw-economic-advanced-symbol{order:2}}
+
 /* Categorías como tarjetas equilibradas, sin espacios laterales artificiales. */
 .dw-grupo-selector{width:100%;}
 .dw-grupo-intro{font-size:14px;color:var(--muted);margin:0 0 22px;}
