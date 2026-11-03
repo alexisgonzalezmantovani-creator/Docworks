@@ -4704,6 +4704,48 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
         <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
         <Inp id="dw-field-anticipo" label="Seña / Anticipo" value={data.anticipo||""} onChange={function(e){onChange("anticipo",e.target.value);}} placeholder="10000" type="number" {...estiloCampoFaltante(faltantes,"anticipo")}/>
         <Field label="Saldo restante"><div className="val-box">{fmt$(data.saldo||(precio-anticipo),data.moneda)}</div></Field>
+        {data.tipo==="reserva"&&<Slt id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva" value={data.reserva_vigencia_dias||"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} className="col2" hint="Días corridos, desde que el Vendedor conforma la reserva, para firmar el boleto y/o la escritura. Figura en la cláusula «Vigencia de la reserva».">{["5","7","10","15","20","30","45","60","90"].map(function(d){return <option key={d} value={d}>{d} días corridos</option>;})}</Slt>}
+        {data.tipo==="reserva"&&<div className="col2" style={{marginTop:2,padding:"12px 14px",borderRadius:12,border:"1px solid rgba(212,168,83,.22)",background:"rgba(212,168,83,.045)"}}>
+          <div style={{fontSize:12.2,fontWeight:700,color:"var(--text)",marginBottom:3}}>Plazo de aceptación</div>
+          <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>El asesor elige cómo vence la aceptación: por horas desde la firma, por días, o en una fecha fija. Se refleja en la cláusula y en el Calendario.</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+            {[
+              {id:"horas",label:"Horas"},
+              {id:"dias",label:"Días"},
+              {id:"fecha",label:"Fecha fija"},
+            ].map(function(opt){
+              var activo=(data.reserva_aceptacion_modo||"dias")===opt.id;
+              return (
+                <button key={opt.id} type="button" onClick={function(){
+                  onChange("reserva_aceptacion_modo",opt.id);
+                  if(opt.id==="horas" && !data.reserva_aceptacion_horas) onChange("reserva_aceptacion_horas","48");
+                  if(opt.id==="dias"){
+                    var n=parseInt(data.reserva_aceptacion_dias,10)||5;
+                    onChange("reserva_aceptacion_dias",String(n));
+                    onChange("reserva_aceptacion_vencimiento",sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),n));
+                  }
+                }} style={{padding:"6px 12px",borderRadius:999,border:activo?"1px solid rgba(212,168,83,.55)":"1px solid var(--border)",background:activo?"rgba(212,168,83,.18)":"var(--surface2)",color:activo?"var(--gold)":"var(--muted)",fontWeight:700,fontSize:12,cursor:"pointer"}}>{opt.label}</button>
+              );
+            })}
+          </div>
+          {(data.reserva_aceptacion_modo||"dias")==="horas" && (
+            <Inp label="Horas desde la suscripción" type="number" min="1" max="720" value={data.reserva_aceptacion_horas||48} onChange={function(e){var n=Math.max(1,Math.min(720,parseInt(e.target.value,10)||48));onChange("reserva_aceptacion_horas",String(n));}} hint="Ej: 48 = caduca a las 48 horas de firmada"/>
+          )}
+          {(data.reserva_aceptacion_modo||"dias")==="dias" && (
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <Inp label="Días para aceptar" type="number" min="1" max="90" value={data.reserva_aceptacion_dias||5} onChange={function(e){var n=Math.max(1,Math.min(90,parseInt(e.target.value,10)||1));onChange("reserva_aceptacion_dias",String(n));onChange("reserva_aceptacion_vencimiento",sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),n));}}/>
+              <Inp id="dw-field-reserva_aceptacion_vencimiento" label="Vencimiento (auto)" type="date" value={data.reserva_aceptacion_vencimiento||""} onChange={function(e){onChange("reserva_aceptacion_vencimiento",e.target.value);}}/>
+            </div>
+          )}
+          {(data.reserva_aceptacion_modo||"dias")==="fecha" && (
+            <Inp id="dw-field-reserva_aceptacion_vencimiento" label="Fecha de vencimiento" type="date" value={data.reserva_aceptacion_vencimiento||""} onChange={function(e){onChange("reserva_aceptacion_vencimiento",e.target.value);}}/>
+          )}
+        </div>}
+        {data.tipo!=="reserva"&&<Inp id="dw-field-escribania" label="Escribanía" value={data.escribania||""} onChange={function(e){onChange("escribania",e.target.value);}} placeholder="Escribanía García" className="col2"/>}
+        {data.tipo!=="reserva"&&<Inp id="dw-field-fecha_posesion" label="Fecha de posesión" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2" {...estiloCampoFaltante(faltantes,"fecha_posesion")}/>}
+        <details className="col2 dw-economic-advanced" defaultOpen={!!(data.compra_modalidad_pago&&data.compra_modalidad_pago!=="habitual"||data.compra_medio_pago&&data.compra_medio_pago!=="sin_definir"||data.compra_condiciones_pago||data.reserva_incluye_refuerzo||data.reserva_fecha_refuerzo)}>
+          <summary><span className="dw-economic-advanced-title">Opciones avanzadas</span><span className="dw-economic-advanced-caption">Financiación, cuotas, medios de pago y refuerzos especiales</span><span className="dw-economic-advanced-symbol" aria-hidden="true"></span></summary>
+          <div className="grid2 dw-economic-advanced-content">
         <div className="col2" style={{padding:"12px 14px",border:"1px solid var(--border)",borderRadius:12,background:"var(--surface2)"}}>
           <div style={{fontSize:13,fontWeight:700,color:"var(--text)",marginBottom:4}}>¿Cómo se realizará el pago?</div>
           <div style={{fontSize:12,color:"var(--dim)",marginBottom:10}}>Elegí la forma de pago. Las condiciones se guardan con la operación. Si agregás un detalle especial, DocWorks comprobará que figure en el documento antes de exportar.</div>
@@ -4766,7 +4808,6 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
           </div>}
           {(data.compra_modalidad_pago!=="habitual"||data.compra_medio_pago==="mixto")&&<Txa id="dw-field-compra_condiciones_pago" label="Detalle de lo acordado" value={data.compra_condiciones_pago||""} onChange={function(e){onChange("compra_condiciones_pago",e.target.value);}} rows={3} placeholder="Ej. Una parte en efectivo al firmar y el resto por transferencia al escriturar."/>}
         </div>
-        {data.tipo!=="reserva"&&<Inp id="dw-field-fecha_posesion" label="Fecha de posesión" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2" {...estiloCampoFaltante(faltantes,"fecha_posesion")}/>}
         {data.tipo==="reserva"&&<div className="col2" style={{padding:"12px 14px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
           <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--text)"}}>
             <input id="dw-field-reserva_incluye_refuerzo" type="checkbox" checked={!!data.reserva_incluye_refuerzo} onChange={function(e){onChange("reserva_incluye_refuerzo",e.target.checked);}}/>
@@ -4775,44 +4816,9 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
           <div style={{fontSize:12,color:"var(--muted)",marginTop:6}}>Si lo activás, DocWorks incorpora la cláusula correspondiente al documento. El refuerzo efectivo se documenta en una operación de Refuerzo de reserva.</div>
         </div>}
         {data.tipo==="reserva"&&!!data.reserva_incluye_refuerzo&&<Inp id="dw-field-reserva_fecha_refuerzo" label="Fecha límite para tomar refuerzo" value={data.reserva_fecha_refuerzo||""} onChange={function(e){onChange("reserva_fecha_refuerzo",e.target.value);}} type="date" className="col2" hint="Opcional — si la cargás, la app te avisa en el Calendario cuando se acerca. La fecha de posesión y la escribanía suelen definirse recién en el boleto."/>}
-        {data.tipo==="reserva"&&<Slt id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva" value={data.reserva_vigencia_dias||"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} className="col2" hint="Días corridos, desde que el Vendedor conforma la reserva, para firmar el boleto y/o la escritura. Figura en la cláusula «Vigencia de la reserva».">{["5","7","10","15","20","30","45","60","90"].map(function(d){return <option key={d} value={d}>{d} días corridos</option>;})}</Slt>}
-        {data.tipo==="reserva"&&<div className="col2" style={{marginTop:2,padding:"12px 14px",borderRadius:12,border:"1px solid rgba(212,168,83,.22)",background:"rgba(212,168,83,.045)"}}>
-          <div style={{fontSize:12.2,fontWeight:700,color:"var(--text)",marginBottom:3}}>Plazo de aceptación</div>
-          <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>El asesor elige cómo vence la aceptación: por horas desde la firma, por días, o en una fecha fija. Se refleja en la cláusula y en el Calendario.</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-            {[
-              {id:"horas",label:"Horas"},
-              {id:"dias",label:"Días"},
-              {id:"fecha",label:"Fecha fija"},
-            ].map(function(opt){
-              var activo=(data.reserva_aceptacion_modo||"dias")===opt.id;
-              return (
-                <button key={opt.id} type="button" onClick={function(){
-                  onChange("reserva_aceptacion_modo",opt.id);
-                  if(opt.id==="horas" && !data.reserva_aceptacion_horas) onChange("reserva_aceptacion_horas","48");
-                  if(opt.id==="dias"){
-                    var n=parseInt(data.reserva_aceptacion_dias,10)||5;
-                    onChange("reserva_aceptacion_dias",String(n));
-                    onChange("reserva_aceptacion_vencimiento",sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),n));
-                  }
-                }} style={{padding:"6px 12px",borderRadius:999,border:activo?"1px solid rgba(212,168,83,.55)":"1px solid var(--border)",background:activo?"rgba(212,168,83,.18)":"var(--surface2)",color:activo?"var(--gold)":"var(--muted)",fontWeight:700,fontSize:12,cursor:"pointer"}}>{opt.label}</button>
-              );
-            })}
+
           </div>
-          {(data.reserva_aceptacion_modo||"dias")==="horas" && (
-            <Inp label="Horas desde la suscripción" type="number" min="1" max="720" value={data.reserva_aceptacion_horas||48} onChange={function(e){var n=Math.max(1,Math.min(720,parseInt(e.target.value,10)||48));onChange("reserva_aceptacion_horas",String(n));}} hint="Ej: 48 = caduca a las 48 horas de firmada"/>
-          )}
-          {(data.reserva_aceptacion_modo||"dias")==="dias" && (
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Inp label="Días para aceptar" type="number" min="1" max="90" value={data.reserva_aceptacion_dias||5} onChange={function(e){var n=Math.max(1,Math.min(90,parseInt(e.target.value,10)||1));onChange("reserva_aceptacion_dias",String(n));onChange("reserva_aceptacion_vencimiento",sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),n));}}/>
-              <Inp id="dw-field-reserva_aceptacion_vencimiento" label="Vencimiento (auto)" type="date" value={data.reserva_aceptacion_vencimiento||""} onChange={function(e){onChange("reserva_aceptacion_vencimiento",e.target.value);}}/>
-            </div>
-          )}
-          {(data.reserva_aceptacion_modo||"dias")==="fecha" && (
-            <Inp id="dw-field-reserva_aceptacion_vencimiento" label="Fecha de vencimiento" type="date" value={data.reserva_aceptacion_vencimiento||""} onChange={function(e){onChange("reserva_aceptacion_vencimiento",e.target.value);}}/>
-          )}
-        </div>}
-        {data.tipo!=="reserva"&&<Inp id="dw-field-escribania" label="Escribanía" value={data.escribania||""} onChange={function(e){onChange("escribania",e.target.value);}} placeholder="Escribanía García" className="col2"/>}
+        </details>
         <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
           <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Para cada parte podés elegir porcentaje o un monto fijo. La moneda del honorario fijo también se define por separado.</div>
           <div className="grid2">
