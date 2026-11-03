@@ -6958,7 +6958,12 @@ function useDocWorksSession(){
   return { ready:ready, session:session, contexto:contexto, contextoLoading:contextoLoading, superDashboard:superDashboard, loginError:loginError, loginLoading:loginLoading, connError:connError, authAction:authAction, passwordSaving:passwordSaving, passwordError:passwordError, registroLoading:registroLoading, registroError:registroError, registroSuccess:registroSuccess, login:login, recoverPassword:recoverPassword, savePassword:savePassword, solicitarRegistro:solicitarRegistro, logout:logout, retry:retry };
 }
 
-function formatearNombreUsuarioVisible(contexto){
+function formatearNombreUsuarioVisible(contexto,perfilActual=undefined){
+  var id=contexto&&contexto.usuario&&contexto.usuario.id;
+  var personal=id&&perfilActual&&perfilActual.broker_perfiles&&perfilActual.broker_perfiles[id];
+  var nombrePersonal=personal&&String(personal.nombre||[personal.nombre_pila,personal.apellido].filter(Boolean).join(" ")||"").trim();
+  if(nombrePersonal)return nombrePersonal.replace(/\s+/g," ");
+
   if (!contexto || !contexto.usuario) return "Usuario";
   var u = contexto.usuario || {};
   var rawNombre = String(u.nombre || u.nombre_usuario || "").trim();
@@ -6978,10 +6983,10 @@ function formatearNombreUsuarioVisible(contexto){
   }).join(" ") || "Usuario";
 }
 
-function SesionBadge({ contexto, onLogout, foto }){
+function SesionBadge({ contexto, onLogout, foto, perfilActual }){
   var [abierto,setAbierto]=useState(false);
   if (!contexto || !contexto.usuario) return null;
-  var usuario = formatearNombreUsuarioVisible(contexto);
+  var usuario = formatearNombreUsuarioVisible(contexto,perfilActual);
   var inicial=(usuario||"U").charAt(0).toUpperCase();
   return (
     <div className="sesion-badge" style={{position:"relative",display:"flex",alignItems:"center"}}>
@@ -8648,11 +8653,11 @@ function DocWorksApp(){
         <div ref={mobilePerfilMenuRef} style={{display:"flex",alignItems:"center",gap:8,position:"relative"}}>
           {mostrarInstalar&&<button type="button" className="dw-install-btn" onClick={abrirInstalacion} aria-label="Instalar DocWorks como app"><DWIcon name="download" size={14} strokeWidth={2}/>Instalar</button>}
           <button type="button" className="mobile-topbar-avatar topbar-avatar" onClick={function(){setMobilePerfilMenuOpen(function(v){return !v;});}} title="Abrir menú de usuario" aria-label="Abrir menú de usuario" aria-haspopup="menu" aria-expanded={mobilePerfilMenuOpen} style={{display:"flex",alignItems:"center",gap:6,width:"auto",padding:"0 4px",borderRadius:20,background:"transparent",border:0,color:"rgba(241,245,249,.88)"}}>
-            <span style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{(ctx&&ctx.usuario&&perfil.broker_fotos&&perfil.broker_fotos[ctx.usuario.id])?<img src={perfil.broker_fotos[ctx.usuario.id]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Foto de perfil"/>:(ctx&&ctx.usuario&&formatearNombreUsuarioVisible(ctx).charAt(0).toUpperCase()||"U")}</span>
-            <span style={{fontSize:12,fontWeight:550,maxWidth:125,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"rgba(241,245,249,.82)"}}>{ctx&&ctx.usuario?formatearNombreUsuarioVisible(ctx):"Salir"}</span>
+            <span style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{(ctx&&ctx.usuario&&perfil.broker_fotos&&perfil.broker_fotos[ctx.usuario.id])?<img src={perfil.broker_fotos[ctx.usuario.id]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Foto de perfil"/>:(ctx&&ctx.usuario&&formatearNombreUsuarioVisible(ctx,perfil).charAt(0).toUpperCase()||"U")}</span>
+            <span style={{fontSize:12,fontWeight:550,maxWidth:125,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"rgba(241,245,249,.82)"}}>{ctx&&ctx.usuario?formatearNombreUsuarioVisible(ctx,perfil):"Salir"}</span>
           </button>
           {mobilePerfilMenuOpen&&<div role="menu" style={{position:"absolute",right:12,top:"calc(100% + 4px)",zIndex:510,minWidth:190,padding:7,background:"var(--card)",border:"1px solid var(--border2)",borderRadius:12,boxShadow:"var(--shadow-lg)"}}>
-            <div style={{padding:"8px 10px",fontSize:12,fontWeight:650,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis"}}>{ctx&&ctx.usuario?formatearNombreUsuarioVisible(ctx):"Usuario"}</div>
+            <div style={{padding:"8px 10px",fontSize:12,fontWeight:650,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis"}}>{ctx&&ctx.usuario?formatearNombreUsuarioVisible(ctx,perfil):"Usuario"}</div>
             <button type="button" role="menuitem" onClick={function(){setMobilePerfilMenuOpen(false);docworksAuth.logout();}} style={{display:"block",width:"100%",padding:"10px",border:0,borderRadius:8,textAlign:"left",background:"transparent",color:"var(--text)",fontSize:13,fontWeight:650,cursor:"pointer"}}>↪ Cerrar sesión</button>
           </div>}
         </div>
@@ -8690,7 +8695,7 @@ function DocWorksApp(){
 
           <div className="topbar-right">
             {mostrarInstalar&&<button type="button" className="dw-install-btn" onClick={abrirInstalacion} aria-label="Instalar DocWorks como app" style={{marginRight:10}}><DWIcon name="download" size={14} strokeWidth={2}/>Instalar</button>}
-            <SesionBadge contexto={ctx} onLogout={docworksAuth.logout} foto={ctx&&ctx.usuario&&perfil&&perfil.broker_fotos&&perfil.broker_fotos[ctx.usuario.id]||""}/>
+            <SesionBadge contexto={ctx} perfilActual={perfil} onLogout={docworksAuth.logout} foto={ctx&&ctx.usuario&&perfil&&perfil.broker_fotos&&perfil.broker_fotos[ctx.usuario.id]||""}/>
           </div>
         </div>
 
