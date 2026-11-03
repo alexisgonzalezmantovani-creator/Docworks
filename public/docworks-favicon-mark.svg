@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+<defs>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0ad"/><stop offset=".32" stop-color="#edbd46"/><stop offset=".57" stop-color="#b97615"/><stop offset=".78" stop-color="#ffdc69"/><stop offset="1" stop-color="#bf811c"/></linearGradient>
+<linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#313236"/><stop offset=".46" stop-color="#141518"/><stop offset="1" stop-color="#08090a"/></linearGradient>
+<linearGradient id="fold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2b3"/><stop offset="1" stop-color="#c98a20"/></linearGradient>
+</defs>
+<!-- No background: transparent around the original DocWorks mark -->
+<path d="M31 15H65Q82 15 82 32V69Q82 83 67 83H32Q19 83 19 70V69" fill="none" stroke="#8c570e" stroke-width="11" stroke-linecap="round"/>
+<path d="M31 15H65Q82 15 82 32V69Q82 83 67 83H32Q19 83 19 70V69" fill="none" stroke="url(#gold)" stroke-width="8" stroke-linecap="round"/>
+<g stroke="#9e6515" stroke-width="7" stroke-linecap="round"><path d="M12 38H32M8 50H32M12 62H32"/></g>
+<g stroke="url(#gold)" stroke-width="5" stroke-linecap="round"><path d="M12 38H32M8 50H32M12 62H32"/></g>
+<g stroke="#b27613" stroke-width="1"><circle cx="11" cy="38" r="6"/><circle cx="8" cy="50" r="6"/><circle cx="11" cy="62" r="6"/></g>
+<g fill="url(#gold)"><circle cx="11" cy="38" r="5"/><circle cx="8" cy="50" r="5"/><circle cx="11" cy="62" r="5"/></g>
+<path d="M36 25H61L74 38V71Q74 76 69 76H36Q31 76 31 71V30Q31 25 36 25Z" fill="url(#paper)" stroke="#c4a35f" stroke-width="1.5"/>
+<path d="M61 25V36Q61 39 65 39H74Z" fill="url(#fold)" stroke="#ffe6a0" stroke-width="1.4" stroke-linejoin="round"/>
+<g fill="url(#gold)"><rect x="40" y="46" width="25" height="4.5" rx="2.2"/><rect x="40" y="55" width="25" height="4.5" rx="2.2"/><rect x="40" y="64" width="22" height="4.5" rx="2.2"/></g>
+</svg>
