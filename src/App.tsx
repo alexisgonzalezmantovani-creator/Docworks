@@ -2504,6 +2504,14 @@ function useAutosave(key, value, delay, onStatus) {
       if (onStatus) onStatus("saving");
     }
     function persist(){
+      // No escribir "null" como borrador al pasear por un formulario vacío.
+      // Solo se persiste progreso real; de lo contrario se limpia el marcador local.
+      if(key==="draftOperacion" && (!value || !value.data)){
+        lsRemove(key);
+        savingRef.current=false;
+        if(onStatus) onStatus(null);
+        return;
+      }
       var persistedValue = (key === "draftOperacion" && value && value.data)
         ? Object.assign({}, value, {ts:Date.now()})
         : value;
