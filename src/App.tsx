@@ -497,9 +497,9 @@ if(typeof document!=="undefined"){var dwThemeMeta=document.querySelector<HTMLMet
       fav.type = "image/png";
       document.head.appendChild(fav);
     }
-    // Ícono vectorial de alta definición, también definido en index.html.
-    fav.type = "image/svg+xml";
-    fav.href = "/docworks-favicon.svg?v=3";
+    // Usar el mismo logotipo original de DocWorks que aparece al iniciar sesión.
+    fav.type = "image/png";
+    fav.href = LOGO_B64 + "?v=4";
   } catch(e) { console.warn("DocWorks: no se pudo actualizar el favicon",e); }
 
 var PWA_MANIFEST = {
