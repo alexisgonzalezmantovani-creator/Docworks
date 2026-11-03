@@ -333,7 +333,7 @@ export const GS = `
 .dw-account-nav-item.active{color:var(--text);border-bottom-color:var(--gold)}
 .dw-account-nav-item:hover:not(.active){color:var(--text)}
 .dw-account-nav-item:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.dw-account-security{max-width:820px;margin:8px auto 0;padding:16px 4px;color:var(--text)}
+.dw-account-security{width:100%;max-width:none;margin:0;padding:22px;color:var(--text);border-radius:16px;box-sizing:border-box}
 /* Seguridad de cuenta: contraseña actual arriba y las dos nuevas debajo. */
 .dw-account-password-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;align-items:start}
 .dw-account-password-grid>*{min-width:0}
@@ -3031,10 +3031,10 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
       )}
 
       {/* Seguridad de la cuenta: disponible para todos los roles, sin tocar datos corporativos. */}
-      {tab==="cuenta"&&cuentaSubtab==="seguridad"&&<div className="dw-account-security" role="tabpanel">
+      {tab==="cuenta"&&cuentaSubtab==="seguridad"&&<div className="card cuenta-profile-card dw-account-security" role="tabpanel">
         <button type="button" className="dw-account-back-link" onClick={function(){setCuentaSubtab("resumen");}}><span aria-hidden="true">‹</span> Mi perfil</button>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <div><div style={{fontSize:16,fontWeight:750,color:"var(--text)"}}>Seguridad y contraseña</div>
+          <div><div style={{fontFamily:"DM Serif Display,serif",fontSize:22,color:"var(--text)",marginBottom:5}}>Seguridad y contraseña</div>
           <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>Cambiá la contraseña de tu usuario para ingresar a DocWorks.</div></div>
           <span style={{fontSize:19,color:"var(--muted)"}} aria-hidden="true">🔒</span>
         </div>
