@@ -4704,19 +4704,16 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
         <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
         <Inp id="dw-field-anticipo" label="Seña / Anticipo" value={data.anticipo||""} onChange={function(e){onChange("anticipo",e.target.value);}} placeholder="10000" type="number" {...estiloCampoFaltante(faltantes,"anticipo")}/>
         <Field label="Saldo restante"><div className="val-box">{fmt$(data.saldo||(precio-anticipo),data.moneda)}</div></Field>
-        {data.tipo==="reserva"&&<details className="col2 dw-economic-advanced dw-economic-refuerzo" defaultOpen={!!data.reserva_incluye_refuerzo}>
-          <summary><span className="dw-economic-advanced-title">Refuerzo de reserva</span><span className="dw-economic-advanced-caption">Activar la cláusula y definir una fecha límite, si corresponde</span><span className="dw-economic-advanced-symbol" aria-hidden="true"></span></summary>
-          <div className="grid2 dw-economic-advanced-content">
-        {data.tipo==="reserva"&&<div className="col2" style={{padding:"12px 14px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
-          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--text)"}}>
+        {data.tipo==="reserva"&&<div className="col2 dw-economic-refuerzo-toggle">
+          <label className="dw-economic-refuerzo-label">
             <input id="dw-field-reserva_incluye_refuerzo" type="checkbox" checked={!!data.reserva_incluye_refuerzo} onChange={function(e){onChange("reserva_incluye_refuerzo",e.target.checked);}}/>
-            ¿Se pactó la posibilidad de un refuerzo de reserva?
+            <span>Refuerzo de reserva</span>
           </label>
-          <div style={{fontSize:12,color:"var(--muted)",marginTop:6}}>Si lo activás, DocWorks incorpora la cláusula correspondiente al documento. El refuerzo efectivo se documenta en una operación de Refuerzo de reserva.</div>
+          {data.reserva_incluye_refuerzo&&<div className="dw-economic-refuerzo-content">
+            <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>DocWorks incorpora la cláusula de posible refuerzo de reserva. El refuerzo efectivo se documenta en una operación independiente.</div>
+            <Inp id="dw-field-reserva_fecha_refuerzo" label="Fecha límite para tomar refuerzo" value={data.reserva_fecha_refuerzo||""} onChange={function(e){onChange("reserva_fecha_refuerzo",e.target.value);}} type="date" hint="Opcional — si cargás esta fecha, aparecerá en el Calendario."/>
+          </div>}
         </div>}
-        {data.tipo==="reserva"&&!!data.reserva_incluye_refuerzo&&<Inp id="dw-field-reserva_fecha_refuerzo" label="Fecha límite para tomar refuerzo" value={data.reserva_fecha_refuerzo||""} onChange={function(e){onChange("reserva_fecha_refuerzo",e.target.value);}} type="date" className="col2" hint="Opcional — si la cargás, la app te avisa en el Calendario cuando se acerca. La fecha de posesión y la escribanía suelen definirse recién en el boleto."/>}
-          </div>
-        </details>}
         {data.tipo==="reserva"&&<Slt id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva" value={data.reserva_vigencia_dias||"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} className="col2" hint="Días corridos, desde que el Vendedor conforma la reserva, para firmar el boleto y/o la escritura. Figura en la cláusula «Vigencia de la reserva».">{["5","7","10","15","20","30","45","60","90"].map(function(d){return <option key={d} value={d}>{d} días corridos</option>;})}</Slt>}
         {data.tipo==="reserva"&&<div className="col2" style={{marginTop:2,padding:"12px 14px",borderRadius:12,border:"1px solid rgba(212,168,83,.22)",background:"rgba(212,168,83,.045)"}}>
           <div style={{fontSize:12.2,fontWeight:700,color:"var(--text)",marginBottom:3}}>Plazo de aceptación</div>
