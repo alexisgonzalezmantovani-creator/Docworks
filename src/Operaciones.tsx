@@ -350,6 +350,20 @@ export const GS = `
 .dw-operation-page .dw-economic-acceptance-content{padding:12px 14px 15px}
 .dw-operation-page .dw-economic-acceptance-help{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px}
 
+/* Navegación de pasos: más anchura y contraste únicamente en la web. */
+@media(min-width:901px){
+  .dw-operation-page .steps{gap:7px;padding:3px 1px 8px}
+  .dw-operation-page .step-item{gap:5px}
+  .dw-operation-page .step-dot{min-width:112px;box-sizing:border-box;justify-content:center;gap:7px;padding:7px 14px;border:1px solid var(--border2);font-size:12px;font-weight:650;line-height:1.3}
+  .dw-operation-page .step-dot.pending{background:var(--surface2);color:var(--text);border-color:var(--border2)}
+  .dw-operation-page .step-dot.done{background:rgba(74,222,128,.11);color:var(--green);border-color:rgba(74,222,128,.30)}
+  .dw-operation-page .step-dot.active{background:rgba(212,168,83,.17);color:var(--gold);border-color:rgba(212,168,83,.66);box-shadow:0 0 0 1px rgba(212,168,83,.13)}
+  .dw-operation-page .step-dot.flag{border-color:rgba(239,68,68,.60)}
+  .dw-operation-page .step-dot:hover{border-color:var(--gold);background:rgba(212,168,83,.10)}
+  .dw-operation-page .step-dot:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .dw-operation-page .step-line{width:10px}
+}
+
 /* Categorías como tarjetas equilibradas, sin espacios laterales artificiales. */
 .dw-grupo-selector{width:100%;}
 .dw-grupo-intro{font-size:14px;color:var(--muted);margin:0 0 22px;}
