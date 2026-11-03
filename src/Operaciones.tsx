@@ -335,6 +335,12 @@ export const GS = `
 .dw-operation-page .dw-economic-advanced>summary:focus-visible{outline:2px solid var(--gold);outline-offset:-3px}
 @media(max-width:640px){.dw-operation-page .dw-economic-advanced>summary{flex-wrap:wrap;gap:6px}.dw-operation-page .dw-economic-advanced-title{flex:1}.dw-operation-page .dw-economic-advanced-caption{order:3;flex:1 0 100%}.dw-operation-page .dw-economic-advanced-symbol{order:2}}
 
+/* Refuerzo de reserva: mismo patrón de activación que operación compartida. */
+.dw-operation-page .dw-economic-refuerzo-toggle{padding:11px 0 12px;border-bottom:1px solid var(--border);}
+.dw-operation-page .dw-economic-refuerzo-label{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:650;color:var(--text);cursor:pointer;width:fit-content}
+.dw-operation-page .dw-economic-refuerzo-label input{flex-shrink:0;accent-color:var(--gold);width:16px;height:16px}
+.dw-operation-page .dw-economic-refuerzo-content{margin-top:12px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:11px}
+
 /* Categorías como tarjetas equilibradas, sin espacios laterales artificiales. */
 .dw-grupo-selector{width:100%;}
 .dw-grupo-intro{font-size:14px;color:var(--muted);margin:0 0 22px;}
