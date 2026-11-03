@@ -321,6 +321,12 @@ export const GS = `
 
 /* Mi perfil de todos los roles: campos claros y apilado móvil. */
 @media(max-width:640px){.dw-personal-profile-grid{grid-template-columns:minmax(0,1fr)!important}}
+/* Navegación de regreso sencilla, sin apariencia de botón grande. */
+.dw-account-back-link{display:inline-flex;align-items:center;gap:7px;padding:4px 1px;margin:0 0 17px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:650;cursor:pointer}
+.dw-account-back-link span{font-size:22px;line-height:1}
+.dw-account-back-link:hover{color:var(--text)}
+.dw-account-back-link:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+@media(max-width:640px){.cuenta-save-panel{flex-wrap:wrap}.cuenta-save-panel>div:last-child{flex-wrap:wrap;justify-content:flex-end}}
 /* Navegación discreta para Mi cuenta, sin tarjetas ni fondos de colores adicionales. */
 .dw-account-nav{display:flex;gap:4px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);margin:-6px 0 18px;padding:0 0 1px}
 .dw-account-nav-item{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);padding:11px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
@@ -2926,13 +2932,13 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
               </div>
             </>;
           }()}
-          <div style={{display:"flex",justifyContent:"flex-start",marginTop:18}}><button type="button" className="btn btn-secondary" onClick={function(){setCuentaSubtab("seguridad");}}>Cambiar contraseña</button></div>
           <div className="cuenta-save-panel" style={{marginTop:18}}>
             <div><div className="cuenta-save-title">Perfil personal</div><div className="cuenta-save-copy">La información institucional se administra por separado.</div></div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               {perfilSaveStatus==="error"&&<span style={{color:"var(--red)",fontSize:12}}>No se pudo guardar</span>}
               {perfilSaveStatus==="saved"&&<span style={{color:"var(--green)",fontSize:12}}>✓ Guardado</span>}
               <Btn v="success" onClick={savePerfil} disabled={perfilSaveStatus==="saving"}>{perfilSaveStatus==="saving"?"Guardando…":"Guardar mi perfil"}</Btn>
+              <button type="button" className="btn btn-secondary" onClick={function(){setCuentaSubtab("seguridad");}}>Cambiar contraseña</button>
             </div>
           </div>
         </div>
@@ -3026,7 +3032,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
 
       {/* Seguridad de la cuenta: disponible para todos los roles, sin tocar datos corporativos. */}
       {tab==="cuenta"&&cuentaSubtab==="seguridad"&&<div className="dw-account-security" role="tabpanel">
-        <button type="button" className="btn btn-ghost btn-sm" style={{marginBottom:16}} onClick={function(){setCuentaSubtab("resumen");}}>← Volver a Mi perfil</button>
+        <button type="button" className="dw-account-back-link" onClick={function(){setCuentaSubtab("resumen");}}><span aria-hidden="true">‹</span> Mi perfil</button>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <div><div style={{fontSize:16,fontWeight:750,color:"var(--text)"}}>Seguridad y contraseña</div>
           <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>Cambiá la contraseña de tu usuario para ingresar a DocWorks.</div></div>
