@@ -1500,6 +1500,13 @@ label:has(>input[type="checkbox"]){line-height:1.3;}
 .dw-ios-sw.on{background:var(--gold);}
 .dw-ios-sw.on::before{transform:translateX(18px);}
 .dw-ios-sw.locked{opacity:.55;}
+/* Selector de cláusulas: mismo switch iOS que en el resto de la aplicación.
+   El reset del botón evita el estilo nativo del navegador y mantiene el pulgar redondo. */
+.dw-op-clause-switch.dw-ios-sw{appearance:none;-webkit-appearance:none;box-sizing:border-box;padding:0;border:0;outline-offset:3px;cursor:pointer;vertical-align:middle;min-width:46px;min-height:28px;max-width:46px;max-height:28px;margin:0;}
+.dw-op-clause-switch.dw-ios-sw:focus-visible{outline:2px solid var(--gold);}
+.dw-op-clause-switch.dw-ios-sw:disabled{cursor:not-allowed;opacity:.55;}
+@media(prefers-reduced-motion:reduce){.dw-op-clause-switch.dw-ios-sw,.dw-op-clause-switch.dw-ios-sw::before{transition:none;}}
+
 .dw-ios-round{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:24px;height:24px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:background-color .2s ease,border-color .2s ease;}
 .dw-ios-round.on{background:var(--gold);border-color:var(--gold);}
 /* Interruptor "mostrar teléfono": misma perilla iPhone. */
