@@ -3274,14 +3274,14 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
         function ClauseCard({c,index}){
           var draggable=puedeAgregar;
           return <div key={c.id}
-            draggable={draggable}
+            draggable={draggable && typeof window!=="undefined" && window.matchMedia("(pointer:fine)").matches}
             onDragStart={function(e){if(!draggable)return;setDragClausulaId(c.id);try{e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",c.id);}catch(_){ console.debug("DocWorks: operación drag/drop no soportada por el navegador."); }}}
             onDragOver={function(e){if(draggable){e.preventDefault();try{e.dataTransfer.dropEffect="move";}catch(_){ console.debug("DocWorks: operación drag/drop no soportada por el navegador."); }}}}
             onDragEnter={function(e){if(draggable)e.preventDefault();}}
             onDrop={function(e){if(!draggable)return;e.preventDefault();var from=dragClausulaId||((e.dataTransfer&&e.dataTransfer.getData("text/plain"))||"");if(from&&from!==c.id)moverPlantilla(from,c.id);setDragClausulaId(null);}}
             onDragEnd={function(){setDragClausulaId(null);}}
             style={{display:"flex",alignItems:"center",gap:10,padding:"11px 12px",border:"1px solid var(--border)",borderRadius:11,background:"rgba(255,255,255,.012)",opacity:dragClausulaId===c.id?.55:1}}>
-            <div title={draggable?"Arrastrá esta cláusula para cambiar el orden":"Modelo protegido"} style={{width:30,height:30,borderRadius:9,background:"rgba(212,168,83,.09)",border:"1px solid rgba(212,168,83,.16)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"var(--gold)",flexShrink:0,cursor:draggable?"grab":"default"}}>⠿</div><div style={{minWidth:22,textAlign:"center",fontSize:12,color:"var(--dim)",flexShrink:0}}>{index+1}</div>
+            <div title={draggable?"En PC: arrastrá para ordenar. También podés usar las flechas.":"Modelo protegido"} style={{width:30,height:30,borderRadius:9,background:"rgba(212,168,83,.09)",border:"1px solid rgba(212,168,83,.16)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"var(--gold)",flexShrink:0,cursor:draggable?"grab":"default"}}>⠿</div><div style={{minWidth:22,textAlign:"center",fontSize:12,color:"var(--dim)",flexShrink:0}}>{index+1}</div>
             <div style={{minWidth:0,flex:1}}>
               <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                 <span style={{fontSize:12.7,fontWeight:650,color:"var(--text)"}}>{(c.titulo&&String(c.titulo).trim())?String(c.titulo).trim():"Cláusula sin título"}</span>
