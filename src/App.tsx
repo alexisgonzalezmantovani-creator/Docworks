@@ -4461,13 +4461,13 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
       <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:3}} title={ayudaRolForm(data.tipo,prefix)}>{tituloRolForm(data.tipo,prefix)}</div>
       <p style={{fontSize:13,color:"var(--muted)",marginBottom:ayudaRolForm(data.tipo,prefix)?6:12}}>Completá los datos de {tituloRolForm(data.tipo,prefix).toLowerCase()}.</p>
       {ayudaRolForm(data.tipo,prefix)&&<div className="dw-rol-ayuda" style={{fontSize:12,color:"var(--gold)",background:"rgba(212,168,83,0.07)",border:"1px solid rgba(212,168,83,0.2)",borderRadius:9,padding:"7px 10px",marginBottom:12}}>ⓘ {ayudaRolForm(data.tipo,prefix)}</div>}
-      <div className="grid2">
-        <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="col2" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
-        <IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="20-12345678-9" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/>
-        <Inp id={"dw-field-"+prefix+"_domicilio"} label="Domicilio" value={f("domicilio")} onChange={s("domicilio")} placeholder="Av. Corrientes 1234, CABA" className="col2" {...estiloCampoFaltante(faltantes,prefix+"_domicilio")}/>
+      <div className="dw-persona-fields">
+        <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
+        <div className="dw-persona-half"><IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="20-12345678-9" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/></div>
+        <Inp id={"dw-field-"+prefix+"_domicilio"} label="Domicilio" value={f("domicilio")} onChange={s("domicilio")} placeholder="Av. Corrientes 1234, CABA" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_domicilio")}/>
         <Inp label="Teléfono" type="tel" inputMode="tel" value={f("telefono")} onChange={s("telefono")} placeholder="+54 9 11 1234-5678" hint="Dato interno de la operación."/>
         <Inp label="Correo electrónico" type="email" inputMode="email" autoComplete="email" value={f("email")} onChange={s("email")} placeholder="persona@correo.com" hint="Dato interno de la operación."/>
-        <div className="col2 dw-doc-toggles">
+        <div className="dw-persona-full dw-doc-toggles">
           <label style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
             <input type="checkbox" checked={!!data[prefix+"_telefono_en_doc"]} onChange={function(e){onChange(prefix+"_telefono_en_doc",e.target.checked);}}/>
             Mostrar teléfono en el documento
@@ -4491,17 +4491,17 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
                 <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Co-titular {i+2}</div>
                 <button onClick={function(){quitarCotitular(i);}} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:12}}>✕ Quitar</button>
               </div>
-              <div className="grid2">
-                <Inp label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="col2"/>
-                <IdentificacionField value={p.dni||""} onChange={function(e){actualizarCotitular(i,"dni",e.target.value);}} placeholder="27-98765432-1"/>
-                <Inp label="Domicilio (si es distinto)" value={p.domicilio||""} onChange={function(e){actualizarCotitular(i,"domicilio",e.target.value);}} placeholder="Dejalo vacío si es el mismo" className="col2"/>
+              <div className="dw-persona-fields">
+                <Inp label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="dw-persona-half"/>
+                <div className="dw-persona-half"><IdentificacionField value={p.dni||""} onChange={function(e){actualizarCotitular(i,"dni",e.target.value);}} placeholder="27-98765432-1"/></div>
+                <Inp label="Domicilio (si es distinto)" value={p.domicilio||""} onChange={function(e){actualizarCotitular(i,"domicilio",e.target.value);}} placeholder="Dejalo vacío si es el mismo" className="dw-persona-half"/>
                 <Inp label="Teléfono" type="tel" inputMode="tel" value={p.telefono||""} onChange={function(e){actualizarCotitular(i,"telefono",e.target.value);}} placeholder="+54 9 11 1234-5678" hint="Dato interno de la operación."/>
                 <Inp label="Correo electrónico" type="email" inputMode="email" autoComplete="off" value={p.email||""} onChange={function(e){actualizarCotitular(i,"email",e.target.value);}} placeholder="persona@correo.com" hint="Dato interno de la operación."/>
-                <label className="col2" style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
+                <label className="dw-persona-half" style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
                   <input type="checkbox" checked={typeof p.telefono_en_doc==="boolean"?p.telefono_en_doc:!!data[prefix+"_telefono_en_doc"]} onChange={function(e){actualizarCotitular(i,"telefono_en_doc",e.target.checked);}}/>
                   Mostrar teléfono en el documento
                 </label>
-                <label className="col2" style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
+                <label className="dw-persona-half" style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
                   <input type="checkbox" checked={typeof p.email_en_doc==="boolean"?p.email_en_doc:!!data[prefix+"_email_en_doc"]} onChange={function(e){actualizarCotitular(i,"email_en_doc",e.target.checked);}}/>
                   Mostrar correo en el documento
                 </label>
@@ -5224,26 +5224,24 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
   return(
     <div>
       <OpcionalesCuerpo data={data} onChange={onChange}/>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>Seleccioná el tipo de documento a generar.</p>
-      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <p className="dw-grupo-intro">Seleccioná el tipo de documento a generar.</p>
+      <div className="dw-grupo-tipo-sections">
         {gruposToShow.map(function(entry){
-          var key=entry[0], g=entry[1];
-          var col=colorMap[key]||"rgba(255,255,255,0.05)";
-          var brd=borderMap[key]||"var(--border2)";
+          var key=entry[0],g=entry[1];
           return(
             <div key={key}>
-              <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>{g.label}</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {!grupo&&<div className="dw-grupo-tipo-heading">{g.label}</div>}
+              <div className={"dw-grupo-tipo-grid dw-grupo-tipo-"+key}>
                 {g.tipos.map(function(t){
                   var sel=data.tipo===t.value;
                   return(
-                    <button type="button" key={t.value} onClick={function(){onChange("tipo",t.value);}}
-                      style={{padding:"14px 12px",borderRadius:12,textAlign:"left",cursor:"pointer",transition:"all 0.15s",
-                        border:"2px solid "+(sel?brd:"var(--border2)"),
-                        background:sel?col:"var(--card)",outline:"none"}}>
-                      <div style={{fontSize:22,marginBottom:6}}>{t.icon}</div>
-                      <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:3}}>{t.label}</div>
-                      <div style={{fontSize:12,color:"var(--muted)"}}>{t.desc}</div>
+                    <button type="button" key={t.value}
+                      className={"dw-grupo-card dw-grupo-tipo-card dw-grupo-"+key+(sel?" is-selected":"")}
+                      aria-pressed={sel}
+                      onClick={function(){onChange("tipo",t.value);}}>
+                      <span className="dw-grupo-icon" aria-hidden="true">{t.icon}</span>
+                      <span className="dw-grupo-text"><strong>{t.label}</strong><small>{t.desc}</small></span>
+                      <span className="dw-grupo-chevron" aria-hidden="true">{sel?"✓":"›"}</span>
                     </button>
                   );
                 })}
@@ -5276,22 +5274,19 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
   );
 }
 function StepGrupo({onSelect}){
-  return(
-    <div>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:20}}>¿Qué tipo de operación querés gestionar?</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+  return (
+    <div className="dw-grupo-selector">
+      <p className="dw-grupo-intro">Elegí el tipo de documento que querés generar.</p>
+      <div className="dw-grupo-grid">
         {Object.entries(TIPO_GRUPOS).map(function([key,g]){
-          var colors={compra:"rgba(212,168,83,0.08)",alquiler:"rgba(45,212,191,0.07)",otros:"rgba(148,163,184,0.07)"};
-          var borders={compra:"rgba(212,168,83,0.3)",alquiler:"rgba(45,212,191,0.25)",otros:"rgba(148,163,184,0.2)"};
-          return(
-            <button type="button" key={key} className="grupo-card" onClick={function(){onSelect(key);}}
-              style={{padding:"20px 16px",borderRadius:14,textAlign:"left",cursor:"pointer",
-                border:"2px solid "+borders[key],background:colors[key],outline:"none",
-                transition:"all 0.15s",display:"flex",flexDirection:"column",gap:6,
-                gridColumn:key==="otros"?"span 2":"span 1"}}>
-              <div style={{fontSize:28}}>{g.label.split(" ")[0]}</div>
-              <div style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>{g.label.slice(2)}</div>
-              <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{g.label==="📌 Otros"?g.tipos.map(function(t){return t.label;}).join(" · "):g.desc}</div>
+          var labels={compra:"Compra",alquiler:"Alquiler",otros:"Otros documentos"};
+          var icons={compra:"🏡",alquiler:"🏠",otros:"📌"};
+          var desc={compra:"Reservas y boletos de compraventa",alquiler:"Reservas y contratos de alquiler",otros:"Comodatos, exclusividades y documentos adicionales"};
+          return (
+            <button type="button" key={key} className={"dw-grupo-card dw-grupo-"+key} onClick={function(){onSelect(key);}}>
+              <span className="dw-grupo-icon" aria-hidden="true">{icons[key]}</span>
+              <span className="dw-grupo-text"><strong>{labels[key]}</strong><small>{desc[key]}</small></span>
+              <span className="dw-grupo-chevron" aria-hidden="true">›</span>
             </button>
           );
         })}
@@ -6186,6 +6181,10 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   const [probarAbierto,setProbarAbierto]=useState(false);
   const [modoVistaClausulas]=useState("simple");
   const [clausulasAbiertas,setClausulasAbiertas]=useState({});
+  const arrastreClausulaRef=useRef(null);
+  const [clausulaDestino,setClausulaDestino]=useState(null);
+  const [clausulaArrastrada,setClausulaArrastrada]=useState(null);
+  const vistaArrastreRef=useRef(null);
   useEffect(function(){if(onEditingChange)onEditingChange(!!editId);},[editId,onEditingChange]);
   useEffect(function(){
     if(!editId)return;
@@ -6263,7 +6262,22 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     if(!res||!res.error)setEditId(null);
   }
   function update(id,changes){if(editId||status==="saving")return;var actual=draft.find(function(b){return b.id===id;});var cambio=Object.assign({},changes||{});if(esClausulaEsencialModelo(actual)){cambio.activo=true;cambio.obligatoria=true;}persist(draft.map(function(b){return b.id===id?Object.assign({},b,cambio):b;}));}
-  function move(idx,dir){if(editId||status==="saving")return;var to=dir==="up"?idx-1:idx+1;if(to<0||to>=draft.length)return;var arr=draft.slice(),x=arr[idx];arr[idx]=arr[to];arr[to]=x;persist(arr);}
+  function moverClausulaHasta(origenId,destinoId){
+    if(!puedeEditar||editId||status==="saving"||!origenId||origenId===destinoId)return;
+    var arr=draft.slice();
+    var desde=arr.findIndex(function(b){return b.id===origenId;});
+    var hasta=arr.findIndex(function(b){return b.id===destinoId;});
+    if(desde<0||hasta<0)return;
+    var bloque=arr.splice(desde,1)[0];
+    arr.splice(hasta,0,bloque);
+    persist(arr).then(function(res){
+      if(res&&res.error){
+        setDraft(getBodyBlocksConfig(perfil,tipo,bloquesReserva));
+        dwNotify("error","No se pudo guardar el nuevo orden. Se restauró el anterior.");
+      }
+    });
+  }
+  function move(idx,dir){if(editId||status==="saving")return;var to=dir==="up"?idx-1:idx+1;if(to<0||to>=draft.length)return;moverClausulaHasta(draft[idx].id,draft[to].id);}
   function addBlock(){if(!puedeEditar||editId||status==="saving")return;var n=draft.length+1;var b=normalizarBodyBlock({id:tipo+".custom."+Date.now(),titulo:"NUEVA CLÁUSULA",contenido:"Escribí acá la redacción de esta cláusula. Podés insertar variables automáticas desde el listado inferior."},n-1);if(editId)return;setDraft(draft.concat([b]));setEditId(b.id);}
   function removeBlock(id){if(editId||status==="saving")return;var b=draft.find(function(x){return x.id===id;});if(!b)return;if(esClausulaEsencialModelo(b)){dwNotify("warning","Este apartado es esencial del modelo. Podés editar su texto, pero no eliminarlo.");return;}requestDwConfirm("¿Eliminar la cláusula “"+(b.titulo||"sin título")+"” de esta plantilla?",function(){persist(draft.filter(function(x){return x.id!==id;}));});}
   function reset(){if(editId||status==="saving")return;requestDwConfirm("¿Restaurar TODAS las cláusulas de "+(TIPOS[tipo]||tipo)+" a la versión de fábrica? Se guardará una copia del modelo actual para poder deshacer esta acción.",function(){var snapshot={fecha:new Date().toISOString(),clausulas:draft.map(function(b,i){return Object.assign({},b,{orden:Number(b.orden)||i+1});})};persist(getDefaultBodyBlocks(tipo),{restauracionAnterior:snapshot});setEditId(null);});}
@@ -6310,12 +6324,22 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     </div></div>,document.body)}
     {status&&<div style={{marginBottom:9,fontSize:12,color:status==="error"?"var(--red)":status==="saved"?"var(--green)":"var(--gold)"}}>{status==="saving"?"Guardando cambios…":status==="saved"?"Cambios guardados ✓":"No se pudo guardar el modelo del documento."}</div>}
     <div style={{display:"flex",flexDirection:"column",gap:7}}>
+      {puedeEditar&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:3}}>En PC, arrastrá desde el número de cada cláusula para cambiar su posición. También podés usar los controles de orden.</div>}
       <style>{DW_MODEL_CLAUSES_UI_CSS + DW_MODEL_CLAUSES_V489_CSS}</style>
-            {draft.map(function(b,idx){var editing=editId===b.id;var numeroActivo=draft.slice(0,idx+1).filter(function(x){return x.activo!==false&&x.obligatoria===true;}).length;var esCondicional=!!(b.condicion||b.condicional);var filaAbierta=modoVistaClausulas==="abierta"?clausulasAbiertas[b.id]!==false:!!clausulasAbiertas[b.id];return <div key={b.id} className={"dw-clause-card "+(modoVistaClausulas==="simple"?"dw-clause-compact":"dw-clause-detail")+(filaAbierta?" dw-clause-open":"")} style={{border:"1px solid "+(editing?"rgba(212,168,83,.40)":"var(--border2)"),borderRadius:10,padding:modoVistaClausulas==="simple"?"6px 9px":11,background:editing?"rgba(212,168,83,.035)":"var(--card)"}}>
-        <div style={{display:"flex",alignItems:modoVistaClausulas==="simple"?"center":"flex-start",gap:9,minWidth:0}}>
-          <div style={{minWidth:28,height:28,borderRadius:8,background:"rgba(212,168,83,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--gold)",flexShrink:0,padding:"0 5px",boxSizing:"border-box"}}><span title={b.obligatoria&&b.activo!==false?"Cláusula "+numeroActivo:""}>{b.activo===false?"—":(b.obligatoria?numeroActivo:"—")}</span></div>
+            {draft.map(function(b,idx){var editing=editId===b.id;var numeroActivo=draft.slice(0,idx+1).filter(function(x){return x.activo!==false&&x.obligatoria===true;}).length;var esCondicional=!!(b.condicion||b.condicional);var filaAbierta=modoVistaClausulas==="abierta"?clausulasAbiertas[b.id]!==false:!!clausulasAbiertas[b.id];return <div key={b.id} className={"dw-clause-card "+(modoVistaClausulas==="simple"?"dw-clause-compact":"dw-clause-detail")+(filaAbierta?" dw-clause-open":"")+(clausulaDestino===b.id?" dw-clause-drop-target":"")+(clausulaArrastrada===b.id?" dw-clause-dragging":"")} onDragOver={function(e){if(!puedeEditar||editId||status==="saving"||!arrastreClausulaRef.current||arrastreClausulaRef.current===b.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setClausulaDestino(b.id);}} onDrop={function(e){e.preventDefault();var idOrigen=arrastreClausulaRef.current;arrastreClausulaRef.current=null;setClausulaDestino(null);setClausulaArrastrada(null);if(vistaArrastreRef.current){vistaArrastreRef.current.remove();vistaArrastreRef.current=null;}moverClausulaHasta(idOrigen,b.id);}} onDragEnd={function(){arrastreClausulaRef.current=null;setClausulaDestino(null);setClausulaArrastrada(null);}} style={{border:"1px solid "+(editing?"rgba(212,168,83,.40)":"var(--border2)"),borderRadius:10,padding:modoVistaClausulas==="simple"?"6px 9px":11,background:editing?"rgba(212,168,83,.035)":"var(--card)"}}>
+        <div style={{display:filaAbierta&&!editing?"block":"flex",alignItems:modoVistaClausulas==="simple"?"center":"flex-start",gap:9,minWidth:0}}>
+          <div className={"dw-clause-number"+(filaAbierta&&!editing?" dw-clause-number-expanded":"")+(puedeEditar&&!editing?" dw-clause-number-draggable":"")}
+            draggable={puedeEditar&&!editing&&status!=="saving"}
+            title={puedeEditar&&!editing?"Arrastrá el número para reordenar la cláusula":"Número de cláusula"}
+            aria-label={"Cláusula "+numeroActivo+(puedeEditar?", arrastrar para ordenar":"")}
+            onDragStart={function(e){if(!puedeEditar||editId||status==="saving"){e.preventDefault();return;}arrastreClausulaRef.current=b.id;setClausulaArrastrada(b.id);setClausulaDestino(null);e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",b.id);
+              if(typeof document!=="undefined"){var fl=document.createElement("div");fl.className="dw-clause-drag-preview";fl.textContent=String(numeroActivo)+" · "+String(b.titulo||"Cláusula");document.body.appendChild(fl);vistaArrastreRef.current=fl;try{e.dataTransfer.setDragImage(fl,42,22);}catch(_e){}}}}
+            onDragEnd={function(){arrastreClausulaRef.current=null;setClausulaDestino(null);setClausulaArrastrada(null);if(vistaArrastreRef.current){vistaArrastreRef.current.remove();vistaArrastreRef.current=null;}}}
+            style={{minWidth:28,height:28,borderRadius:8,background:"rgba(212,168,83,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--gold)",flexShrink:0,padding:"0 5px",boxSizing:"border-box"}}>
+            <span>{b.activo===false?"—":(b.obligatoria?numeroActivo:"—")}</span>
+          </div>
           <div style={{flex:1,minWidth:0}}>
-            {editing&&tipo==="reserva"&&b.id==="reserva.precio" ? <PrecioNarrativaEditor bloque={b} onSave={function(cambios){return persist(draft.map(function(x){return x.id===b.id?Object.assign({},x,cambios):x;}));}} onCancel={cancelarBorrador} onSaved={function(){setEditId(null);}}/> : editing ? <div style={{display:"flex",flexDirection:"column",gap:7}}><input className="inp" value={b.titulo} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{titulo:e.target.value}):x;}));}}/><textarea ref={contenidoEditorRef} className="inp" style={{minHeight:120,resize:"vertical",lineHeight:1.6}} value={b.contenido} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{contenido:e.target.value}):x;}));}}/><div style={{padding:10,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2, rgba(127,127,127,.035))"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:7}}><div style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Insertar campo automático</div><span style={{fontSize:11,color:"var(--dim)"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).length} disponibles</span></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45,marginBottom:8}}>Elegí un campo para insertarlo donde está el cursor. Los campos ya usados se ocultan; si los borrás del texto, vuelven a aparecer.</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).map(function(t){return <button key={t[0]} type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertToken(t[0]);}} style={{display:"inline-flex",alignItems:"center",gap:5,minHeight:30,padding:"5px 9px",borderRadius:999,border:"1px solid var(--border2, rgba(89,199,243,.28))",background:"var(--card, rgba(89,199,243,.055))",color:"var(--text)",fontSize:11.5,fontWeight:600,cursor:"pointer"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:999,background:"rgba(89,199,243,.13)",color:"#59c7f3",fontSize:13,lineHeight:1}}>+</span>{t[1]}</button>;})}{tokens.every(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])!==-1;})&&<div style={{fontSize:11.5,color:"var(--green)"}}>Ya están usados todos los campos disponibles.</div>}</div></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45}}>Los campos se completan automáticamente desde la operación al generar el documento.</div><div style={{display:"flex",justifyContent:"flex-end",gap:6,flexWrap:"wrap"}}><Btn s="sm" v="ghost" onClick={function(){restaurarBloque(editId);}}>↺ Restaurar esta cláusula</Btn><Btn s="sm" v="ghost" onClick={cancelarBorrador}>Cancelar</Btn><Btn s="sm" v="success" onClick={function(){guardarClausula();}}>Guardar cláusula</Btn></div></div> : <><div className="dw-model-clause-row" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:modoVistaClausulas==="simple"?"nowrap":"wrap",gap:7,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap",flex:"1 1 auto",minWidth:0,overflow:"hidden"}}><button type="button" className="dw-clause-toggle" onClick={function(){setClausulasAbiertas(function(prev){var next=Object.assign({},prev);next[b.id]=!filaAbierta;return next;});}} aria-expanded={filaAbierta} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} style={{fontSize:12.2,fontWeight:650,color:"var(--text)",border:0,padding:"6px 0",background:"transparent",textAlign:"left",cursor:"pointer",whiteSpace:modoVistaClausulas==="simple"?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}><span className="dw-clause-name">{b.titulo||"Cláusula sin título"}</span></button>{esClausulaEsencialModelo(b)&&<span className="dw-essential-label" title="Cláusula esencial del documento: se puede editar, pero no desactivar ni eliminar"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{!esClausulaEsencialModelo(b)&&b.obligatoria===true&&<span className="dw-essential-label dw-essential-label-soft" title="Cláusula obligatoria configurada por la inmobiliaria"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{esCondicional&&modoVistaClausulas!=="simple"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:999,background:"rgba(89,199,243,.10)",color:"#59c7f3",border:"1px solid rgba(89,199,243,.18)"}}>Condicional</span>}{b.activo===false&&modoVistaClausulas!=="simple"&&<span className="badge">Inactiva</span>}<button type="button" className={"dw-clause-chevron "+(filaAbierta?"is-open":"")} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} aria-expanded={filaAbierta} onClick={function(){setClausulasAbiertas(function(prev){return Object.assign({},prev,{[b.id]:!filaAbierta});});}}><span aria-hidden="true">⌄</span></button></div><div className="dw-clause-actions" style={{display:"flex",gap:4,flex:"0 1 auto",flexWrap:"nowrap",alignItems:"center"}}><button type="button" title="Subir" onClick={function(){move(idx,"up");}} disabled={!puedeEditar||idx===0} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↑</button><button type="button" title="Bajar" onClick={function(){move(idx,"down");}} disabled={!puedeEditar||idx===draft.length-1} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}>↓</button>{puedeVerHistorial&&<button type="button" title="Historial de la cláusula" onClick={function(){setHistorialSeleccionado(b);}} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<select aria-label={"Estado de la cláusula "+(b.titulo||"")} value={b.activo===false?"apagada":(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&b.obligatoria!==true?"asesor":b.obligatoria===true?"obligatoria":"apagada"} onChange={function(e){var estado=e.target.value;update(b.id,estado==="apagada"?{activo:false}:estado==="asesor"?{activo:true,obligatoria:false}:{activo:true,obligatoria:true});}} style={{maxWidth:155,minWidth:0,width:"100%",fontSize:11,padding:"5px 4px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option><option value="asesor" disabled={b.id!=="reserva.refuerzo"&&b.id!=="alquiler.seguro"}>El asesor elige</option><option value="apagada">Apagada</option></select>}{puedeEditar&&<button type="button" title="Editar" onClick={function(){if(!editId&&status!=="saving")setEditId(b.id);}} style={{border:"1px solid rgba(212,168,83,.25)",background:"rgba(212,168,83,.06)",color:"var(--gold)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>Editar</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<button type="button" title="Eliminar" onClick={function(){removeBlock(b.id);}} style={{border:"1px solid rgba(248,113,113,.2)",background:"transparent",color:"var(--red)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>×</button>}</div></div>{filaAbierta&&<div className="dw-clause-content" style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginTop:7,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{mostrarTokensDocWorks(b.contenido)}</div>}</>}
+            {editing&&tipo==="reserva"&&b.id==="reserva.precio" ? <PrecioNarrativaEditor bloque={b} onSave={function(cambios){return persist(draft.map(function(x){return x.id===b.id?Object.assign({},x,cambios):x;}));}} onCancel={cancelarBorrador} onSaved={function(){setEditId(null);}}/> : editing ? <div style={{display:"flex",flexDirection:"column",gap:7}}><input className="inp" value={b.titulo} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{titulo:e.target.value}):x;}));}}/><textarea ref={contenidoEditorRef} className="inp" style={{minHeight:120,resize:"vertical",lineHeight:1.6}} value={b.contenido} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{contenido:e.target.value}):x;}));}}/><div style={{padding:10,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2, rgba(127,127,127,.035))"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:7}}><div style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Insertar campo automático</div><span style={{fontSize:11,color:"var(--dim)"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).length} disponibles</span></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45,marginBottom:8}}>Elegí un campo para insertarlo donde está el cursor. Los campos ya usados se ocultan; si los borrás del texto, vuelven a aparecer.</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{tokens.filter(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])===-1;}).map(function(t){return <button key={t[0]} type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertToken(t[0]);}} style={{display:"inline-flex",alignItems:"center",gap:5,minHeight:30,padding:"5px 9px",borderRadius:999,border:"1px solid var(--border2, rgba(89,199,243,.28))",background:"var(--card, rgba(89,199,243,.055))",color:"var(--text)",fontSize:11.5,fontWeight:600,cursor:"pointer"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:999,background:"rgba(89,199,243,.13)",color:"#59c7f3",fontSize:13,lineHeight:1}}>+</span>{t[1]}</button>;})}{tokens.every(function(t){return tokensDeTextoDocWorks(b.contenido).indexOf(t[0])!==-1;})&&<div style={{fontSize:11.5,color:"var(--green)"}}>Ya están usados todos los campos disponibles.</div>}</div></div><div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45}}>Los campos se completan automáticamente desde la operación al generar el documento.</div><div style={{display:"flex",justifyContent:"flex-end",gap:6,flexWrap:"wrap"}}><Btn s="sm" v="ghost" onClick={function(){restaurarBloque(editId);}}>↺ Restaurar esta cláusula</Btn><Btn s="sm" v="ghost" onClick={cancelarBorrador}>Cancelar</Btn><Btn s="sm" v="success" onClick={function(){guardarClausula();}}>Guardar cláusula</Btn></div></div> : <><div className="dw-model-clause-row" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:modoVistaClausulas==="simple"?"nowrap":"wrap",gap:7,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap",flex:"1 1 auto",minWidth:0,overflow:"hidden"}}><button type="button" className="dw-clause-toggle" onClick={function(){setClausulasAbiertas(function(prev){var next=Object.assign({},prev);next[b.id]=!filaAbierta;return next;});}} aria-expanded={filaAbierta} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} style={{fontSize:12.2,fontWeight:650,color:"var(--text)",border:0,padding:"6px 0",background:"transparent",textAlign:"left",cursor:"pointer",whiteSpace:modoVistaClausulas==="simple"?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}><span className="dw-clause-name">{b.titulo||"Cláusula sin título"}</span></button>{esClausulaEsencialModelo(b)&&<span className="dw-essential-label" title="Cláusula esencial del documento: se puede editar, pero no desactivar ni eliminar"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{!esClausulaEsencialModelo(b)&&b.obligatoria===true&&<span className="dw-essential-label dw-essential-label-soft" title="Cláusula obligatoria configurada por la inmobiliaria"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{esCondicional&&modoVistaClausulas!=="simple"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:999,background:"rgba(89,199,243,.10)",color:"#59c7f3",border:"1px solid rgba(89,199,243,.18)"}}>Condicional</span>}{b.activo===false&&modoVistaClausulas!=="simple"&&<span className="badge">Inactiva</span>}<button type="button" className={"dw-clause-chevron "+(filaAbierta?"is-open":"")} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} aria-expanded={filaAbierta} onClick={function(){setClausulasAbiertas(function(prev){return Object.assign({},prev,{[b.id]:!filaAbierta});});}}><span aria-hidden="true">⌄</span></button></div><div className="dw-clause-actions" style={{display:"flex",gap:4,flex:"0 1 auto",flexWrap:"nowrap",alignItems:"center"}}><button type="button" title="Subir" onClick={function(){move(idx,"up");}} disabled={!puedeEditar||idx===0} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button><button type="button" title="Bajar" onClick={function(){move(idx,"down");}} disabled={!puedeEditar||idx===draft.length-1} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>{puedeVerHistorial&&<button type="button" title="Historial de la cláusula" onClick={function(){setHistorialSeleccionado(b);}} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<select aria-label={"Estado de la cláusula "+(b.titulo||"")} value={b.activo===false?"apagada":(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&b.obligatoria!==true?"asesor":b.obligatoria===true?"obligatoria":"apagada"} onChange={function(e){var estado=e.target.value;update(b.id,estado==="apagada"?{activo:false}:estado==="asesor"?{activo:true,obligatoria:false}:{activo:true,obligatoria:true});}} style={{maxWidth:155,minWidth:0,width:"100%",fontSize:11,padding:"5px 4px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option><option value="asesor" disabled={b.id!=="reserva.refuerzo"&&b.id!=="alquiler.seguro"}>El asesor elige</option><option value="apagada">Apagada</option></select>}{puedeEditar&&<button type="button" title="Editar" onClick={function(){if(!editId&&status!=="saving")setEditId(b.id);}} style={{border:"1px solid rgba(212,168,83,.25)",background:"rgba(212,168,83,.06)",color:"var(--gold)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>Editar</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<button type="button" title="Eliminar" onClick={function(){removeBlock(b.id);}} style={{border:"1px solid rgba(248,113,113,.2)",background:"transparent",color:"var(--red)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>×</button>}</div></div>{filaAbierta&&<div className="dw-clause-content" style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginTop:7,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}><span className="dw-clause-inline-number" aria-hidden="true">{b.activo===false?"—":(b.obligatoria?numeroActivo:"—")}</span><span>{mostrarTokensDocWorks(b.contenido)}</span></div>}</>}
           </div>
         </div>
       </div>;})}
@@ -6338,6 +6362,27 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-reserva-clause button:focus-visible,.dw-clause-chevron:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 @media(max-width:640px){.dw-reserva-compact .dw-essential-label{font-size:9px;padding:2px 5px}.dw-reserva-compact .dw-clause-chevron{width:25px;height:25px;flex-basis:25px}}
 
+/* Tarjeta flotante al arrastrar desde el número. */
+.dw-clause-drag-preview{position:fixed;left:12px;top:12px;z-index:99999;min-width:170px;max-width:340px;padding:13px 18px;box-sizing:border-box;border-radius:13px;border:1px solid rgba(212,168,83,.5);background:#16243a;color:#f8fafc;font-size:13px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 18px 38px rgba(0,0,0,.26);pointer-events:none}
+/* Reordenamiento premium desde el número, sin un agarre adicional. */
+.dw-clause-card{transition:box-shadow .2s ease,transform .2s ease,border-color .2s ease,background .2s ease}
+.dw-clause-number-draggable{cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+.dw-clause-number-draggable:hover{transform:translateY(-1px);background:rgba(212,168,83,.16)!important;box-shadow:0 3px 12px rgba(212,168,83,.14)}
+.dw-clause-number-draggable:active{cursor:grabbing}
+.dw-clause-dragging{opacity:.58;transform:scale(.992);box-shadow:0 10px 24px rgba(0,0,0,.12)}
+.dw-clause-drop-target{outline:0!important;border-color:var(--gold)!important;box-shadow:0 0 0 2px rgba(212,168,83,.28),0 12px 30px rgba(0,0,0,.1);transform:translateY(-2px);background:rgba(212,168,83,.075)!important}
+.dw-clause-number-expanded{display:none!important}
+.dw-clause-open .dw-clause-content{display:flex;align-items:baseline;gap:7px;margin:2px 0 0!important;padding:0!important;border:0!important;line-height:1.6!important}
+.dw-clause-inline-number{flex:0 0 auto;min-width:23px;min-height:0;display:inline-flex;align-items:baseline;justify-content:center;padding:0 5px;border-radius:6px;box-sizing:border-box;color:var(--gold);font-weight:750;background:rgba(212,168,83,.08)}
+.dw-clause-actions button[title="Subir"],.dw-clause-actions button[title="Bajar"]{width:29px;height:29px;display:inline-flex;align-items:center;justify-content:center;padding:0!important;border-radius:9px!important;background:var(--surface2)!important;transition:background .15s ease,transform .15s ease,color .15s ease}
+.dw-clause-actions button[title="Subir"]:hover:not(:disabled),.dw-clause-actions button[title="Bajar"]:hover:not(:disabled){background:rgba(212,168,83,.12)!important;color:var(--gold)!important;transform:translateY(-1px)}
+.dw-clause-actions button:disabled{opacity:.35;cursor:default!important}
+@media(prefers-reduced-motion:reduce){.dw-clause-card,.dw-clause-number-draggable,.dw-clause-actions button{transition:none!important}}
+/* Arrastre por asa sin afectar texto ni controles. */
+.dw-clause-drag-handle{display:inline-flex;flex:0 0 29px;width:29px;height:34px;align-items:center;justify-content:center;cursor:grab;user-select:none;-webkit-user-select:none;letter-spacing:-2px;font-size:21px;color:var(--gold);background:rgba(212,168,83,.07);border:1px solid var(--border2);border-radius:8px}
+.dw-clause-drag-handle:active{cursor:grabbing}
+.dw-clause-drop-target{outline:2px dashed var(--gold);outline-offset:2px;background:rgba(212,168,83,.08)!important}
+@media(pointer:coarse){.dw-clause-drag-handle{display:none}}
 /* DocWorks 4.91: hoja compacta y tarjetas detalladas, responsive */
 .dw-clause-card{transition:border-color .18s ease,background .18s ease;min-width:0}
 .dw-clause-compact{box-shadow:none}
@@ -6351,7 +6396,7 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-clause-compact .dw-model-clause-row{flex-wrap:nowrap!important;align-items:center!important}
 .dw-clause-compact .dw-model-clause-row>div:first-child{flex-basis:auto!important;width:auto!important;min-width:0}
 .dw-clause-compact .dw-model-clause-row>div.dw-clause-actions{display:flex!important;flex:0 0 auto;overflow-x:auto;max-width:48%;scrollbar-width:thin}
-.dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:wrap!important}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:nowrap!important}
 .dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{display:flex!important;flex-basis:auto;justify-content:flex-end}
 .dw-clause-compact .dw-essential-label{font-size:10px;padding:2px 6px}
 .dw-clause-content{border-top:1px solid var(--border);padding-top:9px}
@@ -6361,9 +6406,9 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-clause-compact:not(.dw-clause-open) .dw-model-clause-row>div.dw-clause-actions{display:none!important}
 .dw-clause-compact .dw-clause-name{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
 .dw-clause-compact .dw-clause-toggle{padding:8px 0!important}
-.dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:wrap!important}
-.dw-clause-compact.dw-clause-open .dw-model-clause-row>div:first-child{flex-basis:100%!important}
-.dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{max-width:100%;width:100%;flex-wrap:wrap!important;overflow:visible}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:nowrap!important}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row>div:first-child{flex-basis:auto!important}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{max-width:52%;width:auto;flex-wrap:nowrap!important;overflow:auto}
 @media(max-width:1100px){.dw-clause-chevron{min-width:36px;min-height:36px}.dw-clause-actions button{min-height:34px}.dw-clause-actions select{min-height:34px}}
 @media(prefers-reduced-motion:reduce){.dw-clause-chevron,.dw-clause-card{transition:none}}
 `;
@@ -7410,7 +7455,7 @@ const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDw
 const ClausulasWorkspace = crearClausulasWorkspace({ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
 const SuperAdminDashboard = crearSuperAdminDashboard({AUTH_RED, AUTH_MUTED, descargarCSV, loadSupabaseJs, traducirError, Field, dwNotify, requestDwConfirm, fmt$, Modal, DWIcon});
-const ConfiguracionView = crearConfiguracionView({Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
+const ConfiguracionView = crearConfiguracionView({Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
 
 function DocWorksApp(){
   var docworksAuth = useDocWorksSession();
@@ -7656,6 +7701,7 @@ function DocWorksApp(){
     return function(){ window.removeEventListener("popstate",onBack); };
   },[dwConfirm,confirmCloseForm,draftPrompt,showForm,viewDoc,view]);
   function abrirDoc(op){ setViewDoc(op); setDocTab(op&&op.tipo==="reserva" ? "reserva" : "resumen"); }
+  const [navPendiente,setNavPendiente]=useState(null);
   function cerrarFormularioSeguro(){
     var draft=lsGet("draftOperacion",null);
     if(draft&&draft.data&&draftTieneContenido(draft.data)){setConfirmCloseForm(true);return;}
@@ -7688,9 +7734,9 @@ function DocWorksApp(){
         return;
       }
     }
-    lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);
+    lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);if(navPendiente){setView(navPendiente);setNavPendiente(null);}
   }
-  function salirSinGuardarFormulario(){lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);}
+  function salirSinGuardarFormulario(){lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);if(navPendiente){setView(navPendiente);setNavPendiente(null);}}
 
   const [clausulas,setClausulas]=useState([]);
   const [papeleraClausulas,setPapeleraClausulas]=useState([]);
@@ -8652,7 +8698,7 @@ function DocWorksApp(){
           <aside className="sidebar">
             {navItems.map(function(n){
               return(
-                <button key={n.id} className={"nav-item premium-nav-item "+(view===n.id?"active":"")} onClick={function(){setView(n.id);}} aria-label={n.label} aria-current={view===n.id?"page":undefined}>
+                <button key={n.id} className={"nav-item premium-nav-item "+(view===n.id?"active":"")} onClick={function(){if(showForm){var draft=lsGet("draftOperacion",null);if(draft&&draft.data&&draftTieneContenido(draft.data)){setNavPendiente(n.id);setConfirmCloseForm(true);return;}setShowForm(false);setEditOp(null);setFormInitialOverride(null);}setView(n.id);}} aria-label={n.label} aria-current={view===n.id?"page":undefined}>
                   <span>{n.ico?<FormalIcon name={n.ico} size={22}/>:n.icon}</span>
                   <span className="tooltip">{n.label}</span>
                 </button>
@@ -8669,7 +8715,16 @@ function DocWorksApp(){
 
           {/* ── Main content ── */}
           <div className="main">
-            <div className="content">
+            <div className={"content"+(showForm?" dw-operation-page-content":"")}>
+              {showForm ? (
+                <section className="dw-operation-page" aria-label={editOp?"Editar operación":"Nueva operación"}>
+                  <div className="dw-operation-page-heading">
+                    <div><div className="dw-operation-page-breadcrumb">Operaciones / {editOp?"Editar operación":"Nueva operación"}</div><h1>{editOp?"Editar operación":"Nueva operación"}</h1><p>Completá los datos, revisá las cláusulas y guardá la operación.</p></div>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={cerrarFormularioSeguro}>Volver a operaciones</button>
+                  </div>
+                  <OperacionForm key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
+                </section>
+              ) : (<>
               {ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks-landing.vercel.app/#planes" style={{color:"inherit"}}>Ver planes</a></div>}
               {view!=="configuracion"&&<details style={{marginBottom:14,fontSize:13,border:"1px solid var(--border)",borderRadius:10,padding:"10px 12px"}}><summary style={{cursor:"pointer",color:"var(--dim)"}}>Ayuda para esta pantalla</summary><p style={{lineHeight:1.6,margin:"9px 0"}}>{({dashboard:"Cada operación reúne los datos y documentos del negocio. Usá Nueva operación para empezar; guardá un borrador si todavía te falta información.",clausulas:"Acá se definen los modelos y las cláusulas disponibles. El dueño o administrador prepara la base; cada asesor suma los extras de su operación.",calendario:"Las fechas importantes se toman de las operaciones. Revisá sus datos para corregir un vencimiento o una fecha pendiente.",estadisticas:"Consultá la actividad del equipo según tu rol y permisos. Los resultados dependen de las operaciones cargadas."})[view]||"Encontrá guías y respuestas en el Centro de ayuda."}</p><button type="button" className="btn btn-ghost btn-sm" onClick={function(){irAyuda("configuracion","soporte");}}>Abrir centro de ayuda</button></details>}
               {view==="dashboard"&&<DashboardView key={claveContextoOperaciones(docworksAuth.contexto)} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario} operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={function(){setFormFocusCampo(null);setEditOp(null);setFormTipo(null);setShowForm(true);}} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
@@ -8677,6 +8732,7 @@ function DocWorksApp(){
               {view==="clausulas"&&<ClausulasWorkspace key={perfilNube.contexto} perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
               {view==="estadisticas"&&<EstadisticasView onExportarCSV={exportarOperacionesCSV} operaciones={operaciones} equipo={equipo} perfil={perfil} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol}/>}
               {view==="configuracion"&&<ConfiguracionView requestedTab={configDestino} onHelpNavigate={irAyuda} onOpenBot={function(){setShowBot(true);}} perfil={perfil} onChange={function(p){ var anterior=perfil; setPerfil(p); return perfilNube.guardarAhora(p).then(function(res){ if(res&&res.error&&!res.contextoObsoleto){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(res.error.message||"Error de comunicación con Supabase.")); } return res; }).catch(function(err){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase.")); return {error:err}; }); }} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol} darkMode={darkMode} onToggleDark={toggleDark} equipo={equipo} equipoSupabase={equipoSupabase} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} onMoveClausula={moveClausula} onDuplicateClausula={duplicateClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} onRetryClausulas={recargarClausulas} papelera={papelera} auditLog={auditLog} auditoriaSupabase={auditoriaSupabase} onExportarRespaldo={exportarRespaldo} onImportarRespaldo={importarRespaldo} onVaciarAuditoria={function(){setAuditLog([]);}} puedeInstalar={!!deferredInstallPrompt} onInstalar={instalarApp} onStartTour={abrirOnboarding} ctx={ctx}/>}
+              </>)}
             </div>
           </div>
         </div>
@@ -8748,9 +8804,6 @@ function DocWorksApp(){
         onClose={cerrarOnboarding}
         onCreate={function(tipo){setView("dashboard");setFormFocusCampo(null);setEditOp(null);setFormTipo(tipo);setFormInitialOverride(Object.assign({},EMPTY_OP,{tipo:tipo}));setShowForm(true);}}/>}
 
-      <Modal open={showForm} onClose={cerrarFormularioSeguro} closeOnBackdrop={false} title={editOp?"Editar operación":"Nueva operación"} wide={true} operationForm={true} formTipo={formTipo}>
-        <OperacionForm key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
-      </Modal>
       <Modal open={!!viewDoc} onClose={function(){setViewDoc(null);setDocAutoAction(null);}} title={viewDoc?<span className="dw-viewer-heading"><span className="dw-viewer-heading-type">{TIPOS[viewDoc.tipo]||viewDoc.tipo||"Documento"}</span><span className="dw-viewer-heading-operation">{viewDoc.nombre||viewDoc.titulo_operacion||viewDoc.inmueble_direccion||"Operación sin nombre"}</span></span>:"DocWorks"} wide={true} viewerMode={true}
         headerExtra={null}
         headerRight={viewDoc?<DocumentHeaderActions

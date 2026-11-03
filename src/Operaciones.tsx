@@ -294,6 +294,87 @@ export const GS = `
   select.inp{cursor:pointer;}
   select.inp option{background:#1e293b;color:#f1f5f9;}
 
+
+/* Editor de operaciones como página completa. */
+.dw-operation-page-content{width:100%;max-width:none!important;box-sizing:border-box;}
+.dw-operation-page{width:100%;max-width:none;min-width:0;display:flex;flex-direction:column;gap:16px;}
+.dw-operation-page-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:4px 0 16px;border-bottom:1px solid var(--border);}
+.dw-operation-page-heading h1{font-family:var(--font-serif);font-size:clamp(24px,2.1vw,34px);margin:5px 0;color:var(--text);}
+.dw-operation-page-heading p{margin:0;color:var(--muted);font-size:13px;}
+.dw-operation-page-breadcrumb{font-size:12px;font-weight:650;color:var(--dim);}
+.dw-operation-page .grid2>.field{min-width:0;max-width:none;}
+
+/* Categorías como tarjetas equilibradas, sin espacios laterales artificiales. */
+.dw-grupo-selector{width:100%;}
+.dw-grupo-intro{font-size:14px;color:var(--muted);margin:0 0 22px;}
+.dw-grupo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+.dw-grupo-card{min-width:0;display:flex;align-items:center;gap:14px;text-align:left;padding:22px 18px;border-radius:16px;min-height:136px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text);transition:border-color .15s,transform .15s,background .15s;}
+.dw-grupo-card:hover{border-color:var(--gold);transform:translateY(-2px);}
+.dw-grupo-icon{flex:none;width:60px;height:60px;border-radius:14px;display:grid;place-items:center;font-size:32px;font-weight:700;background:rgba(80,146,220,.14);color:#60a5fa;}
+.dw-grupo-alquiler .dw-grupo-icon{background:rgba(52,211,153,.13);color:#34d399;}
+.dw-grupo-otros .dw-grupo-icon{background:rgba(167,139,250,.14);color:#a78bfa;}
+.dw-grupo-text{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;}
+.dw-grupo-text strong{font-size:19px;line-height:1.2;}
+.dw-grupo-text small{font-size:13px;color:var(--muted);line-height:1.45;}
+.dw-grupo-chevron{font-size:30px;font-weight:300;color:var(--dim);}
+@media(max-width:980px){.dw-grupo-grid{grid-template-columns:1fr;}.dw-grupo-card{min-height:94px;padding:14px 16px;}}
+
+/* Navegación discreta para Mi cuenta, sin tarjetas ni fondos de colores adicionales. */
+.dw-account-nav{display:flex;gap:4px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);margin:-6px 0 18px;padding:0 0 1px}
+.dw-account-nav-item{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);padding:11px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.dw-account-nav-item.active{color:var(--text);border-bottom-color:var(--gold)}
+.dw-account-nav-item:hover:not(.active){color:var(--text)}
+.dw-account-nav-item:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.dw-account-security{max-width:820px;margin:8px auto 0;padding:16px 4px;color:var(--text)}
+/* Seguridad de cuenta: tres campos alineados sin scroll lateral. */
+.dw-account-password-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dw-account-password-grid>*{min-width:0}
+@media(max-width:800px){.dw-account-password-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Segunda pantalla: mismo lenguaje visual de tarjetas que el selector de grupos. */
+.dw-grupo-tipo-sections{display:flex;flex-direction:column;gap:20px;width:100%;}
+.dw-grupo-tipo-heading{font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;}
+.dw-grupo-tipo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.dw-grupo-tipo-otros{grid-template-columns:repeat(2,minmax(0,1fr));}
+.dw-grupo-tipo-card{width:100%;}
+.dw-grupo-tipo-card.is-selected{border-color:var(--gold);background:var(--surface2);box-shadow:inset 0 0 0 1px var(--gold);}
+.dw-grupo-tipo-card.is-selected .dw-grupo-chevron{font-size:22px;color:var(--gold);}
+.dw-grupo-tipo-card:focus-visible{outline:2px solid var(--gold);outline-offset:3px;}
+@media(max-width:980px){.dw-grupo-tipo-grid{grid-template-columns:1fr;}.dw-grupo-tipo-card{min-height:94px;padding:14px 16px;}}
+
+/* Selector integrado: ocupa buena parte del espacio sin márgenes laterales excesivos. */
+.dw-operation-groups-balanced{width:100%;max-width:1320px;margin-inline:auto;}
+@media(min-width:1200px){.dw-operation-groups-balanced{width:92%;}}
+@media(max-width:1199px){.dw-operation-groups-balanced{max-width:none;}}
+
+
+
+
+/* Grilla compacta de personas: aprovecha el ancho sin forzar scroll horizontal. */
+.dw-operation-page .dw-persona-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 12px;width:100%;align-items:start}
+.dw-operation-page .dw-persona-fields>*{min-width:0}
+.dw-operation-page .dw-persona-fields .dw-persona-half{grid-column:span 2;min-width:0}
+.dw-operation-page .dw-persona-fields .dw-persona-full{grid-column:1/-1}
+.dw-operation-page .dw-persona-fields .dw-doc-toggles{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;min-height:32px}
+.dw-operation-page .dw-persona-fields .dw-doc-toggles label{margin:0}
+@media(max-width:950px){.dw-operation-page .dw-persona-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.dw-operation-page .dw-persona-fields .dw-persona-half{grid-column:span 1}}
+@media(max-width:640px){.dw-operation-page .dw-persona-fields{grid-template-columns:minmax(0,1fr)}.dw-operation-page .dw-persona-fields .dw-persona-half,.dw-operation-page .dw-persona-fields .dw-persona-full{grid-column:1}}
+/* Formulario compacto en monitores: evita campos exageradamente anchos y reduce el desplazamiento vertical. */
+@media(min-width:1100px){
+  .dw-operation-page{gap:10px;}
+  .dw-operation-page-heading{padding:2px 0 9px;gap:12px;}
+  .dw-operation-page-heading h1{font-size:clamp(22px,1.8vw,29px);margin:2px 0;}
+  .dw-operation-page .grid2,.dw-operation-page .grid3{max-width:1120px;gap:9px 12px;}
+  .dw-operation-page .grid2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .dw-operation-page .grid3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .dw-operation-page .field{gap:3px;min-width:0;}
+  .dw-operation-page .inp{min-height:36px;padding:7px 10px;font-size:14px;}
+  .dw-operation-page textarea.inp{min-height:74px;resize:vertical;}
+  .dw-operation-page .field-label{font-size:12px;}
+}
+
+@media(max-width:640px){.dw-operation-page-heading{align-items:flex-start;}.dw-operation-page-heading h1{font-size:24px;}.dw-operation-page{gap:12px;}}
+
   /* ── Modal ── */
   .modal-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);height:100vh;height:100dvh;overflow:hidden;overscroll-behavior:contain;}
   .modal-box{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-lg);width:100%;max-height:92vh;max-height:92dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
@@ -2393,7 +2474,7 @@ return SuperAdminDashboard;
 }
 
 export function crearConfiguracionView(deps){
- const {Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
+ const {Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
 function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, onChange, currentUserId, currentUserRole, darkMode, onToggleDark, equipo, equipoSupabase, operaciones, clausulas, onAddClausula, onEditClausula, onDeleteClausula, onMoveClausula, onDuplicateClausula, bloquesReserva, onUpdateBloqueReserva, onMoveBloqueReserva, bloquesError, bloquesLoading, onRetryBloques, clausulasError, onRetryClausulas, papelera, auditLog, auditoriaSupabase, onExportarRespaldo, onImportarRespaldo, onVaciarAuditoria, puedeInstalar, onInstalar, onStartTour, ctx }) {
   const [tab, setTab] = useState(requestedTab?.tab||"cuenta");
   useEffect(function(){if(requestedTab?.tab)pedirCambioTab(requestedTab.tab);},[requestedTab?.request]);
@@ -2405,6 +2486,13 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
   const fileRef = useRef();
   const [localPerfil, setLocalPerfil] = useState(perfil);
   const [cuentaSubtab, setCuentaSubtab] = useState("resumen");
+  const [claveActual,setClaveActual]=useState("");
+  const [claveNueva,setClaveNueva]=useState("");
+  const [claveConfirmar,setClaveConfirmar]=useState("");
+  const [claveVisible,setClaveVisible]=useState(false);
+  const [claveGuardando,setClaveGuardando]=useState(false);
+  const [claveError,setClaveError]=useState("");
+  const [claveExito,setClaveExito]=useState(false);
   const [histBroker, setHistBroker] = useState("todos");
   const [confirmDelMiembro, setConfirmDelMiembro] = useState(null);
   const [histEstado, setHistEstado] = useState("todos");
@@ -2431,6 +2519,34 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
   const [supportPhoto,setSupportPhoto] = useState(null);
 
   useEffect(function(){ setLocalPerfil(perfil); }, [perfil]);
+
+  async function cambiarMiContrasena(e){
+    if(e&&e.preventDefault)e.preventDefault();
+    if(claveGuardando)return;
+    setClaveError("");setClaveExito(false);
+    if(!claveActual||claveNueva.length<8){setClaveError("Ingresá la contraseña actual y una nueva de al menos 8 caracteres.");return;}
+    if(claveNueva!==claveConfirmar){setClaveError("Las contraseñas nuevas no coinciden.");return;}
+    if(claveNueva===claveActual){setClaveError("La contraseña nueva debe ser diferente de la actual.");return;}
+    setClaveGuardando(true);
+    try{
+      var sb=await loadSupabaseJs();
+      if(!sb)throw new Error("No se pudo conectar con el servicio de autenticación.");
+      var identificacion=await sb.auth.getUser();
+      var usuario=identificacion&&identificacion.data&&identificacion.data.user;
+      if(!usuario||!usuario.email)throw new Error("La sesión no está disponible. Volvé a iniciar sesión.");
+      // Verificamos la contraseña actual en Supabase y el mismo usuario antes de actualizarla.
+      var verificacion=await sb.auth.signInWithPassword({email:usuario.email,password:claveActual});
+      if(verificacion.error){setClaveError("La contraseña actual no es correcta, o no se pudo verificar.");return;}
+      if(!verificacion.data||!verificacion.data.user||verificacion.data.user.id!==usuario.id)throw new Error("No se pudo verificar la identidad de esta sesión.");
+      var actualizado=await sb.auth.updateUser({password:claveNueva});
+      if(actualizado.error)throw actualizado.error;
+      setClaveActual("");setClaveNueva("");setClaveConfirmar("");
+      setClaveExito(true);
+      dwNotify("success","Tu contraseña se actualizó correctamente.");
+    }catch(err){
+      setClaveError(traducirError(err&&err.message||"No se pudo cambiar la contraseña."));
+    }finally{setClaveGuardando(false);}
+  }
 
   function cuerpoSoporte(){return ["Inmobiliaria: "+(perfil.nombre||""),"Usuario: "+(currentUserId||""),"Rol: "+(currentUserRole||perfil.rol||""),"Versión: "+document.title,"Dispositivo: "+navigator.userAgent,"","Mensaje:",supportMessage.trim()].join("\n");}
   function whatsappSoporte(){if(!supportMessage.trim()){dwNotify("error","Describí el problema antes de continuar.");return;}window.open("https://wa.me/5491144795880?text="+encodeURIComponent(cuerpoSoporte()+(supportPhoto?"\nCaptura: "+supportPhoto.name+" (adjuntar manualmente).":"")),"_blank","noopener,noreferrer");}
@@ -2738,8 +2854,13 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
         })}
       </div>
 
+      {/* Mi cuenta: separar perfil y contraseña en vistas independientes. */}
+      {tab==="cuenta"&&<div className="dw-account-nav" role="tablist" aria-label="Secciones de Mi cuenta">
+        <button type="button" role="tab" aria-selected={cuentaSubtab==="resumen"} className={"dw-account-nav-item"+(cuentaSubtab==="resumen"?" active":"")} onClick={function(){setCuentaSubtab("resumen");}}>Mi perfil</button>
+        <button type="button" role="tab" aria-selected={cuentaSubtab==="seguridad"} className={"dw-account-nav-item"+(cuentaSubtab==="seguridad"?" active":"")} onClick={function(){setCuentaSubtab("seguridad");}}>Seguridad y contraseña</button>
+      </div>}
       {/* ── TAB: MI CUENTA (DUEÑO) ── */}
-      {tab==="cuenta"&&esBroker&&(
+      {tab==="cuenta"&&cuentaSubtab==="resumen"&&esBroker&&(
         <div style={{width:"100%",maxWidth:720,margin:"0 auto"}}>
           <div className="card cuenta-profile-card" style={{padding:0,overflow:"hidden",borderRadius:18}}>
             <div style={{padding:"18px 20px",borderBottom:"1px solid var(--border)",background:"linear-gradient(180deg,rgba(212,168,83,.075),rgba(212,168,83,.015))"}}>
@@ -2769,7 +2890,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
         </div>
       )}
 
-      {tab==="cuenta"&&!esBroker&&(
+      {tab==="cuenta"&&cuentaSubtab==="resumen"&&!esBroker&&(
         <div style={{width:"100%",maxWidth:"none",margin:"0 auto"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:10,flexWrap:"wrap"}}><div><div style={{fontSize:12,fontWeight:750,color:"var(--gold)",textTransform:"uppercase",letterSpacing:".10em"}}>Panel de la inmobiliaria</div><div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>Identidad, actividad y equipo en una sola vista.</div></div></div>
           <div className="card cuenta-profile-card" style={{padding:0,overflow:"hidden",borderRadius:18}}>
@@ -2874,6 +2995,28 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
           </div>
         </div>
       )}
+
+      {/* Seguridad de la cuenta: disponible para todos los roles, sin tocar datos corporativos. */}
+      {tab==="cuenta"&&cuentaSubtab==="seguridad"&&<div className="dw-account-security" role="tabpanel">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div><div style={{fontSize:16,fontWeight:750,color:"var(--text)"}}>Seguridad y contraseña</div>
+          <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>Cambiá la contraseña de tu usuario para ingresar a DocWorks.</div></div>
+          <span style={{fontSize:19,color:"var(--muted)"}} aria-hidden="true">🔒</span>
+        </div>
+        <form onSubmit={cambiarMiContrasena} style={{marginTop:14,display:"flex",flexDirection:"column",gap:10}}>
+          <div className="dw-account-password-grid">
+            <Inp label="Contraseña actual" type={claveVisible?"text":"password"} autoComplete="current-password" value={claveActual} onChange={function(e){setClaveActual(e.target.value);setClaveExito(false);}} required/>
+            <Inp label="Contraseña nueva" type={claveVisible?"text":"password"} autoComplete="new-password" value={claveNueva} onChange={function(e){setClaveNueva(e.target.value);setClaveExito(false);}} minLength={8} required/>
+            <Inp label="Repetir contraseña nueva" type={claveVisible?"text":"password"} autoComplete="new-password" value={claveConfirmar} onChange={function(e){setClaveConfirmar(e.target.value);setClaveExito(false);}} minLength={8} required/>
+          </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+            <label style={{display:"flex",alignItems:"center",gap:7,fontSize:12,color:"var(--muted)",cursor:"pointer"}}><input type="checkbox" checked={claveVisible} onChange={function(e){setClaveVisible(e.target.checked);}}/> Mostrar contraseñas</label>
+            <button type="submit" className="btn btn-primary" disabled={claveGuardando}>{claveGuardando?"Actualizando…":"Cambiar contraseña"}</button>
+          </div>
+          {claveError&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{claveError}</div>}
+          {claveExito&&<div role="status" style={{fontSize:12,color:"var(--green)"}}>✓ Contraseña actualizada correctamente.</div>}
+        </form>
+      </div>}
 
       {/* Respaldo / Respaldo y migración */}
       {tab==="backup"&&(
@@ -3225,14 +3368,14 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
         function ClauseCard({c,index}){
           var draggable=puedeAgregar;
           return <div key={c.id}
-            draggable={draggable}
+            draggable={draggable && typeof window!=="undefined" && window.matchMedia("(pointer:fine)").matches}
             onDragStart={function(e){if(!draggable)return;setDragClausulaId(c.id);try{e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",c.id);}catch(_){ console.debug("DocWorks: operación drag/drop no soportada por el navegador."); }}}
             onDragOver={function(e){if(draggable){e.preventDefault();try{e.dataTransfer.dropEffect="move";}catch(_){ console.debug("DocWorks: operación drag/drop no soportada por el navegador."); }}}}
             onDragEnter={function(e){if(draggable)e.preventDefault();}}
             onDrop={function(e){if(!draggable)return;e.preventDefault();var from=dragClausulaId||((e.dataTransfer&&e.dataTransfer.getData("text/plain"))||"");if(from&&from!==c.id)moverPlantilla(from,c.id);setDragClausulaId(null);}}
             onDragEnd={function(){setDragClausulaId(null);}}
             style={{display:"flex",alignItems:"center",gap:10,padding:"11px 12px",border:"1px solid var(--border)",borderRadius:11,background:"rgba(255,255,255,.012)",opacity:dragClausulaId===c.id?.55:1}}>
-            <div title={draggable?"Arrastrá esta cláusula para cambiar el orden":"Modelo protegido"} style={{width:30,height:30,borderRadius:9,background:"rgba(212,168,83,.09)",border:"1px solid rgba(212,168,83,.16)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"var(--gold)",flexShrink:0,cursor:draggable?"grab":"default"}}>⠿</div><div style={{minWidth:22,textAlign:"center",fontSize:12,color:"var(--dim)",flexShrink:0}}>{index+1}</div>
+            <div title={draggable?"En PC: arrastrá para ordenar. También podés usar las flechas.":"Modelo protegido"} style={{width:30,height:30,borderRadius:9,background:"rgba(212,168,83,.09)",border:"1px solid rgba(212,168,83,.16)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"var(--gold)",flexShrink:0,cursor:draggable?"grab":"default"}}>⠿</div><div style={{minWidth:22,textAlign:"center",fontSize:12,color:"var(--dim)",flexShrink:0}}>{index+1}</div>
             <div style={{minWidth:0,flex:1}}>
               <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                 <span style={{fontSize:12.7,fontWeight:650,color:"var(--text)"}}>{(c.titulo&&String(c.titulo).trim())?String(c.titulo).trim():"Cláusula sin título"}</span>
@@ -5049,7 +5192,7 @@ function OperacionForm({contextoBorrador=undefined,initial,clausulas,perfil,equi
   if(!grupo){
     return(
       <div>
-        <div style={{minHeight:260,paddingTop:4}}>
+        <div className="dw-operation-groups-balanced" style={{minHeight:260,paddingTop:4}}>
           <StepGrupo onSelect={function(g){setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);}}/>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:14}}>
