@@ -2559,29 +2559,25 @@ function relativeTimeCorto(ts){
   return "hace "+h+"h";
 }
 function AutosaveIndicator({status, compact}){
-  // Se re-renderiza cada pocos segundos solo para refrescar el "hace Ns",
-  // sin depender de que cambie algún dato real.
-  var [, force] = useState(0);
+  // Indicador discreto: aparece mientras guarda y unos segundos al terminar.
+  // Los errores y la falta de conexión permanecen visibles para no ocultar riesgos.
+  var [showSaved,setShowSaved]=useState(false);
+  var online=useOnlineStatus();
   useEffect(function(){
-    var t=setInterval(function(){ force(function(n){return n+1;}); }, 5000);
-    return function(){ clearInterval(t); };
-  },[]);
-  var online = useOnlineStatus();
-  var color, icon, txt, fullTxt;
-  if(!online){
-    color="var(--gold)"; icon="💾"; fullTxt="Sin conexión — autoguardado local"; txt = compact?"Sin conexión":fullTxt;
-  } else if(status.state==="error"){
-    color="var(--red)"; icon="💾"; fullTxt="No se pudo autoguardar"; txt = fullTxt;
-  } else if(status.state==="saving"){
-    color="var(--dim)"; icon="💾"; fullTxt="Autoguardando…"; txt = fullTxt;
-  } else {
-    fullTxt="Autoguardado "+relativeTimeCorto(status.ts);
-    color="var(--green)"; icon="💾"; txt = compact?"Autoguardado "+relativeTimeCorto(status.ts):fullTxt;
-  }
+    if(status.state!=="saved" || !status.ts){setShowSaved(false);return;}
+    setShowSaved(true);
+    var timer=setTimeout(function(){setShowSaved(false);},2600);
+    return function(){clearTimeout(timer);};
+  },[status.state,status.ts]);
+  var state=status.state;
+  if(state==="saved" && !showSaved && online) return null;
+  var saving=state==="saving",error=state==="error";
+  var color=error?"var(--red)":!online?"var(--gold)":saving?"var(--dim)":"var(--green)";
+  var description=error?"No se pudieron guardar los cambios":!online?"Sin conexión — guardado local":saving?"Guardando cambios…":"Cambios guardados";
   return (
-    <span title={compact?fullTxt:undefined} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:compact?10.5:12,color:color,fontFamily:"DM Sans,sans-serif",whiteSpace:"nowrap"}}>
-      <span style={{display:"inline-block",animation:status.state==="saving"?"diskpulse 0.9s ease-in-out infinite":"none"}}>{icon}</span>
-      {txt}
+    <span role="status" aria-label={description} title={description} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:compact?11:12,color:color,fontFamily:"DM Sans,sans-serif",whiteSpace:"nowrap"}}>
+      <span aria-hidden="true" style={{display:"inline-block",fontSize:compact?15:16,animation:saving?"diskpulse 0.9s ease-in-out infinite":"none"}}>💾</span>
+      {(error||!online)&&<span>{error?"Error al guardar":"Sin conexión"}</span>}
     </span>
   );
 }
