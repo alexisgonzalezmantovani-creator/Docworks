@@ -5349,7 +5349,18 @@ function OperacionForm({contextoBorrador=undefined,initial,clausulas,perfil,equi
     if(step===6)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil}/>;
     return null;
   }
-  var pct=Math.min(100,Math.round((step/total)*100));
+  // El porcentaje representa datos realmente completados, nunca pantallas visitadas.
+  // No contar valores sugeridos que vienen precargados del modelo vacío.
+  var camposProgreso=CAMPOS_CRITICOS_POR_TIPO[data.tipo]||[];
+  var totalProgreso=camposProgreso.length;
+  var camposCompletados=camposProgreso.filter(function(item){
+    var campo=item[0],valor=data[campo],defecto=EMPTY_OP[campo];
+    if(valor===undefined||valor===null||String(valor).trim()==="")return false;
+    if(defecto!==undefined&&String(valor)===String(defecto))return false;
+    if(/monto|precio|anticipo/i.test(campo)&&!isNaN(Number(valor))&&Number(valor)<=0)return false;
+    return true;
+  }).length;
+  var pct=totalProgreso?Math.round(camposCompletados/totalProgreso*100):0;
   async function handleFinalizarAccion(accion,estadoFinal=undefined){
     // Evita que un doble toque cree dos documentos (cada guardado de una operación nueva genera un id propio).
     if(guardandoFormRef.current) return;
