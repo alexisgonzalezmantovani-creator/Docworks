@@ -319,6 +319,17 @@ export const GS = `
 .dw-grupo-chevron{font-size:30px;font-weight:300;color:var(--dim);}
 @media(max-width:980px){.dw-grupo-grid{grid-template-columns:1fr;}.dw-grupo-card{min-height:94px;padding:14px 16px;}}
 
+/* Segunda pantalla: mismo lenguaje visual de tarjetas que el selector de grupos. */
+.dw-grupo-tipo-sections{display:flex;flex-direction:column;gap:20px;width:100%;}
+.dw-grupo-tipo-heading{font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;}
+.dw-grupo-tipo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.dw-grupo-tipo-otros{grid-template-columns:repeat(2,minmax(0,1fr));}
+.dw-grupo-tipo-card{width:100%;}
+.dw-grupo-tipo-card.is-selected{border-color:var(--gold);background:var(--surface2);box-shadow:inset 0 0 0 1px var(--gold);}
+.dw-grupo-tipo-card.is-selected .dw-grupo-chevron{font-size:22px;color:var(--gold);}
+.dw-grupo-tipo-card:focus-visible{outline:2px solid var(--gold);outline-offset:3px;}
+@media(max-width:980px){.dw-grupo-tipo-grid{grid-template-columns:1fr;}.dw-grupo-tipo-card{min-height:94px;padding:14px 16px;}}
+
 /* Selector integrado: ocupa buena parte del espacio sin márgenes laterales excesivos. */
 .dw-operation-groups-balanced{width:100%;max-width:1320px;margin-inline:auto;}
 @media(min-width:1200px){.dw-operation-groups-balanced{width:92%;}}
