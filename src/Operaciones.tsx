@@ -319,6 +319,8 @@ export const GS = `
 .dw-grupo-chevron{font-size:30px;font-weight:300;color:var(--dim);}
 @media(max-width:980px){.dw-grupo-grid{grid-template-columns:1fr;}.dw-grupo-card{min-height:94px;padding:14px 16px;}}
 
+/* Mi perfil de todos los roles: campos claros y apilado móvil. */
+@media(max-width:640px){.dw-personal-profile-grid{grid-template-columns:minmax(0,1fr)!important}}
 /* Navegación discreta para Mi cuenta, sin tarjetas ni fondos de colores adicionales. */
 .dw-account-nav{display:flex;gap:4px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);margin:-6px 0 18px;padding:0 0 1px}
 .dw-account-nav-item{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);padding:11px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
@@ -351,6 +353,12 @@ export const GS = `
 
 
 
+/* Alinea el input DNI/CUIT con el input de nombre, sin desfasaje causado por los chips. */
+.dw-operation-page .dw-persona-identificacion{position:relative}
+.dw-operation-page .dw-persona-identificacion>.field>div:first-child{height:16px;min-height:16px;margin-bottom:0!important;align-items:center}
+.dw-operation-page .dw-persona-identificacion>.field>div:first-child>div{position:absolute;top:-6px;right:0}
+.dw-operation-page .dw-persona-identificacion>.field>div:first-child .field-label{line-height:16px}
+@media(max-width:480px){.dw-operation-page .dw-persona-identificacion>.field>div:first-child>div{top:-4px}}
 /* Datos de personas: filas uniformes, dos columnas reales, sin celdas sueltas. */
 .dw-operation-page .dw-persona-fields{
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
@@ -2749,7 +2757,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
 
   var rolActual = currentUserRole || perfil.rol || "dueno";
   var esBroker = rolActual==="broker" || rolActual==="vendedor" || rolActual==="viewer";
-  var puedeEditarInstitucional = !esBroker;
+  var puedeEditarInstitucional = rolActual==="dueno" || rolActual==="admin";
   var puedeVerFacturacion = !esBroker && !!perfil && (perfil.rol==="dueno" || perfil.rol==="admin" || rolActual==="dueno" || rolActual==="admin");
   var TABS_CFG = esBroker ? [
     {id:"cuenta", label:"Mi perfil", icon:"👤"},
@@ -2874,40 +2882,63 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
       {/* Mi cuenta: separar perfil y contraseña en vistas independientes. */}
       {tab==="cuenta"&&<div className="dw-account-nav" role="tablist" aria-label="Secciones de Mi cuenta">
         <button type="button" role="tab" aria-selected={cuentaSubtab==="resumen"} className={"dw-account-nav-item"+(cuentaSubtab==="resumen"?" active":"")} onClick={function(){setCuentaSubtab("resumen");}}>Mi perfil</button>
+        {puedeEditarInstitucional&&<button type="button" role="tab" aria-selected={cuentaSubtab==="inmobiliaria"} className={"dw-account-nav-item"+(cuentaSubtab==="inmobiliaria"?" active":"")} onClick={function(){setCuentaSubtab("inmobiliaria");}}>Información de la inmobiliaria</button>}
         <button type="button" role="tab" aria-selected={cuentaSubtab==="seguridad"} className={"dw-account-nav-item"+(cuentaSubtab==="seguridad"?" active":"")} onClick={function(){setCuentaSubtab("seguridad");}}>Seguridad y contraseña</button>
       </div>}
       {/* ── TAB: MI CUENTA (DUEÑO) ── */}
-      {tab==="cuenta"&&cuentaSubtab==="resumen"&&esBroker&&(
-        <div style={{width:"100%",maxWidth:720,margin:"0 auto"}}>
-          <div className="card cuenta-profile-card" style={{padding:0,overflow:"hidden",borderRadius:18}}>
-            <div style={{padding:"18px 20px",borderBottom:"1px solid var(--border)",background:"linear-gradient(180deg,rgba(212,168,83,.075),rgba(212,168,83,.015))"}}>
-              <div style={{fontSize:12,fontWeight:750,color:"var(--gold)",textTransform:"uppercase",letterSpacing:".10em"}}>Mi perfil de broker</div>
-              <div style={{fontFamily:"DM Serif Display,serif",fontSize:22,color:"var(--text)",marginTop:4}}>Tu información personal</div>
-              <div style={{fontSize:12,color:"var(--dim)",marginTop:4,lineHeight:1.5}}>Podés completar únicamente tus datos personales. La información de la inmobiliaria es administrada por el dueño o administrador.</div>
-            </div>
-            <div style={{padding:20,display:"flex",flexDirection:"column",gap:16}}>
-              <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-                <div style={{position:"relative",width:78,height:78,flexShrink:0}}>
-                  <div style={{width:78,height:78,borderRadius:"50%",background:"linear-gradient(145deg,var(--gold),var(--gold2))",border:"2px solid rgba(255,255,255,.18)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",fontSize:25,fontWeight:800,color:"#0a0f1a"}}>{(localPerfil.broker_fotos&&currentUserId&&localPerfil.broker_fotos[currentUserId])?<img src={localPerfil.broker_fotos[currentUserId]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Foto de perfil"/>:(localPerfil.broker_perfiles&&currentUserId&&localPerfil.broker_perfiles[currentUserId]&&localPerfil.broker_perfiles[currentUserId].nombre||formatearNombreUsuarioVisible({usuario:{nombre:localPerfil.nombre||"Broker"}}).charAt(0).toUpperCase())}</div>
-                  <label title="Cambiar foto de perfil" style={{position:"absolute",right:-3,bottom:-3,width:25,height:25,borderRadius:"50%",background:"var(--gold)",color:"#0a0f1a",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,fontWeight:900,border:"2px solid var(--card)"}}>+
+      {tab==="cuenta"&&cuentaSubtab==="resumen"&&(
+        <div className="card cuenta-profile-card" style={{width:"100%",maxWidth:840,margin:"0 auto",borderRadius:16,padding:22}}>
+          <div style={{fontFamily:"DM Serif Display,serif",fontSize:22,color:"var(--text)",marginBottom:5}}>Mi perfil</div>
+          <p style={{fontSize:12.5,color:"var(--muted)",margin:"0 0 18px"}}>Tus datos personales y tu foto. Cada usuario administra únicamente su propio perfil.</p>
+          {function(){
+            var bp=(localPerfil.broker_perfiles&&currentUserId&&localPerfil.broker_perfiles[currentUserId])||{};
+            var nombreInicial=String(bp.nombre||((ctx&&ctx.usuario&&ctx.usuario.nombre)||"")).trim();
+            var nombrePersonal=bp.nombre_pila!==undefined?bp.nombre_pila:(nombreInicial.split(/\s+/)[0]||"");
+            var apellidoPersonal=bp.apellido!==undefined?bp.apellido:nombreInicial.split(/\s+/).slice(1).join(" ");
+            function setBP(ch){
+              if(!currentUserId){dwNotify("error","No se identificó al usuario actual.");return;}
+              var nextNombre=ch.nombre_pila!==undefined?ch.nombre_pila:nombrePersonal;
+              var nextApellido=ch.apellido!==undefined?ch.apellido:apellidoPersonal;
+              var nuevos=Object.assign({},bp,ch,{nombre:[nextNombre,nextApellido].filter(Boolean).join(" ").trim()});
+              setLocalPerfil(function(p){return Object.assign({},p,{broker_perfiles:Object.assign({},p.broker_perfiles||{},{[currentUserId]:nuevos})});});
+            }
+            return <>
+              <div style={{display:"flex",gap:15,alignItems:"center",marginBottom:20,flexWrap:"wrap"}}>
+                <div style={{position:"relative",width:82,height:82,flexShrink:0}}>
+                  <div style={{width:82,height:82,borderRadius:"50%",background:"var(--surface2)",border:"1px solid var(--border2)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",fontSize:28,fontWeight:750,color:"var(--gold)"}}>
+                    {localPerfil.broker_fotos&&currentUserId&&localPerfil.broker_fotos[currentUserId]?
+                      <img src={localPerfil.broker_fotos[currentUserId]} alt="Tu foto de perfil" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                      :(nombrePersonal||"U").charAt(0).toUpperCase()}
+                  </div>
+                  <label title="Cambiar foto de perfil" style={{position:"absolute",bottom:0,right:-3,width:27,height:27,borderRadius:"50%",border:"2px solid var(--card)",background:"var(--gold)",color:"#121827",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:800,cursor:"pointer"}}>+
                     <input type="file" accept="image/png,image/jpeg,image/webp" style={{display:"none"}} onChange={handleMiFotoPerfil}/>
                   </label>
                 </div>
-                <div style={{minWidth:0,flex:1}}><div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{(localPerfil.broker_perfiles&&currentUserId&&localPerfil.broker_perfiles[currentUserId]&&localPerfil.broker_perfiles[currentUserId].nombre)||formatearNombreUsuarioVisible({usuario:{nombre:localPerfil.nombre||"Broker"}})}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:4}}>Broker · {currentUserId?"Perfil sincronizado con el equipo":"Perfil local"}</div></div>
+                <div>
+                  <div style={{fontSize:16,fontWeight:700,color:"var(--text)"}}>{[nombrePersonal,apellidoPersonal].filter(Boolean).join(" ")||"Tu nombre"}</div>
+                  <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>Foto personal · {ROLES_DEF[rolActual]&&ROLES_DEF[rolActual].label||rolActual}</div>
+                </div>
               </div>
-              {function(){var bp=(localPerfil.broker_perfiles&&currentUserId&&localPerfil.broker_perfiles[currentUserId])||{}; function setBP(ch){var all=Object.assign({},localPerfil.broker_perfiles||{});all[currentUserId]=Object.assign({},bp,ch);setLocalPerfil(Object.assign({},localPerfil,{broker_perfiles:all}));} return <div className="cuenta-info-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"12px 14px"}}>
-                <Inp label="Nombre y apellido" value={bp.nombre||""} onChange={function(e){setBP({nombre:e.target.value});}} placeholder="Nombre y apellido"/>
-                <Inp label="Teléfono personal" value={bp.telefono||""} onChange={function(e){setBP({telefono:e.target.value});}} placeholder="+54 9 11 1234-5678"/>
-                <Inp label="Correo" value={(typeof ctx!=="undefined"&&ctx&&ctx.usuario&&ctx.usuario.email)||bp.email||""} readOnly onChange={function(){}} />
-                <Inp label="Rol" value={ROLES_DEF[rolActual]&&ROLES_DEF[rolActual].label||rolActual} readOnly onChange={function(){}} />
-              </div>; }()}
-              <div className="cuenta-save-panel"><div><div className="cuenta-save-title">Perfil personal</div><div className="cuenta-save-copy">Estos datos no modifican la cuenta ni la identidad de la inmobiliaria.</div></div><div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>{perfilSaveStatus==="saved"&&<span className="cuenta-save-state saved"><span>✓</span> Guardado</span>}<Btn v="success" onClick={savePerfil} disabled={perfilSaveStatus==="saving"}>{perfilSaveStatus==="saving"?"Guardando…":"Guardar perfil"}</Btn></div></div>
+              <div className="cuenta-info-grid dw-personal-profile-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:12}}>
+                <Inp label="Nombre" value={nombrePersonal} onChange={function(e){setBP({nombre_pila:e.target.value});}} placeholder="Nombre"/>
+                <Inp label="Apellido" value={apellidoPersonal} onChange={function(e){setBP({apellido:e.target.value});}} placeholder="Apellido"/>
+                <Inp label="Teléfono personal" type="tel" value={bp.telefono||""} onChange={function(e){setBP({telefono:e.target.value});}} placeholder="+54 9 11 1234-5678"/>
+                <Inp label="Correo de acceso" value={(ctx&&ctx.usuario&&ctx.usuario.email)||bp.email||""} readOnly/>
+              </div>
+            </>;
+          }()}
+          <div className="cuenta-save-panel" style={{marginTop:18}}>
+            <div><div className="cuenta-save-title">Perfil personal</div><div className="cuenta-save-copy">La información institucional se administra por separado.</div></div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              {perfilSaveStatus==="error"&&<span style={{color:"var(--red)",fontSize:12}}>No se pudo guardar</span>}
+              {perfilSaveStatus==="saved"&&<span style={{color:"var(--green)",fontSize:12}}>✓ Guardado</span>}
+              <Btn v="success" onClick={savePerfil} disabled={perfilSaveStatus==="saving"}>{perfilSaveStatus==="saving"?"Guardando…":"Guardar mi perfil"}</Btn>
             </div>
           </div>
         </div>
       )}
 
-      {tab==="cuenta"&&cuentaSubtab==="resumen"&&!esBroker&&(
+      {tab==="cuenta"&&cuentaSubtab==="inmobiliaria"&&puedeEditarInstitucional&&(
         <div style={{width:"100%",maxWidth:"none",margin:"0 auto"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:10,flexWrap:"wrap"}}><div><div style={{fontSize:12,fontWeight:750,color:"var(--gold)",textTransform:"uppercase",letterSpacing:".10em"}}>Panel de la inmobiliaria</div><div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>Identidad, actividad y equipo en una sola vista.</div></div></div>
           <div className="card cuenta-profile-card" style={{padding:0,overflow:"hidden",borderRadius:18}}>
@@ -2941,26 +2972,6 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
             <div style={{padding:"20px 22px 18px"}}>
               <div className="cuenta-main-grid" style={{display:"grid",gridTemplateColumns:"minmax(250px,300px) minmax(0,1fr)",gap:22,alignItems:"start"}}>
                 <div style={{display:"flex",flexDirection:"column",gap:12,minWidth:0}}>
-                  <div style={{padding:"16px",borderRadius:14,border:"1px solid rgba(212,168,83,.24)",background:"linear-gradient(180deg,rgba(212,168,83,.08),rgba(255,255,255,.018))",minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:750,color:"var(--gold)",textTransform:"uppercase",letterSpacing:".10em",marginBottom:11}}>Mi perfil</div>
-                    <div style={{display:"flex",alignItems:"center",gap:12}}>
-                      <div style={{position:"relative",width:72,height:72,flexShrink:0}}>
-                        <div style={{width:72,height:72,borderRadius:"50%",background:"linear-gradient(145deg,var(--gold),var(--gold2))",border:"2px solid rgba(255,255,255,.18)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",fontSize:22,fontWeight:800,color:"#0a0f1a"}}>
-                          {(localPerfil.broker_fotos&&currentUserId&&localPerfil.broker_fotos[currentUserId])
-                            ? <img src={localPerfil.broker_fotos[currentUserId]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Foto de perfil"/>
-                            : ((localPerfil.nombre||"Usuario").charAt(0).toUpperCase())}
-                        </div>
-                        <label title="Cambiar foto de perfil" style={{position:"absolute",right:-3,bottom:-3,width:24,height:24,borderRadius:"50%",background:"var(--gold)",color:"#0a0f1a",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:14,fontWeight:900,border:"2px solid var(--card)",boxSizing:"border-box"}}>
-                          +
-                          <input type="file" accept="image/png,image/jpeg,image/webp" style={{display:"none"}} onChange={handleMiFotoPerfil}/>
-                        </label>
-                      </div>
-                      <div style={{minWidth:0}}>
-                        <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Tu foto de perfil</div>
-                        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.45,marginTop:4}}>Se sincroniza con tu usuario para que los integrantes del equipo puedan verla cuando compartan o gestionen una operación.</div>
-                      </div>
-                    </div>
-                  </div>
                   <div style={{padding:"16px",borderRadius:14,border:"1px solid rgba(212,168,83,.24)",background:"linear-gradient(180deg,rgba(212,168,83,.08),rgba(255,255,255,.018))",minWidth:0}}>
                     <div style={{fontSize:12,fontWeight:750,color:"var(--gold)",textTransform:"uppercase",letterSpacing:".10em",marginBottom:11}}>Logo de la inmobiliaria</div>
                     <div style={{display:"flex",gap:12,alignItems:"center"}}>
