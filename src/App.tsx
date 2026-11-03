@@ -4461,13 +4461,13 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
       <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:3}} title={ayudaRolForm(data.tipo,prefix)}>{tituloRolForm(data.tipo,prefix)}</div>
       <p style={{fontSize:13,color:"var(--muted)",marginBottom:ayudaRolForm(data.tipo,prefix)?6:12}}>Completá los datos de {tituloRolForm(data.tipo,prefix).toLowerCase()}.</p>
       {ayudaRolForm(data.tipo,prefix)&&<div className="dw-rol-ayuda" style={{fontSize:12,color:"var(--gold)",background:"rgba(212,168,83,0.07)",border:"1px solid rgba(212,168,83,0.2)",borderRadius:9,padding:"7px 10px",marginBottom:12}}>ⓘ {ayudaRolForm(data.tipo,prefix)}</div>}
-      <div className="grid2">
-        <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="col2" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
-        <IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="20-12345678-9" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/>
-        <Inp id={"dw-field-"+prefix+"_domicilio"} label="Domicilio" value={f("domicilio")} onChange={s("domicilio")} placeholder="Av. Corrientes 1234, CABA" className="col2" {...estiloCampoFaltante(faltantes,prefix+"_domicilio")}/>
+      <div className="dw-persona-fields">
+        <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
+        <div className="dw-persona-half"><IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="20-12345678-9" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/></div>
+        <Inp id={"dw-field-"+prefix+"_domicilio"} label="Domicilio" value={f("domicilio")} onChange={s("domicilio")} placeholder="Av. Corrientes 1234, CABA" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_domicilio")}/>
         <Inp label="Teléfono" type="tel" inputMode="tel" value={f("telefono")} onChange={s("telefono")} placeholder="+54 9 11 1234-5678" hint="Dato interno de la operación."/>
         <Inp label="Correo electrónico" type="email" inputMode="email" autoComplete="email" value={f("email")} onChange={s("email")} placeholder="persona@correo.com" hint="Dato interno de la operación."/>
-        <div className="col2 dw-doc-toggles">
+        <div className="dw-persona-full dw-doc-toggles">
           <label style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
             <input type="checkbox" checked={!!data[prefix+"_telefono_en_doc"]} onChange={function(e){onChange(prefix+"_telefono_en_doc",e.target.checked);}}/>
             Mostrar teléfono en el documento
@@ -4491,17 +4491,17 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
                 <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Co-titular {i+2}</div>
                 <button onClick={function(){quitarCotitular(i);}} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:12}}>✕ Quitar</button>
               </div>
-              <div className="grid2">
-                <Inp label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="col2"/>
-                <IdentificacionField value={p.dni||""} onChange={function(e){actualizarCotitular(i,"dni",e.target.value);}} placeholder="27-98765432-1"/>
-                <Inp label="Domicilio (si es distinto)" value={p.domicilio||""} onChange={function(e){actualizarCotitular(i,"domicilio",e.target.value);}} placeholder="Dejalo vacío si es el mismo" className="col2"/>
+              <div className="dw-persona-fields">
+                <Inp label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="dw-persona-half"/>
+                <div className="dw-persona-half"><IdentificacionField value={p.dni||""} onChange={function(e){actualizarCotitular(i,"dni",e.target.value);}} placeholder="27-98765432-1"/></div>
+                <Inp label="Domicilio (si es distinto)" value={p.domicilio||""} onChange={function(e){actualizarCotitular(i,"domicilio",e.target.value);}} placeholder="Dejalo vacío si es el mismo" className="dw-persona-half"/>
                 <Inp label="Teléfono" type="tel" inputMode="tel" value={p.telefono||""} onChange={function(e){actualizarCotitular(i,"telefono",e.target.value);}} placeholder="+54 9 11 1234-5678" hint="Dato interno de la operación."/>
                 <Inp label="Correo electrónico" type="email" inputMode="email" autoComplete="off" value={p.email||""} onChange={function(e){actualizarCotitular(i,"email",e.target.value);}} placeholder="persona@correo.com" hint="Dato interno de la operación."/>
-                <label className="col2" style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
+                <label className="dw-persona-half" style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
                   <input type="checkbox" checked={typeof p.telefono_en_doc==="boolean"?p.telefono_en_doc:!!data[prefix+"_telefono_en_doc"]} onChange={function(e){actualizarCotitular(i,"telefono_en_doc",e.target.checked);}}/>
                   Mostrar teléfono en el documento
                 </label>
-                <label className="col2" style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
+                <label className="dw-persona-half" style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
                   <input type="checkbox" checked={typeof p.email_en_doc==="boolean"?p.email_en_doc:!!data[prefix+"_email_en_doc"]} onChange={function(e){actualizarCotitular(i,"email_en_doc",e.target.checked);}}/>
                   Mostrar correo en el documento
                 </label>
