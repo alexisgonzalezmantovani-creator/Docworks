@@ -364,6 +364,16 @@ export const GS = `
   .dw-operation-page .step-line{width:10px}
 }
 
+/* Cláusulas opcionales: el + abre el texto; el interruptor solo incluye/excluye. */
+.dw-operation-page .dw-op-clause-row{display:flex;align-items:center;gap:10px;min-height:52px}
+.dw-operation-page .dw-op-clause-title{flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;border:0;background:transparent;color:var(--text);text-align:left;cursor:pointer}
+.dw-operation-page .dw-op-clause-name{font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.dw-operation-page .dw-op-clause-expand{flex:0 0 36px;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(212,168,83,.50);border-radius:9px;background:rgba(212,168,83,.08);color:var(--gold);font-size:23px;font-weight:500;line-height:1;cursor:pointer}
+.dw-operation-page .dw-op-clause-expand:hover,.dw-operation-page .dw-op-clause-expand[aria-expanded="true"]{border-color:var(--gold);background:rgba(212,168,83,.15)}
+.dw-operation-page .dw-op-clause-expand:focus-visible,.dw-operation-page .dw-op-clause-title:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.dw-operation-page .dw-op-clause-detail{font-size:12.5px;color:var(--text);line-height:1.6;padding:0 0 13px;white-space:pre-wrap}
+@media(max-width:640px){.dw-operation-page .dw-op-clause-row{gap:8px}.dw-operation-page .dw-op-clause-expand{flex-basis:39px;width:39px;height:39px}}
+
 /* Categorías como tarjetas equilibradas, sin espacios laterales artificiales. */
 .dw-grupo-selector{width:100%;}
 .dw-grupo-intro{font-size:14px;color:var(--muted);margin:0 0 22px;}
