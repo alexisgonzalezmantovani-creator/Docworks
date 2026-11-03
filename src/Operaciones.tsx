@@ -341,6 +341,15 @@ export const GS = `
 .dw-operation-page .dw-economic-refuerzo-label input{flex-shrink:0;accent-color:var(--gold);width:16px;height:16px}
 .dw-operation-page .dw-economic-refuerzo-content{margin-top:12px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:11px}
 
+/* Plazos de reserva: lectura rápida y edición opcional sin sobrecargar Económico. */
+.dw-operation-page .dw-economic-term{position:relative;padding:2px 0 10px}
+.dw-operation-page .dw-economic-term-reset{margin-top:6px;padding:5px 0;border:0;background:transparent;color:var(--gold);font-size:12px;font-weight:650;cursor:pointer}
+.dw-operation-page .dw-economic-term-reset:hover{text-decoration:underline}
+.dw-operation-page .dw-economic-term-reset:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.dw-operation-page .dw-economic-acceptance>summary{min-height:51px}
+.dw-operation-page .dw-economic-acceptance-content{padding:12px 14px 15px}
+.dw-operation-page .dw-economic-acceptance-help{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+
 /* Categorías como tarjetas equilibradas, sin espacios laterales artificiales. */
 .dw-grupo-selector{width:100%;}
 .dw-grupo-intro{font-size:14px;color:var(--muted);margin:0 0 22px;}
