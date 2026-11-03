@@ -6184,6 +6184,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   const arrastreClausulaRef=useRef(null);
   const [clausulaDestino,setClausulaDestino]=useState(null);
   const [clausulaArrastrada,setClausulaArrastrada]=useState(null);
+  const vistaArrastreRef=useRef(null);
   useEffect(function(){if(onEditingChange)onEditingChange(!!editId);},[editId,onEditingChange]);
   useEffect(function(){
     if(!editId)return;
@@ -6325,14 +6326,15 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     <div style={{display:"flex",flexDirection:"column",gap:7}}>
       {puedeEditar&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:3}}>En PC, arrastrá desde el número de cada cláusula para cambiar su posición. También podés usar los controles de orden.</div>}
       <style>{DW_MODEL_CLAUSES_UI_CSS + DW_MODEL_CLAUSES_V489_CSS}</style>
-            {draft.map(function(b,idx){var editing=editId===b.id;var numeroActivo=draft.slice(0,idx+1).filter(function(x){return x.activo!==false&&x.obligatoria===true;}).length;var esCondicional=!!(b.condicion||b.condicional);var filaAbierta=modoVistaClausulas==="abierta"?clausulasAbiertas[b.id]!==false:!!clausulasAbiertas[b.id];return <div key={b.id} className={"dw-clause-card "+(modoVistaClausulas==="simple"?"dw-clause-compact":"dw-clause-detail")+(filaAbierta?" dw-clause-open":"")+(clausulaDestino===b.id?" dw-clause-drop-target":"")+(clausulaArrastrada===b.id?" dw-clause-dragging":"")} onDragOver={function(e){if(!puedeEditar||editId||status==="saving"||!arrastreClausulaRef.current||arrastreClausulaRef.current===b.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setClausulaDestino(b.id);}} onDrop={function(e){e.preventDefault();var idOrigen=arrastreClausulaRef.current;arrastreClausulaRef.current=null;setClausulaDestino(null);setClausulaArrastrada(null);moverClausulaHasta(idOrigen,b.id);}} onDragEnd={function(){arrastreClausulaRef.current=null;setClausulaDestino(null);setClausulaArrastrada(null);}} style={{border:"1px solid "+(editing?"rgba(212,168,83,.40)":"var(--border2)"),borderRadius:10,padding:modoVistaClausulas==="simple"?"6px 9px":11,background:editing?"rgba(212,168,83,.035)":"var(--card)"}}>
-        <div style={{display:"flex",alignItems:modoVistaClausulas==="simple"?"center":"flex-start",gap:9,minWidth:0}}>
+            {draft.map(function(b,idx){var editing=editId===b.id;var numeroActivo=draft.slice(0,idx+1).filter(function(x){return x.activo!==false&&x.obligatoria===true;}).length;var esCondicional=!!(b.condicion||b.condicional);var filaAbierta=modoVistaClausulas==="abierta"?clausulasAbiertas[b.id]!==false:!!clausulasAbiertas[b.id];return <div key={b.id} className={"dw-clause-card "+(modoVistaClausulas==="simple"?"dw-clause-compact":"dw-clause-detail")+(filaAbierta?" dw-clause-open":"")+(clausulaDestino===b.id?" dw-clause-drop-target":"")+(clausulaArrastrada===b.id?" dw-clause-dragging":"")} onDragOver={function(e){if(!puedeEditar||editId||status==="saving"||!arrastreClausulaRef.current||arrastreClausulaRef.current===b.id)return;e.preventDefault();e.dataTransfer.dropEffect="move";setClausulaDestino(b.id);}} onDrop={function(e){e.preventDefault();var idOrigen=arrastreClausulaRef.current;arrastreClausulaRef.current=null;setClausulaDestino(null);setClausulaArrastrada(null);if(vistaArrastreRef.current){vistaArrastreRef.current.remove();vistaArrastreRef.current=null;}moverClausulaHasta(idOrigen,b.id);}} onDragEnd={function(){arrastreClausulaRef.current=null;setClausulaDestino(null);setClausulaArrastrada(null);}} style={{border:"1px solid "+(editing?"rgba(212,168,83,.40)":"var(--border2)"),borderRadius:10,padding:modoVistaClausulas==="simple"?"6px 9px":11,background:editing?"rgba(212,168,83,.035)":"var(--card)"}}>
+        <div style={{display:filaAbierta&&!editing?"block":"flex",alignItems:modoVistaClausulas==="simple"?"center":"flex-start",gap:9,minWidth:0}}>
           <div className={"dw-clause-number"+(filaAbierta&&!editing?" dw-clause-number-expanded":"")+(puedeEditar&&!editing?" dw-clause-number-draggable":"")}
             draggable={puedeEditar&&!editing&&status!=="saving"}
             title={puedeEditar&&!editing?"Arrastrá el número para reordenar la cláusula":"Número de cláusula"}
             aria-label={"Cláusula "+numeroActivo+(puedeEditar?", arrastrar para ordenar":"")}
-            onDragStart={function(e){if(!puedeEditar||editId||status==="saving"){e.preventDefault();return;}arrastreClausulaRef.current=b.id;setClausulaArrastrada(b.id);setClausulaDestino(null);e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",b.id);}}
-            onDragEnd={function(){arrastreClausulaRef.current=null;setClausulaDestino(null);setClausulaArrastrada(null);}}
+            onDragStart={function(e){if(!puedeEditar||editId||status==="saving"){e.preventDefault();return;}arrastreClausulaRef.current=b.id;setClausulaArrastrada(b.id);setClausulaDestino(null);e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",b.id);
+              if(typeof document!=="undefined"){var fl=document.createElement("div");fl.className="dw-clause-drag-preview";fl.textContent=String(numeroActivo)+" · "+String(b.titulo||"Cláusula");document.body.appendChild(fl);vistaArrastreRef.current=fl;try{e.dataTransfer.setDragImage(fl,42,22);}catch(_e){}}}}
+            onDragEnd={function(){arrastreClausulaRef.current=null;setClausulaDestino(null);setClausulaArrastrada(null);if(vistaArrastreRef.current){vistaArrastreRef.current.remove();vistaArrastreRef.current=null;}}}
             style={{minWidth:28,height:28,borderRadius:8,background:"rgba(212,168,83,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--gold)",flexShrink:0,padding:"0 5px",boxSizing:"border-box"}}>
             <span>{b.activo===false?"—":(b.obligatoria?numeroActivo:"—")}</span>
           </div>
@@ -6360,6 +6362,8 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-reserva-clause button:focus-visible,.dw-clause-chevron:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 @media(max-width:640px){.dw-reserva-compact .dw-essential-label{font-size:9px;padding:2px 5px}.dw-reserva-compact .dw-clause-chevron{width:25px;height:25px;flex-basis:25px}}
 
+/* Tarjeta flotante al arrastrar desde el número. */
+.dw-clause-drag-preview{position:fixed;left:12px;top:12px;z-index:99999;min-width:170px;max-width:340px;padding:13px 18px;box-sizing:border-box;border-radius:13px;border:1px solid rgba(212,168,83,.5);background:#16243a;color:#f8fafc;font-size:13px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 18px 38px rgba(0,0,0,.26);pointer-events:none}
 /* Reordenamiento premium desde el número, sin un agarre adicional. */
 .dw-clause-card{transition:box-shadow .2s ease,transform .2s ease,border-color .2s ease,background .2s ease}
 .dw-clause-number-draggable{cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
@@ -6367,9 +6371,9 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-clause-number-draggable:active{cursor:grabbing}
 .dw-clause-dragging{opacity:.58;transform:scale(.992);box-shadow:0 10px 24px rgba(0,0,0,.12)}
 .dw-clause-drop-target{outline:0!important;border-color:var(--gold)!important;box-shadow:0 0 0 2px rgba(212,168,83,.28),0 12px 30px rgba(0,0,0,.1);transform:translateY(-2px);background:rgba(212,168,83,.075)!important}
-.dw-clause-number-expanded{visibility:hidden;height:0!important;padding:0!important;min-width:0!important;width:0!important;flex-basis:0!important}
-.dw-clause-open .dw-clause-content{display:flex;align-items:flex-start;gap:9px;margin-top:6px!important;padding-top:7px;border-top:1px solid var(--border);line-height:1.6!important}
-.dw-clause-inline-number{flex:0 0 28px;min-width:28px;min-height:27px;display:inline-flex;align-items:center;justify-content:center;padding:2px 5px;border-radius:8px;box-sizing:border-box;color:var(--gold);font-weight:750;background:rgba(212,168,83,.08)}
+.dw-clause-number-expanded{display:none!important}
+.dw-clause-open .dw-clause-content{display:flex;align-items:baseline;gap:7px;margin:2px 0 0!important;padding:0!important;border:0!important;line-height:1.6!important}
+.dw-clause-inline-number{flex:0 0 auto;min-width:23px;min-height:0;display:inline-flex;align-items:baseline;justify-content:center;padding:0 5px;border-radius:6px;box-sizing:border-box;color:var(--gold);font-weight:750;background:rgba(212,168,83,.08)}
 .dw-clause-actions button[title="Subir"],.dw-clause-actions button[title="Bajar"]{width:29px;height:29px;display:inline-flex;align-items:center;justify-content:center;padding:0!important;border-radius:9px!important;background:var(--surface2)!important;transition:background .15s ease,transform .15s ease,color .15s ease}
 .dw-clause-actions button[title="Subir"]:hover:not(:disabled),.dw-clause-actions button[title="Bajar"]:hover:not(:disabled){background:rgba(212,168,83,.12)!important;color:var(--gold)!important;transform:translateY(-1px)}
 .dw-clause-actions button:disabled{opacity:.35;cursor:default!important}
@@ -6392,7 +6396,7 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-clause-compact .dw-model-clause-row{flex-wrap:nowrap!important;align-items:center!important}
 .dw-clause-compact .dw-model-clause-row>div:first-child{flex-basis:auto!important;width:auto!important;min-width:0}
 .dw-clause-compact .dw-model-clause-row>div.dw-clause-actions{display:flex!important;flex:0 0 auto;overflow-x:auto;max-width:48%;scrollbar-width:thin}
-.dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:wrap!important}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:nowrap!important}
 .dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{display:flex!important;flex-basis:auto;justify-content:flex-end}
 .dw-clause-compact .dw-essential-label{font-size:10px;padding:2px 6px}
 .dw-clause-content{border-top:1px solid var(--border);padding-top:9px}
@@ -6402,9 +6406,9 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-clause-compact:not(.dw-clause-open) .dw-model-clause-row>div.dw-clause-actions{display:none!important}
 .dw-clause-compact .dw-clause-name{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
 .dw-clause-compact .dw-clause-toggle{padding:8px 0!important}
-.dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:wrap!important}
-.dw-clause-compact.dw-clause-open .dw-model-clause-row>div:first-child{flex-basis:100%!important}
-.dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{max-width:100%;width:100%;flex-wrap:wrap!important;overflow:visible}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:nowrap!important}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row>div:first-child{flex-basis:auto!important}
+.dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{max-width:52%;width:auto;flex-wrap:nowrap!important;overflow:auto}
 @media(max-width:1100px){.dw-clause-chevron{min-width:36px;min-height:36px}.dw-clause-actions button{min-height:34px}.dw-clause-actions select{min-height:34px}}
 @media(prefers-reduced-motion:reduce){.dw-clause-chevron,.dw-clause-card{transition:none}}
 `;
