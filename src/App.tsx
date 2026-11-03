@@ -5136,7 +5136,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
   var [tituloCustom,setTituloCustom]=useState(data.clausulas_custom_titulo||"");
   var [contenidoCustom,setContenidoCustom]=useState(data.clausulas_custom||"");
   var [ideaIA,setIdeaIA]=useState("");
-  var ideaIARef=useRef(null);
+  var ideaIARef=useRef<HTMLTextAreaElement | null>(null);
   var [loadingIA,setLoadingIA]=useState(false);
   var [errorIA,setErrorIA]=useState("");
   useEffect(function(){onChange("clausulas_custom_titulo",showAdd?tituloCustom:"");onChange("clausulas_custom",showAdd?contenidoCustom:"");},[tituloCustom,contenidoCustom,showAdd]);
