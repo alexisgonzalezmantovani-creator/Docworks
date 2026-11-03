@@ -5224,26 +5224,24 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
   return(
     <div>
       <OpcionalesCuerpo data={data} onChange={onChange}/>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:16}}>Seleccioná el tipo de documento a generar.</p>
-      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <p className="dw-grupo-intro">Seleccioná el tipo de documento a generar.</p>
+      <div className="dw-grupo-tipo-sections">
         {gruposToShow.map(function(entry){
-          var key=entry[0], g=entry[1];
-          var col=colorMap[key]||"rgba(255,255,255,0.05)";
-          var brd=borderMap[key]||"var(--border2)";
+          var key=entry[0],g=entry[1];
           return(
             <div key={key}>
-              <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>{g.label}</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {!grupo&&<div className="dw-grupo-tipo-heading">{g.label}</div>}
+              <div className={"dw-grupo-tipo-grid dw-grupo-tipo-"+key}>
                 {g.tipos.map(function(t){
                   var sel=data.tipo===t.value;
                   return(
-                    <button type="button" key={t.value} onClick={function(){onChange("tipo",t.value);}}
-                      style={{padding:"14px 12px",borderRadius:12,textAlign:"left",cursor:"pointer",transition:"all 0.15s",
-                        border:"2px solid "+(sel?brd:"var(--border2)"),
-                        background:sel?col:"var(--card)",outline:"none"}}>
-                      <div style={{fontSize:22,marginBottom:6}}>{t.icon}</div>
-                      <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:3}}>{t.label}</div>
-                      <div style={{fontSize:12,color:"var(--muted)"}}>{t.desc}</div>
+                    <button type="button" key={t.value}
+                      className={"dw-grupo-card dw-grupo-tipo-card dw-grupo-"+key+(sel?" is-selected":"")}
+                      aria-pressed={sel}
+                      onClick={function(){onChange("tipo",t.value);}}>
+                      <span className="dw-grupo-icon" aria-hidden="true">{t.icon}</span>
+                      <span className="dw-grupo-text"><strong>{t.label}</strong><small>{t.desc}</small></span>
+                      <span className="dw-grupo-chevron" aria-hidden="true">{sel?"✓":"›"}</span>
                     </button>
                   );
                 })}
