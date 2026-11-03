@@ -351,15 +351,31 @@ export const GS = `
 
 
 
-/* Grilla compacta de personas: aprovecha el ancho sin forzar scroll horizontal. */
-.dw-operation-page .dw-persona-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 12px;width:100%;align-items:start}
-.dw-operation-page .dw-persona-fields>*{min-width:0}
-.dw-operation-page .dw-persona-fields .dw-persona-half{grid-column:span 2;min-width:0}
-.dw-operation-page .dw-persona-fields .dw-persona-full{grid-column:1/-1}
-.dw-operation-page .dw-persona-fields .dw-doc-toggles{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;min-height:32px}
-.dw-operation-page .dw-persona-fields .dw-doc-toggles label{margin:0}
-@media(max-width:950px){.dw-operation-page .dw-persona-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.dw-operation-page .dw-persona-fields .dw-persona-half{grid-column:span 1}}
-@media(max-width:640px){.dw-operation-page .dw-persona-fields{grid-template-columns:minmax(0,1fr)}.dw-operation-page .dw-persona-fields .dw-persona-half,.dw-operation-page .dw-persona-fields .dw-persona-full{grid-column:1}}
+/* Datos de personas: filas uniformes, dos columnas reales, sin celdas sueltas. */
+.dw-operation-page .dw-persona-fields{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  column-gap:16px;row-gap:13px;width:100%;align-items:start;
+}
+.dw-operation-page .dw-persona-fields>*{min-width:0;max-width:none;}
+.dw-operation-page .dw-persona-fields .dw-persona-half{grid-column:auto;min-width:0;}
+.dw-operation-page .dw-persona-fields .dw-persona-full{grid-column:1/-1;}
+.dw-operation-page .dw-persona-fields .dw-doc-toggles{
+  grid-column:auto;display:flex;flex-direction:column;align-items:stretch;gap:7px;
+  background:transparent;border:0;padding:0;margin:0;min-width:0;
+}
+.dw-operation-page .dw-doc-toggles-title{font-size:12px;font-weight:650;line-height:1.35;color:var(--muted);}
+.dw-operation-page .dw-doc-toggles-options{display:flex;align-items:center;gap:10px 20px;flex-wrap:wrap;min-height:36px;}
+.dw-operation-page .dw-doc-toggles-options label{display:inline-flex!important;align-items:center;gap:6px;white-space:nowrap;margin:0!important;font-size:12px!important;}
+.dw-operation-page .dw-doc-toggles-options input{flex:none;}
+@media(max-width:1100px){
+ .dw-operation-page .dw-doc-toggles-options{gap:6px 12px;}
+ .dw-operation-page .dw-doc-toggles-options label{white-space:normal;}
+}
+@media(max-width:640px){
+ .dw-operation-page .dw-persona-fields{grid-template-columns:minmax(0,1fr);row-gap:11px;}
+ .dw-operation-page .dw-persona-fields .dw-persona-half,.dw-operation-page .dw-persona-fields .dw-persona-full{grid-column:1;}
+ .dw-operation-page .dw-doc-toggles-options{flex-direction:column;align-items:flex-start;gap:7px;}
+}
 /* Formulario compacto en monitores: evita campos exageradamente anchos y reduce el desplazamiento vertical. */
 @media(min-width:1100px){
   .dw-operation-page{gap:10px;}
