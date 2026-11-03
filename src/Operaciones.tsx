@@ -304,6 +304,22 @@ export const GS = `
 .dw-operation-page-breadcrumb{font-size:12px;font-weight:650;color:var(--dim);}
 .dw-operation-page .grid2>.field{min-width:0;max-width:none;}
 
+/* Nueva operación: un poco más de definición sin cambiar la identidad visual. */
+.dw-operation-page-heading{border-bottom-color:var(--border2);}
+.dw-operation-page-breadcrumb{color:var(--muted);}
+.dw-operation-page-heading p{color:var(--muted);}
+.dw-operation-page .card{border-color:var(--border2);}
+.dw-operation-page .field-label{color:var(--text);font-weight:650;}
+.dw-operation-page .field-hint{color:var(--muted);}
+.dw-operation-page .inp{background:var(--card);border-color:var(--border2);box-shadow:0 1px 2px rgba(5,15,30,.035);}
+.dw-operation-page .inp::placeholder{color:var(--muted);opacity:.82;}
+.dw-operation-page .inp:hover:not(:focus){border-color:var(--gold);}
+.dw-operation-page .inp:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,168,83,.15);}
+.dw-operation-page .dw-grupo-card{background:var(--card);border-color:var(--border2);}
+.dw-operation-page .dw-grupo-card:hover,.dw-operation-page .dw-grupo-card:focus-visible{border-color:var(--gold);background:var(--surface2);}
+.dw-operation-page .dw-grupo-chevron{color:var(--muted);}
+.dw-operation-page .dw-grupo-tipo-heading{color:var(--muted);}
+
 /* Categorías como tarjetas equilibradas, sin espacios laterales artificiales. */
 .dw-grupo-selector{width:100%;}
 .dw-grupo-intro{font-size:14px;color:var(--muted);margin:0 0 22px;}
