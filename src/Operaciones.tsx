@@ -320,6 +320,11 @@ export const GS = `
 @media(max-width:980px){.dw-grupo-grid{grid-template-columns:1fr;}.dw-grupo-card{min-height:94px;padding:14px 16px;}}
 
 /* Mi perfil de todos los roles: campos claros y apilado móvil. */
+.dw-personal-profile-heading{padding:18px 22px 16px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(212,168,83,.075),rgba(212,168,83,.015))}
+.dw-personal-profile-body{padding:20px 22px 18px}
+.dw-personal-profile-card .cuenta-save-panel{margin-top:18px}
+@media(max-width:640px){.dw-personal-profile-heading,.dw-personal-profile-body{padding-left:14px;padding-right:14px}.dw-personal-profile-card .cuenta-save-panel>div:last-child{flex-wrap:wrap;justify-content:flex-start}.dw-profile-theme-option button{flex-shrink:0}}
+
 @media(max-width:640px){.dw-personal-profile-grid{grid-template-columns:minmax(0,1fr)!important}}
 /* Navegación de regreso sencilla, sin apariencia de botón grande. */
 .dw-account-back-link{display:inline-flex;align-items:center;gap:7px;padding:4px 1px;margin:0 0 17px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:650;cursor:pointer}
@@ -2892,9 +2897,9 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
       </div>}
       {/* ── TAB: MI CUENTA (DUEÑO) ── */}
       {tab==="cuenta"&&cuentaSubtab==="resumen"&&(
-        <div className="card cuenta-profile-card" style={{width:"100%",maxWidth:"none",margin:0,borderRadius:16,padding:22}}>
+        <div className="card cuenta-profile-card dw-personal-profile-card" style={{width:"100%",maxWidth:"none",margin:0,borderRadius:18,padding:0,overflow:"hidden"}}><div className="dw-personal-profile-heading">
           <div style={{fontFamily:"DM Serif Display,serif",fontSize:22,color:"var(--text)",marginBottom:5}}>Mi perfil</div>
-          <p style={{fontSize:12.5,color:"var(--muted)",margin:"0 0 18px"}}>Tus datos personales y tu foto. Cada usuario administra únicamente su propio perfil.</p>
+          <p style={{fontSize:12.5,color:"var(--muted)",margin:"5px 0 0"}}>Tus datos personales y tu foto. Cada usuario administra únicamente su propio perfil.</p></div><div className="dw-personal-profile-body">
           {function(){
             var bp=(localPerfil.broker_perfiles&&currentUserId&&localPerfil.broker_perfiles[currentUserId])||{};
             var nombreInicial=String(bp.nombre||((ctx&&ctx.usuario&&ctx.usuario.nombre)||"")).trim();
@@ -2932,7 +2937,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
               </div>
             </>;
           }()}
-          <div className="cuenta-save-panel" style={{marginTop:18}}>
+          <div className="dw-profile-theme-option" style={{marginTop:20,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",padding:"12px 14px",border:"1px solid var(--border)",borderRadius:12,background:"var(--surface2)"}}><div><div style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>Modo noche</div><div style={{fontSize:12,color:"var(--muted)",marginTop:3}}>Cambiá el aspecto de DocWorks también desde el celular.</div></div><button type="button" className="btn btn-secondary" role="switch" aria-checked={!!darkMode} aria-label="Modo noche" onClick={onToggleDark} style={{minHeight:40,fontWeight:700}}>{darkMode?"☾ Activado":"☀ Desactivado"}</button></div><div className="cuenta-save-panel" style={{marginTop:18}}>
             <div><div className="cuenta-save-title">Perfil personal</div><div className="cuenta-save-copy">La información institucional se administra por separado.</div></div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               {perfilSaveStatus==="error"&&<span style={{color:"var(--red)",fontSize:12}}>No se pudo guardar</span>}
@@ -2940,7 +2945,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
               <Btn v="success" onClick={savePerfil} disabled={perfilSaveStatus==="saving"}>{perfilSaveStatus==="saving"?"Guardando…":"Guardar mi perfil"}</Btn>
               <button type="button" className="btn btn-secondary" onClick={function(){setCuentaSubtab("seguridad");}}>Cambiar contraseña</button>
             </div>
-          </div>
+          </div></div>
         </div>
       )}
 
