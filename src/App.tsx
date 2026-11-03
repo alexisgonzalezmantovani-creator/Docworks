@@ -4467,7 +4467,9 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
         <Inp id={"dw-field-"+prefix+"_domicilio"} label="Domicilio" value={f("domicilio")} onChange={s("domicilio")} placeholder="Av. Corrientes 1234, CABA" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_domicilio")}/>
         <Inp label="Teléfono" type="tel" inputMode="tel" value={f("telefono")} onChange={s("telefono")} placeholder="+54 9 11 1234-5678" hint="Dato interno de la operación."/>
         <Inp label="Correo electrónico" type="email" inputMode="email" autoComplete="email" value={f("email")} onChange={s("email")} placeholder="persona@correo.com" hint="Dato interno de la operación."/>
-        <div className="dw-persona-full dw-doc-toggles">
+        <div className="dw-doc-toggles">
+          <div className="dw-doc-toggles-title">Datos de contacto en el documento</div>
+          <div className="dw-doc-toggles-options">
           <label style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
             <input type="checkbox" checked={!!data[prefix+"_telefono_en_doc"]} onChange={function(e){onChange(prefix+"_telefono_en_doc",e.target.checked);}}/>
             Mostrar teléfono en el documento
@@ -4476,6 +4478,7 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
             <input type="checkbox" checked={!!data[prefix+"_email_en_doc"]} onChange={function(e){onChange(prefix+"_email_en_doc",e.target.checked);}}/>
             Mostrar correo en el documento
           </label>
+          </div>
         </div>
       </div>
 
