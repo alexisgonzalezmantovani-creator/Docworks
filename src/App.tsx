@@ -499,7 +499,7 @@ if(typeof document!=="undefined"){var dwThemeMeta=document.querySelector<HTMLMet
     }
     // Ícono vectorial de alta definición, también definido en index.html.
     fav.type = "image/svg+xml";
-    fav.href = "/docworks-favicon.svg?v=2";
+    fav.href = "/docworks-favicon.svg?v=3";
   } catch(e) { console.warn("DocWorks: no se pudo actualizar el favicon",e); }
 
 var PWA_MANIFEST = {
