@@ -497,9 +497,9 @@ if(typeof document!=="undefined"){var dwThemeMeta=document.querySelector<HTMLMet
       fav.type = "image/png";
       document.head.appendChild(fav);
     }
-    // El logo existe en /public/logo.png. Lo apuntamos directamente como favicon
-    // y agregamos la versión para evitar que Chrome reutilice un icono cacheado.
-    fav.href = LOGO_B64 + "?v=" + DOCWORKS_VERSION;
+    // Ícono vectorial de alta definición, también definido en index.html.
+    fav.type = "image/svg+xml";
+    fav.href = "/docworks-favicon.svg?v=2";
   } catch(e) { console.warn("DocWorks: no se pudo actualizar el favicon",e); }
 
 var PWA_MANIFEST = {
