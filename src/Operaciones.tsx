@@ -326,10 +326,11 @@ export const GS = `
 .dw-account-nav-item:hover:not(.active){color:var(--text)}
 .dw-account-nav-item:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .dw-account-security{max-width:820px;margin:8px auto 0;padding:16px 4px;color:var(--text)}
-/* Seguridad de cuenta: tres campos alineados sin scroll lateral. */
-.dw-account-password-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+/* Seguridad de cuenta: contraseña actual arriba y las dos nuevas debajo. */
+.dw-account-password-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;align-items:start}
 .dw-account-password-grid>*{min-width:0}
-@media(max-width:800px){.dw-account-password-grid{grid-template-columns:minmax(0,1fr)}}
+.dw-account-password-grid>:first-child{grid-column:1/-1;max-width:390px;width:100%}
+@media(max-width:640px){.dw-account-password-grid{grid-template-columns:minmax(0,1fr)}.dw-account-password-grid>:first-child{grid-column:1;max-width:none}}
 
 /* Segunda pantalla: mismo lenguaje visual de tarjetas que el selector de grupos. */
 .dw-grupo-tipo-sections{display:flex;flex-direction:column;gap:20px;width:100%;}
