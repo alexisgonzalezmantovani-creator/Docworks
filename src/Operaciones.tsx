@@ -1006,6 +1006,34 @@ export const GS = `
     .calendar-summary-title{white-space:normal;}
     .calendar-summary-description{display:none;}
   }
+
+/* Confirmaciones críticas: aisladas de los bottom sheets genéricos en iOS. */
+html body .modal-overlay.dw-confirm-overlay{
+  position:fixed!important;inset:0!important;top:0!important;left:0!important;
+  width:100vw!important;width:100dvw!important;height:100vh!important;height:100dvh!important;
+  min-height:0!important;max-height:none!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px))!important;
+  box-sizing:border-box!important;overflow:hidden!important;z-index:3100!important;
+}
+html body .modal-overlay.dw-confirm-overlay .modal-box.dw-confirm-box{
+  flex:0 1 380px!important;width:min(380px,100%)!important;max-width:380px!important;
+  height:auto!important;min-height:0!important;max-height:calc(100dvh - 36px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
+  margin:0!important;border-radius:16px!important;overflow:hidden!important;
+  display:flex!important;flex-direction:column!important;transform:none!important;
+}
+html body .dw-confirm-box .modal-head{flex:0 0 auto!important;position:relative!important;padding:14px 16px!important;}
+html body .dw-confirm-box .modal-title{min-width:0;overflow-wrap:anywhere;white-space:normal;line-height:1.3;}
+html body .dw-confirm-box .modal-body{
+  flex:1 1 auto!important;min-height:0!important;max-height:none!important;
+  overflow-y:auto!important;overflow-x:hidden!important;padding:16px!important;
+  -webkit-overflow-scrolling:touch;overflow-wrap:anywhere;
+}
+html body .dw-confirm-box .modal-body .btn{min-height:42px!important;white-space:normal!important;text-align:center;}
+@media(max-width:480px){
+  html body .modal-overlay.dw-confirm-overlay .modal-box.dw-confirm-box{max-width:calc(100vw - 24px)!important;}
+  html body .dw-confirm-box .modal-body{font-size:14px!important;}
+}
 `;
 
 export var MOBILE_STABILITY_CSS = `
