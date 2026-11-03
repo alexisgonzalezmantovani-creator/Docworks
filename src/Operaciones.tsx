@@ -338,6 +338,15 @@ export const GS = `
 
 
 
+/* Grilla compacta de personas: aprovecha el ancho sin forzar scroll horizontal. */
+.dw-operation-page .dw-persona-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 12px;width:100%;align-items:start}
+.dw-operation-page .dw-persona-fields>*{min-width:0}
+.dw-operation-page .dw-persona-fields .dw-persona-half{grid-column:span 2;min-width:0}
+.dw-operation-page .dw-persona-fields .dw-persona-full{grid-column:1/-1}
+.dw-operation-page .dw-persona-fields .dw-doc-toggles{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;min-height:32px}
+.dw-operation-page .dw-persona-fields .dw-doc-toggles label{margin:0}
+@media(max-width:950px){.dw-operation-page .dw-persona-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.dw-operation-page .dw-persona-fields .dw-persona-half{grid-column:span 1}}
+@media(max-width:640px){.dw-operation-page .dw-persona-fields{grid-template-columns:minmax(0,1fr)}.dw-operation-page .dw-persona-fields .dw-persona-half,.dw-operation-page .dw-persona-fields .dw-persona-full{grid-column:1}}
 /* Formulario compacto en monitores: evita campos exageradamente anchos y reduce el desplazamiento vertical. */
 @media(min-width:1100px){
   .dw-operation-page{gap:10px;}
