@@ -4535,9 +4535,9 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{top:0,right:0,left:-20,bottom:0}}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)"/>
-                    <XAxis dataKey="name" tick={{fill:"#94a3b8",fontSize:12}} axisLine={false} tickLine={false}/>
-                    <YAxis tick={{fill:"#94a3b8",fontSize:12}} axisLine={false} tickLine={false} allowDecimals={false}/>
-                    <Tooltip contentStyle={{background:"#1e293b",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,color:"#f1f5f9",fontSize:12}}/>
+                    <XAxis dataKey="name" tick={{fill:"var(--muted)",fontSize:12}} axisLine={false} tickLine={false}/>
+                    <YAxis tick={{fill:"var(--muted)",fontSize:12}} axisLine={false} tickLine={false} allowDecimals={false}/>
+                    <Tooltip contentStyle={{background:"#17243b",border:"1px solid rgba(255,255,255,0.22)",borderRadius:9,color:"#f8fafc",fontSize:12,boxShadow:"0 10px 28px rgba(0,0,0,.28)"}} labelStyle={{color:"#f8fafc",fontWeight:700}} itemStyle={{color:"#f8fafc",fontWeight:600}}/>
                     <Bar dataKey="ops" fill="var(--gold)" radius={[4,4,0,0]} name="Operaciones"/>
                   </BarChart>
                 </ResponsiveContainer>
@@ -4550,8 +4550,8 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
                   <PieChart>
                     <Pie data={porTipo.length?porTipo:[{name:"Sin datos",v:1,color:"#1e293b"}]} dataKey="v" nameKey="name" cx="50%" cy="50%" outerRadius={65} innerRadius={30}>
                       {(porTipo.length?porTipo:[{color:"#1e293b"}]).map(function(e,i){return <Cell key={i} fill={e.color}/>;})}</Pie>
-                    <Tooltip contentStyle={{background:"#1e293b",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,color:"#f1f5f9",fontSize:12}}/>
-                    <Legend iconType="circle" iconSize={7} wrapperStyle={{fontSize:12,color:"#94a3b8"}}/>
+                    <Tooltip contentStyle={{background:"#17243b",border:"1px solid rgba(255,255,255,0.22)",borderRadius:9,color:"#f8fafc",fontSize:12,boxShadow:"0 10px 28px rgba(0,0,0,.28)"}} labelStyle={{color:"#f8fafc",fontWeight:700}} itemStyle={{color:"#f8fafc",fontWeight:600}}/>
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{fontSize:12,color:"var(--muted)"}}/>
                   </PieChart>
                 </ResponsiveContainer>
               </div>
