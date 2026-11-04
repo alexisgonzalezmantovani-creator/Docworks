@@ -1,6 +1,8 @@
 // Las consultas generales no toman datos de operaciones ni admiten adjuntos.
 export const IA_HABILITADA = true;
 export const IA_DOCUMENTOS_HABILITADA = false;
+// Solo plantillas genéricas con chips; no habilita revisión de operaciones reales.
+export const IA_PLANTILLAS_HABILITADA = true;
 export const AVISO_IA_GENERICA = "Usá consultas e ideas genéricas, sin datos personales ni información confidencial. Las respuestas son orientativas.";
 export const MENSAJE_IA_PAUSADA = "La revisión de operaciones y archivos con IA no está disponible. Podés hacer consultas generales o redactar cláusulas sin datos reales.";
 

@@ -80,6 +80,8 @@ export function normalizarBusqueda(value){
 
 // Estilos globales y estabilidad móvil, extraídos sin cambiar su contenido.
 export const GS = `
+[data-theme="dark"]{--dw-token-required-bg:#253d60;--dw-token-required-text:#eaf2ff;}
+
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{overflow-x:hidden;max-width:100vw;min-height:100%;}
@@ -3642,8 +3644,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
                   onRestablecer={function(){
                     var mapa=Object.assign({},customMapPreview); delete mapa[tipoDocSel];
                     var next=Object.assign({},localPerfil,{encabezados_custom:mapa});
-                    setLocalPerfil(next); persistirPerfil(next);
-                    setEncabezadoDraft(DEFAULT_ENCABEZADOS[tipoDocSel]||"");
+                    return persistirPerfil(next).then(function(res){if(!(res&&res.error)){setLocalPerfil(next);setEncabezadoDraft("");setEncabezadoEditing(false);}return res;});
                   }}
                   onSave={function(texto){
                     var mapa=Object.assign({},customMapPreview,{[tipoDocSel]:texto});
@@ -4537,7 +4538,7 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)"/>
                     <XAxis dataKey="name" tick={{fill:"#94a3b8",fontSize:12}} axisLine={false} tickLine={false}/>
                     <YAxis tick={{fill:"#94a3b8",fontSize:12}} axisLine={false} tickLine={false} allowDecimals={false}/>
-                    <Tooltip contentStyle={{background:"#1e293b",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,color:"#f1f5f9",fontSize:12}}/>
+                    <Tooltip contentStyle={{background:"var(--card)",border:"1px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:12}} itemStyle={{color:"var(--text)"}} labelStyle={{color:"var(--text)"}}/>
                     <Bar dataKey="ops" fill="var(--gold)" radius={[4,4,0,0]} name="Operaciones"/>
                   </BarChart>
                 </ResponsiveContainer>
@@ -4550,7 +4551,7 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
                   <PieChart>
                     <Pie data={porTipo.length?porTipo:[{name:"Sin datos",v:1,color:"#1e293b"}]} dataKey="v" nameKey="name" cx="50%" cy="50%" outerRadius={65} innerRadius={30}>
                       {(porTipo.length?porTipo:[{color:"#1e293b"}]).map(function(e,i){return <Cell key={i} fill={e.color}/>;})}</Pie>
-                    <Tooltip contentStyle={{background:"#1e293b",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,color:"#f1f5f9",fontSize:12}}/>
+                    <Tooltip contentStyle={{background:"var(--card)",border:"1px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:12}} itemStyle={{color:"var(--text)"}} labelStyle={{color:"var(--text)"}}/>
                     <Legend iconType="circle" iconSize={7} wrapperStyle={{fontSize:12,color:"#94a3b8"}}/>
                   </PieChart>
                 </ResponsiveContainer>

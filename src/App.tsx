@@ -12,8 +12,8 @@ declare global {
 }
 import { InicioInmobiliaria } from './PrimerosPasos';
 import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
-import { IA_HABILITADA, IA_DOCUMENTOS_HABILITADA, MENSAJE_IA_PAUSADA, AVISO_IA_GENERICA, asegurarIAHabilitada, validarConsultaGenerica } from './PrivacidadIA';
-import { crearClausulasView, crearClausulasWorkspace } from './Clausulas';
+import { IA_HABILITADA, IA_PLANTILLAS_HABILITADA, IA_DOCUMENTOS_HABILITADA, MENSAJE_IA_PAUSADA, AVISO_IA_GENERICA, asegurarIAHabilitada, validarConsultaGenerica } from './PrivacidadIA';
+import { filtrarCatalogoClausulas, crearClausulasView, crearClausulasWorkspace } from './Clausulas';
 import { crearDocumentViewer, crearOperacionForm, crearPapeleraView, crearTareasPanel, crearNegociacionPanel, crearReservaDecisionPanel } from './Operaciones';
 import { crearSuperAdminDashboard, crearConfiguracionView, crearDashboardView , crearEstadisticasView , crearCalendarioView } from './Operaciones';
 import { GS, MOBILE_STABILITY_CSS } from './Operaciones';
@@ -464,7 +464,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.19";
+var DOCWORKS_VERSION = "6.20";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -1062,6 +1062,7 @@ function textoEncabezadoDesdeDom(root){
   function walk(node){
     if(node.nodeType===3) return node.textContent||"";
     if(node.nodeType!==1) return "";
+    if(node.tagName==="BR")return "\n";
     var tok=node.getAttribute&&node.getAttribute("data-dw-token");
     if(tok) return "{{"+tok+"}}";
     var out="";
@@ -1070,11 +1071,17 @@ function textoEncabezadoDesdeDom(root){
   }
   return walk(root).replace(/\u00a0/g," ").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
 }
+function esTokenObligatorioIntroduccion(k,tipo){
+  return tokensDeTextoDocWorks(DEFAULT_ENCABEZADOS[tipo]||"").indexOf(k)!==-1&&["nomenclatura_catastral","nomenclatura_catastral_texto","inmobiliaria_matricula"].indexOf(k)===-1;
+}
+function estiloTokenIntroduccion(k,tipo){
+  return "display:inline-block;padding:2px 7px;border-radius:6px;"+(esTokenObligatorioIntroduccion(k,tipo)?"background:var(--dw-token-required-bg,#e7eef9);color:var(--dw-token-required-text,#173862);":"background:var(--surface2,rgba(127,127,127,.12));color:var(--muted);")+"font-weight:600;cursor:pointer;user-select:none;margin:0 1px";
+}
 function htmlEncabezadoDesdeTpl(tpl, tipo){
   var t=escaparHtmlDocWorks(String(tpl||"")); // escapamos ANTES de inyectar los spans de token
   return t.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, function(_,k){
     var lab=labelTokenEncabezado(k, tipo);
-    return '<span data-dw-token="'+k+'" contenteditable="false" style="display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(70,180,230,.14);color:#59c7f3;font-weight:700;cursor:pointer;user-select:none;margin:0 1px">'+lab+'</span>';
+    return '<span data-dw-token="'+k+'" contenteditable="false" style="'+estiloTokenIntroduccion(k,tipo)+'">'+lab+'</span>';
   }).replace(/\n/g,"<br/>");
 }
 function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, onRestablecer}){
@@ -1087,7 +1094,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
     setTokensUsados(tokensDeTextoDocWorks(value||""));
   }, [tipo]); // solo al montar / cambiar tipo; no en cada tecla
   function insertarToken(k){
-    if(tokensDeTextoDocWorks(textoNarrativaPrecioDocWorks(editorRef.current)).indexOf(k)!==-1)return;
+    if(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(editorRef.current)).indexOf(k)!==-1)return;
     var root=editorRef.current; if(!root) return;
     root.focus();
     var sel=window.getSelection&&window.getSelection();
@@ -1097,7 +1104,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
     }
     var span=document.createElement("span");
     span.setAttribute("data-dw-token",k); span.setAttribute("contenteditable","false");
-    span.style.cssText="display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(70,180,230,.14);color:#59c7f3;font-weight:700;cursor:pointer;user-select:none;margin:0 1px";
+    span.style.cssText=estiloTokenIntroduccion(k,tipo);
     span.textContent=labelTokenEncabezado(k, tipo);
     range.deleteContents(); range.insertNode(span);
     var space=document.createTextNode(" "); span.parentNode.insertBefore(space,span.nextSibling);
@@ -1107,6 +1114,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
   }
   function leer(){ return textoEncabezadoDesdeDom(editorRef.current); }
   function guardar(){
+    if(status==="saving"||status==="ia")return;
     var t=leer(); setStatus("saving");
     Promise.resolve(onSave(t)).then(function(res){
       if(res&&res.error){ setStatus("error"); setMsg("No se pudo guardar"); return; }
@@ -1115,6 +1123,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
     }).catch(function(){ setStatus("error"); setMsg("Error al guardar"); });
   }
   async function conIA(){
+    if(status==="saving"||status==="ia")return;
     setStatus("ia"); setMsg("Mejorando con IA…");
     try{
       var mejor=await mejorarEncabezadoIA(leer(), tipo);
@@ -1129,7 +1138,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
   return (
     <div style={{marginTop:8}}>
       <div style={{fontSize:12,color:"var(--dim)",marginBottom:8,lineHeight:1.45}}>
-        Hacé clic en los chips para insertar datos dinámicos (nombre del oferente, inmueble, montos, etc.). Se completan solos al generar el documento.
+        Usá chips para los datos variables, sin nombres, documentos ni domicilios reales. Se completan solos al generar el documento. Tocá un campo para insertarlo; los que ya usaste se ocultan.
       </div>
       <div
         ref={editorRef}
@@ -1140,36 +1149,26 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
         onKeyDown={function(e){ /* permitir Enter normal */ }}
         onInput={function(){setTokensUsados(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(editorRef.current)));}}
       />
-      <div style={{marginTop:12,padding:11,borderRadius:12,border:"1px solid var(--border)",background:"var(--card2, rgba(127,127,127,.035))"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-          <div style={{fontSize:12.5,fontWeight:750,color:"var(--text)"}}>Campos disponibles</div>
-          <span style={{fontSize:11,color:"var(--dim)",padding:"3px 7px",borderRadius:999,background:"var(--surface2, rgba(127,127,127,.08))"}}>{tokens.filter(function(k){return tokensUsados.indexOf(k)===-1;}).length} para insertar</span>
-        </div>
-        <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45,marginBottom:9}}>Tocá un campo para agregarlo donde está el cursor. Los que ya usaste se ocultan para evitar repeticiones.</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-          {tokens.filter(function(k){return tokensUsados.indexOf(k)===-1;}).map(function(k){
-            return <button key={k} type="button" title={"Insertar "+labelTokenEncabezado(k,tipo)} onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken(k);}}
-              style={{display:"inline-flex",alignItems:"center",gap:5,minHeight:31,padding:"6px 9px",borderRadius:999,border:"1px solid var(--border2, rgba(89,199,243,.28))",background:"var(--card, rgba(89,199,243,.055))",color:"var(--text)",fontWeight:600,cursor:"pointer",fontSize:11.5,boxShadow:"0 1px 2px rgba(0,0,0,.025)"}}>
-              <span aria-hidden="true" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:17,height:17,borderRadius:999,background:"rgba(89,199,243,.13)",color:"#59c7f3",fontSize:14,lineHeight:1}}>+</span>{labelTokenEncabezado(k, tipo)}
-            </button>;
-          })}
-          {tokens.every(function(k){return tokensUsados.indexOf(k)!==-1;})&&<div style={{fontSize:12,color:"var(--green)",padding:"5px 0"}}>Ya insertaste todos los campos disponibles. Si borrás uno del texto, volverá a aparecer acá.</div>}
-        </div>
+      <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:12}}>
+        {[true,false].map(function(obligatorios){var grupo=tokens.filter(function(k){return esTokenObligatorioIntroduccion(k,tipo)===obligatorios;});var disponibles=grupo.filter(function(k){return tokensUsados.indexOf(k)===-1;});return <section key={String(obligatorios)} aria-label={obligatorios?"Campos obligatorios":"Campos opcionales"} style={{padding:11,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2,var(--card))"}}>
+          <div style={{fontSize:12.5,fontWeight:700,color:"var(--text)",marginBottom:5}}>{obligatorios?"Campos obligatorios":"Campos opcionales"} · {disponibles.length} para insertar</div>
+          <div style={{fontSize:11.5,color:"var(--muted)",marginBottom:9,lineHeight:1.5}}>{obligatorios?"Campos necesarios para esta introducción según el texto base. Se muestran en azul.":"Datos complementarios que podés agregar. Se muestran en gris."}</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{disponibles.map(function(k){return <button key={k} type="button" className={"dw-intro-token "+(obligatorios?"required":"optional")} title={"Insertar "+labelTokenEncabezado(k,tipo)} onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken(k);}} style={{minHeight:36,padding:"6px 10px",borderRadius:999,border:"1px solid var(--border2)",background:obligatorios?"var(--dw-token-required-bg,#e7eef9)":"var(--surface2,var(--card))",color:obligatorios?"var(--dw-token-required-text,#173862)":"var(--muted)",fontWeight:600,fontSize:12,cursor:"pointer"}}>+ {labelTokenEncabezado(k,tipo)}</button>;})}{!disponibles.length&&<span style={{fontSize:12,color:"var(--muted)"}}>{obligatorios?"Ya están todos insertados.":"Ya insertaste todos los campos opcionales."}</span>}</div>
+        </section>;})}
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:12,alignItems:"center"}}>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>Cancelar</button>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={function(){
-          if(onRestablecer){
-            var defTpl=DEFAULT_ENCABEZADOS[tipo]||"";
-            if(editorRef.current) editorRef.current.innerHTML=htmlEncabezadoDesdeTpl(defTpl, tipo);
-            setTokensUsados(tokensDeTextoDocWorks(defTpl));
-            onRestablecer();
-          }
+        <button type="button" className="btn btn-ghost btn-sm" disabled={status==="saving"||status==="ia"} onClick={onCancel}>Cancelar</button>
+        <button type="button" className="btn btn-secondary btn-sm" disabled={status==="saving"||status==="ia"} onClick={function(){
+          if(!onRestablecer)return;
+          requestDwConfirm("¿Querés volver al texto predeterminado? Se reemplazará tu introducción personalizada.",async function(){
+            setStatus("saving");setMsg("");
+            try{var r=await onRestablecer();if(r&&r.error)throw r.error;dwNotify("success","Se restauró la introducción predeterminada");}catch(e){setStatus("error");setMsg("No se pudo restablecer. Tu texto sigue disponible; intentá nuevamente.");}
+          });
         }}>Restablecer valor predeterminado</button>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={conIA} disabled={!IA_DOCUMENTOS_HABILITADA||status==="ia"} title={!IA_DOCUMENTOS_HABILITADA?MENSAJE_IA_PAUSADA:undefined}>
-          {status==="ia"?"IA…":"Mejorar con IA"}
+        <button type="button" className="btn btn-secondary btn-sm" onClick={conIA} disabled={!IA_PLANTILLAS_HABILITADA||status==="ia"||status==="saving"}>
+          {status==="ia"?"Mejorando…":"Mejorar con IA"}
         </button>
-        <button type="button" className="btn btn-primary btn-sm" onClick={guardar} disabled={status==="saving"}>
+        <button type="button" className="btn btn-primary btn-sm" onClick={guardar} disabled={status==="saving"||status==="ia"}>
           {status==="saving"?"Guardando…":"Guardar introducción"}
         </button>
         {msg && <span style={{fontSize:12,color:status==="ia-error"||status==="error"?"var(--red)":"var(--muted)"}}>{msg}</span>}
@@ -1246,7 +1245,7 @@ function PrecioNarrativaEditor({bloque, onSave, onCancel, onSaved=onCancel}){
     if(editorRef.current) setTexto(textoNarrativaPrecioDocWorks(editorRef.current));
   }
   function insertarToken(k){
-    if(tokensDeTextoDocWorks(textoNarrativaPrecioDocWorks(editorRef.current)).indexOf(k)!==-1)return;
+    if(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(editorRef.current)).indexOf(k)!==-1)return;
     var root=editorRef.current;
     if(!root) return;
     root.focus();
@@ -1538,7 +1537,7 @@ function draftTieneContenido(d) {
   // La app precarga la fecha de aceptación al entrar en Económico; recorrer pasos
   // no es completar datos. Una fecha personalizada SÍ cuenta como progreso.
   var aceptacionAuto=sumarDiasISO(d.reserva_fecha_reserva||fechaHoyISO(),d.reserva_aceptacion_dias||5);
-  var metadatosIgnorados={tipo:true,estado:true,id:true,parent_id:true,created_at:true,updated_at:true,plantilla_version:true,clausulas_ids:true,tareas_done:true,tareas_custom:true};
+  var metadatosIgnorados:Record<string,boolean>={tipo:true,estado:true,id:true,parent_id:true,created_at:true,updated_at:true,plantilla_version:true,clausulas_ids:true,tareas_done:true,tareas_custom:true};
   if(d.tipo==="reserva" && (!d.reserva_aceptacion_vencimiento || d.reserva_aceptacion_vencimiento===aceptacionAuto)) metadatosIgnorados.reserva_aceptacion_vencimiento=true;
   if(Object.keys(d).some(function(k){
     if(metadatosIgnorados[k] || esDatoInstitucionalAutomatico(k) || !( /nombre|dni|cuit|cuil|email|e_mail|correo|telefono|teléfono|celular|mobile|phone|direccion|domicilio|precio|monto|fecha|plazo|uso|motivo|partido|provincia/i.test(k))) return false;
@@ -3120,8 +3119,8 @@ function getEncabezadoTemplate(tipo, perfil) {
 function tokensEncabezadoParaTipo(tipo) {
   var compra = ["comprador_nombre","comprador_dni","comprador_domicilio","vendedor_nombre","vendedor_dni","vendedor_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","precio_letras","anticipo_letras","saldo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
   var alq = ["locador_nombre","locador_dni","locador_domicilio","locatario_nombre","locatario_dni","locatario_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","alquiler_monto_letras","anticipo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
-  if (tipo==="alquiler"||tipo==="reserva_alquiler") return alq;
-  return compra;
+  var lista=(tipo==="alquiler"||tipo==="reserva_alquiler")?alq:compra;
+  return Array.from(new Set(tokensDeTextoDocWorks(DEFAULT_ENCABEZADOS[tipo]||"").concat(lista)));
 }
 
 function labelTokenEncabezado(k, tipo) {
@@ -3136,6 +3135,7 @@ function labelTokenEncabezado(k, tipo) {
     locador_nombre: "Nombre locador", locador_dni: "DNI locador", locador_domicilio: "Domicilio locador",
     locatario_nombre: "Nombre locatario/inquilino", locatario_dni: "DNI locatario", locatario_domicilio: "Domicilio locatario",
     inmueble_direccion: "Dirección del inmueble", inmueble_partido: "Partido", inmueble_provincia: "Provincia",
+    nomenclatura_catastral_texto: "Nomenclatura catastral con rótulo",
     nomenclatura_catastral: "Nomenclatura catastral",
     precio_letras: "Precio en letras", anticipo_letras: "Seña/anticipo en letras", saldo_letras: "Saldo en letras",
     alquiler_monto_letras: "Canon en letras", fecha_operacion_larga: "Fecha (larga)",
@@ -3154,8 +3154,23 @@ function aplicarEncabezadoPersonalizado(doc, op, tipo, perfil) {
   return Object.assign({}, doc, { encabezado: sustituirTokens(tpl, op, perfil, tipo) });
 }
 
+function validarChipsIntroduccionIA(salida,original,tipo){
+  var out=String(salida||"").trim();
+  validarConsultaGenerica(out);
+  var usados=tokensDeTextoDocWorks(out),permitidos=tokensEncabezadoParaTipo(tipo);
+  if(/\{\{|\}\}/.test(out.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g,"")))throw new Error("La IA devolvió chips con formato inválido. Tu texto original se conserva.");
+  if(usados.some(function(k){return permitidos.indexOf(k)===-1;})||/\[(?:NOMBRE|DNI|DOMICILIO|MONTO)[^\]]*\]/i.test(out))throw new Error("La IA devolvió campos que no son chips válidos. Tu texto original se conserva; intentá nuevamente.");
+  var necesarios=Array.from(new Set(tokensDeTextoDocWorks(original).concat(permitidos.filter(function(k){return esTokenObligatorioIntroduccion(k,tipo);}))));
+  if(necesarios.some(function(k){return usados.indexOf(k)===-1;}))throw new Error("La IA omitió chips necesarios. Tu texto original se conserva; intentá nuevamente.");
+  return out;
+}
+
 async function mejorarEncabezadoIA(textoActual, tipo) {
-  asegurarIAHabilitada("documento");
+  asegurarIAHabilitada();
+  validarConsultaGenerica(textoActual);
+  if(!tokensDeTextoDocWorks(textoActual).length)throw new Error("Usá chips para los datos variables antes de mejorar la introducción.");
+  var permitidos=tokensEncabezadoParaTipo(tipo);
+  var necesarios=permitidos.filter(function(k){return esTokenObligatorioIntroduccion(k,tipo);});
   var sb = await loadSupabaseJs();
   if (!sb) throw new Error("No se pudo conectar con Supabase.");
   var nombreTipo = (typeof TIPOS !== "undefined" && TIPOS[tipo]) ? TIPOS[tipo] : (tipo || "documento");
@@ -3165,7 +3180,9 @@ async function mejorarEncabezadoIA(textoActual, tipo) {
     "1) Respondé SOLO con el texto del preámbulo, sin explicaciones ni comillas envolventes.\n"+
     "2) Conservá EXACTAMENTE todos los tokens {{...}} (no los reemplaces ni borres).\n"+
     "3) Estilo formal jurídico argentino, claro y profesional.\n"+
-    "4) No inventes cláusulas nuevas; solo el preámbulo introductorio.\n\n"+
+    "4) No inventes cláusulas nuevas; solo el preámbulo introductorio genérico, sin datos reales.\n"+
+    "5) Insertá donde correspondan los chips necesarios: "+necesarios.map(function(k){return "{{"+k+"}}";}).join(", ")+".\n"+
+    "6) Usá únicamente estos tokens: "+permitidos.map(function(k){return "{{"+k+"}}";}).join(", ")+". Nunca escribas nombres de campos como texto común.\n\n"+
     "Texto actual:\n"+textoActual;
   function normalizarErrorIA(err){
     var m = String((err && err.message) || err || "");
@@ -3186,14 +3203,14 @@ async function mejorarEncabezadoIA(textoActual, tipo) {
   for (var intento=0; intento<2; intento++){
     try {
       res = await sb.functions.invoke("ia-docworks", {
-        body: { mode: "chat", messages: [{ role: "user", content: prompt }] }
+        body: { mode: "generic_chat", messages: [{ role: "user", content: prompt }] }
       });
       if (res.error) throw new Error(traducirError(res.error.message || "No se pudo conectar con el asistente."));
       var data = res.data || {};
       if (data.error) throw new Error(typeof data.error==="string"?data.error:(data.error.message||JSON.stringify(data.error)));
       var out = String(data.text || "").replace(/^```[\s\S]*?\n/, "").replace(/```$/, "").trim();
       if (!out) throw new Error("La IA no devolvió texto.");
-      return out;
+      return validarChipsIntroduccionIA(out,textoActual,tipo);
     } catch (e) {
       lastErr = e;
       var msg = String((e && e.message) || e || "");
@@ -4727,7 +4744,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
           <Inp id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva (días corridos)" type="number" min="1" step="1" value={data.reserva_vigencia_dias??"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} placeholder="30" hint="Sugerido: 30 días corridos desde la conformidad del vendedor. Podés escribir otro plazo, incluso más de 90 días."/>
           <button type="button" className="dw-economic-term-reset" onClick={function(){onChange("reserva_vigencia_dias","30");}}>Usar 30 días sugeridos</button>
         </div>}
-        {data.tipo==="reserva"&&<details className="col2 dw-economic-advanced dw-economic-acceptance" defaultOpen={!!((data.reserva_aceptacion_modo||"dias")!=="dias"||Number(data.reserva_aceptacion_dias||5)!==5)}>
+        {data.tipo==="reserva"&&<details className="col2 dw-economic-advanced dw-economic-acceptance" open={!!((data.reserva_aceptacion_modo||"dias")!=="dias"||Number(data.reserva_aceptacion_dias||5)!==5)}>
           <summary>
             <span className="dw-economic-advanced-title">Plazo de aceptación</span>
             <span className="dw-economic-advanced-caption">{(data.reserva_aceptacion_modo||"dias")==="horas"?(data.reserva_aceptacion_horas||48)+" horas desde la firma":(data.reserva_aceptacion_modo||"dias")==="fecha"?"Fecha fija":(data.reserva_aceptacion_dias||5)+" días para aceptar · sugerido 5 días"}</span>
@@ -4771,7 +4788,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
         </details>}
         {data.tipo!=="reserva"&&<Inp id="dw-field-escribania" label="Escribanía" value={data.escribania||""} onChange={function(e){onChange("escribania",e.target.value);}} placeholder="Escribanía García" className="col2"/>}
         {data.tipo!=="reserva"&&<Inp id="dw-field-fecha_posesion" label="Fecha de posesión" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2" {...estiloCampoFaltante(faltantes,"fecha_posesion")}/>}
-        <details className="col2 dw-economic-advanced" defaultOpen={!!(data.compra_modalidad_pago&&data.compra_modalidad_pago!=="habitual"||data.compra_medio_pago&&data.compra_medio_pago!=="sin_definir"||data.compra_condiciones_pago)}>
+        <details className="col2 dw-economic-advanced" open={!!(data.compra_modalidad_pago&&data.compra_modalidad_pago!=="habitual"||data.compra_medio_pago&&data.compra_medio_pago!=="sin_definir"||data.compra_condiciones_pago)}>
           <summary><span className="dw-economic-advanced-title">Opciones avanzadas</span><span className="dw-economic-advanced-caption">Financiación, cuotas y condiciones especiales de pago</span><span className="dw-economic-advanced-symbol" aria-hidden="true"></span></summary>
           <div className="grid2 dw-economic-advanced-content">
         <div className="col2" style={{padding:"12px 14px",border:"1px solid var(--border)",borderRadius:12,background:"var(--surface2)"}}>
@@ -5120,7 +5137,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
   var idsObligatorias=Array.isArray(cfgOpcionales.obligatorias_ids)?cfgOpcionales.obligatorias_ids:[];
   // El catálogo que ve el broker contiene solo extras habilitados; los del modelo no se exponen.
   var idsFrecuentes=Array.isArray(cfgOpcionales.frecuentes_ids)?cfgOpcionales.frecuentes_ids:[];
-  var lista=(clausulas||[]).filter(function(c){return c.id!=="c4" && !clausulaYaEnTextoBase(c) && !c.obligatoria && idsObligatorias.indexOf(c.id)===-1 && clausulaAplicaTipo(c,data.tipo) && (idsOpcionales.indexOf(c.id)!==-1 || idsFrecuentes.indexOf(c.id)!==-1);});
+  var lista=filtrarCatalogoClausulas(clausulas,{tipo:data.tipo,idsProtegidos:idsObligatorias,esTextoBase:clausulaYaEnTextoBase,aplicaTipo:clausulaAplicaTipo}).filter(function(c){return !c.obligatoria&&(idsOpcionales.indexOf(c.id)!==-1||idsFrecuentes.indexOf(c.id)!==-1);});
   lista.sort(function(a,b){return Number(idsFrecuentes.indexOf(b.id)!==-1)-Number(idsFrecuentes.indexOf(a.id)!==-1);});
   var protegidas=obtenerIdsObligatoriosDePlantilla(perfil,data.tipo);
   var nombreInmobiliariaObligatoria=(perfil&&perfil.nombre&&String(perfil.nombre).trim())?String(perfil.nombre).trim():"la inmobiliaria";
@@ -6549,21 +6566,20 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
     return persistir(Object.assign({},perfil,{encabezados_custom:mapa})).then(function(res){if(!(res&&res.error)){setEncabezadoDraft("");setEncabezadoEditing(false);}return res;});
   }
   return <div style={{display:"flex",flexDirection:"column",gap:12}}>
-    {barraSuperior&&<div id="dw-config-modelo" style={{padding:"8px 2px",fontSize:13,fontWeight:700,color:"var(--text)"}}>{TIPOS[tipoDocSel]||tipoDocSel}</div>}
     {!puedeEditar&&<div className="notice" style={{fontSize:12}}>Esta configuración es de solo lectura. Solo Dueño y Administrador pueden editar encabezados y cláusulas.</div>}
     {pasoModelo===3&&mostrarIntroduccion!==false&&<div id="dw-config-introduccion" className="card" style={{padding:14,scrollMarginTop:90}}>
       <div style={{fontSize:15,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Introducción</div>
       <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Los datos se completan desde la operación.</div>
       {!ocultarSelector&&<label className="field" style={{display:"block",marginBottom:10}}><span className="field-label">Tipo de documento</span><select className="inp" value={tipoDocSel} onChange={function(e){setTipoDocSel(e.target.value);setEncabezadoEditing(false);setEncabezadoDraft("");}} style={{width:"100%"}}>{PLANTILLA_TIPOS.map(function(tipo){return <option key={tipo} value={tipo}>{TIPOS[tipo]||tipo}</option>;})}</select></label>}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:8}}><span className="badge" style={{background:customTexto?"rgba(212,168,83,.10)":"rgba(74,222,128,.08)",color:customTexto?"var(--gold)":"var(--green)"}}>{customTexto?"Personalizado":"Predeterminado"}</span>{puedeEditar&&!encabezadoEditing&&<div style={{display:"flex",gap:6}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setEncabezadoDraft(getEncabezadoTemplate(tipoDocSel,perfil));setEncabezadoEditing(true);}}>Editar introducción</button>{customTexto&&<button type="button" className="btn btn-secondary btn-sm" onClick={restablecerEncabezado}>Restablecer</button>}</div>}</div>
-      {encabezadoEditing&&puedeEditar?<EncabezadoEditor tipo={tipoDocSel} value={encabezadoDraft||getEncabezadoTemplate(tipoDocSel,perfil)} onCancel={function(){setEncabezadoEditing(false);setEncabezadoDraft("");}} onRestablecer={function(){setEncabezadoDraft(DEFAULT_ENCABEZADOS[tipoDocSel]||"");}} onSave={guardarEncabezado}/>:<div style={{padding:"10px 11px",borderRadius:8,background:"rgba(255,255,255,.025)",border:"1px solid var(--border2)",fontSize:12,color:"var(--muted)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{sustituirTokens(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"Sin introducción predeterminada para este tipo.",SAMPLE_OP_PREVIEW,perfil,tipoDocSel).slice(0,650)}{(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"").length>650?"…":""}</div>}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:8}}><span className="badge" style={{background:customTexto?"rgba(212,168,83,.10)":"rgba(74,222,128,.08)",color:customTexto?"var(--gold)":"var(--green)"}}>{customTexto?"Personalizado":"Predeterminado"}</span>{puedeEditar&&!encabezadoEditing&&<div style={{display:"flex",gap:6}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setEncabezadoDraft(getEncabezadoTemplate(tipoDocSel,perfil));setEncabezadoEditing(true);}}>Editar introducción</button>{customTexto&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){requestDwConfirm("¿Querés volver al texto predeterminado? Se reemplazará tu introducción personalizada.",async function(){var r=await restablecerEncabezado();if(!(r&&r.error))dwNotify("success","Se restauró la introducción predeterminada");});}}>Restablecer</button>}</div>}</div>
+      {encabezadoEditing&&puedeEditar?<EncabezadoEditor tipo={tipoDocSel} value={encabezadoDraft||getEncabezadoTemplate(tipoDocSel,perfil)} onCancel={function(){setEncabezadoEditing(false);setEncabezadoDraft("");}} onRestablecer={restablecerEncabezado} onSave={guardarEncabezado}/>:<div style={{padding:"10px 11px",borderRadius:8,background:"rgba(255,255,255,.025)",border:"1px solid var(--border2)",fontSize:12,color:"var(--muted)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{sustituirTokens(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"Sin introducción predeterminada para este tipo.",SAMPLE_OP_PREVIEW,perfil,tipoDocSel).slice(0,650)}{(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"").length>650?"…":""}</div>}
       {saveStatus==="saving"&&<div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Guardando cambios…</div>}{saveStatus==="saved"&&<div style={{fontSize:12,color:"var(--green)",marginTop:8}}>Cambios guardados.</div>}{saveStatus==="error"&&<div style={{fontSize:12,color:"var(--red)",marginTop:8}}>No se pudo guardar. Revisá la conexión e intentá nuevamente.</div>}
     </div>}
     {(pasoModelo===2||pasoModelo===3)&&<div id="dw-config-clausulas" style={{scrollMarginTop:90,border:"1px solid var(--border)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:12}}>
       {children}
 
     </div>}
-    {barraSuperior&&<div className="card" data-testid="dw-model-actions" style={{padding:14,display:"flex",flexDirection:"column",gap:8}}>
+    {barraSuperior&&<div data-testid="dw-model-actions" style={{padding:"4px 0",display:"flex",flexDirection:"column",gap:7,alignItems:"flex-end"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
         <button type="button" data-testid="dw-open-fullpage-preview" className="btn btn-secondary" onClick={function(){if(typeof onPreviewChange==="function")onPreviewChange(true);}}>Vista previa</button>
         {puedeEditar&&<button type="button" className="btn btn-primary" disabled={saveStatus==="saving"||encabezadoEditing||!!modeloEnEdicion} onClick={guardarModelo}>{saveStatus==="saving"?"Guardando…":"Guardar cambios"}</button>}
@@ -7512,7 +7528,7 @@ const EstadisticasView = crearEstadisticasView({Btn, getComisionComponents, load
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
 const OperacionForm = crearOperacionForm({AutosaveIndicator, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
-const ClausulasWorkspace = crearClausulasWorkspace({ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
+const ClausulasWorkspace = crearClausulasWorkspace({TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
 const SuperAdminDashboard = crearSuperAdminDashboard({AUTH_RED, AUTH_MUTED, descargarCSV, loadSupabaseJs, traducirError, Field, dwNotify, requestDwConfirm, fmt$, Modal, DWIcon});
 const ConfiguracionView = crearConfiguracionView({Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});

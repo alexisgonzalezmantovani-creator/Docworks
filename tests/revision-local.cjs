@@ -21,6 +21,6 @@ await fill('Consulta general sobre una reserva.');await click(button('Enviar'));
 assert.equal(invocations,1);assert.equal(document.querySelector('textarea').value,'Consulta general sobre una reserva.');assert.match(document.querySelector('[role=alert]').textContent,/Fallo simulado/);
 await click(button('Nueva consulta'));assert.equal(document.querySelector('textarea').value,'');assert.equal(document.querySelector('[role=alert]'),null);assert.ok(!document.body.textContent.includes('Consulta general sobre una reserva.'));
 await app.act(async()=>mount.render(react.createElement(app.EncabezadoEditor,{tipo:'reserva',value:'Texto manual de ejemplo.',onCancel(){},onSave(){},onRestablecer(){}})));
-assert.equal(button('Mejorar con IA').disabled,true);assert.match(button('Mejorar con IA').title,/no está disponible/);assert.equal(button('Guardar introducción').disabled,false);
-await app.act(async()=>mount.unmount());dom.window.close();console.log('APROBADAS revisión local: ocho textos sin cambios; recuperación de consulta tras error; reinicio del chat; mejora de encabezados bloqueada y edición manual disponible (DOM simulado).');
+assert.equal(button('Mejorar con IA').disabled,false);assert.equal(button('Guardar introducción').disabled,false);
+await app.act(async()=>mount.unmount());dom.window.close();console.log('APROBADAS revisión local: ocho textos sin cambios; recuperación de consulta tras error; reinicio del chat; mejora de plantillas genéricas habilitada y edición manual disponible (DOM simulado).');
 })().catch(e=>{console.error(e);process.exitCode=1;dom.window.close()});

@@ -35,7 +35,7 @@ function noProvider(){assert.equal(requests.filter(r=>r.url.includes('generative
  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-ia-generica-'));
  esbuild.buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+'\nimport {renderToStaticMarkup} from "react-dom/server"; export {BotIA,mejorarEncabezadoIA,revisarDocumentoIA,renderToStaticMarkup};',resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs')});
  global.document={querySelector:()=>({}),title:''};const a=require(path.join(tmp,'app.cjs'));delete global.document;
- await assert.rejects(a.mejorarEncabezadoIA('SENTINELA','reserva'),/revisión de operaciones/);
+ await assert.rejects(a.mejorarEncabezadoIA('SENTINELA','reserva'),/Usá chips/);
  await assert.rejects(a.revisarDocumentoIA({comprador_nombre:'SENTINELA'},{}),/revisión de operaciones/);
  const {JSDOM}=require('jsdom');const html=a.renderToStaticMarkup(a.BotIA({onClose(){},onAddClausula(){},operaciones:[{comprador_nombre:'SENTINELA'}]}));const d=new JSDOM(html).window.document;
  assert.ok(d.body.textContent.includes('Nueva consulta'));assert.ok(d.querySelector('textarea'));assert.equal(d.querySelector('input[type=file]'),null);assert.ok(!d.body.textContent.includes('SENTINELA'));assert.ok(!d.body.textContent.includes('Revisar operación'));assert.ok(d.body.textContent.includes('sin datos personales'));

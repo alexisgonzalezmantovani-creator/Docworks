@@ -22,7 +22,7 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
   await app.act(async()=>render());
   await click(button('＋ Agregar cláusula'));
   check(tipo+' alta no persiste',()=>assert.equal(saves,0));
-  check(tipo+' chips tienen etiquetas inequívocas',()=>{const labels=buttons().map(b=>b.textContent.trim()).filter(t=>t.startsWith('+'));assert.equal(new Set(labels).size,labels.length);});
+  check(tipo+' chips tienen etiquetas inequívocas',()=>{const labels=buttons().map(b=>b.textContent.trim()).filter(t=>t.startsWith('+')&&t.length>1);assert.equal(new Set(labels).size,labels.length);});
   if(tipo==='reserva'){
    await click(button('+Reserva alquiler · importe numérico'));
    await click(button('+Reserva alquiler · importe en letras'));

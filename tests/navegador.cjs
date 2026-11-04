@@ -61,20 +61,20 @@ const server=http.createServer((req,res)=>{if(req.url==='/docworks-header-logo.p
   }
   await page.goto('http://127.0.0.1:'+server.address().port+'/workspace');
   for(const label of ['Reserva de Compra','Boleto de Compraventa','Reserva de Alquiler','Contrato de Alquiler','Comodato','Autorización de Venta','Refuerzo de Reserva','Devolución de Reserva']){
-   await page.locator('#dw-modelo-documento').selectOption({label});
-   assert.equal(await page.locator('#dw-config-modelo').count(),1);checks++;
-   assert.ok((await page.locator('#dw-config-modelo').textContent()).startsWith(label),name+' cambio a '+label);checks++;
-   const tipoActual=await page.locator('#dw-modelo-documento').inputValue();
+   await page.locator('#dw-modelo-documento').getByRole('button',{name:label,exact:true}).click();
+   assert.equal(await page.locator('#dw-config-modelo').count(),0);checks++;
+   assert.equal(await page.locator('#dw-modelo-documento [aria-pressed=true]').innerText(),label,name+' cambio a '+label);checks++;
+   const tipoActual=await page.locator('#dw-modelo-documento [aria-pressed=true]').getAttribute('data-document-type');
    const idsDocumento=await page.locator('#dw-model-extra-clauses [data-clausula-id]').evaluateAll(xs=>xs.map(x=>x.dataset.clausulaId));
    await page.getByRole('navigation',{name:'Cláusulas y documentos'}).getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
-   await page.locator('#dw-biblioteca-documento').selectOption(tipoActual);
+   await page.locator('#dw-biblioteca-documento [data-document-type="'+tipoActual+'"]').click();
    const idsBiblioteca=await page.locator('[data-clausula-id]').evaluateAll(xs=>xs.map(x=>x.dataset.clausulaId));
    assert.deepEqual(idsDocumento,idsBiblioteca,name+' mismo catálogo '+label);checks++;
    assert.deepEqual(idsDocumento,['ejemplo-opcional'],name+' sin cláusulas viejas/eliminadas '+label);checks++;
    await page.getByRole('navigation',{name:'Cláusulas y documentos'}).getByRole('button',{name:'Documentos',exact:true}).click();
 
   }
-  await page.locator('#dw-modelo-documento').selectOption({label:'Reserva de Compra'});
+  await page.locator('#dw-modelo-documento').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
   assert.equal(await nav.getByRole('button').count(),3);checks++;
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
@@ -109,7 +109,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/docworks-header-logo.p
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' workspace overflow');checks++;
   await page.screenshot({path:path.join(out,'documentos-'+name+'.png'),fullPage:true});
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
-  await page.locator('#dw-biblioteca-documento').selectOption('todas');
+  await page.locator('#dw-biblioteca-documento').getByRole('button',{name:'Todas',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
   await nav.getByRole('button',{name:'Documentos',exact:true}).click();
   await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();

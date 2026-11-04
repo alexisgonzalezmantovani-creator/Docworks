@@ -43,12 +43,12 @@ async function fill(el,value){assert.ok(el);await a.act(async()=>{Object.getOwnP
  let data={...op,clausulas_ids:[]};
  function render(){root.render(a.createElement(a.StepClausulas,{data,perfil,clausulas:a.CLAUSULAS_DEFAULT,onChange:(k,v)=>{data={...data,[k]:v};render();}}));}
  await a.act(async()=>render());
- await click(document.querySelector('[aria-label="Agregar Aires acondicionados incluidos"]'));
+ await click(document.querySelector('[aria-label="Incluir Aires acondicionados incluidos"]'));
  await fill(document.getElementById('dw-field-entrega_aires_detalle'),'1 equipo en living, funcionando.');
  check('seleccionar aires abre el campo y conserva el dato',()=>assert.equal(data.entrega_aires_detalle,'1 equipo en living, funcionando.'));
  await click(document.querySelector('[aria-label="Quitar Aires acondicionados incluidos"]'));
  check('quitar condición oculta detalle y deja de exigirlo',()=>{assert.equal(document.getElementById('dw-field-entrega_aires_detalle'),null);assert.ok(!a.getCamposFaltantesDetalle(data).some(f=>f.campo==='entrega_aires_detalle'));assert.ok(!a.docToPlainText(a.buildDocSections(data,a.CLAUSULAS_DEFAULT,'boleto')).includes('1 equipo en living'));});
- await click(document.querySelector('[aria-label="Agregar Aires acondicionados incluidos"]'));
+ await click(document.querySelector('[aria-label="Incluir Aires acondicionados incluidos"]'));
  check('volver a seleccionar recupera el detalle',()=>assert.equal(document.getElementById('dw-field-entrega_aires_detalle').value,'1 equipo en living, funcionando.'));
  const uuid='6b0e9c1f-7014-4d21-8248-f914727dfbc1';
  const copia={...especiales.find(c=>c.id==='especial.aires_incluidos'),id:uuid};
@@ -56,7 +56,7 @@ async function fill(el,value){assert.ok(el);await a.act(async()=>{Object.getOwnP
  const perfilUuid={...perfil,plantillas:{boleto:{clausulas_ids:[uuid]}}};
  function renderUuid(){root.render(a.createElement(a.StepClausulas,{data,perfil:perfilUuid,clausulas:[copia],onChange:(k,v)=>{data={...data,[k]:v};renderUuid();}}));}
  await a.act(async()=>renderUuid());
- await click(document.querySelector('[aria-label="Agregar Aires acondicionados incluidos"]'));
+ await click(document.querySelector('[aria-label="Incluir Aires acondicionados incluidos"]'));
  check('copia con UUID exige detalle y abre el campo',()=>{assert.ok(document.getElementById('dw-field-entrega_aires_detalle'));assert.ok(a.getCamposFaltantesDetalle(data).some(f=>f.campo==='entrega_aires_detalle'));});
  await fill(document.getElementById('dw-field-entrega_aires_detalle'),'Equipo copiado con UUID en cocina.');
  check('copia con UUID exporta el detalle y no cambia biblioteca',()=>{assert.ok(a.docToPlainText(a.buildDocSections(data,[copia],'boleto')).includes('Equipo copiado con UUID en cocina.'));assert.equal(copia.contenido,especiales.find(c=>c.id==='especial.aires_incluidos').contenido);});

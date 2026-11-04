@@ -63,8 +63,10 @@ const deps={crear:async c=>{altas++;catalogo.push({...c,id:'nuevo'});return {dat
  await click([...document.querySelectorAll('fieldset input[type=checkbox]')][0]);
  const savesBefore=guardados;await click(button('Guardar cláusula'));
  check('opción biblioteca sola funciona desde el mismo editor',()=>{assert.equal(guardados,savesBefore);assert.equal(altas,2)});
- await click(button('Usar esta idea'));
- check('idea de fábrica abre el mismo editor sin guardar todavía',()=>{assert.equal(altas,2);assert.ok(document.getElementById('dw-clausula-texto'));assert.ok(button('Guardar y habilitar'));});
+ check('biblioteca no muestra ideas de fábrica',()=>assert.ok(!document.body.textContent.includes('Ideas de cláusulas de fábrica')));
+ await click(button('＋ Crear cláusula para biblioteca'));
+ await fill(document.querySelector('fieldset input.inp'),'Condición nueva');
+ await fill(document.getElementById('dw-clausula-texto'),'Texto de prueba para proteger al salir.');
  const borrador=document.getElementById('dw-clausula-texto').value;
  await click(button('Documentos'));
  check('cambiar de biblioteca a documentos protege el borrador',()=>{assert.ok(pendingConfirm);assert.ok(document.getElementById('dw-clausula-texto'));assert.equal(document.getElementById('dw-clausula-texto').value,borrador);});
@@ -120,7 +122,7 @@ const deps={crear:async c=>{altas++;catalogo.push({...c,id:'nuevo'});return {dat
   {id:'solo-boleto',titulo:'Acuerdo especial del boleto',contenido:'Texto de boleto.',tipos:['boleto']}
  ];await a.act(async()=>render());
  const visibles=()=>[...document.querySelectorAll('[data-clausula-id]')].map(e=>e.dataset.clausulaId);
- async function elegir(id,tipo){await a.act(async()=>{const el=document.getElementById(id);el.value=tipo;el.dispatchEvent(new Event('change',{bubbles:true}));});}
+ async function elegir(id,tipo){await click([...document.getElementById(id).querySelectorAll('button')].find(b=>b.textContent.trim()===(tipo==='todas'?'Todas':a.TIPOS[tipo])));}
  for(const tipo of a.PLANTILLA_TIPOS){
   await click(button('Biblioteca de cláusulas'));await elegir('dw-biblioteca-documento',tipo);const idsBiblioteca=visibles();
   await click(button('Documentos'));await elegir('dw-modelo-documento',tipo);const idsDocumento=visibles();
