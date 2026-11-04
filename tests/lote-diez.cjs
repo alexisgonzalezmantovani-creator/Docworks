@@ -31,6 +31,13 @@ let checks=0;function check(label,fn){fn();checks++;console.log('OK',label);}
  check('sin título duplicado ni tarjeta blanca en acciones',()=>{assert.equal(document.getElementById('dw-config-modelo'),null);assert.ok(!document.querySelector('[data-testid=dw-model-actions]').classList.contains('card'));});
  await click(button('Editar introducción'));
  check('campos agrupados y colores distintos',()=>{assert.ok(document.querySelector('[aria-label="Campos obligatorios"]'));assert.ok(document.querySelector('[aria-label="Campos opcionales"]'));assert.ok(document.querySelector('.dw-intro-token.required'));assert.ok(document.querySelector('.dw-intro-token.optional'));assert.notEqual(document.querySelector('.dw-intro-token.required').style.background,document.querySelector('.dw-intro-token.optional').style.background);assert.equal(button('Mejorar con IA').disabled,false);});
+ check('obligatorios incluidos siguen visibles y no se duplican',()=>{const b=document.querySelector('.dw-intro-token.required[disabled]');assert.ok(b);assert.ok(b.textContent.includes('Incluido'));});
+ await click(button('−'));
+ check('cerrar sin cambios no pide confirmación ni guarda',()=>{assert.equal(pending,null);assert.equal(saves,0);assert.equal(document.querySelector('[contenteditable]'),null);});
+ await click(button('+'));await click(button('Editar introducción'));
+ await a.act(async()=>{const e=document.querySelector('[contenteditable]');e.append(' Cambio');e.dispatchEvent(new Event('input',{bubbles:true}));});
+ await click(button('−'));
+ check('cerrar con cambios pide confirmación y conserva el borrador',()=>{assert.ok(pending.message.includes('Descartar'));assert.ok(document.querySelector('[contenteditable]').textContent.includes('Cambio'));assert.equal(saves,0);});pending=null;
  await click(button('Restablecer valor predeterminado'));
  check('restablecer espera confirmación',()=>{assert.ok(pending.message.includes('predeterminado'));assert.equal(saves,0);assert.ok(document.querySelector('[contenteditable]'));});pending=null;
  check('cancelar confirmación conserva edición',()=>{assert.ok(document.body.textContent.includes('Personalizado'));assert.equal(saves,0);});
@@ -47,6 +54,6 @@ let checks=0;function check(label,fn){fn();checks++;console.log('OK',label);}
  await click([...document.querySelectorAll('#dw-modelo-documento button')].find(b=>b.textContent===a.TIPOS.reserva_alquiler));
  check('botón cambia el documento',()=>assert.equal(document.querySelector('#dw-modelo-documento [aria-pressed=true]').textContent,a.TIPOS.reserva_alquiler));
  await click(button('Biblioteca de cláusulas'));
- check('biblioteca tiene Todas y creación alineada en el mismo selector',()=>{assert.equal(document.querySelectorAll('#dw-biblioteca-documento .dw-document-choice').length,9);assert.ok(document.querySelector('#dw-biblioteca-documento .dw-document-selector-head').textContent.includes('Crear cláusula'));assert.ok(!document.body.textContent.includes('Ideas de cláusulas de fábrica'));});
+ check('biblioteca tiene Todos los documentos y creación alineada en el mismo selector',()=>{assert.equal(document.querySelectorAll('#dw-biblioteca-documento .dw-document-choice').length,9);assert.equal(document.querySelectorAll('#dw-biblioteca-documento .dw-document-grid button').length,8);assert.ok(document.querySelector('#dw-biblioteca-documento .dw-document-selector-head [data-document-type=todas]'));assert.ok(document.querySelector('#dw-biblioteca-documento .dw-document-selector-head').textContent.includes('Crear cláusula'));assert.ok(!document.body.textContent.includes('Ideas de cláusulas de fábrica'));});
  await a.act(async()=>root.unmount());dom.window.close();console.log('APROBADAS',checks,'verificaciones de la tanda.');
 })().catch(e=>{console.error(e);process.exitCode=1;dom.window.close();});

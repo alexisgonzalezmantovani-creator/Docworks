@@ -464,7 +464,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.20";
+var DOCWORKS_VERSION = "6.21";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -1075,7 +1075,7 @@ function esTokenObligatorioIntroduccion(k,tipo){
   return tokensDeTextoDocWorks(DEFAULT_ENCABEZADOS[tipo]||"").indexOf(k)!==-1&&["nomenclatura_catastral","nomenclatura_catastral_texto","inmobiliaria_matricula"].indexOf(k)===-1;
 }
 function estiloTokenIntroduccion(k,tipo){
-  return "display:inline-block;padding:2px 7px;border-radius:6px;"+(esTokenObligatorioIntroduccion(k,tipo)?"background:var(--dw-token-required-bg,#e7eef9);color:var(--dw-token-required-text,#173862);":"background:var(--surface2,rgba(127,127,127,.12));color:var(--muted);")+"font-weight:600;cursor:pointer;user-select:none;margin:0 1px";
+  return "display:inline-block;padding:2px 7px;border-radius:6px;"+(esTokenObligatorioIntroduccion(k,tipo)?"background:var(--dw-token-required-bg,#bceaff);color:var(--dw-token-required-text,#074d71);":"background:var(--surface2,rgba(127,127,127,.12));color:var(--muted);")+"font-weight:600;cursor:pointer;user-select:none;margin:0 1px";
 }
 function htmlEncabezadoDesdeTpl(tpl, tipo){
   var t=escaparHtmlDocWorks(String(tpl||"")); // escapamos ANTES de inyectar los spans de token
@@ -1084,7 +1084,7 @@ function htmlEncabezadoDesdeTpl(tpl, tipo){
     return '<span data-dw-token="'+k+'" contenteditable="false" style="'+estiloTokenIntroduccion(k,tipo)+'">'+lab+'</span>';
   }).replace(/\n/g,"<br/>");
 }
-function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, onRestablecer}){
+function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, onRestablecer, onDirtyChange=undefined}){
   const editorRef=useRef(null);
   const [tokensUsados,setTokensUsados]=useState(function(){return tokensDeTextoDocWorks(value||"");});
   const [status,setStatus]=useState(null); // saving | saved | error | ia | ia-error
@@ -1093,6 +1093,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
     if(editorRef.current) editorRef.current.innerHTML=htmlEncabezadoDesdeTpl(value||"", tipo);
     setTokensUsados(tokensDeTextoDocWorks(value||""));
   }, [tipo]); // solo al montar / cambiar tipo; no en cada tecla
+  function reportarCambio(){if(onDirtyChange)onDirtyChange(textoEncabezadoDesdeDom(editorRef.current)!==String(value||""));}
   function insertarToken(k){
     if(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(editorRef.current)).indexOf(k)!==-1)return;
     var root=editorRef.current; if(!root) return;
@@ -1110,7 +1111,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
     var space=document.createTextNode(" "); span.parentNode.insertBefore(space,span.nextSibling);
     range.setStartAfter(space); range.collapse(true);
     if(sel){ sel.removeAllRanges(); sel.addRange(range); }
-    setTokensUsados(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(root)));
+    setTokensUsados(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(root)));reportarCambio();
   }
   function leer(){ return textoEncabezadoDesdeDom(editorRef.current); }
   function guardar(){
@@ -1128,7 +1129,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
     try{
       var mejor=await mejorarEncabezadoIA(leer(), tipo);
       if(editorRef.current) editorRef.current.innerHTML=htmlEncabezadoDesdeTpl(mejor, tipo);
-      setTokensUsados(tokensDeTextoDocWorks(mejor));
+      setTokensUsados(tokensDeTextoDocWorks(mejor));reportarCambio();
       setStatus(null); setMsg("Revisá el texto y guardá si te convence.");
     }catch(e){
       setStatus("ia-error"); setMsg(traducirError(e&&e.message?e.message:"No se pudo usar la IA."));
@@ -1138,7 +1139,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
   return (
     <div style={{marginTop:8}}>
       <div style={{fontSize:12,color:"var(--dim)",marginBottom:8,lineHeight:1.45}}>
-        Usá chips para los datos variables, sin nombres, documentos ni domicilios reales. Se completan solos al generar el documento. Tocá un campo para insertarlo; los que ya usaste se ocultan.
+        Usá chips para los datos variables, sin nombres, documentos ni domicilios reales. Se completan solos al generar el documento. Tocá un campo para insertarlo; los obligatorios permanecen visibles y muestran si ya están incluidos.
       </div>
       <div
         ref={editorRef}
@@ -1147,13 +1148,13 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
         className="inp"
         style={{minHeight:120,lineHeight:1.55,padding:"10px 12px",whiteSpace:"pre-wrap",fontSize:12.5}}
         onKeyDown={function(e){ /* permitir Enter normal */ }}
-        onInput={function(){setTokensUsados(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(editorRef.current)));}}
+        onInput={function(){setTokensUsados(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(editorRef.current)));reportarCambio();}}
       />
       <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:12}}>
-        {[true,false].map(function(obligatorios){var grupo=tokens.filter(function(k){return esTokenObligatorioIntroduccion(k,tipo)===obligatorios;});var disponibles=grupo.filter(function(k){return tokensUsados.indexOf(k)===-1;});return <section key={String(obligatorios)} aria-label={obligatorios?"Campos obligatorios":"Campos opcionales"} style={{padding:11,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2,var(--card))"}}>
-          <div style={{fontSize:12.5,fontWeight:700,color:"var(--text)",marginBottom:5}}>{obligatorios?"Campos obligatorios":"Campos opcionales"} · {disponibles.length} para insertar</div>
-          <div style={{fontSize:11.5,color:"var(--muted)",marginBottom:9,lineHeight:1.5}}>{obligatorios?"Campos necesarios para esta introducción según el texto base. Se muestran en azul.":"Datos complementarios que podés agregar. Se muestran en gris."}</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{disponibles.map(function(k){return <button key={k} type="button" className={"dw-intro-token "+(obligatorios?"required":"optional")} title={"Insertar "+labelTokenEncabezado(k,tipo)} onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken(k);}} style={{minHeight:36,padding:"6px 10px",borderRadius:999,border:"1px solid var(--border2)",background:obligatorios?"var(--dw-token-required-bg,#e7eef9)":"var(--surface2,var(--card))",color:obligatorios?"var(--dw-token-required-text,#173862)":"var(--muted)",fontWeight:600,fontSize:12,cursor:"pointer"}}>+ {labelTokenEncabezado(k,tipo)}</button>;})}{!disponibles.length&&<span style={{fontSize:12,color:"var(--muted)"}}>{obligatorios?"Ya están todos insertados.":"Ya insertaste todos los campos opcionales."}</span>}</div>
+        {[true,false].map(function(obligatorios){var grupo=tokens.filter(function(k){return esTokenObligatorioIntroduccion(k,tipo)===obligatorios;});var disponibles=grupo.filter(function(k){return tokensUsados.indexOf(k)===-1;});var visibles=obligatorios?grupo:disponibles;return <section key={String(obligatorios)} aria-label={obligatorios?"Campos obligatorios":"Campos opcionales"} style={{padding:11,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2,var(--card))"}}>
+          <div style={{fontSize:12.5,fontWeight:700,display:"inline-block",padding:"5px 9px",borderRadius:999,background:obligatorios?"var(--dw-token-required-bg,#bceaff)":"var(--surface2,var(--card))",color:obligatorios?"var(--dw-token-required-text,#074d71)":"var(--muted)",marginBottom:5}}>{obligatorios?"Campos obligatorios":"Campos opcionales"} · {disponibles.length} para insertar</div>
+          <div style={{fontSize:11.5,color:"var(--muted)",marginBottom:9,lineHeight:1.5}}>{obligatorios?"Campos necesarios para esta introducción según el texto base. Se muestran en celeste, incluso cuando ya están incluidos.":"Datos complementarios que podés agregar. Se muestran en gris."}</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{visibles.map(function(k){var incluido=tokensUsados.indexOf(k)!==-1;return <button key={k} disabled={incluido} aria-label={labelTokenEncabezado(k,tipo)+(incluido?" · Incluido":"")} type="button" className={"dw-intro-token "+(obligatorios?"required":"optional")} title={(incluido?"Ya incluido: ":"Insertar ")+labelTokenEncabezado(k,tipo)} onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken(k);}} style={{minHeight:36,padding:"6px 10px",borderRadius:999,border:"1px solid var(--border2)",background:obligatorios?"var(--dw-token-required-bg,#bceaff)":"var(--surface2,var(--card))",color:obligatorios?"var(--dw-token-required-text,#074d71)":"var(--muted)",fontWeight:600,fontSize:12,cursor:incluido?"default":"pointer"}}>{incluido?"✓ ":"+ "}{labelTokenEncabezado(k,tipo)}{incluido?" · Incluido":""}</button>;})}{!visibles.length&&<span style={{fontSize:12,color:"var(--muted)"}}>{obligatorios?"Ya están todos insertados.":"Ya insertaste todos los campos opcionales."}</span>}</div>
         </section>;})}
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:12,alignItems:"center"}}>
@@ -6491,12 +6492,20 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   function setTipoDocSel(v){if(typeof onTipoDocChange==="function")onTipoDocChange(v);else setTipoDocInterno(v);}
   const [encabezadoEditing,setEncabezadoEditing]=useState(false);
   const [encabezadoDraft,setEncabezadoDraft]=useState("");
+  const [introduccionAbierta,setIntroduccionAbierta]=useState(true);
+  const [introduccionDirty,setIntroduccionDirty]=useState(false);
+  function cerrarIntroduccion(){
+    function cerrar(){setEncabezadoEditing(false);setEncabezadoDraft("");setIntroduccionDirty(false);setIntroduccionAbierta(false);}
+    if(saveStatus==="saving")return;
+    if(introduccionDirty)requestDwConfirm("¿Descartar los cambios sin guardar de la introducción?",cerrar);else cerrar();
+  }
+  useEffect(function(){setIntroduccionDirty(false);setEncabezadoEditing(false);setIntroduccionAbierta(true);},[tipoDocSel]);
   const [confirmLockDefaults,setConfirmLockDefaults]=useState(false);
   const [confirmPreviewReviewed,setConfirmPreviewReviewed]=useState(false);
   const [saveStatus,setSaveStatus]=useState(null);
-  useEffect(function(){if(onEditingChange)onEditingChange(encabezadoEditing||saveStatus==="saving");},[encabezadoEditing,saveStatus,onEditingChange]);
+  useEffect(function(){if(onEditingChange)onEditingChange(introduccionDirty||saveStatus==="saving");},[introduccionDirty,saveStatus,onEditingChange]);
   useEffect(function(){
-    if(!encabezadoEditing&&saveStatus!=="saving")return;
+    if(!introduccionDirty&&saveStatus!=="saving")return;
     function advertirSalida(e){e.preventDefault();e.returnValue="";}
     function protegerSalida(e){
       if(e.defaultPrevented)return;
@@ -6507,7 +6516,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
     window.addEventListener("beforeunload",advertirSalida);
     window.addEventListener("dw:model-navigation",protegerSalida);
     return function(){window.removeEventListener("beforeunload",advertirSalida);window.removeEventListener("dw:model-navigation",protegerSalida);};
-  },[encabezadoEditing,saveStatus]);
+  },[introduccionDirty,saveStatus]);
   const puedeEditar=!!perfil&&(perfil.rol==="dueno"||perfil.rol==="admin");
   const cfg=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas);
   const idsPlantilla=cfg.clausulas_ids||[];
@@ -6559,20 +6568,22 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   }
   function guardarEncabezado(texto){
     var mapa=Object.assign({},customMap);mapa[tipoDocSel]=texto;
-    return persistir(Object.assign({},perfil,{encabezados_custom:mapa})).then(function(res){if(!(res&&res.error))setEncabezadoEditing(false);return res;});
+    return persistir(Object.assign({},perfil,{encabezados_custom:mapa})).then(function(res){if(!(res&&res.error)){setEncabezadoEditing(false);setIntroduccionDirty(false);setIntroduccionAbierta(false);}return res;});
   }
   function restablecerEncabezado(){
     var mapa=Object.assign({},customMap);delete mapa[tipoDocSel];
-    return persistir(Object.assign({},perfil,{encabezados_custom:mapa})).then(function(res){if(!(res&&res.error)){setEncabezadoDraft("");setEncabezadoEditing(false);}return res;});
+    return persistir(Object.assign({},perfil,{encabezados_custom:mapa})).then(function(res){if(!(res&&res.error)){setEncabezadoDraft("");setEncabezadoEditing(false);setIntroduccionDirty(false);setIntroduccionAbierta(false);}return res;});
   }
   return <div style={{display:"flex",flexDirection:"column",gap:12}}>
     {!puedeEditar&&<div className="notice" style={{fontSize:12}}>Esta configuración es de solo lectura. Solo Dueño y Administrador pueden editar encabezados y cláusulas.</div>}
     {pasoModelo===3&&mostrarIntroduccion!==false&&<div id="dw-config-introduccion" className="card" style={{padding:14,scrollMarginTop:90}}>
-      <div style={{fontSize:15,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Introducción</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{fontSize:15,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Introducción</div><button type="button" className="btn btn-ghost btn-sm" aria-label={introduccionAbierta?"Ocultar introducción":"Desplegar introducción"} aria-expanded={introduccionAbierta} disabled={saveStatus==="saving"} onClick={function(){if(introduccionAbierta)cerrarIntroduccion();else setIntroduccionAbierta(true);}}>{introduccionAbierta?"−":"+"}</button></div>
+      {introduccionAbierta&&<>
       <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Los datos se completan desde la operación.</div>
       {!ocultarSelector&&<label className="field" style={{display:"block",marginBottom:10}}><span className="field-label">Tipo de documento</span><select className="inp" value={tipoDocSel} onChange={function(e){setTipoDocSel(e.target.value);setEncabezadoEditing(false);setEncabezadoDraft("");}} style={{width:"100%"}}>{PLANTILLA_TIPOS.map(function(tipo){return <option key={tipo} value={tipo}>{TIPOS[tipo]||tipo}</option>;})}</select></label>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:8}}><span className="badge" style={{background:customTexto?"rgba(212,168,83,.10)":"rgba(74,222,128,.08)",color:customTexto?"var(--gold)":"var(--green)"}}>{customTexto?"Personalizado":"Predeterminado"}</span>{puedeEditar&&!encabezadoEditing&&<div style={{display:"flex",gap:6}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setEncabezadoDraft(getEncabezadoTemplate(tipoDocSel,perfil));setEncabezadoEditing(true);}}>Editar introducción</button>{customTexto&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){requestDwConfirm("¿Querés volver al texto predeterminado? Se reemplazará tu introducción personalizada.",async function(){var r=await restablecerEncabezado();if(!(r&&r.error))dwNotify("success","Se restauró la introducción predeterminada");});}}>Restablecer</button>}</div>}</div>
-      {encabezadoEditing&&puedeEditar?<EncabezadoEditor tipo={tipoDocSel} value={encabezadoDraft||getEncabezadoTemplate(tipoDocSel,perfil)} onCancel={function(){setEncabezadoEditing(false);setEncabezadoDraft("");}} onRestablecer={restablecerEncabezado} onSave={guardarEncabezado}/>:<div style={{padding:"10px 11px",borderRadius:8,background:"rgba(255,255,255,.025)",border:"1px solid var(--border2)",fontSize:12,color:"var(--muted)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{sustituirTokens(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"Sin introducción predeterminada para este tipo.",SAMPLE_OP_PREVIEW,perfil,tipoDocSel).slice(0,650)}{(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"").length>650?"…":""}</div>}
+      {encabezadoEditing&&puedeEditar?<EncabezadoEditor tipo={tipoDocSel} value={encabezadoDraft||getEncabezadoTemplate(tipoDocSel,perfil)} onDirtyChange={setIntroduccionDirty} onCancel={cerrarIntroduccion} onRestablecer={restablecerEncabezado} onSave={guardarEncabezado}/>:<div style={{padding:"10px 11px",borderRadius:8,background:"rgba(255,255,255,.025)",border:"1px solid var(--border2)",fontSize:12,color:"var(--muted)",lineHeight:1.55,whiteSpace:"pre-wrap"}}>{sustituirTokens(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"Sin introducción predeterminada para este tipo.",SAMPLE_OP_PREVIEW,perfil,tipoDocSel).slice(0,650)}{(customTexto||DEFAULT_ENCABEZADOS[tipoDocSel]||"").length>650?"…":""}</div>}
+      </>}
       {saveStatus==="saving"&&<div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Guardando cambios…</div>}{saveStatus==="saved"&&<div style={{fontSize:12,color:"var(--green)",marginTop:8}}>Cambios guardados.</div>}{saveStatus==="error"&&<div style={{fontSize:12,color:"var(--red)",marginTop:8}}>No se pudo guardar. Revisá la conexión e intentá nuevamente.</div>}
     </div>}
     {(pasoModelo===2||pasoModelo===3)&&<div id="dw-config-clausulas" style={{scrollMarginTop:90,border:"1px solid var(--border)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:12}}>
@@ -7531,7 +7542,12 @@ const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDw
 const ClausulasWorkspace = crearClausulasWorkspace({TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
 const SuperAdminDashboard = crearSuperAdminDashboard({AUTH_RED, AUTH_MUTED, descargarCSV, loadSupabaseJs, traducirError, Field, dwNotify, requestDwConfirm, fmt$, Modal, DWIcon});
-const ConfiguracionView = crearConfiguracionView({Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
+async function generarVistaPreviaAspecto(perfil){
+  var op=Object.assign({},SAMPLE_OP_PREVIEW,{id:"EJEMPLO-NO-GUARDAR",tipo:"reserva",created_at:"2026-11-04T12:00:00.000Z",inmueble_direccion:"EJEMPLO · Av. del Libertador 5678",reserva_vigencia_dias:"30",reserva_aceptacion_dias:"5",reserva_incluye_refuerzo:false});
+  var doc=aplicarEncabezadoPersonalizado(buildDocSections(opParaDocumento(op),[],"reserva"),op,"reserva",perfil);
+  return generarPDF(doc,perfil.logoDataUrl,perfil);
+}
+const ConfiguracionView = crearConfiguracionView({generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
 
 function DocWorksApp(){
   var docworksAuth = useDocWorksSession();

@@ -12,9 +12,12 @@
     "check": "npm run typecheck && npm test && npm run test:database && npm run build",
     "test:browser": "node tests/navegador.cjs && node tests/landing-responsive.cjs && node tests/inicio-soporte-browser.cjs",
     "test:webkit": "node tests/navegador.cjs --webkit && node tests/landing-responsive.cjs --webkit && node tests/inicio-soporte-browser.cjs --webkit",
-    "test:database": "node tests/database/permisos-operaciones.cjs && node tests/database/biblioteca-base.cjs"
+    "test:database": "node tests/database/permisos-operaciones.cjs && node tests/database/biblioteca-base.cjs",
+    "predev": "node scripts/copiar-pdf-preview.cjs",
+    "prebuild": "node scripts/copiar-pdf-preview.cjs"
   },
   "dependencies": {
+    "pdfjs-dist": "6.5.438",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "2.12.7"

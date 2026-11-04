@@ -1,3 +1,11 @@
+// Preferencias independientes; los perfiles anteriores conservan su ubicación elegida.
+export function mostrarUbicacionDocumento(perfil, lugar){
+  if(!perfil||!perfil.direccion)return false;
+  var clave="ubicacion_"+lugar;
+  if(typeof perfil[clave]==="boolean")return perfil[clave];
+  return perfil.ubicacion_inmobiliaria_activa===true && (perfil.ubicacion_inmobiliaria_posicion||"pie")===lugar;
+}
+
 // Función compartida por PDF, DOCX y vista previa.
 export function contactosDocumento(doc){
   return (doc&&doc.contactosIndividuales||[]).map(function(p){
@@ -99,8 +107,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
     function addFooter(){
       // Pie configurable por elemento: ubicación, leyenda, logo y número de página
       // tienen posiciones independientes y nunca se dibujan en la misma coordenada.
-      var ubicacionActiva=!!(perfil&&perfil.ubicacion_inmobiliaria_activa===true&&perfil.direccion);
-      var ubicacionPie=ubicacionActiva&&(perfil.ubicacion_inmobiliaria_posicion||"pie")==="pie";
+      var ubicacionPie=mostrarUbicacionDocumento(perfil,"pie");
       var pieLogoActivo = !!(perfil && perfil.pie_pagina_logo_debajo && imgObjNum && logoInfo);
       var leyendaActiva = perfil && perfil.pie_pagina_leyenda_activa !== false && !!perfil.pie_pagina_texto;
       var numeroActivo = !perfil || perfil.pie_pagina_numero_activo !== false;
@@ -178,7 +185,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
         y-=(boxH+14);
       }
       var encNombre=perfil.encabezado_nombre!==false, encMatricula=perfil.encabezado_matricula!==false, encWeb=perfil.encabezado_web!==false;
-      var ubicacionHeader=perfil.ubicacion_inmobiliaria_activa===true && perfil.direccion && (perfil.ubicacion_inmobiliaria_posicion||"pie")==="encabezado";
+      var ubicacionHeader=mostrarUbicacionDocumento(perfil,"encabezado");
       var metaHeader=[];
       if(encWeb&&perfil.web) metaHeader.push(safeHeaderValue(perfil.web));
       if(ubicacionHeader&&perfil.direccion) metaHeader.push("Ubicación: "+safeHeaderValue(perfil.direccion));
@@ -552,7 +559,7 @@ export async function generarDOCXModulo(doc, perfil, deps) {
     }
 
     // Header inmobiliaria con logo
-    if (perfil && (perfil.nombre || perfil.matricula || perfil.web || (perfil.ubicacion_inmobiliaria_activa===true && perfil.direccion) || (perfil.logo_encabezado_activo !== false && logoInfo))) {
+    if (perfil && (perfil.nombre || perfil.matricula || perfil.web || mostrarUbicacionDocumento(perfil,"encabezado") || (perfil.logo_encabezado_activo !== false && logoInfo))) {
       if (perfil.logo_encabezado_activo !== false && logoInfo) {
         // Tamaño objetivo del logo: aprox. 4cm x 2cm (a 96dpi, 1cm ≈ 37.8px),
         // ajustable por perfil.logoScale (%, 50–200, default 100).
@@ -576,7 +583,7 @@ export async function generarDOCXModulo(doc, perfil, deps) {
           + '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
       }
       var encNombreD=perfil.encabezado_nombre!==false, encMatriculaD=perfil.encabezado_matricula!==false, encWebD=perfil.encabezado_web!==false;
-      var ubicacionHeaderD = perfil.ubicacion_inmobiliaria_activa===true && perfil.direccion && (perfil.ubicacion_inmobiliaria_posicion||"pie")==="encabezado";
+      var ubicacionHeaderD = mostrarUbicacionDocumento(perfil,"encabezado");
       var perfilNombreSeguro=String((perfil&&perfil.nombre)||"").trim();
       var perfilMatriculaSegura=String((perfil&&perfil.matricula)||"").trim();
       var cabeceraDocx=encNombreD?(perfilNombreSeguro.toUpperCase()+(encMatriculaD&&perfilMatriculaSegura?" — Matrícula: "+perfilMatriculaSegura:"")):(encMatriculaD&&perfilMatriculaSegura?"Matrícula: "+perfilMatriculaSegura:"");
@@ -722,7 +729,7 @@ export async function generarDOCXModulo(doc, perfil, deps) {
     // al final de la base. Así el número de página, la ubicación, la leyenda y el
     // logo respetan la misma lógica visual página por página.
     // Assemble OOXML files
-    var ubicacionPieD = perfil && perfil.ubicacion_inmobiliaria_activa===true && perfil.direccion && (perfil.ubicacion_inmobiliaria_posicion||"pie")==="pie";
+    var ubicacionPieD = mostrarUbicacionDocumento(perfil,"pie");
     var footerHasAnything = !!(perfil && (ubicacionPieD || perfil.pie_pagina_texto || (perfil.pie_pagina_logo_debajo && logoInfo) || perfil.pie_pagina_numero_activo!==false));
 
     var footerBody = "";

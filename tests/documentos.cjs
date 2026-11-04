@@ -43,5 +43,24 @@ delete global.document;
  check('título personalizado se conserva y se muestra',()=>{const b=app.normalizarBodyBlock({id:'boleto.precio',titulo:'PRECIO ESPECIAL PACTADO',contenido:'Texto personalizado.',sinTitulo:true},0);assert.equal(b.titulo,'PRECIO ESPECIAL PACTADO');assert.equal(b.sinTitulo,false);assert.equal(b.contenido,'Texto personalizado.');});
  check('cláusula propia sin título recibe nombre neutral',()=>{assert.equal(app.normalizarBodyBlock({id:'propia',titulo:'   ',contenido:'Acuerdo particular.'},0).titulo,'CONDICIÓN PARTICULAR');});
  check('Snapshot respeta obligatorias del modelo',()=>{const op={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'boleto',plantilla_snapshot:{tipo:'boleto',body_blocks:app.getDefaultBodyBlocks('boleto'),clausulas:[{id:'extra',titulo:'EXTRA PARTICULAR',contenido:'Texto adicional único',tipos:['boleto'],obligatoria:false}],obligatorias_ids:['extra']}};assert.ok(app.docToPlainText(app.buildDocSections(op,[],'boleto')).includes('Texto adicional único'));});
+
+ const opUbicacion={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva'};
+ const docUbicacion=app.buildDocSections(app.opParaDocumento(opUbicacion),[],'reserva');docUbicacion.secciones=[];docUbicacion.firmas=[];docUbicacion.conformidad=null;
+ for(const [nombre,config,esperado] of [
+  ['sin ubicación',{ubicacion_encabezado:false,ubicacion_pie:false},0],
+  ['solo encabezado',{ubicacion_encabezado:true,ubicacion_pie:false},1],
+  ['solo pie',{ubicacion_encabezado:false,ubicacion_pie:true},1],
+  ['ambos',{ubicacion_encabezado:true,ubicacion_pie:true},2],
+  ['legacy encabezado',{ubicacion_inmobiliaria_activa:true,ubicacion_inmobiliaria_posicion:'encabezado'},1],
+  ['legacy pie',{ubicacion_inmobiliaria_activa:true,ubicacion_inmobiliaria_posicion:'pie'},1],
+  ['desactivar legacy',{ubicacion_inmobiliaria_activa:true,ubicacion_inmobiliaria_posicion:'pie',ubicacion_encabezado:false,ubicacion_pie:false},0]
+ ]){
+  const perfil={nombre:'Inmobiliaria de ejemplo',direccion:'CallePrueba 123',...config};
+  const pdf=await app.generarPDF(docUbicacion,null,perfil),word=await app.generarDOCX(docUbicacion,perfil);
+  const pdfTexto=Buffer.from(await pdf.blob.arrayBuffer()).toString('latin1');
+  const wordBytes=Buffer.from(await word.blob.arrayBuffer());let xml='';
+  for(let at=0;at+30<wordBytes.length&&wordBytes.readUInt32LE(at)===0x04034b50;){const method=wordBytes.readUInt16LE(at+8),size=wordBytes.readUInt32LE(at+18),len=wordBytes.readUInt16LE(at+26),extra=wordBytes.readUInt16LE(at+28),start=at+30+len+extra;let data=wordBytes.subarray(start,start+size);if(method===8)data=require('node:zlib').inflateRawSync(data);xml+=data.toString('utf8');at=start+size;}
+  check(nombre+' coincide en PDF y Word',()=>{assert.equal((pdfTexto.match(/CallePrueba 123/g)||[]).length,esperado);assert.equal((xml.match(/CallePrueba 123/g)||[]).length,esperado);});
+ }
  console.log('APROBADAS',count,'verificaciones. Exportaciones:',tmp);
 })().catch(e=>{console.error(e);process.exitCode=1;});

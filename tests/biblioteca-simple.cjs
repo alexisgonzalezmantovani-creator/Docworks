@@ -122,7 +122,7 @@ const deps={crear:async c=>{altas++;catalogo.push({...c,id:'nuevo'});return {dat
   {id:'solo-boleto',titulo:'Acuerdo especial del boleto',contenido:'Texto de boleto.',tipos:['boleto']}
  ];await a.act(async()=>render());
  const visibles=()=>[...document.querySelectorAll('[data-clausula-id]')].map(e=>e.dataset.clausulaId);
- async function elegir(id,tipo){await click([...document.getElementById(id).querySelectorAll('button')].find(b=>b.textContent.trim()===(tipo==='todas'?'Todas':a.TIPOS[tipo])));}
+ async function elegir(id,tipo){await click([...document.getElementById(id).querySelectorAll('button')].find(b=>b.textContent.trim()===(tipo==='todas'?'Todos los documentos':a.TIPOS[tipo])));}
  for(const tipo of a.PLANTILLA_TIPOS){
   await click(button('Biblioteca de cláusulas'));await elegir('dw-biblioteca-documento',tipo);const idsBiblioteca=visibles();
   await click(button('Documentos'));await elegir('dw-modelo-documento',tipo);const idsDocumento=visibles();
