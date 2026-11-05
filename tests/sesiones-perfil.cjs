@@ -95,6 +95,10 @@ function deferred(){let resolve;const promise=new Promise(r=>resolve=r);return {
  sessionError={message:'Error controlado tras render'};
  result=await callbackVigente({});sessionError=null;
  check('render de la misma cuenta mantiene callback vigente',()=>{assert.equal(result.contextoObsoleto,undefined);assert.equal(result.error.message,'Error controlado tras render');assert.equal(writes.length,4);});
+ const ultimaLectura=reads.length;let refresco;
+ await app.act(async()=>{refresco=api.recargar();});
+ await resolveRead(ultimaLectura,{data:{nombre:'Perfil final actualizado',rol:'dueno',plantillas:{alquiler:{clausulas_ids:['compartida-nueva']}}},error:null});await refresco;
+ check('recargar recupera cláusulas compartidas de la inmobiliaria',()=>assert.deepEqual(api.perfil.plantillas.alquiler.clausulas_ids,['compartida-nueva']));
  sessionPause=deferred();pending=api.guardarAhora({nombre:'Pendiente al desmontar'});await app.act(async()=>{});
  const callbackDesmontado=api.guardarAhora;
  await app.act(async()=>root.unmount());

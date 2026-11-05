@@ -19,6 +19,13 @@ delete global.document;
   let doc=app.buildDocSections(op,[],tipo,blocks);
   doc=app.aplicarEncabezadoPersonalizado(doc,op,tipo,{});
   const text=app.docToPlainText(doc);
+  if(tipo==='reserva'||tipo==='boleto'){
+    const probe={...op,descripcion_inmueble:'DETALLE_ADICIONAL_PRUEBA'};
+    check(tipo+' detalles no se imprimen por defecto',()=>assert.ok(!app.docToPlainText(app.buildDocSections(probe,[],tipo,blocks)).includes(probe.descripcion_inmueble)));
+    const custom=blocks.map((b,i)=>i===0?{...b,contenido:b.contenido+' Detalles: {{descripcion_inmueble}}'}:b);
+    check(tipo+' detalles se imprimen si la plantilla usa el campo',()=>assert.ok(app.docToPlainText(app.buildDocSections(probe,[],tipo,custom)).includes(probe.descripcion_inmueble)));
+  }
+
   check(tipo+' construye sin mutar operación',()=>{assert.equal(JSON.stringify(original),before);assert.ok(text.length>100);});
   check(tipo+' faltantes detectados',()=>assert.ok(app.getCamposFaltantesDetalle({...app.EMPTY_OP,tipo}).length>0));
   check(tipo+' tokens resueltos',()=>assert.deepEqual(app.getTokensSinReemplazar(doc),[]));

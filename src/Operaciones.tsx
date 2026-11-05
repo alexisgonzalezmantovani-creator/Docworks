@@ -26,7 +26,7 @@ export const EMPTY_OP = {
   alquiler_forma_pago:["transferencia"], alquiler_dia_pago:"1", alquiler_dia_pago_otro:"",
   alquiler_interes_punitorio:"5", alquiler_penalidad_meses:"2", alquiler_seguro_dias:"10", alquiler_aviso_meses:"1",
   clausulas_ids:[], clausulas_custom:"", clausulas_custom_titulo:"", entrega_aires_detalle:"", entrega_muebles_detalle:"",
-  inmueble_tipo:"departamento", inmueble_tipo_otro:"", inmueble_unidad_funcional:"",
+  inmueble_tipo:"departamento", inmueble_tipo_otro:"", inmueble_unidad_funcional:"", inmueble_en_barrio_complejo:false, inmueble_barrio:"",
   alquiler_modo_plazo:"preset", alquiler_plazo_dias:"0",
   res_alq_aceptacion_dias:"2",
   comision_vendedor:"4", comision_comprador:"3",
@@ -526,18 +526,20 @@ export const GS = `
   .op-table{width:100%;border-collapse:collapse;min-width:760px;}
   .op-table th{padding:9px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
   .op-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:11.5px;color:var(--text);vertical-align:middle;}
+  .op-table-partes{display:none}
   .op-table tr:last-child td{border-bottom:0;}
   .op-table tr:hover td{background:var(--hover-bg);}
   @media(max-width:640px){
-    .op-table{min-width:0;width:100%;table-layout:fixed}
+    .op-table{display:table;min-width:0;width:100%;max-width:100%;table-layout:fixed;overflow:visible}
     .op-table th,.op-table td{padding:10px 7px}
     .op-table th:nth-child(n+3):nth-child(-n+6),.op-table td:nth-child(n+3):nth-child(-n+6){display:none}
     .op-table th:first-child,.op-table td:first-child{width:78px}
     .op-table th:last-child,.op-table td:last-child{width:65px}
     .op-table td:nth-child(2)>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .op-table td:nth-child(2)>.op-table-partes{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
     .op-table .op-status-badge{max-width:100%;box-sizing:border-box;font-size:10px;padding:4px 6px}
     .op-table td:last-child .btn{padding:7px 8px;min-height:36px}
-    .op-table-wrap{overflow:visible}
+    .op-table-wrap{display:block;width:100%;max-width:100%;min-width:0;height:auto;max-height:none;box-sizing:border-box;overflow:visible;align-self:stretch}
   }
 
   @media(max-width:850px){.op-filter-panel{grid-template-columns:1fr 1fr;}}
@@ -1676,6 +1678,70 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
  .viewer-modal .doc-header-actions .doc-action-download .doc-download-chevron{display:inline!important}
  .viewer-modal .doc-download-menu{left:auto;right:0;max-width:calc(100vw - 48px)}
 }
+
+/* Próximo lote: encabezado, acciones y guardado discretos. */
+.dw-operation-exit-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px!important}
+.dw-operation-exit-actions .btn{min-width:0;min-height:44px;padding:9px 4px;white-space:normal;font-size:12px;line-height:1.25;text-align:center}
+.dw-operation-save-floating{filter:none;opacity:.78}
+.dw-operation-save-floating [role=status]{min-width:0!important;min-height:0!important;padding:3px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.dw-operation-save-floating [aria-hidden=true]{font-size:17px!important}
+.dw-viewer-heading-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;min-width:0}
+.dw-viewer-heading-type{font-size:18px;white-space:normal;line-height:1.25}
+.dw-viewer-heading-status{flex:none;font-size:11px;line-height:1.25}
+.viewer-modal .doc-ficha-panel{height:auto!important;overflow:visible!important}
+@media(max-width:640px){
+ .dw-viewer-heading-type{font-size:16px}
+ .dw-dashboard-root .op-card-side .op-actions{justify-content:flex-end;width:100%;margin-left:auto}
+ .dw-dashboard-root .op-card-side .op-actions .btn{flex:0 0 auto;min-width:0!important}
+}
+
+/* El control de inclusión pertenece al campo de contacto correspondiente. */
+.dw-contact-field{display:flex;align-items:flex-end;gap:10px;min-width:0}
+.dw-contact-input{flex:1;min-width:0;margin-bottom:0}
+.dw-contact-print{display:flex;align-items:center;gap:8px;flex:none;min-height:42px;white-space:nowrap;font-size:12px;color:var(--muted)}
+.dw-contact-print .dw-ios-sw{appearance:none;-webkit-appearance:none;padding:0;border:0;cursor:pointer}
+.dw-contact-print .dw-ios-sw:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+@media(max-width:1279px){.dw-operation-page .dw-persona-fields .dw-contact-field{grid-column:1/-1}}
+@media(max-width:640px){.dw-contact-field{flex-direction:column;align-items:stretch;gap:6px}.dw-contact-print{justify-content:flex-end;min-height:34px}}
+
+/* Navegación del formulario más cómoda en computadora. */
+@media(min-width:761px){
+ .dw-operation-page-heading>.btn,.dw-operation-form-footer .btn,.dw-operation-page .dw-operation-back{min-height:44px;padding:10px 18px;font-size:13.5px;line-height:1.2}
+}
+@media(min-width:641px){
+ .dw-operation-page .dw-persona-fields .field-label{min-height:26px;display:flex;align-items:center}
+ .dw-operation-page .dw-identificacion-heading{margin-bottom:0!important}
+ .dw-contact-print{min-height:36px}
+}
+
+.dw-barrio-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px;width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:10px;background:var(--surface2);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left}
+.dw-barrio-toggle.is-active{border-color:var(--gold);background:var(--gold-soft)}
+.dw-barrio-toggle:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.dw-barrio-datos{margin-top:10px}
+
+/* Comisión: modalidad y valor juntos; inclusión en la misma fila cuando hay espacio. */
+.dw-commissions-stack{display:grid;gap:8px}
+.dw-commission-editor{padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);min-width:0}
+.dw-commission-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dw-commission-party{font-size:12px;font-weight:700;color:var(--text);flex:0 0 auto}
+.dw-commission-controls{display:flex;align-items:center;gap:6px;min-width:0}
+.dw-commission-mode{width:126px!important;flex:none;padding-left:9px!important;padding-right:8px!important;font-size:14px!important}
+.dw-commission-value{width:76px;flex:none;position:relative}
+.dw-commission-value.is-fixed{width:120px}
+.dw-commission-value>span{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-weight:600}
+.dw-commission-currency{width:76px!important;flex:none}
+.dw-commission-print{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:12px;color:var(--text);margin-left:auto;min-height:40px;cursor:pointer}
+.dw-commission-print input{appearance:none;width:34px;height:20px;border-radius:999px;background:var(--border2);position:relative;flex:none;cursor:pointer}
+.dw-commission-print input:checked{background:var(--gold)}
+.dw-commission-print input::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--surface)}
+.dw-commission-print input:checked::after{transform:translateX(14px)}
+.dw-commission-print input:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+@media(max-width:640px){.dw-commission-line{gap:7px}.dw-commission-mode{width:124px!important}.dw-commission-value{width:65px}.dw-commission-value.is-fixed{width:96px}.dw-commission-controls:has(.is-fixed){flex-wrap:nowrap}.dw-commission-controls:has(.is-fixed) .dw-commission-mode{width:104px!important}.dw-commission-controls:has(.is-fixed) .dw-commission-value{width:90px}.dw-commission-controls:has(.is-fixed) .dw-commission-currency{width:68px!important;padding-left:7px!important;padding-right:0!important;font-size:14px!important}.dw-commission-print{min-height:36px}}
+
+/* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
+.dw-operation-page-heading{z-index:40;isolation:isolate;background-color:var(--bg)!important;background-image:none;backdrop-filter:none;opacity:1;flex-shrink:0;box-shadow:0 7px 0 var(--bg)}
+.dw-operation-page-heading::before{content:"";position:absolute;inset:-30px -28px 0;background:var(--bg);z-index:-1;pointer-events:none}
+@media(max-width:640px){.dw-operation-page-heading::before{left:-16px;right:-16px}}
 
 `;
 
@@ -4255,7 +4321,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       {!perfil.nombre&&<div className="notice notice-gold" style={{marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}><span>Configurá el perfil de tu inmobiliaria para agregar logo en los PDFs.</span><Btn v="ghost" s="sm" onClick={onPerfil} style={{color:"var(--gold)",flexShrink:0}}>⚙ Configurar</Btn></div>}
       {modoVista==="tabla" ? (
         <div className="op-table-wrap">
-          {filtered.length===0?<div style={{padding:44,textAlign:"center",color:"var(--dim)",fontSize:13}}>No hay operaciones en esta vista.</div>:<table className="op-table"><thead><tr><th>Estado</th><th>Operación</th><th>Partes</th><th>Monto</th><th>Fecha</th><th>Agente</th><th></th></tr></thead><tbody>{filtered.map(function(op){return <tr key={op.id}><td><span className={"op-status-badge "+(op.estado||"borrador")}>{ESTADOS[op.estado]||"Borrador"}</span></td><td><div style={{fontWeight:700}}>{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]||op.tipo}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{op.inmueble_direccion||"Sin dirección"}</div></td><td>{getName(op)}</td><td style={{fontWeight:700,color:"var(--gold)"}}>{getMonto(op)||"—"}</td><td>{new Date(op.created_at).toLocaleDateString("es-AR")}</td><td>{op.broker_nombre||op.broker||"—"}</td><td><Btn v="secondary" s="sm" onClick={function(){onViewDoc(op);}}>Abrir</Btn></td></tr>;})}</tbody></table>}
+          {filtered.length===0?<div style={{padding:44,textAlign:"center",color:"var(--dim)",fontSize:13}}>No hay operaciones en esta vista.</div>:<table className="op-table"><thead><tr><th>Estado</th><th>Operación</th><th>Partes</th><th>Monto</th><th>Fecha</th><th>Agente</th><th></th></tr></thead><tbody>{filtered.map(function(op){return <tr key={op.id}><td><span className={"op-status-badge "+(op.estado||"borrador")}>{ESTADOS[op.estado]||"Borrador"}</span></td><td><div style={{fontWeight:700}}>{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]||op.tipo}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{op.inmueble_direccion||"Sin dirección"}</div><div className="op-table-partes" title={getName(op)}>{getName(op).replace(/\s*\((?:comprador|vendedor|locatario|locador)\)/gi,"")}</div></td><td>{getName(op)}</td><td style={{fontWeight:700,color:"var(--gold)"}}>{getMonto(op)||"—"}</td><td>{new Date(op.created_at).toLocaleDateString("es-AR")}</td><td>{op.broker_nombre||op.broker||"—"}</td><td><Btn v="secondary" s="sm" onClick={function(){onViewDoc(op);}}>Abrir</Btn></td></tr>;})}</tbody></table>}
         </div>
       ) : (
       <div className="op-list" style={{display:"flex",flexDirection:"column",gap:9}}>
@@ -4968,7 +5034,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       {tabActual.esTareas ? (
         <TareasPanel op={op} onToggleTarea={onToggleTarea} onUpdateOperation={onUpdateOperation}/>
       ) : tabActual.esFicha ? (
-        <FichaOperacionPanel op={op} operaciones={operaciones||[]} embedded={true}/>
+        <FichaOperacionPanel op={op} operaciones={operaciones||[]} embedded={true} summaryContent={<DocSummaryPanel op={op} perfil={perfil} tabsDocs={TABS} onLeer={changeTab} operaciones={operaciones} onToggleTarea={onToggleTarea} onUpdateOperation={onUpdateOperation} onActionWorkflow={onActionWorkflow} onRevisionIA={ejecutarRevisionIA} aiReview={aiReview} onCopiarRevisionIA={copiarRevisionIA}/>}/>
       ) : tabActual.esNegociacion ? (
         <><ReservaDecisionPanel op={op} onUpdate={onUpdateOperation} onAction={onActionWorkflow}/><NegociacionPanel op={op} onUpdate={onUpdateOperation}/></>
       ) : tabActual.esResumen ? (
@@ -5312,7 +5378,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       comprador_nombre:op.comprador_nombre||"", comprador_dni:op.comprador_dni||"", comprador_domicilio:op.comprador_domicilio||"",
       vendedor_nombre:op.vendedor_nombre||"", vendedor_dni:op.vendedor_dni||"", vendedor_domicilio:op.vendedor_domicilio||"",
       inmueble_direccion:op.inmueble_direccion||"", inmueble_partido:op.inmueble_partido||"", inmueble_provincia:op.inmueble_provincia||"",
-      inmueble_tipo:op.inmueble_tipo||"departamento", inmueble_tipo_otro:op.inmueble_tipo_otro||"", inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",
+      inmueble_tipo:op.inmueble_tipo||"departamento", inmueble_tipo_otro:op.inmueble_tipo_otro||"", inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"", inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",
       precio:op.anticipo||op.precio||"", moneda:op.moneda||"USD",
       devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",
       clausulas_ids:op.clausulas_ids||[]
@@ -5327,6 +5393,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       vendedor_domicilio:op.vendedor_domicilio||"", vendedor_email:op.vendedor_email||"", vendedor_telefono:op.vendedor_telefono||"",
       inmueble_direccion:op.inmueble_direccion||"", inmueble_partido:op.inmueble_partido||"",
       inmueble_provincia:op.inmueble_provincia||"", inmueble_tipo:op.inmueble_tipo||"departamento", inmueble_tipo_otro:op.inmueble_tipo_otro||"",
+      inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",
       inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",
       refuerzo_trayectoria:"Reserva original firmada el "+new Date(op.created_at).toLocaleDateString("es-AR")+" por "+fmt$(op.anticipo,op.moneda)+" de seña sobre precio total "+fmt$(op.precio,op.moneda)+".",
       clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"", clausulas_custom_titulo:op.clausulas_custom_titulo||"",
@@ -5431,7 +5498,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       </div>
       <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
       {step<=total&&<div className="dw-operation-form-footer">
-        <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Cambiar grupo":"← Anterior"}</Btn>
+        <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Volver a opciones":"← Anterior"}</Btn>
         <div className="dw-operation-form-actions">
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           <div className="dw-operation-next-action">
@@ -5602,7 +5669,7 @@ function NegociacionPanel({op,onUpdate}){
     {historial.length>0&&<div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:12}}>{historial.map(function(h,i){return <div key={h.id||i} style={{display:"grid",gridTemplateColumns:"92px 1fr auto",gap:8,alignItems:"center",padding:"7px 8px",border:"1px solid var(--border)",borderRadius:8,background:"rgba(255,255,255,.018)",fontSize:12}}><span style={{color:"var(--dim)"}}>{fmtD(h.fecha)}</span><span style={{color:"var(--text)"}}><b>{h.parte==="vendedor"?"Vendedor":"Comprador"}</b>{h.observacion?" · "+h.observacion:""}</span><span style={{color:"var(--gold)",fontWeight:700,whiteSpace:"nowrap"}}>{fmt$(h.monto,h.moneda||"USD")}{h.vencimiento?" · vence "+fmtD(h.vencimiento):""}</span></div>;})}</div>}
     {op.estado!=="cerrado"&&<div style={{paddingTop:11,borderTop:"1px dashed var(--border2)"}}><div className="grid2">
       <Slt label="Propuesta de" value={parte} onChange={function(e){setParte(e.target.value);}}><option value="comprador">Comprador</option><option value="vendedor">Vendedor</option></Slt>
-      <div className="grid2" style={{gap:8}}><Inp label="Monto" type="number" value={monto} onChange={function(e){setMonto(e.target.value);}}/><Slt label="Moneda" value={moneda} onChange={function(e){setMoneda(e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt></div>
+      <div className="grid2" style={{gap:8}}><Inp label="Monto" money value={monto} onChange={function(e){setMonto(e.target.value);}}/><Slt label="Moneda" value={moneda} onChange={function(e){setMoneda(e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt></div>
       <Inp label="Nuevo vencimiento de aceptación" type="date" value={venc} onChange={function(e){setVenc(e.target.value);}} className="col2"/>
       <Txa label="Observación" rows={2} value={obs} onChange={function(e){setObs(e.target.value);}} placeholder="Ej. El Vendedor acepta este valor y solicita 3 días más…" className="col2"/>
     </div><div style={{display:"flex",justifyContent:"flex-end",marginTop:9}}><Btn v="primary" s="sm" onClick={agregar}>+ Registrar contraoferta</Btn></div></div>}
