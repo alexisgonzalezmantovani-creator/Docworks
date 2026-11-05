@@ -464,7 +464,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.24";
+var DOCWORKS_VERSION = "6.25";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -713,6 +713,7 @@ function PagoMensualField({data,onChange,reserva=false}){
   return <div><Slt id={"dw-field-"+campo} label="Período de pago mensual" value={data[campo]||(reserva?"":"1")} onChange={function(e){onChange(campo,e.target.value);}}>
     {reserva&&<option value="">A definir en el contrato</option>}
     <option value="1-10">Del 1 al 10 de cada mes</option><option value="1-5">Del 1 al 5 de cada mes</option>
+    {/^(?:[1-9]|[12][0-9]|3[01])$/.test(String(data[campo]||""))&&!["1","5","10","15"].includes(String(data[campo]))&&<option value={data[campo]}>Día {data[campo]}</option>}
     <option value="1">Día 1</option><option value="5">Día 5</option><option value="10">Día 10</option><option value="15">Día 15</option><option value="otro">Otro día</option>
   </Slt>{data[campo]==="otro"&&<Inp id={"dw-field-"+campo+"_otro"} label="Otro día de pago" value={data[campo+"_otro"]||""} onChange={function(e){onChange(campo+"_otro",e.target.value);}} placeholder="Ej: 20" type="number" min="1" max="31" style={{marginTop:8}}/>}</div>;
 }
@@ -1856,6 +1857,7 @@ function getPasoDeCampo(campo,tipo){
     return pre==="comprador"?2:3;
   }
   if(simple) return 4;
+  if(/^alquiler_garantia_/.test(campo))return 6;
   if(/^inmueble_/.test(campo)) return 4;
   return 5;
 }
@@ -1871,9 +1873,65 @@ function valorCriticoOp(op,campo){
 // La comisión puede ser 0% por acuerdo expreso; un valor negativo, vacío
 // o no numérico no debe aprobarse como honorario válido.
 function comisionAutorizanteInformada(op){
-  var campos=[op&&op.comision_vendedor_valor,op&&op.comision_vendedor];
+  var v=op&&op.comision_vendedor_valor;
+  var explicito=!!(op&&op.comision_vendedor_valor_editado)||(v!==undefined&&v!==null&&String(v).trim()!=="");
+  var campos=explicito?[v]:[op&&op.comision_vendedor];
   if(campos.some(function(v){return v!==undefined&&v!==null&&String(v).trim()!==""&&isFinite(parseMontoAR(v))&&parseMontoAR(v)>=0;})) return true;
   return !!String(op&&op.comision_vendedor_texto||"").trim();
+}
+// Revisión de valores cargados, además de la presencia de campos obligatorios.
+// No impone mínimos contractuales: admite cero donde significa un acuerdo expreso.
+function getInconsistenciasCamposOperacion(op){
+  op=op||{};var result=[];
+  function add(campo,label,mensaje){if(!result.some(function(x){return x.campo===campo;}))result.push({campo:campo,label:label,mensaje:mensaje,paso:getPasoDeCampo(campo,op.tipo)});}
+  function informado(v){return v!==undefined&&v!==null&&String(v).trim()!=="";}
+  function entero(campo,label,min){if(informado(op[campo])&&(!/^\d+$/.test(String(op[campo]).trim())||!Number.isSafeInteger(Number(op[campo]))||Number(op[campo])<min))add(campo,label,label+": ingresá un número entero "+(min===0?"igual o mayor a cero.":"mayor a cero."));}
+  var alquiler=op.tipo==="alquiler",resAlq=op.tipo==="reserva_alquiler",compra=op.tipo==="reserva"||op.tipo==="boleto";
+  var fechas=[["fecha_documento","Fecha del documento"]];
+  if(compra)fechas.push(["fecha_posesion","Fecha de posesión"]);
+  if(op.tipo==="reserva"){
+    if(op.reserva_incluye_refuerzo)fechas.push(["reserva_fecha_refuerzo","Fecha del refuerzo"]);
+    fechas.push(["reserva_aceptacion_vencimiento","Vencimiento para la aceptación"]);
+    entero("reserva_vigencia_dias","Vigencia de la reserva",1);
+    if(op.reserva_aceptacion_modo==="horas")entero("reserva_aceptacion_horas","Plazo de aceptación en horas",1);
+    else if(op.reserva_aceptacion_modo!=="fecha")entero("reserva_aceptacion_dias","Plazo de aceptación en días",1);
+  }
+  if(alquiler){
+    fechas.push(["alquiler_inicio","Inicio del contrato"],["alquiler_fin","Vencimiento del contrato"]);
+    [["alquiler_plazo_meses","Meses del contrato",0],["alquiler_plazo_dias","Días adicionales",0],["alquiler_seguro_dias","Plazo para contratar seguro",0],["alquiler_aviso_meses","Meses de preaviso",0]].forEach(function(x){entero(x[0],x[1],x[2]);});
+    ["alquiler_interes_punitorio","alquiler_penalidad_meses"].forEach(function(campo){if(informado(op[campo])&&(!isFinite(Number(op[campo]))||Number(op[campo])<0))add(campo,campo==="alquiler_interes_punitorio"?"Interés punitorio":"Cláusula penal","El interés y la penalidad deben ser números iguales o mayores a cero.");});
+  }
+  if(resAlq){fechas.push(["res_alq_inicio_estimado","Inicio estimado del contrato"]);entero("res_alq_plazo_cantidad","Cantidad del plazo estimado",1);entero("res_alq_vigencia_dias","Vigencia de la reserva",1);}
+  if(op.tipo==="comodato"){
+    fechas.push(["comodato_inicio","Inicio del comodato"],["comodato_fin","Vencimiento del comodato"]);
+    if(parseISOLocal(op.comodato_inicio)&&parseISOLocal(op.comodato_fin)&&op.comodato_fin<=op.comodato_inicio)add("comodato_plazo","Vencimiento del comodato","El vencimiento del comodato debe ser posterior al inicio.");
+  }
+  if(op.tipo==="refuerzo_reserva"||op.tipo==="devolucion_reserva")fechas.push(["fecha_posesion","Fecha del documento vinculado"]);
+  fechas.forEach(function(x){if(informado(op[x[0]])&&!parseISOLocal(op[x[0]]))add(x[0],x[1],x[1]+": ingresá una fecha válida.");});
+  if(compra&&informado(op.anticipo)){
+    var anticipo=parseMontoAR(op.anticipo),precio=parseMontoAR(op.precio);
+    if(!isFinite(anticipo)||anticipo<0)add("anticipo","Seña / anticipo","La seña / anticipo debe ser un importe igual o mayor a cero.");
+    else if(isFinite(precio)&&anticipo>precio)add("anticipo","Seña / anticipo","La seña / anticipo supera el precio total. Revisá los importes.");
+  }
+  var comisiones=alquiler?["alquiler_comision_locador","alquiler_comision_locatario"]:resAlq?["res_alq_comision_locador","res_alq_comision_locatario"]:compra||op.tipo==="exclusividad"?["comision_vendedor","comision_comprador"]:[];
+  comisiones.forEach(function(prefix){
+    if(op.tipo==="exclusividad"&&prefix==="comision_comprador")return;
+    if(String(op[prefix+"_texto"]||"").trim())return;
+    var explicit=!!op[prefix+"_valor_editado"]||informado(op[prefix+"_valor"]),v=explicit?op[prefix+"_valor"]:op[prefix];
+    if((explicit||informado(v))&&(!informado(v)||!isFinite(parseMontoAR(v))||parseMontoAR(v)<0))add(prefix,"Comisión: "+prefix.split("_").pop(),"Completá la comisión con un valor igual o mayor a cero, o ingresá 0 si no corresponde cobrarla.");
+  });
+  var partes=alquiler||resAlq?["locador","locatario"]:op.tipo==="exclusividad"?["vendedor"]:["comprador","vendedor"];
+  partes.forEach(function(prefix){
+    var email=String(op[prefix+"_email"]||"").trim();
+    if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))add(prefix+"_email","Correo de "+tituloRolForm(op.tipo,prefix).toLowerCase(),"Revisá el formato del correo electrónico de "+tituloRolForm(op.tipo,prefix).toLowerCase()+".");
+    (op[prefix+"_cotitulares"]||[]).forEach(function(p,i){
+      var nombre="Cotitular "+(i+2)+" de "+tituloRolForm(op.tipo,prefix).toLowerCase(),base=prefix+"_cotitular_"+i+"_";
+      if(!String(p.nombre||"").trim())add(base+"nombre",nombre+": nombre","Completá el nombre de "+nombre.toLowerCase()+" o quitá el titular si no corresponde.");
+      if(!String(p.dni||"").trim())add(base+"dni",nombre+": DNI / CUIT","Completá el DNI / CUIT de "+nombre.toLowerCase()+".");
+      if(p.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(p.email).trim()))add(base+"email",nombre+": correo","Revisá el formato del correo de "+nombre.toLowerCase()+".");
+    });
+  });
+  return result;
 }
 function getCamposFaltantes(op,perfil=null){
   return getCamposFaltantesDetalle(op,perfil).map(function(f){return f.label;});
@@ -1886,20 +1944,32 @@ function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
   });
   if(inmuebleEnBarrioComplejo(op))lista.push(["inmueble_barrio","Nombre del barrio o complejo"]);
   if(op.tipo==="alquiler"&&op.alquiler_amoblado)lista.push(["alquiler_inventario","Inventario de bienes muebles"]);
+  if(op.inmueble_tipo==="otro")lista.push(["inmueble_tipo_otro","Tipo de inmueble (otro)"]);
+  if(op.tipo==="alquiler"){
+    if(op.alquiler_actualizacion==="otro")lista.push(["alquiler_actualizacion_otro","Índice de actualización acordado"]);
+    if(op.alquiler_periodo_actualizacion==="otro")lista.push(["alquiler_periodo_otro","Período de actualización acordado"]);
+    if(!String(op.alquiler_garantia_texto_personalizado||"").trim()){
+      lista.push(["alquiler_garantia_titular",op.alquiler_garantia_tipo==="propietario"?"Nombre del garante":"Titular / entidad de garantía"]);
+      if(op.alquiler_garantia_tipo==="propietario")lista.push(["alquiler_garantia_dni","DNI / CUIT del garante"],["alquiler_garantia_inmueble","Inmueble en garantía"]);
+    }
+  }
   if(op.tipo==="exclusividad"&&perfil){
     op=Object.assign({},op,{comprador_nombre:op.inmobiliaria_nombre||perfil.inmobiliaria_nombre||op.comprador_nombre,comprador_dni:op.inmobiliaria_matricula||perfil.matricula||op.comprador_dni});
   }
   var campoPago=op.tipo==="reserva_alquiler"?"res_alq_dia_pago":"alquiler_dia_pago";
   if(["alquiler","reserva_alquiler"].includes(op.tipo)&&op[campoPago]==="otro")lista.push([campoPago+"_otro","Día de pago (1 al 31)"]);
-  return lista.filter(function(f){
+  var faltantes=lista.filter(function(f){
     var v=valorCriticoOp(op,f[0]);
     if(/dia_pago_otro$/.test(f[0]))return !/^(?:[1-9]|[12][0-9]|3[01])$/.test(String(v||""));
     if(["precio","anticipo","res_alq_monto_reserva","res_alq_monto_mensual","alquiler_monto_inicial"].indexOf(f[0])>=0) return !esMontoMayorACero(v);
     if(f[0]==="comision_vendedor") return !comisionAutorizanteInformada(op);
     if(f[0]==="exclusividad_vigencia") return !/^\s*[1-9]\d*\s*(?:d[ií]as?)?\s*$/i.test(String(v||""));
-    if(["res_alq_vigencia_dias","alquiler_plazo_meses","comodato_plazo"].indexOf(f[0])>=0) return !v || !Number.isFinite(Number(v)) || Number(v)<=0;
+    if(f[0]==="comodato_plazo"){var plazo=String(v||"").trim();return !plazo||(/^[+-]?\d+(?:[.,]\d+)?$/.test(plazo)&&!(parseMontoAR(plazo)>0));}
+    if(["res_alq_vigencia_dias","alquiler_plazo_meses"].indexOf(f[0])>=0) return !v || !Number.isFinite(Number(v)) || Number(v)<=0;
     return !v || String(v).trim()==="";
   }).map(function(f){return {campo:f[0],label:f[1],paso:getPasoDeCampo(f[0],op.tipo)};});
+  getInconsistenciasCamposOperacion(op).forEach(function(f){if(!faltantes.some(function(x){return x.campo===f.campo;}))faltantes.push(f);});
+  return faltantes;
 }
 function getProblemasFechas(op) {
   var problemas = [];
@@ -2019,7 +2089,7 @@ function validarDocumentoParaExport(op, doc, perfil){
   var faltantes=getCamposFaltantesDetalle(opValid,perfil);
   faltantes.forEach(function(c){
     if(op.tipo==="reserva"&&c.campo==="reserva_aceptacion_dias") return;
-    errores.push("Falta completar: "+c.label+(c.paso?" (paso "+c.paso+")":"")+".");
+    errores.push(c.mensaje||("Falta completar: "+c.label+(c.paso?" (paso "+c.paso+")":"")+"."));
   });
   if(op.tipo==="reserva"){
     var modo=String(op.reserva_aceptacion_modo||"dias").toLowerCase();
@@ -2257,8 +2327,8 @@ function limpiarComisionesIncompatibles(op){
   if(tipo==="alquiler" || tipo==="reserva_alquiler"){
     [
       "comision_porcentaje","comision_vendedor","comision_comprador",
-      "comision_vendedor_modo","comision_vendedor_valor","comision_vendedor_moneda",
-      "comision_comprador_modo","comision_comprador_valor","comision_comprador_moneda"
+      "comision_vendedor_modo","comision_vendedor_valor","comision_vendedor_valor_editado","comision_vendedor_moneda",
+      "comision_comprador_modo","comision_comprador_valor","comision_comprador_valor_editado","comision_comprador_moneda"
     ].forEach(function(k){ delete next[k]; });
   }
   return next;
@@ -2280,9 +2350,9 @@ function getComisionConfig(op, prefix, base, monedaBase, legacyKey, defaultValue
   op=op||{};
   var modo=normalizarModoComision(op[prefix+"_modo"]);
   var legacy=op[legacyKey || prefix];
-  var valor=op[prefix+"_valor"];
-  if(valor===undefined || valor===null || String(valor).trim()==="") valor=legacy;
-  if((valor===undefined || valor===null || String(valor).trim()==="") && defaultValue!==undefined) valor=defaultValue;
+  var guardado=op[prefix+"_valor"];
+  var explicito=!!op[prefix+"_valor_editado"]||(guardado!==undefined&&guardado!==null&&String(guardado).trim()!=="");
+  var valor=explicito?guardado:valorComisionPredeterminado(legacy,defaultValue);
   var moneda=modo==="fijo" ? (op[prefix+"_moneda"] || monedaBase || "ARS") : (monedaBase || "ARS");
   var n=parseMontoAR(valor);
   var monto=0;
@@ -2418,7 +2488,7 @@ function textoPlazoComodato(v){
   if(/^\d+$/.test(t)) return t+(t==="1"?" mes":" meses");
   return t;
 }
-function parseISOLocal(ds){ var m=String(ds||"").match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null; return new Date(parseInt(m[1],10),parseInt(m[2],10)-1,parseInt(m[3],10)); }
+function parseISOLocal(ds){ var m=String(ds||"").match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return null; var y=Number(m[1]),mes=Number(m[2]),dia=Number(m[3]);var d=new Date(y,mes-1,dia);if(y<100)d.setFullYear(y);return d.getFullYear()===y&&d.getMonth()===mes-1&&d.getDate()===dia?d:null; }
 function isoLocal(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function sumarMesesLocal(d,meses){ var tot=d.getFullYear()*12+d.getMonth()+meses; var ny=Math.floor(tot/12),nm=((tot%12)+12)%12; var last=new Date(ny,nm+1,0).getDate(); return new Date(ny,nm,Math.min(d.getDate(),last)); }
 // Suma meses (con tope al último día del mes) y días a una fecha ISO, sin pasar por UTC (evita corrimientos de un día).
@@ -4407,8 +4477,8 @@ function MenuAyudaDocWorks({abierto,onToggle,onCerrar,onPreparar,onClausulas,onC
 function Btn({children=null,onClick=undefined,v=undefined,s=undefined,disabled=undefined,className=undefined,type=undefined,title=undefined,style=undefined}){
   return <button type={type||"button"} onClick={onClick} disabled={disabled} title={title} style={style} className={"btn btn-"+(v||"primary")+(s?" btn-"+s:"")+(className?" "+className:"")}>{children}</button>;
 }
-function Field({label=undefined,hint=undefined,children=undefined,className=undefined}){
-  return <div className={"field "+(className||"")}>{label&&<label className="field-label">{label}</label>}{children}{hint&&<span className="field-hint">{hint}</span>}</div>;
+function Field({label=undefined,hint=undefined,children=undefined,className=undefined,htmlFor=undefined}){
+  return <div className={"field "+(className||"")}>{label&&<label className="field-label" htmlFor={htmlFor}>{label}</label>}{children}{hint&&<span className="field-hint">{hint}</span>}</div>;
 }
 // Los importes se guardan sin miles; sólo la presentación usa puntos y coma decimal.
 function formatoImporteCampo(value){
@@ -4444,13 +4514,13 @@ function ImporteInput({value=undefined,onChange=undefined,onPaste=undefined,onKe
   }}/>;
 }
 function Inp({label=undefined,hint=undefined,error=undefined,className=undefined,money=false,...props}){
-  return <Field label={label} hint={hint} className={className}>{money?<ImporteInput className="inp" {...props}/>:<input className="inp" {...props}/>}{error&&<span className="field-error">{error}</span>}</Field>;
+  return <Field label={label} hint={hint} className={className} htmlFor={props.id}>{money?<ImporteInput className="inp" {...props}/>:<input className="inp" {...props}/>}{error&&<span className="field-error">{error}</span>}</Field>;
 }
 function Txa({label=undefined,hint=undefined,rows=undefined,error=undefined,className=undefined,...props}){
-  return <Field label={label} hint={hint} className={className}><textarea className="inp" rows={rows||3} {...props}/>{error&&<span className="field-error">{error}</span>}</Field>;
+  return <Field label={label} hint={hint} className={className} htmlFor={props.id}><textarea className="inp" rows={rows||3} {...props}/>{error&&<span className="field-error">{error}</span>}</Field>;
 }
 function Slt({label=undefined,hint=undefined,error=undefined,className=undefined,children=undefined,...props}){
-  return <Field label={label} hint={hint} className={className}><select className="inp" {...props}>{children}</select>{error&&<span className="field-error">{error}</span>}</Field>;
+  return <Field label={label} hint={hint} className={className} htmlFor={props.id}><select className="inp" {...props}>{children}</select>{error&&<span className="field-error">{error}</span>}</Field>;
 }
 
 const TIPO_BG={reserva:"rgba(59,130,246,0.12)",boleto:"rgba(139,92,246,0.12)",reserva_alquiler:"rgba(251,146,60,0.12)",alquiler:"rgba(45,212,191,0.12)"};
@@ -4627,8 +4697,8 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
                 <button onClick={function(){quitarCotitular(i);}} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:12}}>✕ Quitar</button>
               </div>
               <div className="dw-persona-fields">
-                <Inp label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="dw-persona-half"/>
-                <div className="dw-persona-half"><IdentificacionField value={p.dni||""} onChange={function(e){actualizarCotitular(i,"dni",e.target.value);}} placeholder="27-98765432-1"/></div>
+                <Inp id={"dw-field-"+prefix+"_cotitular_"+i+"_nombre"} label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="dw-persona-half"/>
+                <div className="dw-persona-half"><IdentificacionField id={"dw-field-"+prefix+"_cotitular_"+i+"_dni"} value={p.dni||""} onChange={function(e){actualizarCotitular(i,"dni",e.target.value);}} placeholder="27-98765432-1"/></div>
                 <Inp label="Domicilio (si es distinto)" value={p.domicilio||""} onChange={function(e){actualizarCotitular(i,"domicilio",e.target.value);}} placeholder="Dejalo vacío si es el mismo" className="dw-persona-full"/>
                 <ContactoDocumentoField id={"dw-field-"+prefix+"_cotitular_"+i+"_telefono"} label="Teléfono" type="tel" value={p.telefono||""} onChange={function(e){actualizarCotitular(i,"telefono",e.target.value);}} checked={typeof p.telefono_en_doc==="boolean"?p.telefono_en_doc:!!data[prefix+"_telefono_en_doc"]} onChecked={function(v){actualizarCotitular(i,"telefono_en_doc",v);}} placeholder="+54 9 11 1234-5678"/>
                 <ContactoDocumentoField id={"dw-field-"+prefix+"_cotitular_"+i+"_email"} label="Correo electrónico" type="email" autoComplete="off" value={p.email||""} onChange={function(e){actualizarCotitular(i,"email",e.target.value);}} checked={typeof p.email_en_doc==="boolean"?p.email_en_doc:!!data[prefix+"_email_en_doc"]} onChecked={function(v){actualizarCotitular(i,"email_en_doc",v);}} placeholder="persona@correo.com"/>
@@ -4769,21 +4839,22 @@ function ComisionEditor({data,onChange,prefix,label,base,monedaBase,defaultPct,l
   var legacy=data[legacyKey||prefix];
   // Si el usuario borra todos los dígitos, el input debe quedar vacío.
   // No volver a inyectar el valor legacy/default mientras escribe.
-  var hasExplicitValue=Object.prototype.hasOwnProperty.call(data,prefix+"_valor");
-  var valor=hasExplicitValue ? data[prefix+"_valor"] : (legacy!==undefined?legacy:defaultPct);
+  var hasExplicitValue=!!data[prefix+"_valor_editado"]||(data[prefix+"_valor"]!==undefined&&data[prefix+"_valor"]!==null&&String(data[prefix+"_valor"]).trim()!=="");
+  var valor=hasExplicitValue ? data[prefix+"_valor"] : valorComisionPredeterminado(legacy,defaultPct);
   var monedaFija=data[prefix+"_moneda"]||monedaBase||"ARS";
   var n=parseMontoAR(valor)||0;
   function setModo(next){
     onChange(prefix+"_modo",next);
+    onChange(prefix+"_valor_editado",true);
     if(next==="fijo"){
-      var seed=(parseMontoAR(base)||0)*((parseMontoAR(legacy)||0))/100;
-      onChange(prefix+"_valor",seed?String(Math.round(seed*100)/100):"");
-      if(!data[prefix+"_moneda"]) onChange(prefix+"_moneda",monedaBase||"ARS");
+      var seed=(parseMontoAR(base)||0)*n/100;
+      onChange(prefix+"_valor",String(valor??"").trim()!==""&&((parseMontoAR(base)||0)>0||n===0)?String(Math.round(seed*100)/100):"");
+      onChange(prefix+"_moneda",monedaBase||"ARS");
     } else {
-      var pctActual=(parseMontoAR(legacy)||0);
-      if(!pctActual && n>0 && parseMontoAR(base)>0) pctActual=n*100/parseMontoAR(base);
-      onChange(prefix+"_valor",pctActual?String(Math.round(pctActual*10000)/10000):"");
-      onChange(legacyKey||prefix,pctActual?String(Math.round(pctActual*10000)/10000):"");
+      var pctActual=monedaFija===(monedaBase||"ARS")&&parseMontoAR(base)>0?n*100/parseMontoAR(base):NaN;
+      if(monedaFija!==(monedaBase||"ARS"))dwNotify("info","Ingresá el porcentaje: la comisión fija estaba en otra moneda y no se aplica una conversión automática.");
+      onChange(prefix+"_valor",isFinite(pctActual)?String(Math.round(pctActual*10000)/10000):"");
+      onChange(legacyKey||prefix,isFinite(pctActual)?String(Math.round(pctActual*10000)/10000):"");
     }
   }
   var ocultable=prefix==="comision_vendedor"||prefix==="comision_comprador";
@@ -4796,7 +4867,7 @@ function ComisionEditor({data,onChange,prefix,label,base,monedaBase,defaultPct,l
           <option value="porcentaje">Porcentaje</option><option value="fijo">Monto fijo</option>
         </select>
         <div className={"dw-commission-value "+(modo==="fijo"?"is-fixed":"")}>
-          <InputValor aria-label={"Valor de comisión: "+label} className="inp" type={modo==="fijo"?"text":"number"} min="0" step="0.01" value={valor===0?"0":(valor||"")} onChange={function(e){onChange(prefix+"_valor",e.target.value);if(modo==="porcentaje")onChange(legacyKey||prefix,e.target.value);}} placeholder={modo==="fijo"?"100.000":"3"} style={{paddingRight:modo==="porcentaje"?26:10}}/>
+          <InputValor id={"dw-field-"+prefix} aria-label={"Valor de comisión: "+label} className="inp" type={modo==="fijo"?"text":"number"} min="0" step="0.01" value={valor===0?"0":(valor||"")} onChange={function(e){var v=e.target.value;if(modo==="porcentaje"&&/[eE]/.test(v)&&isFinite(Number(v)))v=String(Number(v));onChange(prefix+"_valor",v);onChange(prefix+"_valor_editado",true);if(modo==="porcentaje")onChange(legacyKey||prefix,v);}} placeholder={modo==="fijo"?"100.000":"3"} style={{paddingRight:modo==="porcentaje"?26:10}}/>
           {modo==="porcentaje"&&<span aria-hidden="true">%</span>}
         </div>
         {modo==="fijo"&&<select aria-label={"Moneda de comisión: "+label} className="inp dw-commission-currency" value={monedaFija} onChange={function(e){onChange(prefix+"_moneda",e.target.value);}}><option value="ARS">ARS</option><option value="USD">USD</option></select>}
@@ -4826,6 +4897,11 @@ function describirAcuerdoPagoCompra(op){
   return resultado;
 }
 
+function DetallesFormulario({inicialmenteAbierto=false,children=undefined,...props}){
+  var [abierto,setAbierto]=useState(!!inicialmenteAbierto);
+  return <details {...props} open={abierto} onToggle={function(e){setAbierto(e.currentTarget.open);}}>{children}</details>;
+}
+
 function StepEconomicoCompra({data,onChange,equipo,faltantes}){
   var precio=parseMontoAR(data.precio)||0,anticipo=parseMontoAR(data.anticipo)||0;
   var pctV=parseFloat(data.comision_vendedor||0),pctC=parseFloat(data.comision_comprador||0);
@@ -4853,7 +4929,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
           <Inp id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva (días corridos)" type="number" min="1" step="1" value={data.reserva_vigencia_dias??"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} placeholder="30" hint="Sugerido: 30 días corridos desde la conformidad del vendedor. Podés escribir otro plazo, incluso más de 90 días."/>
           <button type="button" className="dw-economic-term-reset" onClick={function(){onChange("reserva_vigencia_dias","30");}}>Usar 30 días sugeridos</button>
         </div>}
-        {data.tipo==="reserva"&&<details className="col2 dw-economic-advanced dw-economic-acceptance" open={!!((data.reserva_aceptacion_modo||"dias")!=="dias"||Number(data.reserva_aceptacion_dias||5)!==5)}>
+        {data.tipo==="reserva"&&<DetallesFormulario className="col2 dw-economic-advanced dw-economic-acceptance" inicialmenteAbierto={!!((data.reserva_aceptacion_modo||"dias")!=="dias"||Number(data.reserva_aceptacion_dias||5)!==5)}>
           <summary>
             <span className="dw-economic-advanced-title">Plazo de aceptación</span>
             <span className="dw-economic-advanced-caption">{(data.reserva_aceptacion_modo||"dias")==="horas"?(data.reserva_aceptacion_horas||48)+" horas desde la firma":(data.reserva_aceptacion_modo||"dias")==="fecha"?"Fecha fija":(data.reserva_aceptacion_dias||5)+" días para aceptar · sugerido 5 días"}</span>
@@ -4882,19 +4958,19 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
             })}
           </div>
           {(data.reserva_aceptacion_modo||"dias")==="horas" && (
-            <Inp label="Horas desde la suscripción" type="number" min="1" max="720" value={data.reserva_aceptacion_horas??48} onChange={function(e){onChange("reserva_aceptacion_horas",e.target.value);}} onBlur={function(e){var n=Math.max(1,Math.min(720,parseInt(e.target.value,10)||48));onChange("reserva_aceptacion_horas",String(n));}} hint="Ej: 48 = caduca a las 48 horas de firmada"/>
+            <Inp id="dw-field-reserva_aceptacion_horas" label="Horas desde la suscripción" type="number" min="1" max="720" value={data.reserva_aceptacion_horas??48} onChange={function(e){onChange("reserva_aceptacion_horas",e.target.value);}} onBlur={function(e){var n=Math.max(1,Math.min(720,parseInt(e.target.value,10)||48));onChange("reserva_aceptacion_horas",String(n));}} hint="Ej: 48 = caduca a las 48 horas de firmada"/>
           )}
           {(data.reserva_aceptacion_modo||"dias")==="dias" && (
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Inp label="Días para aceptar" type="number" min="1" max="90" value={data.reserva_aceptacion_dias??5} onChange={function(e){var v=e.target.value,n=parseInt(v,10);onChange("reserva_aceptacion_dias",v);onChange("reserva_aceptacion_vencimiento",n>0?sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),n):"");}} onBlur={function(e){var n=Math.max(1,Math.min(90,parseInt(e.target.value,10)||5));onChange("reserva_aceptacion_dias",String(n));onChange("reserva_aceptacion_vencimiento",sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),n));}}/>
-              <Inp id="dw-field-reserva_aceptacion_vencimiento" label="Vencimiento (auto)" type="date" value={data.reserva_aceptacion_vencimiento||""} onChange={function(e){onChange("reserva_aceptacion_vencimiento",e.target.value);}}/>
+              <Inp id="dw-field-reserva_aceptacion_dias" label="Días para aceptar" type="number" min="1" max="90" value={data.reserva_aceptacion_dias??5} onChange={function(e){var v=e.target.value,n=parseInt(v,10);onChange("reserva_aceptacion_dias",v);onChange("reserva_aceptacion_vencimiento",n>0?sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),n):"");}} onBlur={function(e){var n=Math.max(1,Math.min(90,parseInt(e.target.value,10)||5));onChange("reserva_aceptacion_dias",String(n));onChange("reserva_aceptacion_vencimiento",sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),n));}}/>
+              <Inp id="dw-field-reserva_aceptacion_vencimiento" label="Vencimiento (auto)" type="date" value={data.reserva_aceptacion_vencimiento||""} onChange={function(e){onChange("reserva_aceptacion_vencimiento",e.target.value);onChange("reserva_aceptacion_modo","fecha");}}/>
             </div>
           )}
           {(data.reserva_aceptacion_modo||"dias")==="fecha" && (
             <Inp id="dw-field-reserva_aceptacion_vencimiento" label="Fecha de vencimiento" type="date" value={data.reserva_aceptacion_vencimiento||""} onChange={function(e){onChange("reserva_aceptacion_vencimiento",e.target.value);}}/>
           )}
           </div>
-        </details>}
+        </DetallesFormulario>}
         {(data.id||String(data.escribania||"").trim())&&<details className="col2 dw-economic-advanced">
           <summary><span className="dw-economic-advanced-title">Escribanía (opcional)</span><span className="dw-economic-advanced-caption">{data.escribania||"Completar cuando esté asignada"}</span><span className="dw-economic-advanced-symbol" aria-hidden="true"/></summary>
           <div className="dw-economic-advanced-content"><Inp id="dw-field-escribania" label="Escribanía" value={data.escribania||""} onChange={function(e){onChange("escribania",e.target.value);}} placeholder="Nombre de la escribanía"/></div>
@@ -5060,7 +5136,7 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
           <option value="1">1 mes</option><option value="2">2 meses</option><option value="otro">Monto personalizado</option>
         </Slt>
         {data.alquiler_deposito==="otro"&&<div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8,marginTop:8}}>
-          <ImporteInput className="inp" value={data.alquiler_deposito_otro_monto||""} onChange={function(e){onChange("alquiler_deposito_otro_monto",e.target.value);}} placeholder="500"/>
+          <ImporteInput id="dw-field-alquiler_deposito_otro_monto" aria-label="Monto personalizado del depósito" className="inp" value={data.alquiler_deposito_otro_monto||""} onChange={function(e){onChange("alquiler_deposito_otro_monto",e.target.value);}} placeholder="500"/>
           <select className="inp" value={data.alquiler_deposito_otro_moneda||"USD"} onChange={function(e){onChange("alquiler_deposito_otro_moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></select>
         </div>}
       </div>
@@ -5110,6 +5186,7 @@ function StepCondicionesReservaAlq({data,onChange,equipo,faltantes}){
         <Inp id="dw-field-res_alq_inicio_estimado" label="Inicio estimado" value={data.res_alq_inicio_estimado||""} onChange={function(e){onChange("res_alq_inicio_estimado",e.target.value);}} type="date" hint={data.res_alq_inicio_estimado?("Vencimiento estimado: "+fmtD(finReservaAlquilerISO(data))):undefined} {...estiloCampoFaltante(faltantes,"res_alq_inicio_estimado")}/>
         <Slt id="dw-field-res_alq_destino" label="Destino" value={data.res_alq_destino||"vivienda"} onChange={function(e){onChange("res_alq_destino",e.target.value);}}><option value="vivienda">Vivienda</option><option value="comercial">Comercial</option><option value="profesional">Profesional</option></Slt>
         <Slt id="dw-field-res_alq_vigencia_dias" label="Vigencia de la reserva" value={data.res_alq_vigencia_dias||"10"} onChange={function(e){onChange("res_alq_vigencia_dias",e.target.value);}} {...estiloCampoFaltante(faltantes,"res_alq_vigencia_dias")}>
+          {data.res_alq_vigencia_dias&&!["3","5","7","10","15","30"].includes(String(data.res_alq_vigencia_dias))&&<option value={data.res_alq_vigencia_dias}>{data.res_alq_vigencia_dias} días</option>}
           {["3","5","7","10","15","30"].map(function(d){return <option key={d} value={d}>{d} días</option>;})}
         </Slt>
         <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
@@ -5131,12 +5208,13 @@ function StepDocSimple({data,onChange}){
     <div>
       <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Datos específicos del documento.</p>
       <div className="grid2">
+        {data.inmueble_tipo==="otro"&&<Inp id="dw-field-inmueble_tipo_otro" label="Tipo de inmueble" value={data.inmueble_tipo_otro||""} onChange={function(e){onChange("inmueble_tipo_otro",e.target.value);}} className="col2"/>}
         <Inp id="dw-field-inmueble_direccion" label="Dirección del inmueble" value={data.inmueble_direccion||""} onChange={function(e){onChange("inmueble_direccion",e.target.value);}} placeholder="Av. Corrientes 1234, CABA" className="col2"/>
         <BarrioComplejoField data={data} onChange={onChange}/>
         <Inp id="dw-field-inmueble_partido" label="Partido / Municipio" value={data.inmueble_partido||""} onChange={function(e){onChange("inmueble_partido",e.target.value);}} placeholder="Buenos Aires"/>
         <Inp id="dw-field-inmueble_provincia" label="Provincia" value={data.inmueble_provincia||""} onChange={function(e){onChange("inmueble_provincia",e.target.value);}} placeholder="Buenos Aires"/>
         {tipo==="comodato"&&<>
-          <Inp label="Inicio del comodato" type="date" value={data.comodato_inicio||""} onChange={function(e){onChange("comodato_inicio",e.target.value);onChange("comodato_plazo",plazoComodatoDesdeFechas(e.target.value,data.comodato_fin));}}/>
+          <Inp id="dw-field-comodato_inicio" label="Inicio del comodato" type="date" value={data.comodato_inicio||""} onChange={function(e){onChange("comodato_inicio",e.target.value);onChange("comodato_plazo",plazoComodatoDesdeFechas(e.target.value,data.comodato_fin));}}/>
           <Inp id="dw-field-comodato_plazo" label="Vencimiento del comodato" type="date" min={data.comodato_inicio||undefined} value={data.comodato_fin||""} onChange={function(e){onChange("comodato_fin",e.target.value);onChange("comodato_plazo",plazoComodatoDesdeFechas(data.comodato_inicio,e.target.value));}}/>
           <div className="col2" style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
             <span style={{fontSize:12,color:"var(--dim)"}}>Atajo desde el inicio:</span>
@@ -5199,7 +5277,7 @@ function StepGarantia({data,onChange}){
       {data.alquiler_garantia_tipo==="propietario"&&(
         <div className="grid2" style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
           <Inp id="dw-field-alquiler_garantia_titular" label="Nombre del garante" value={data.alquiler_garantia_titular||""} onChange={function(e){onChange("alquiler_garantia_titular",e.target.value);}} placeholder="Roberto Gómez" className="col2"/>
-          <IdentificacionField value={data.alquiler_garantia_dni||""} onChange={function(e){onChange("alquiler_garantia_dni",e.target.value);}} placeholder="20-98765432-1" labelSuffix=" del garante"/>
+          <IdentificacionField id="dw-field-alquiler_garantia_dni" value={data.alquiler_garantia_dni||""} onChange={function(e){onChange("alquiler_garantia_dni",e.target.value);}} placeholder="20-98765432-1" labelSuffix=" del garante"/>
           <Inp id="dw-field-alquiler_garantia_inmueble" label="Inmueble en garantía" value={data.alquiler_garantia_inmueble||""} onChange={function(e){onChange("alquiler_garantia_inmueble",e.target.value);}} placeholder="Mitre 456, Quilmes"/>
         </div>
       )}
@@ -5478,7 +5556,7 @@ function getResumenPartes(op){
   return prefixes.map(function(prefix,i){return {label:roles[i]||roles[0],nombre:op[prefix+"_nombre"]||"",dni:op[prefix+"_dni"]||""};});
 }
 function datosCompraCompartidos(op){
-  var datos={inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
+  var datos={comision_vendedor_valor_editado:op.comision_vendedor_valor_editado,comision_comprador_valor_editado:op.comision_comprador_valor_editado,inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
   ["comprador","vendedor"].forEach(function(prefix){
     datos[prefix+"_telefono"]=op[prefix+"_telefono"]||"";
     datos[prefix+"_email"]=op[prefix+"_email"]||"";
@@ -5551,7 +5629,7 @@ function PasoResumenFinal({data,clausulas,onVolver,onFinalizarAccion}){
       {faltantes.length>0&&(
         <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"10px 14px",borderRadius:10,background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",marginBottom:12,fontSize:12.5,color:"var(--red)"}}>
           <span>⚠</span>
-          <div style={{flex:1,minWidth:0}}><div style={{fontWeight:750,marginBottom:5}}>Faltan datos por completar:</div><ul style={{listStyle:"none",padding:0,margin:"0 0 5px"}}>{faltantes.map(function(f){return <li key={f.campo} style={{margin:"3px 0"}}><button type="button" onClick={function(){onVolver(f.campo);}} style={{background:"none",border:0,padding:0,color:"inherit",textDecoration:"underline",cursor:"pointer",font:"inherit",textAlign:"left"}}>• {f.label}</button></li>;})}</ul><div style={{fontSize:12,color:"var(--muted)"}}>Podés completarlos más tarde.</div></div>
+          <div style={{flex:1,minWidth:0}}><div style={{fontWeight:750,marginBottom:5}}>Revisá estos datos:</div><ul style={{listStyle:"none",padding:0,margin:"0 0 5px"}}>{faltantes.map(function(f){return <li key={f.campo} style={{margin:"3px 0"}}><button type="button" onClick={function(){onVolver(f.campo);}} style={{background:"none",border:0,padding:0,color:"inherit",textDecoration:"underline",cursor:"pointer",font:"inherit",textAlign:"left"}}>• {f.label}</button></li>;})}</ul><div style={{fontSize:12,color:"var(--muted)"}}>Podés completarlos más tarde.</div></div>
         </div>
       )}
       <Tarjeta t="Partes">
@@ -7669,19 +7747,19 @@ const TareasPanel = crearTareasPanel({Btn, genId, getTareasDeOp, useState});
 const NegociacionPanel = crearNegociacionPanel({Btn, Inp, Slt, Txa, fechaHoyISO, fmt$, fmtD, genId, useState});
 const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
 const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
-const EstadisticasView = crearEstadisticasView({Btn, getComisionComponents, loadRecharts, useEffect, useState});
+const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
-const OperacionForm = crearOperacionForm({FloatingOperationSave, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
+const OperacionForm = crearOperacionForm({FloatingOperationSave, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
 const ClausulasWorkspace = crearClausulasWorkspace({TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
-const DashboardView = crearDashboardView({Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
+const DashboardView = crearDashboardView({parseMontoAR, Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
 const SuperAdminDashboard = crearSuperAdminDashboard({AUTH_RED, AUTH_MUTED, descargarCSV, loadSupabaseJs, traducirError, Field, dwNotify, requestDwConfirm, fmt$, Modal, DWIcon});
 async function generarVistaPreviaAspecto(perfil){
   var op=Object.assign({},SAMPLE_OP_PREVIEW,{id:"EJEMPLO-NO-GUARDAR",tipo:"reserva",created_at:"2026-11-04T12:00:00.000Z",inmueble_direccion:"EJEMPLO · Av. del Libertador 5678",reserva_vigencia_dias:"30",reserva_aceptacion_dias:"5",reserva_incluye_refuerzo:false});
   var doc=aplicarEncabezadoPersonalizado(buildDocSections(opParaDocumento(op),[],"reserva"),op,"reserva",perfil);
   return generarPDF(doc,perfil.logoDataUrl,perfil);
 }
-const ConfiguracionView = crearConfiguracionView({generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
+const ConfiguracionView = crearConfiguracionView({parseMontoAR, generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
 
 function DocWorksApp(){
   var docworksAuth = useDocWorksSession();

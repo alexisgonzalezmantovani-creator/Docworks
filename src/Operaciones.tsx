@@ -21,20 +21,20 @@ export const EMPTY_OP = {
   alquiler_garantia_tipo:"propietario", alquiler_garantia_titular:"", alquiler_garantia_dni:"", alquiler_garantia_inmueble:"",
   alquiler_garantia_texto_personalizado:"",
   alquiler_comision:"1", alquiler_comision_locador:"", alquiler_comision_locatario:"",
-  alquiler_comision_locador_modo:"porcentaje", alquiler_comision_locador_valor:"", alquiler_comision_locador_moneda:"ARS",
-  alquiler_comision_locatario_modo:"porcentaje", alquiler_comision_locatario_valor:"", alquiler_comision_locatario_moneda:"ARS",
+  alquiler_comision_locador_modo:"porcentaje", alquiler_comision_locador_valor:"1", alquiler_comision_locador_moneda:"ARS",
+  alquiler_comision_locatario_modo:"porcentaje", alquiler_comision_locatario_valor:"1", alquiler_comision_locatario_moneda:"ARS",
   alquiler_forma_pago:["transferencia"], alquiler_dia_pago:"1", alquiler_dia_pago_otro:"",
   alquiler_interes_punitorio:"5", alquiler_penalidad_meses:"2", alquiler_seguro_dias:"10", alquiler_aviso_meses:"1",
   clausulas_ids:[], clausulas_custom:"", clausulas_custom_titulo:"", entrega_aires_detalle:"", entrega_muebles_detalle:"",
   inmueble_tipo:"departamento", inmueble_tipo_otro:"", inmueble_unidad_funcional:"", inmueble_en_barrio_complejo:false, inmueble_barrio:"",
   alquiler_modo_plazo:"preset", alquiler_plazo_dias:"0",
   res_alq_aceptacion_dias:"2",
-  comision_vendedor:"4", comision_comprador:"3",
-  comision_vendedor_modo:"porcentaje", comision_vendedor_valor:"", comision_vendedor_moneda:"USD",
-  comision_comprador_modo:"porcentaje", comision_comprador_valor:"", comision_comprador_moneda:"USD",
+  comision_vendedor:"3", comision_comprador:"3",
+  comision_vendedor_modo:"porcentaje", comision_vendedor_valor:"3", comision_vendedor_moneda:"USD",
+  comision_comprador_modo:"porcentaje", comision_comprador_valor:"3", comision_comprador_moneda:"USD",
   res_alq_comision_locador:"", res_alq_comision_locatario:"",
-  res_alq_comision_locador_modo:"porcentaje", res_alq_comision_locador_valor:"", res_alq_comision_locador_moneda:"ARS",
-  res_alq_comision_locatario_modo:"porcentaje", res_alq_comision_locatario_valor:"", res_alq_comision_locatario_moneda:"ARS",
+  res_alq_comision_locador_modo:"porcentaje", res_alq_comision_locador_valor:"1", res_alq_comision_locador_moneda:"ARS",
+  res_alq_comision_locatario_modo:"porcentaje", res_alq_comision_locatario_valor:"1", res_alq_comision_locatario_moneda:"ARS",
   res_alq_plazo_cantidad:"24", res_alq_plazo_unidad:"meses",
   parent_id:null,
   exclusividad_inmobiliaria_autofill:false,
@@ -2744,7 +2744,7 @@ return SuperAdminDashboard;
 }
 
 export function crearConfiguracionView(deps){
- const {generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
+ const {parseMontoAR, generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
 function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, onChange, currentUserId, currentUserRole, darkMode, onToggleDark, equipo, equipoSupabase, operaciones, clausulas, onAddClausula, onEditClausula, onDeleteClausula, onMoveClausula, onDuplicateClausula, bloquesReserva, onUpdateBloqueReserva, onMoveBloqueReserva, bloquesError, bloquesLoading, onRetryBloques, clausulasError, onRetryClausulas, papelera, auditLog, auditoriaSupabase, onExportarRespaldo, onImportarRespaldo, onVaciarAuditoria, puedeInstalar, onInstalar, onStartTour, ctx }) {
   const [tab, setTab] = useState(requestedTab?.tab||"cuenta");
   useEffect(function(){if(requestedTab?.tab)pedirCambioTab(requestedTab.tab);},[requestedTab?.request]);
@@ -3907,7 +3907,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
             cerradas:misOps.filter(function(o){return o.estado==="cerrado";}).length,
             borrador:misOps.filter(function(o){return o.estado==="borrador";}).length,
             volumen:misOps.reduce(function(s,o){
-              var v=o.tipo==="alquiler"?parseFloat(o.alquiler_monto_inicial||0):parseFloat(o.precio||0);
+              var v=o.tipo==="alquiler"?parseMontoAR(o.alquiler_monto_inicial||0):parseMontoAR(o.precio||0);
               return s+(isNaN(v)?0:v);
             },0),
           };
@@ -4000,7 +4000,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
 }
 
 export function crearDashboardView(deps){
- const {Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport} = deps;
+ const {parseMontoAR, Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport} = deps;
 
 
 
@@ -4050,8 +4050,8 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     var matchAvanzado=true;
     if(filtros.agente!=="todos") matchAvanzado=grupoDe(op).some(function(o){return String(o.broker_id||"")===String(filtros.agente);});
     if(filtros.sucursal!=="todos") matchAvanzado=matchAvanzado&&grupoDe(op).some(function(o){return String(o.sucursal||o.sucursal_nombre||"")===String(filtros.sucursal);});
-    var minM=filtros.montoMin!==""?parseFloat(filtros.montoMin):null, maxM=filtros.montoMax!==""?parseFloat(filtros.montoMax):null;
-    if(minM!==null||maxM!==null) matchAvanzado=matchAvanzado&&grupoDe(op).some(function(o){var m=Number(o.precio||o.alquiler_monto_inicial||o.res_alq_monto_mensual||0);return (minM===null||m>=minM)&&(maxM===null||m<=maxM);});
+    var minM=filtros.montoMin!==""?parseMontoAR(filtros.montoMin):null, maxM=filtros.montoMax!==""?parseMontoAR(filtros.montoMax):null;
+    if(minM!==null||maxM!==null) matchAvanzado=matchAvanzado&&grupoDe(op).some(function(o){var m=parseMontoAR(o.tipo==="alquiler"?o.alquiler_monto_inicial:o.tipo==="reserva_alquiler"?o.res_alq_monto_mensual:o.precio);return (minM===null||m>=minM)&&(maxM===null||m<=maxM);});
     if(filtros.desde) matchAvanzado=matchAvanzado&&grupoDe(op).some(function(o){return new Date(o.created_at||0)>=new Date(filtros.desde+"T00:00:00");});
     if(filtros.hasta) matchAvanzado=matchAvanzado&&grupoDe(op).some(function(o){return new Date(o.created_at||0)<=new Date(filtros.hasta+"T23:59:59");});
     return matchSearch&&matchTipo&&matchEstado&&matchAvanzado;
@@ -4420,7 +4420,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
 }
 
 export function crearEstadisticasView(deps){
- const {Btn, getComisionComponents, loadRecharts, useEffect, useState} = deps;
+ const {Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState} = deps;
 
 function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRole,onExportarCSV}){
   const [rechReady,setRechReady]=useState(typeof window !== "undefined" && !!window.Recharts);
@@ -4457,7 +4457,7 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
     var key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
     var mes=d.toLocaleString("es-AR",{month:"short",year:"2-digit"});
     var ops=operacionesVisibles.filter(function(o){return (o.created_at||"").slice(0,7)===key;});
-    meses12.push({name:mes,ops:ops.length,usd:ops.filter(function(o){return o.moneda==="USD"&&o.precio;}).reduce(function(s,o){return s+parseFloat(o.precio||0);},0)});
+    meses12.push({name:mes,ops:ops.length,usd:ops.filter(function(o){return o.moneda==="USD"&&o.precio;}).reduce(function(s,o){return s+parseMontoAR(o.precio||0);},0)});
   }
 
   // --- Anual: por año, contando cada carpeta una sola vez ---
@@ -4466,7 +4466,7 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
   if(!isFinite(minAnio))minAnio=now.getFullYear();
   for(var y=minAnio;y<=now.getFullYear();y++){
     var yops=operacionesVisibles.filter(function(o){return (o.created_at||"").slice(0,4)===String(y);});
-    anios.push({name:String(y),ops:yops.length,usd:yops.filter(function(o){return o.moneda==="USD"&&o.precio;}).reduce(function(s,o){return s+parseFloat(o.precio||0);},0)});
+    anios.push({name:String(y),ops:yops.length,usd:yops.filter(function(o){return o.moneda==="USD"&&o.precio;}).reduce(function(s,o){return s+parseMontoAR(o.precio||0);},0)});
   }
 
   // --- Por broker: cada carpeta cuenta una sola vez ---
@@ -4480,8 +4480,8 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
 
   // Todo lo estadístico parte de la carpeta raíz. Los documentos vinculados
   // (reserva → boleto, refuerzo, comodato, etc.) nunca vuelven a sumar.
-  var usd=operacionesVisibles.filter(function(o){return o.moneda==="USD"&&o.precio;}).reduce(function(s,o){return s+parseFloat(o.precio||0);},0);
-  var ars=operacionesVisibles.filter(function(o){return o.moneda==="ARS"&&o.precio;}).reduce(function(s,o){return s+parseFloat(o.precio||0);},0);
+  var usd=operacionesVisibles.filter(function(o){return o.moneda==="USD"&&o.precio;}).reduce(function(s,o){return s+parseMontoAR(o.precio||0);},0);
+  var ars=operacionesVisibles.filter(function(o){return o.moneda==="ARS"&&o.precio;}).reduce(function(s,o){return s+parseMontoAR(o.precio||0);},0);
   var canon=operacionesVisibles.filter(function(o){return o.tipo==="alquiler"&&o.alquiler_monto_inicial;}).reduce(function(s,o){return s+parseFloat(o.alquiler_monto_inicial||0);},0);
   function grupoRaiz(o){return [o].concat(operaciones.filter(function(h){return h.parent_id===o.id;}));}
   function comisionOperacion(o){
@@ -5180,8 +5180,17 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
  return DocumentViewer;
 }
 
+export function enfocarCampoOperacion(campo){
+  if(typeof document==="undefined")return false;
+  var el=document.getElementById("dw-field-"+campo)||(campo==="comodato_fin"?document.getElementById("dw-field-comodato_plazo"):null);if(!el)return false;
+  var parent=el.parentElement;while(parent){if(parent.tagName==="DETAILS")parent.setAttribute("open","");parent=parent.parentElement;}
+  try{el.scrollIntoView({behavior:"smooth",block:"center"});}catch(e){}
+  try{el.focus({preventScroll:true});}catch(e){}
+  return true;
+}
+
 export function crearOperacionForm(deps){
- const {FloatingOperationSave, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {FloatingOperationSave, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -5242,8 +5251,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     var intentos=0;
     var iv=window.setInterval(function(){
       intentos++;
-      var el=document.getElementById("dw-field-"+campo);
-      if(el){ window.clearInterval(iv); try{el.scrollIntoView({behavior:"smooth",block:"center"});}catch(e){} try{el.focus({preventScroll:true});}catch(e){} }
+      if(enfocarCampoOperacion(campo))window.clearInterval(iv);
       else if(intentos>15) window.clearInterval(iv);
     },100);
   }
@@ -5251,8 +5259,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     if(!focusCampo||typeof document==="undefined") return;
     var n=0, iv=window.setInterval(function(){
       n++;
-      var el=document.getElementById("dw-field-"+focusCampo);
-      if(el){ window.clearInterval(iv); try{el.scrollIntoView({behavior:"smooth",block:"center"});}catch(e){} try{el.focus({preventScroll:true});}catch(e){} }
+      if(enfocarCampoOperacion(focusCampo))window.clearInterval(iv);
       else if(n>15) window.clearInterval(iv);
     },100);
     return function(){window.clearInterval(iv);};
@@ -5373,7 +5380,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // que ya trae parent_id), se ofrece elegir una reserva abierta reciente para
   // no volver a tipear todos los datos de las partes y el inmueble.
   function elegirReservaParaDevolucion(op){
-    setBulk({
+    setBulk({...datosCompraCompartidos(op),
       parent_id: op.id,
       comprador_nombre:op.comprador_nombre||"", comprador_dni:op.comprador_dni||"", comprador_domicilio:op.comprador_domicilio||"",
       vendedor_nombre:op.vendedor_nombre||"", vendedor_dni:op.vendedor_dni||"", vendedor_domicilio:op.vendedor_domicilio||"",
@@ -5385,7 +5392,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     });
   }
   function elegirReservaParaRefuerzo(op){
-    setBulk({
+    setBulk({...datosCompraCompartidos(op),
       parent_id: op.id,
       comprador_nombre:op.comprador_nombre||"", comprador_dni:op.comprador_dni||"",
       comprador_domicilio:op.comprador_domicilio||"", comprador_email:op.comprador_email||"", comprador_telefono:op.comprador_telefono||"",
@@ -5483,7 +5490,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       {modoEdicion&&faltantesDetalle.length>0&&(
         <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"10px 14px",borderRadius:10,background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",marginBottom:10,fontSize:12.5,color:"var(--red)"}}>
           <span>⚠</span>
-          <span>Faltan {faltantesDetalle.length} dato{faltantesDetalle.length===1?"":"s"} clave: {faltantesDetalle.map(function(f){return f.label;}).join(", ")}.</span>
+          <span>Revisá {faltantesDetalle.length} dato{faltantesDetalle.length===1?"":"s"}: {faltantesDetalle.map(function(f){return f.label;}).join(", ")}.</span>
         </div>
       )}
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(id);}}/></div>
