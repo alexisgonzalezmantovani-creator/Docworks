@@ -464,7 +464,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.22";
+var DOCWORKS_VERSION = "6.23";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -2577,7 +2577,7 @@ function relativeTimeCorto(ts){
   var h=Math.round(m/60);
   return "hace "+h+"h";
 }
-function AutosaveIndicator({status, compact}){
+function AutosaveIndicator({status, compact, persistent=false}){
   // Indicador discreto: aparece mientras guarda y unos segundos al terminar.
   // Los errores y la falta de conexión permanecen visibles para no ocultar riesgos.
   var [showSaved,setShowSaved]=useState(false);
@@ -2589,16 +2589,43 @@ function AutosaveIndicator({status, compact}){
     return function(){clearTimeout(timer);};
   },[status.state,status.ts]);
   var state=status.state;
-  if(state==="saved" && !showSaved && online) return null;
+  if(state==="saved" && !showSaved && online && !persistent) return null;
   var saving=state==="saving",error=state==="error";
   var color=error?"var(--red)":!online?"var(--gold)":saving?"var(--dim)":"var(--green)";
   var description=error?"No se pudieron guardar los cambios":!online?"Sin conexión — guardado local":saving?"Guardando cambios…":"Cambios guardados";
   return (
     <span role="status" aria-label={description} title={description} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:compact?11:12,color:color,fontFamily:"DM Sans,sans-serif",whiteSpace:"nowrap"}}>
-      <span aria-hidden="true" style={{display:"inline-block",fontSize:compact?15:16,animation:saving?"diskpulse 0.9s ease-in-out infinite":"none"}}>💾</span>
+      <svg aria-hidden="true" width={compact?18:20} height={compact?18:20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,animation:saving?"diskpulse 0.9s ease-in-out infinite":"none"}}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V4M7 21v-8h10v8M13 5v2"/></svg>
       {(error||!online)&&<span>{error?"Error al guardar":"Sin conexión"}</span>}
     </span>
   );
+}
+function FloatingOperationSave({status}){
+  var [keyboardInset,setKeyboardInset]=useState(0);
+  useEffect(function(){
+    var viewport=window.visualViewport;
+    if(!viewport)return;
+    function update(){setKeyboardInset(Math.max(0,window.innerHeight-viewport.height-viewport.offsetTop));}
+    update();
+    viewport.addEventListener("resize",update);viewport.addEventListener("scroll",update);
+    return function(){viewport.removeEventListener("resize",update);viewport.removeEventListener("scroll",update);};
+  },[]);
+  if(!status)return null;
+  return createPortal(<div className="dw-operation-save dw-operation-save-floating" style={{bottom:"calc("+(keyboardInset+16)+"px + env(safe-area-inset-bottom, 0px))"}}><AutosaveIndicator status={status} compact={false} persistent/></div>,document.body);
+}
+
+// El formulario y el listado comparten página. Reiniciar ambos tipos de scroll
+// después de liberar el bloqueo del diálogo evita arrastrar el desplazamiento del formulario.
+function useOperationPageScroll(showForm){
+  useEffect(function(){
+    var frame=requestAnimationFrame(function(){
+      if(window.__dwScrollLocks)return;
+      if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
+      window.scrollTo({top:0,left:0,behavior:"instant"});
+      document.querySelectorAll(".content").forEach(function(el){el.scrollTo({top:0,left:0,behavior:"instant"});});
+    });
+    return function(){cancelAnimationFrame(frame);};
+  },[showForm]);
 }
 // Purga de la papelera: elimina definitivamente lo que lleva más de 30 días.
 var PAPELERA_DIAS = 30;
@@ -4397,7 +4424,7 @@ function useBodyScrollLock(active){
         var y2=parseInt(b.getAttribute("data-dw-scroll-y")||"0",10)||0;
         b.style.position=""; b.style.top=""; b.style.left=""; b.style.right=""; b.style.width="";
         b.removeAttribute("data-dw-scroll-y"); h.classList.remove("dw-modal-open");
-        try{ window.scrollTo(0,y2); }catch(e){}
+        try{ window.scrollTo({top:y2,left:0,behavior:"instant"}); }catch(e){}
       }
     };
   },[active]);
@@ -4482,7 +4509,6 @@ function getSteps(t){
 }
 
 function IdentificacionField({value,onChange,placeholder=undefined,className=undefined,labelSuffix=undefined,style=undefined,error=undefined,id=undefined}){
-  var limpio=String(value||"").replace(/\D/g,"");
   var tipo=tipoIdentificacion(value);
   var dniActivo=tipo==="DNI";
   var cuitActivo=tipo==="CUIT";
@@ -4490,13 +4516,12 @@ function IdentificacionField({value,onChange,placeholder=undefined,className=und
     return <span style={{display:"inline-flex",alignItems:"center",padding:"3px 8px",borderRadius:8,border:"1px solid "+(active?"var(--gold)":"var(--border2)"),background:active?"rgba(212,168,83,0.14)":"transparent",color:active?"var(--gold)":"var(--dim)",fontSize:12,fontWeight:active?700:500}}>{label}</span>;
   }
   return <Field className={className}>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:5}}>
+    <div className="dw-identificacion-heading" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:5}}>
       <label className="field-label" style={{marginBottom:0}}>{tipo+(labelSuffix||"")}</label>
       <div style={{display:"flex",gap:5,flexShrink:0}}><Chip label="DNI" active={dniActivo}/><Chip label="CUIT" active={cuitActivo}/></div>
     </div>
     <input id={id} className="inp" value={value||""} onChange={onChange} placeholder={placeholder} style={style}/>
     {error&&<span className="field-error">{error}</span>}
-    <span className="field-hint">{limpio.length===0?"Se detecta automáticamente según la cantidad de dígitos.":dniActivo?"Detectado: DNI · 7–8 dígitos.":cuitActivo?"Detectado: CUIT · 11 dígitos.":"Formato pendiente de identificar."}</span>
   </Field>;
 }
 
@@ -4527,8 +4552,8 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
         <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
         <div className="dw-persona-half dw-persona-identificacion"><IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="20-12345678-9" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/></div>
         <Inp id={"dw-field-"+prefix+"_domicilio"} label="Domicilio" value={f("domicilio")} onChange={s("domicilio")} placeholder="Av. Corrientes 1234, CABA" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_domicilio")}/>
-        <Inp label="Teléfono" type="tel" inputMode="tel" value={f("telefono")} onChange={s("telefono")} placeholder="+54 9 11 1234-5678" hint="Dato interno de la operación."/>
-        <Inp label="Correo electrónico" type="email" inputMode="email" autoComplete="email" value={f("email")} onChange={s("email")} placeholder="persona@correo.com" hint="Dato interno de la operación."/>
+        <Inp label="Teléfono" type="tel" inputMode="tel" value={f("telefono")} onChange={s("telefono")} placeholder="+54 9 11 1234-5678" />
+        <Inp label="Correo electrónico" type="email" inputMode="email" autoComplete="email" value={f("email")} onChange={s("email")} placeholder="persona@correo.com" />
         <div className="dw-doc-toggles">
           <div className="dw-doc-toggles-title">Datos de contacto en el documento</div>
           <div className="dw-doc-toggles-options">
@@ -4560,8 +4585,8 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
                 <Inp label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="dw-persona-half"/>
                 <div className="dw-persona-half"><IdentificacionField value={p.dni||""} onChange={function(e){actualizarCotitular(i,"dni",e.target.value);}} placeholder="27-98765432-1"/></div>
                 <Inp label="Domicilio (si es distinto)" value={p.domicilio||""} onChange={function(e){actualizarCotitular(i,"domicilio",e.target.value);}} placeholder="Dejalo vacío si es el mismo" className="dw-persona-half"/>
-                <Inp label="Teléfono" type="tel" inputMode="tel" value={p.telefono||""} onChange={function(e){actualizarCotitular(i,"telefono",e.target.value);}} placeholder="+54 9 11 1234-5678" hint="Dato interno de la operación."/>
-                <Inp label="Correo electrónico" type="email" inputMode="email" autoComplete="off" value={p.email||""} onChange={function(e){actualizarCotitular(i,"email",e.target.value);}} placeholder="persona@correo.com" hint="Dato interno de la operación."/>
+                <Inp label="Teléfono" type="tel" inputMode="tel" value={p.telefono||""} onChange={function(e){actualizarCotitular(i,"telefono",e.target.value);}} placeholder="+54 9 11 1234-5678" />
+                <Inp label="Correo electrónico" type="email" inputMode="email" autoComplete="off" value={p.email||""} onChange={function(e){actualizarCotitular(i,"email",e.target.value);}} placeholder="persona@correo.com" />
                 <label className="dw-persona-half" style={{display:"flex",alignItems:"center",fontSize:12.5,color:"var(--text)",cursor:"pointer"}}>
                   <input type="checkbox" checked={typeof p.telefono_en_doc==="boolean"?p.telefono_en_doc:!!data[prefix+"_telefono_en_doc"]} onChange={function(e){actualizarCotitular(i,"telefono_en_doc",e.target.checked);}}/>
                   Mostrar teléfono en el documento
@@ -6519,9 +6544,14 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 @media(max-width:640px){
  .dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:wrap!important;align-items:flex-start!important}
  .dw-clause-compact.dw-clause-open .dw-model-clause-row>div:first-child{flex:1 0 100%!important;width:100%!important}
- .dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{flex:1 0 100%!important;width:100%!important;max-width:100%!important;flex-wrap:wrap!important;justify-content:flex-start!important;overflow:visible!important;gap:6px}
+ .dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{display:grid!important;grid-template-columns:36px 36px minmax(0,1fr) auto;flex:1 0 100%!important;width:100%!important;max-width:100%!important;overflow:visible!important;gap:6px;align-items:center}
  .dw-clause-compact.dw-clause-open .dw-clause-name{overflow-wrap:normal;word-break:normal}
- .dw-clause-compact.dw-clause-open .dw-clause-actions button{flex-shrink:0}
+ .dw-clause-compact.dw-clause-open .dw-clause-actions button{flex-shrink:0;box-sizing:border-box;height:36px;min-height:36px;white-space:nowrap;border-radius:9px!important;display:inline-flex;align-items:center;justify-content:center}
+ .dw-clause-compact.dw-clause-open .dw-clause-actions button[title="Historial de la cláusula"]{grid-column:3;grid-row:1;padding:0 8px!important}
+ .dw-clause-compact.dw-clause-open .dw-clause-actions button[title="Editar"]{grid-column:4;grid-row:1;padding:0 10px!important}
+ .dw-clause-compact.dw-clause-open .dw-clause-actions select{grid-column:1/4;grid-row:2;max-width:none!important;width:100%!important;height:36px;box-sizing:border-box;font-size:16px!important}
+ .dw-clause-compact.dw-clause-open .dw-clause-actions button[title="Eliminar"]{grid-column:4;grid-row:2;min-width:36px}
+ .dw-clause-actions button svg{width:15px;height:15px;max-width:none;flex:none}
 }
 @media(prefers-reduced-motion:reduce){.dw-clause-chevron,.dw-clause-card{transition:none}}
 `;
@@ -7577,7 +7607,7 @@ const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
 const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
-const OperacionForm = crearOperacionForm({AutosaveIndicator, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
+const OperacionForm = crearOperacionForm({FloatingOperationSave, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
 const ClausulasWorkspace = crearClausulasWorkspace({TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
@@ -7775,28 +7805,10 @@ function DocWorksApp(){
     navegarConProteccionModelo(function(){setViewDirecto(next);});
   }
   useEffect(function(){lsSet("last_view_v1",view||"dashboard");},[view]);
-  // 4.08 — Los botones flotantes ("+" y asistente) se esconden al bajar y vuelven al subir.
-  useEffect(function(){
-    var ultimo=0;
-    function onScroll(e){
-      try{
-        var t=e.target;
-        var esPagina=(t===document||t===document.documentElement||t===document.body);
-        var esContenido=!!(t&&t.classList&&t.classList.contains("content"));
-        if(!esPagina&&!esContenido) return;
-        var y=esPagina?(window.pageYOffset||document.documentElement.scrollTop||0):(t.scrollTop||0);
-        var dy=y-ultimo;
-        if(Math.abs(dy)<8) return;
-        document.body.classList.toggle("dw-fab-hide",dy>0&&y>90);
-        ultimo=y;
-      }catch(_s){ /* sin efecto visual si falla */ }
-    }
-    window.addEventListener("scroll",onScroll,{capture:true,passive:true});
-    return function(){ window.removeEventListener("scroll",onScroll,true); document.body.classList.remove("dw-fab-hide"); };
-  },[]);
   const [showFormEstado,setShowFormEstado]=useState(false);
   const [formContexto,setFormContexto]=useState("");
   const showForm=showFormEstado&&formContexto===claveContextoOperaciones(docworksAuth.contexto);
+  useOperationPageScroll(showForm);
   function setShowForm(visible){if(visible)setFormContexto(claveContextoOperaciones(docworksAuth.contexto));setShowFormEstado(visible);}
   const [editOp,setEditOp]=useState(null);
   const [formInitialOverride,setFormInitialOverride]=useState(null); // prefill de un borrador recuperado (operación nueva, sin guardar aún)

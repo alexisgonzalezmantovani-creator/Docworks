@@ -311,6 +311,10 @@ export const GS = `
 .dw-operation-form-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-left:auto;max-width:100%}
 .dw-operation-next-action{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .dw-operation-save{display:inline-flex;align-items:center}
+.dw-operation-save-floating{position:fixed;right:max(16px,env(safe-area-inset-right,0px));z-index:600;max-width:calc(100vw - 32px);pointer-events:none;filter:drop-shadow(0 4px 12px rgba(0,0,0,.22))}
+.dw-operation-save-floating [role=status]{min-width:44px!important;min-height:44px!important;background:var(--card)!important}
+.dw-operation-page{padding-bottom:72px;overflow-anchor:none}
+
 .dw-operation-save [role=status]{justify-content:center;min-width:40px;min-height:40px;box-sizing:border-box;padding:7px 9px;border:1px solid var(--border2);border-radius:10px;background:var(--surface2)}
 .dw-operation-save [aria-hidden=true]{font-size:20px!important}
 .dw-operation-page .grid2>.field{min-width:0;max-width:none;}
@@ -445,12 +449,10 @@ export const GS = `
 
 
 
-/* Alinea el input DNI/CUIT con el input de nombre, sin desfasaje causado por los chips. */
-.dw-operation-page .dw-persona-identificacion{position:relative}
-.dw-operation-page .dw-persona-identificacion>.field>div:first-child{height:16px;min-height:16px;margin-bottom:0!important;align-items:center}
-.dw-operation-page .dw-persona-identificacion>.field>div:first-child>div{position:absolute;top:-6px;right:0}
-.dw-operation-page .dw-persona-identificacion>.field>div:first-child .field-label{line-height:16px}
-@media(max-width:480px){.dw-operation-page .dw-persona-identificacion>.field>div:first-child>div{top:-4px}}
+/* Los chips participan del flujo: nunca se dibujan sobre el input de DNI/CUIT. */
+.dw-identificacion-heading{flex-wrap:wrap;min-height:26px;height:auto}
+.dw-identificacion-heading .field-label{line-height:1.3}
+.dw-identificacion-heading>div{position:static;flex-shrink:0}
 /* Datos de personas: filas uniformes, dos columnas reales, sin celdas sueltas. */
 .dw-operation-page .dw-persona-fields{
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
@@ -526,6 +528,18 @@ export const GS = `
   .op-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:11.5px;color:var(--text);vertical-align:middle;}
   .op-table tr:last-child td{border-bottom:0;}
   .op-table tr:hover td{background:var(--hover-bg);}
+  @media(max-width:640px){
+    .op-table{min-width:0;width:100%;table-layout:fixed}
+    .op-table th,.op-table td{padding:10px 7px}
+    .op-table th:nth-child(n+3):nth-child(-n+6),.op-table td:nth-child(n+3):nth-child(-n+6){display:none}
+    .op-table th:first-child,.op-table td:first-child{width:78px}
+    .op-table th:last-child,.op-table td:last-child{width:65px}
+    .op-table td:nth-child(2)>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .op-table .op-status-badge{max-width:100%;box-sizing:border-box;font-size:10px;padding:4px 6px}
+    .op-table td:last-child .btn{padding:7px 8px;min-height:36px}
+    .op-table-wrap{overflow:visible}
+  }
+
   @media(max-width:850px){.op-filter-panel{grid-template-columns:1fr 1fr;}}
   @media(max-width:560px){.op-filter-panel{grid-template-columns:1fr;}.op-view-switch{order:2;}.op-filter-row-top{width:100%;}}
 
@@ -1175,7 +1189,7 @@ html,body{touch-action:manipulation;}
 .fab svg{pointer-events:none;}
 .ia-fab{transition:transform .25s cubic-bezier(.2,.8,.2,1),opacity .2s,box-shadow .2s!important;}
 .fab:active,.ia-fab:active{transform:scale(.92)!important;}
-@media (max-width:640px),(orientation:landscape) and (max-height:500px){body.dw-fab-hide .fab,body.dw-fab-hide .ia-fab{transform:translateY(170px)!important;opacity:0;pointer-events:none;}}
+
 @media (max-width:640px){
   .fab{display:flex!important;bottom:calc(var(--mobile-nav-h) + 14px)!important;right:16px!important;width:56px!important;height:56px!important;}
   .ia-fab{bottom:calc(var(--mobile-nav-h) + 82px)!important;right:20px!important;width:46px!important;height:46px!important;}
@@ -5101,7 +5115,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
 }
 
 export function crearOperacionForm(deps){
- const {AutosaveIndicator, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {FloatingOperationSave, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -5333,7 +5347,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:14}}>
           <Btn v="ghost" onClick={onCancel}>Cancelar</Btn>
         </div>
-        {saveStatus&&<div style={{display:"flex",justifyContent:"flex-end",paddingTop:8}}><AutosaveIndicator status={saveStatus} compact={true}/></div>}
+        {saveStatus&&<FloatingOperationSave status={saveStatus}/>}
       </div>
     );
   }
@@ -5421,12 +5435,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         <div className="dw-operation-form-actions">
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           <div className="dw-operation-next-action">
-            {saveStatus&&<span className="dw-operation-save"><AutosaveIndicator status={saveStatus} compact={false}/></span>}
             {step<total?<Btn onClick={function(){setStep(function(s){return s+1;});}}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={function(){setStep(total+1);}}>{modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
           </div>
         </div>
       </div>}
-      {step>total&&saveStatus&&<div style={{display:"flex",justifyContent:"flex-end",paddingTop:8}}><AutosaveIndicator status={saveStatus} compact={true}/></div>}
+      {saveStatus&&<FloatingOperationSave status={saveStatus}/>}
     </div>
   );
 }
