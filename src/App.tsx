@@ -11,7 +11,7 @@ declare global {
   interface Navigator { standalone?: boolean; }
 }
 import { InicioInmobiliaria } from './PrimerosPasos';
-import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
+import { RECOMENDACION_ASESORAMIENTO, AvisoClausulasPersonalizadas } from './AvisoModelos';
 import { IA_HABILITADA, IA_PLANTILLAS_HABILITADA, IA_DOCUMENTOS_HABILITADA, MENSAJE_IA_PAUSADA, AVISO_IA_GENERICA, asegurarIAHabilitada, validarConsultaGenerica } from './PrivacidadIA';
 import { filtrarCatalogoClausulas, crearClausulasView, crearClausulasWorkspace } from './Clausulas';
 import { crearDocumentViewer, crearOperacionForm, crearPapeleraView, crearTareasPanel, crearNegociacionPanel, crearReservaDecisionPanel } from './Operaciones';
@@ -464,7 +464,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.21";
+var DOCWORKS_VERSION = "6.22";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -698,6 +698,22 @@ function fmtVarValue(key, op) {
   if (VAR_DATE_FIELDS.indexOf(key)!==-1) return fmtD(v);
   return String(v);
 }
+function periodoPagoMensualTexto(op,campo="alquiler_dia_pago"){
+  var valor=String(op&&op[campo]|| (campo==="alquiler_dia_pago"?"1":""));
+  if(!valor)return "";
+  if(valor==="1-10")return "del 1 al 10";
+  if(valor==="1-5")return "del 1 al 5";
+  var dia=valor==="otro"?String(op&&op[campo+"_otro"]||""):valor;
+  return "el día "+(/^(?:[1-9]|[12][0-9]|3[01])$/.test(dia)?dia:"___");
+}
+function PagoMensualField({data,onChange,reserva=false}){
+  var campo=reserva?"res_alq_dia_pago":"alquiler_dia_pago";
+  return <div><Slt id={"dw-field-"+campo} label="Período de pago mensual" value={data[campo]||(reserva?"":"1")} onChange={function(e){onChange(campo,e.target.value);}}>
+    {reserva&&<option value="">A definir en el contrato</option>}
+    <option value="1-10">Del 1 al 10 de cada mes</option><option value="1-5">Del 1 al 5 de cada mes</option>
+    <option value="1">Día 1</option><option value="5">Día 5</option><option value="10">Día 10</option><option value="15">Día 15</option><option value="otro">Otro día</option>
+  </Slt>{data[campo]==="otro"&&<Inp id={"dw-field-"+campo+"_otro"} label="Otro día de pago" value={data[campo+"_otro"]||""} onChange={function(e){onChange(campo+"_otro",e.target.value);}} placeholder="Ej: 20" type="number" min="1" max="31" style={{marginTop:8}}/>}</div>;
+}
 function derivedTokensGenerales(op) {
   op = op || {};
   var moneda = op.moneda || op.alquiler_moneda || op.res_alq_moneda || "ARS";
@@ -713,8 +729,8 @@ function derivedTokensGenerales(op) {
   var periodoTxt = periodoKey === "otro" ? (op.alquiler_periodo_otro || "a definir") : periodoKey;
   var diaPagoTxt = op.alquiler_dia_pago === "otro" ? (op.alquiler_dia_pago_otro || "___") : (op.alquiler_dia_pago || "1");
   var canonClause = indiceEsFijo
-    ? "El canon locativo mensual se pacta en "+fmt$L(op.alquiler_monto_inicial,op.alquiler_moneda)+", con carácter FIJO, sin actualización durante toda la vigencia del contrato. El pago se efectuará el día "+diaPagoTxt+" de cada mes, mediante "+formaPagoTexto(op.alquiler_forma_pago)+".-"
-    : "El canon locativo mensual inicial se pacta en "+fmt$L(op.alquiler_monto_inicial,op.alquiler_moneda)+", con actualización "+periodoTxt+" conforme al índice "+indiceNombre+(indiceKey==="ICL"?" que publica el BCRA":"")+". El pago se efectuará el día "+diaPagoTxt+" de cada mes, mediante "+formaPagoTexto(op.alquiler_forma_pago)+".-";
+    ? "El canon locativo mensual se pacta en "+fmt$L(op.alquiler_monto_inicial,op.alquiler_moneda)+", con carácter FIJO, sin actualización durante toda la vigencia del contrato. El pago se efectuará "+periodoPagoMensualTexto(op)+" de cada mes, mediante "+formaPagoTexto(op.alquiler_forma_pago)+".-"
+    : "El canon locativo mensual inicial se pacta en "+fmt$L(op.alquiler_monto_inicial,op.alquiler_moneda)+", con actualización "+periodoTxt+" conforme al índice "+indiceNombre+(indiceKey==="ICL"?" que publica el BCRA":"")+". El pago se efectuará "+periodoPagoMensualTexto(op)+" de cada mes, mediante "+formaPagoTexto(op.alquiler_forma_pago)+".-";
   var depositoMontoNum = op.alquiler_deposito === "otro" ? parseFloat(op.alquiler_deposito_otro_monto||0) : parseFloat(op.alquiler_monto_inicial||0)*parseFloat(valorComisionPredeterminado(op.alquiler_deposito,"1"));
   var depositoMoneda = op.alquiler_deposito === "otro" ? (op.alquiler_deposito_otro_moneda||"USD") : op.alquiler_moneda;
   var depositoMeses = String(valorComisionPredeterminado(op.alquiler_deposito,"1"));
@@ -1506,7 +1522,7 @@ function draftTieneContenido(d) {
     "comprador_nombre","vendedor_nombre","locador_nombre","locatario_nombre",
     "comodatario_nombre","comodante_nombre","autorizante_nombre","inmobiliaria_nombre",
     "inmueble_direccion","inmueble_partido","inmueble_provincia","precio",
-    "anticipo","fecha_posesion","alquiler_monto_inicial","alquiler_inicio",
+    "anticipo","fecha_posesion","alquiler_monto_inicial","alquiler_inicio","alquiler_dia_pago","alquiler_dia_pago_otro","res_alq_dia_pago","res_alq_dia_pago_otro",
     "entrega_aires_detalle","entrega_muebles_detalle",
     "res_alq_monto_reserva","res_alq_monto_mensual","res_alq_inicio_estimado",
     "comodato_plazo","comodato_uso","devolucion_motivo","refuerzo_trayectoria",
@@ -1880,8 +1896,11 @@ function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
   if(op.tipo==="exclusividad"&&perfil){
     op=Object.assign({},op,{comprador_nombre:op.inmobiliaria_nombre||perfil.inmobiliaria_nombre||op.comprador_nombre,comprador_dni:op.inmobiliaria_matricula||perfil.matricula||op.comprador_dni});
   }
+  var campoPago=op.tipo==="reserva_alquiler"?"res_alq_dia_pago":"alquiler_dia_pago";
+  if(["alquiler","reserva_alquiler"].includes(op.tipo)&&op[campoPago]==="otro")lista.push([campoPago+"_otro","Día de pago (1 al 31)"]);
   return lista.filter(function(f){
     var v=valorCriticoOp(op,f[0]);
+    if(/dia_pago_otro$/.test(f[0]))return !/^(?:[1-9]|[12][0-9]|3[01])$/.test(String(v||""));
     if(["precio","anticipo","res_alq_monto_reserva","res_alq_monto_mensual","alquiler_monto_inicial"].indexOf(f[0])>=0) return !esMontoMayorACero(v);
     if(f[0]==="comision_vendedor") return !comisionAutorizanteInformada(op);
     if(f[0]==="exclusividad_vigencia") return !/^\s*[1-9]\d*\s*(?:d[ií]as?)?\s*$/i.test(String(v||""));
@@ -3929,8 +3948,8 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
   var periodoTxt = periodoKey==="otro" ? (op.alquiler_periodo_otro||"a definir") : periodoKey;
   var diaPagoTxt = op.alquiler_dia_pago==="otro" ? (op.alquiler_dia_pago_otro||"___") : (op.alquiler_dia_pago||"1");
   var canonClause = indiceEsFijo
-    ? "El canon locativo mensual se pacta en "+fmt$L(op.alquiler_monto_inicial,op.alquiler_moneda)+", con carácter FIJO, sin actualización durante toda la vigencia del contrato. El pago se efectuará el día "+diaPagoTxt+" de cada mes, mediante "+formaPagoTexto(op.alquiler_forma_pago)+".-"
-    : "El canon locativo mensual inicial se pacta en "+fmt$L(op.alquiler_monto_inicial,op.alquiler_moneda)+", con actualización "+periodoTxt+" conforme al índice "+indiceNombre+(indiceKey==="ICL"?" que publica el BCRA":"")+". El pago se efectuará el día "+diaPagoTxt+" de cada mes, mediante "+formaPagoTexto(op.alquiler_forma_pago)+".-";
+    ? "El canon locativo mensual se pacta en "+fmt$L(op.alquiler_monto_inicial,op.alquiler_moneda)+", con carácter FIJO, sin actualización durante toda la vigencia del contrato. El pago se efectuará "+periodoPagoMensualTexto(op)+" de cada mes, mediante "+formaPagoTexto(op.alquiler_forma_pago)+".-"
+    : "El canon locativo mensual inicial se pacta en "+fmt$L(op.alquiler_monto_inicial,op.alquiler_moneda)+", con actualización "+periodoTxt+" conforme al índice "+indiceNombre+(indiceKey==="ICL"?" que publica el BCRA":"")+". El pago se efectuará "+periodoPagoMensualTexto(op)+" de cada mes, mediante "+formaPagoTexto(op.alquiler_forma_pago)+".-";
   var depositoMontoNum = op.alquiler_deposito==="otro"
     ? parseFloat(op.alquiler_deposito_otro_monto||0)
     : parseFloat(op.alquiler_monto_inicial||0)*parseFloat(valorComisionPredeterminado(op.alquiler_deposito,"1"));
@@ -3999,10 +4018,15 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   // o documento generado para alquiler usa únicamente las comisiones de locador
   // y locatario.
   op = limpiarComisionesIncompatibles(op || {});
-  if (Array.isArray(bloquesPlantilla) && bloquesPlantilla.length) {
-    return buildDocSectionsFromEditableBody(op, clausulasLib || [], tipo, bloquesPlantilla);
+  var doc=Array.isArray(bloquesPlantilla)&&bloquesPlantilla.length
+    ? buildDocSectionsFromEditableBody(op,clausulasLib||[],tipo,bloquesPlantilla)
+    : buildDocSectionsStandard(op,clausulasLib||[],tipo);
+  if((tipo||op.tipo)==="reserva_alquiler"&&op.res_alq_dia_pago){
+    var pago="El pago mensual se efectuará "+periodoPagoMensualTexto(op,"res_alq_dia_pago")+" de cada mes.-";
+    var condiciones=doc.secciones.find(function(c){return /CONDICIONES ESTIMADAS DE LOCACI[ÓO]N/i.test(c.titulo);});
+    if(!(doc.secciones||[]).some(function(c){return c.items.some(function(t){return String(t).includes(pago);});})){if(condiciones)condiciones.items.push(pago);else doc.secciones.push({titulo:String(doc.secciones.length+1)+". PERÍODO DE PAGO MENSUAL",items:[pago]});}
   }
-  return buildDocSectionsStandard(op, clausulasLib || [], tipo);
+  return doc;
 }
 
 // ── RECIBO DE HONORARIOS ───────────────────────────────────────────────────────
@@ -4328,6 +4352,14 @@ function GStyles() {
   return null;
 }
 
+function MenuAyudaDocWorks({abierto,onToggle,onCerrar,onPreparar,onClausulas,onCentro,onIA,movil=false}){
+  var acciones=[{label:"Asistente IA",accion:onIA},{label:"Centro de ayuda y soporte",accion:onCentro},{label:"Preparar mi inmobiliaria",accion:onPreparar},{label:"Editar cláusulas",accion:onClausulas}];
+  return <div style={{position:"relative"}} onKeyDown={function(e){if(e.key==="Escape")onCerrar();}}>
+    <button type="button" className="sidebar-bottom-icon" onClick={onToggle} title="Ayuda" aria-label="Ayuda" aria-haspopup="menu" aria-expanded={abierto} style={movil?{color:"#eef4ff",width:38,height:38}:undefined}><FormalIcon name="help" size={20}/></button>
+    {abierto&&<div role="menu" aria-label="Ayuda" style={{position:"absolute",...(movil?{right:0,top:44}:{left:42,bottom:0}),width:220,maxWidth:"calc(100vw - 24px)",zIndex:300,background:"var(--card)",border:"1px solid var(--border2)",borderRadius:10,padding:5,boxShadow:"0 12px 35px rgba(0,0,0,.22)"}}>{acciones.map(function(a){return <button key={a.label} type="button" role="menuitem" onClick={function(){onCerrar();a.accion();}} style={{display:"block",width:"100%",textAlign:"left",padding:"10px",border:0,borderRadius:7,background:"transparent",color:"var(--text)",fontSize:12,cursor:"pointer"}}>{a.label}</button>;})}</div>}
+  </div>;
+}
+
 function Btn({children=null,onClick=undefined,v=undefined,s=undefined,disabled=undefined,className=undefined,type=undefined,title=undefined,style=undefined}){
   return <button type={type||"button"} onClick={onClick} disabled={disabled} title={title} style={style} className={"btn btn-"+(v||"primary")+(s?" btn-"+s:"")+(className?" "+className:"")}>{children}</button>;
 }
@@ -4374,8 +4406,8 @@ function useBodyScrollLock(active){
 function Modal({open,onClose,title,children=undefined,wide=undefined,formTipo=undefined,headerExtra=undefined,headerRight=undefined,viewerMode=undefined,soft=undefined,operationForm=false,closeOnBackdrop=true}){
   useBodyScrollLock(!!open);
   if(!open)return null;
-  return(
-    <div className={"modal-overlay"+(viewerMode?" modal-overlay-viewer":"")+(soft?" modal-overlay-soft":"")+(operationForm?" modal-overlay-operation-form":"")} onClick={function(e){if(closeOnBackdrop && e.target===e.currentTarget)onClose();}}>
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label={typeof title==="string"?title:"Documento"} className={"modal-overlay"+(viewerMode?" modal-overlay-viewer":"")+(soft?" modal-overlay-soft":"")+(operationForm?" modal-overlay-operation-form":"")} onClick={function(e){if(closeOnBackdrop && e.target===e.currentTarget)onClose();}}>
       <div className={"modal-box fade-up "+(wide?"wide":"narrow")+(viewerMode?" viewer-modal":"")}>
         <div className="modal-head" style={(headerExtra||headerRight)?{flexWrap:"wrap",rowGap:8}:undefined}>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",rowGap:8,minWidth:0,flex:1}}>
@@ -4388,7 +4420,7 @@ function Modal({open,onClose,title,children=undefined,wide=undefined,formTipo=un
         <div className="modal-body">{children}</div>
       </div>
     </div>
-  );
+  , document.body);
 }
 
 // Confirmación propia en vez de confirmación nativa: dentro de un WebView/app
@@ -4404,7 +4436,7 @@ function navegarConProteccionModelo(continuar){
   var evento=new CustomEvent("dw:model-navigation",{cancelable:true,detail:{continuar:continuar}});
   if(window.dispatchEvent(evento))continuar();
 }
-function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,onConfirm,onCancel,secondaryLabel=null,onSecondary=null,secondaryDisabled=false}){
+function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,onConfirm,onCancel,secondaryLabel=null,onSecondary=null,secondaryDisabled=false,confirmDisabled=false,children=undefined}){
   useBodyScrollLock(!!open);
   if(!open)return null;
   return createPortal(
@@ -4416,10 +4448,10 @@ function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,
         </div>
         <div className="modal-body" style={{overflowY:"auto",maxHeight:"calc(100dvh - 180px)",WebkitOverflowScrolling:"touch"}}>
           <div style={{fontSize:14,color:"var(--muted)",lineHeight:1.5,marginBottom:18,overflowWrap:"anywhere"}}>{message}</div>
-          <div style={{display:"flex",gap:8,justifyContent:"flex-end",flexWrap:"wrap"}}>
+          {children}<div style={{display:"flex",gap:8,justifyContent:"flex-end",flexWrap:"wrap"}}>
             <Btn v="secondary" s="sm" onClick={onCancel}>{cancelLabel||"Cancelar"}</Btn>
             {secondaryLabel&&onSecondary&&<Btn v="secondary" s="sm" disabled={!!secondaryDisabled} onClick={onSecondary}>{secondaryLabel}</Btn>}
-            <Btn v={danger?"danger":"primary"} s="sm" onClick={onConfirm}>{confirmLabel||"Confirmar"}</Btn>
+            <Btn v={danger?"danger":"primary"} s="sm" disabled={confirmDisabled} onClick={onConfirm}>{confirmLabel||"Confirmar"}</Btn>
           </div>
         </div>
       </div>
@@ -4903,7 +4935,7 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
       <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Plazo del contrato</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           <Inp id="dw-field-alquiler_plazo_meses" label="Meses" value={data.alquiler_plazo_meses||"24"} onChange={function(e){onChange("alquiler_plazo_meses",e.target.value);}} placeholder="24" type="number" hint="Plazo pactado libremente por las partes" {...estiloCampoFaltante(faltantes,"alquiler_plazo_meses")}/>
-          <Inp id="dw-field-alquiler_plazo_dias" label="Días adicionales" value={data.alquiler_plazo_dias||"0"} onChange={function(e){onChange("alquiler_plazo_dias",e.target.value);}} placeholder="0" type="number"/>
+          <Inp id="dw-field-alquiler_plazo_dias" label="Días adicionales" value={data.alquiler_plazo_dias??""} onChange={function(e){onChange("alquiler_plazo_dias",e.target.value);}} onFocus={function(e){if(e.target.value==="0")e.target.select();}} onBlur={function(e){if(/^\d+$/.test(e.target.value))onChange("alquiler_plazo_dias",String(parseInt(e.target.value,10)));}} placeholder="0" type="number" min="0" step="1"/>
         </div>
       </div>
 
@@ -4945,12 +4977,7 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
         </div>
       </div>
 
-      <div>
-        <Slt id="dw-field-alquiler_dia_pago" label="Día de pago" value={data.alquiler_dia_pago||"1"} onChange={function(e){onChange("alquiler_dia_pago",e.target.value);}}>
-          <option value="1">Día 1</option><option value="5">Día 5</option><option value="10">Día 10</option><option value="15">Día 15</option><option value="otro">Otro día</option>
-        </Slt>
-        {data.alquiler_dia_pago==="otro"&&<Inp id="dw-field-alquiler_dia_pago_otro" value={data.alquiler_dia_pago_otro||""} onChange={function(e){onChange("alquiler_dia_pago_otro",e.target.value);}} placeholder="Ej: 20" type="number" style={{marginTop:8}}/>}
-      </div>
+      <PagoMensualField data={data} onChange={onChange}/>
       <div>
         <Slt id="dw-field-alquiler_deposito" label="Depósito" value={valorComisionPredeterminado(data.alquiler_deposito,"1")} onChange={function(e){onChange("alquiler_deposito",e.target.value);}} hint="Monto de depósito a pactar según la operación y la normativa aplicable">
           <option value="1">1 mes</option><option value="2">2 meses</option><option value="otro">Monto personalizado</option>
@@ -5001,6 +5028,7 @@ function StepCondicionesReservaAlq({data,onChange,equipo,faltantes}){
         <Inp id="dw-field-res_alq_monto_reserva" label="Monto de reserva" value={data.res_alq_monto_reserva||""} onChange={function(e){onChange("res_alq_monto_reserva",e.target.value);}} placeholder="50000" type="number" {...estiloCampoFaltante(faltantes,"res_alq_monto_reserva")}/>
         <Slt label="Moneda de la operación" value={data.res_alq_moneda||"ARS"} onChange={function(e){onChange("res_alq_moneda",e.target.value);onChange("res_alq_monto_mensual_moneda",e.target.value);}}><option value="ARS">ARS — Pesos argentinos</option><option value="USD">USD — Dólares estadounidenses</option></Slt>
         <Inp id="dw-field-res_alq_monto_mensual" label="Valor del alquiler mensual" value={data.res_alq_monto_mensual||""} onChange={function(e){onChange("res_alq_monto_mensual",e.target.value);}} placeholder="180000" type="number" {...estiloCampoFaltante(faltantes,"res_alq_monto_mensual")}/>
+        <PagoMensualField data={data} onChange={onChange} reserva/>
         <div className="col2"><div className="notice" style={{fontSize:12}}>La reserva y el alquiler mensual usan la misma moneda. Así la reserva queda vinculada a la moneda real del contrato.</div></div>
         <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Plazo estimado del contrato</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -5182,6 +5210,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
       <button type="button" onClick={function(){setShowAdd(function(v){return !v;});}} style={{width:"100%",padding:"11px 13px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",cursor:"pointer",textAlign:"left",fontWeight:700}}>＋ Agregar cláusula</button>
       {showAdd&&<div style={{marginTop:9,padding:12,borderRadius:12,border:"1px solid var(--border2)",background:"rgba(212,168,83,.035)"}}>
         <Inp label="Título" value={tituloCustom} onChange={function(e){setTituloCustom(e.target.value);}} placeholder="Ej.: Prohibición de mascotas"/>
+        <AvisoClausulasPersonalizadas/>
         <Txa label="Texto" value={contenidoCustom} onChange={function(e){setContenidoCustom(e.target.value);}} placeholder="Escribí la cláusula…" rows={4}/>
         <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){setContenidoCustom(function(v){return (v?v+" ":"")+t;});}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictar texto de la cláusula</span></div>
         <div style={{marginTop:14,padding:"12px 13px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
@@ -6086,6 +6115,7 @@ function ClausulaFormBody({form,setForm,onCancel,onSubmit,editId,guardando,habil
         <textarea id="dw-clausula-texto" ref={taRef} className="inp" rows={4} value={form.contenido} onChange={function(e){setForm(function(f){return Object.assign({},f,{contenido:e.target.value});});}} placeholder="Redactá el texto. Usá «Vincular dato» para insertar campos como el nombre del titular, DNI, dirección, etc."/>
         <div style={{fontSize:12,color:"var(--dim)",marginTop:4}}>Los campos vinculados se completan automáticamente con los datos reales de cada operación al generar el documento.</div>
       </div>
+      <AvisoClausulasPersonalizadas/>
       </fieldset>
       <div style={{display:"flex",gap:7,justifyContent:"flex-end"}}>
         {editId&&<Btn v="ghost" s="sm" onClick={onCancel} disabled={!!guardando}>Cancelar</Btn>}
@@ -6379,6 +6409,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     setTimeout(function(){if(contenidoEditorRef.current){contenidoEditorRef.current.focus();contenidoEditorRef.current.setSelectionRange(inicio+insertar.length,inicio+insertar.length);}},0);
   }
   return <div>
+    {editId!=null&&<AvisoClausulasPersonalizadas/>}
     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginBottom:12}}>
       <div style={{fontFamily:"DM Serif Display,serif",fontSize:15,color:"var(--text)"}}>Cláusulas del documento · {draft.filter(function(b){return b.activo!==false&&b.obligatoria===true;}).length} incluidas</div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{puedeEditar&&<><button type="button" className="btn btn-secondary btn-sm dw-restore-all-clauses" onClick={reset} disabled={!!editId||status==="saving"} title="Recuperar el modelo original de este documento (con copia para deshacer)">↺ Restaurar todas las cláusulas</button>{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior&&<Btn s="sm" v="secondary" onClick={deshacerRestauracion}>Deshacer restauración</Btn>}<Btn s="sm" onClick={addBlock}>＋ Agregar cláusula</Btn></>}</div>
@@ -6483,6 +6514,15 @@ const DW_MODEL_CLAUSES_V489_CSS = `
 .dw-clause-compact.dw-clause-open .dw-model-clause-row>div:first-child{flex-basis:auto!important}
 .dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{max-width:52%;width:auto;flex-wrap:nowrap!important;overflow:auto}
 @media(max-width:1100px){.dw-clause-chevron{min-width:36px;min-height:36px}.dw-clause-actions button{min-height:34px}.dw-clause-actions select{min-height:34px}}
+/* Al abrir una cláusula en un teléfono, las acciones ocupan su propia fila. */
+.dw-clause-actions button[title="Subir"],.dw-clause-actions button[title="Bajar"]{flex:0 0 36px;min-width:36px;width:36px;min-height:36px}
+@media(max-width:640px){
+ .dw-clause-compact.dw-clause-open .dw-model-clause-row{flex-wrap:wrap!important;align-items:flex-start!important}
+ .dw-clause-compact.dw-clause-open .dw-model-clause-row>div:first-child{flex:1 0 100%!important;width:100%!important}
+ .dw-clause-compact.dw-clause-open .dw-model-clause-row>div.dw-clause-actions{flex:1 0 100%!important;width:100%!important;max-width:100%!important;flex-wrap:wrap!important;justify-content:flex-start!important;overflow:visible!important;gap:6px}
+ .dw-clause-compact.dw-clause-open .dw-clause-name{overflow-wrap:normal;word-break:normal}
+ .dw-clause-compact.dw-clause-open .dw-clause-actions button{flex-shrink:0}
+}
 @media(prefers-reduced-motion:reduce){.dw-clause-chevron,.dw-clause-card{transition:none}}
 `;
 
@@ -7783,7 +7823,7 @@ function DocWorksApp(){
     function onBack(){
       backTrapRef.current=false;
       if(dwConfirm){ setDwConfirm(null); return; }
-      if(confirmCloseForm){ setConfirmCloseForm(false); return; }
+      if(confirmCloseForm){ cancelarSalidaFormulario(); return; }
       if(draftPrompt){ setDraftPrompt(null); return; }
       if(viewDoc){ setViewDoc(null); return; }
       if(showForm){ cerrarFormularioSeguro(); return; }
@@ -7794,15 +7834,45 @@ function DocWorksApp(){
   },[dwConfirm,confirmCloseForm,draftPrompt,showForm,viewDoc,view]);
   function abrirDoc(op){ setViewDoc(op); setDocTab(op&&op.tipo==="reserva" ? "reserva" : "resumen"); }
   const [navPendiente,setNavPendiente]=useState(null);
+  const formSnapshotRef=useRef(null);
+  const formSaveIdRef=useRef(null);
+  useEffect(function(){if(!showForm){formSaveIdRef.current=null;}},[showForm]);
+  const salidaEnCursoRef=useRef(false);
+  const salidaRevisionRef=useRef(0);
+  const [guardandoSalida,setGuardandoSalida]=useState(false);
+  const [errorSalida,setErrorSalida]=useState("");
+  function borradorFormularioActual(){var d=formSnapshotRef.current||lsGet("draftOperacion",null);return d?Object.assign({},d,{editId:d.editId||formSaveIdRef.current||null}):null;}
+  function cancelarSalidaFormulario(){salidaRevisionRef.current++;salidaEnCursoRef.current=false;setGuardandoSalida(false);setConfirmCloseForm(false);setNavPendiente(null);setErrorSalida("");}
+  function continuarOperacionDespues(){
+    var draft=borradorFormularioActual();
+    if(draft&&draftTieneContenido(draft.data)&&!lsSet("draftOperacion",Object.assign({},draft,{ts:Date.now()}))){setErrorSalida("No se pudo conservar el borrador en este dispositivo. Podés seguir editando o elegir Salir sin guardar.");return;}
+    salidaRevisionRef.current++;salidaEnCursoRef.current=false;setGuardandoSalida(false);setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);setErrorSalida("");
+    dwNotify("info","Borrador conservado en este dispositivo. Podés retomarlo al crear una operación.");setView(navPendiente||"dashboard");setNavPendiente(null);
+  }
+  function abrirNuevaOperacion(){
+    if(showForm)return;
+    var d=lsGet("draftOperacion",null);
+    if(d&&d.data&&draftTieneContenido(d.data)&&(!d.contexto||borradorDelContexto(d,docworksAuth.contexto))){setDraftPrompt(d);return;}
+    setFormFocusCampo(null);setEditOp(null);setFormInitialOverride(null);setFormTipo(null);setShowForm(true);
+  }
+  function navegarPrincipal(destino){
+    if(showForm){setNavPendiente(destino);cerrarFormularioSeguro();return;}
+    setView(destino);
+  }
   function cerrarFormularioSeguro(){
-    var draft=lsGet("draftOperacion",null);
+    if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
+    setErrorSalida("");
+    var draft=borradorFormularioActual();
     if(draft&&draft.data&&draftTieneContenido(draft.data)){setConfirmCloseForm(true);return;}
     lsRemove("draftOperacion");
-    setShowForm(false);setEditOp(null);setFormInitialOverride(null);
+    setShowForm(false);setEditOp(null);setFormInitialOverride(null);setView(navPendiente||"dashboard");setNavPendiente(null);
     dwNotify("info","No se guardó ninguna operación: el formulario estaba vacío.");
   }
   async function guardarBorradorYSalir(){
-    var draft=lsGet("draftOperacion",null);
+    if(salidaEnCursoRef.current)return;
+    salidaEnCursoRef.current=true;setGuardandoSalida(true);setErrorSalida("");
+    var revision=++salidaRevisionRef.current,vigente=accionesContextoRef.current.capturar();
+    var draft=borradorFormularioActual();
     if(draft&&draft.data&&draftTieneContenido(draft.data)){
       var existingId=draft.editId||null;
       var op;
@@ -7812,24 +7882,27 @@ function DocWorksApp(){
       } else {
         op=Object.assign({},draft.data,{id:genId(),created_at:new Date().toISOString(),estado:"borrador"});
       }
-      var previoBorrador=existingId?operaciones.find(function(o){return o.id===existingId;}):null;
+      formSaveIdRef.current=op.id;
+      draft=Object.assign({},draft,{editId:op.id});
+      if(formSnapshotRef.current)formSnapshotRef.current=draft;
+      lsSet("draftOperacion",Object.assign({},draft,{ts:Date.now()}));
       marcarOperacionPendiente(op.id);
-      setOperaciones(function(ops){return existingId?ops.map(function(o){return o.id===existingId?op:o;}):[op].concat(ops);});
       var saveDraftRes;
       try { saveDraftRes=await opsSupabase.guardar(op); } catch(e) { saveDraftRes={error:e}; }
       desmarcarOperacionPendiente(op.id);
-      if(saveDraftRes&&saveDraftRes.error){
-        setOperaciones(function(ops){
-          if(previoBorrador) return ops.map(function(o){return o.id===existingId?previoBorrador:o;});
-          return ops.filter(function(o){return o.id!==op.id;});
-        });
+      if(!vigente())return;
+      if(saveDraftRes&&!saveDraftRes.error)setOperaciones(function(ops){return ops.some(function(o){return o.id===op.id;})?ops.map(function(o){return o.id===op.id?op:o;}):[op].concat(ops);});
+      if(revision!==salidaRevisionRef.current)return;
+      salidaEnCursoRef.current=false;setGuardandoSalida(false);
+      if(!saveDraftRes||saveDraftRes.error){
+        setErrorSalida("No se pudo guardar en la nube. Tus datos siguen disponibles. Podés continuar después en este dispositivo o volver a intentar.");
         dwNotify("error","No se pudo guardar el borrador. Tus cambios siguen en el formulario.");
         return;
       }
     }
-    lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("success","Borrador guardado en Operaciones.");if(navPendiente){setView(navPendiente);setNavPendiente(null);}
+    salidaEnCursoRef.current=false;setGuardandoSalida(false);lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("success","Borrador guardado en Operaciones.");setView(navPendiente||"dashboard");setNavPendiente(null);
   }
-  function salirSinGuardarFormulario(){lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("info","Se descartaron los cambios sin guardar. No se creó ningún elemento en Papelera.");if(navPendiente){setView(navPendiente);setNavPendiente(null);}}
+  function salirSinGuardarFormulario(){salidaRevisionRef.current++;salidaEnCursoRef.current=false;setGuardandoSalida(false);setErrorSalida("");lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("info","Se descartaron los cambios sin guardar. No se creó ningún elemento en Papelera.");setView(navPendiente||"dashboard");setNavPendiente(null);}
 
   const [clausulas,setClausulas]=useState([]);
   const [papeleraClausulas,setPapeleraClausulas]=useState([]);
@@ -8562,7 +8635,7 @@ function DocWorksApp(){
   function yaConvertido(opId, tipoHijo){ return operaciones.some(function(o){return o.parent_id===opId && o.tipo===tipoHijo;}); }
   function convertirAContrato(op){
     if(yaConvertido(op.id,"alquiler")) return;
-    var nuevo=Object.assign({},EMPTY_OP,{tipo:"alquiler",estado:"borrador",parent_id:op.id,locador_nombre:op.locador_nombre,locador_dni:op.locador_dni,locador_domicilio:op.locador_domicilio,locador_email:op.locador_email,locatario_nombre:op.locatario_nombre,locatario_dni:op.locatario_dni,locatario_domicilio:op.locatario_domicilio,locatario_email:op.locatario_email,inmueble_direccion:op.inmueble_direccion,inmueble_partido:op.inmueble_partido,inmueble_provincia:op.inmueble_provincia,nomenclatura_catastral:op.nomenclatura_catastral,descripcion_inmueble:op.descripcion_inmueble,inmueble_tipo:op.inmueble_tipo||"departamento",alquiler_monto_inicial:op.res_alq_monto_mensual||"",alquiler_moneda:op.res_alq_moneda||op.res_alq_monto_mensual_moneda||"ARS",alquiler_plazo_meses:String(plazoReservaAlquiler(op).meses),alquiler_plazo_dias:String(plazoReservaAlquiler(op).dias),alquiler_inicio:op.res_alq_inicio_estimado||"",alquiler_destino:op.res_alq_destino||"vivienda",alquiler_comision:valorComisionPredeterminado(op.res_alq_comision,"1"),clausulas_ids:op.clausulas_ids||[],clausulas_custom:op.clausulas_custom||""});
+    var nuevo=Object.assign({},EMPTY_OP,{tipo:"alquiler",estado:"borrador",parent_id:op.id,locador_nombre:op.locador_nombre,locador_dni:op.locador_dni,locador_domicilio:op.locador_domicilio,locador_email:op.locador_email,locatario_nombre:op.locatario_nombre,locatario_dni:op.locatario_dni,locatario_domicilio:op.locatario_domicilio,locatario_email:op.locatario_email,inmueble_direccion:op.inmueble_direccion,inmueble_partido:op.inmueble_partido,inmueble_provincia:op.inmueble_provincia,nomenclatura_catastral:op.nomenclatura_catastral,descripcion_inmueble:op.descripcion_inmueble,inmueble_tipo:op.inmueble_tipo||"departamento",alquiler_monto_inicial:op.res_alq_monto_mensual||"",alquiler_moneda:op.res_alq_moneda||op.res_alq_monto_mensual_moneda||"ARS",alquiler_plazo_meses:String(plazoReservaAlquiler(op).meses),alquiler_plazo_dias:String(plazoReservaAlquiler(op).dias),alquiler_inicio:op.res_alq_inicio_estimado||"",alquiler_dia_pago:op.res_alq_dia_pago||"1",alquiler_dia_pago_otro:op.res_alq_dia_pago_otro||"",alquiler_destino:op.res_alq_destino||"vivienda",alquiler_comision:valorComisionPredeterminado(op.res_alq_comision,"1"),clausulas_ids:op.clausulas_ids||[],clausulas_custom:op.clausulas_custom||""});
     return crearDocumentoConfirmado(nuevo,"alquiler",true);
   }
   function convertirARefuerzo(op){
@@ -8662,6 +8735,7 @@ function DocWorksApp(){
   ];
 
   const [showBot,setShowBot]=useState(false);
+  useEffect(function(){if(showForm){setShowBot(false);setShowHelpMenu(false);}},[showForm]);
   const [anuncioUsuario,setAnuncioUsuario]=useState(null);
   const [anuncioCerrado,setAnuncioCerrado]=useState(false);
   useEffect(function(){
@@ -8672,9 +8746,9 @@ function DocWorksApp(){
   },[docworksAuth.session,docworksAuth.contexto&&docworksAuth.contexto.usuario&&docworksAuth.contexto.usuario.id]);
   const onboardingStorageKey = "docworks_onboarding_seen_v1_" + ((docworksAuth.contexto && docworksAuth.contexto.usuario && docworksAuth.contexto.usuario.id) || "local");
   const [showOnboarding,setShowOnboarding]=useState(false);
-  const [showHelpMenu,setShowHelpMenu]=useState(false);
+  const [showHelpMenu,setShowHelpMenu]=useState<false|"mobile"|"desktop">(false);
   const [configDestino,setConfigDestino]=useState({tab:"cuenta",request:0});
-  function irAyuda(v,tab){if(v==="configuracion")setConfigDestino(p=>({tab:tab||"cuenta",request:p.request+1}));setView(v);}
+  function irAyuda(v,tab){if(v==="configuracion")setConfigDestino(p=>({tab:tab||"cuenta",request:p.request+1}));navegarPrincipal(v);}
   useEffect(function(){
     var c=docworksAuth.contexto;
     if(!docworksAuth.session||!c||!c.usuario||!perfilNubeCargado||!c.habilitado||!['dueno','admin'].includes(c.usuario.rol_base))return;
@@ -8736,6 +8810,7 @@ function DocWorksApp(){
           <span className="dw-header-version">v{DOCWORKS_VERSION}</span>
         </div>
         <div ref={mobilePerfilMenuRef} style={{display:"flex",alignItems:"center",gap:8,position:"relative"}}>
+          <MenuAyudaDocWorks abierto={showHelpMenu==="mobile"} onToggle={function(){setShowHelpMenu(function(v){return v==="mobile"?false:"mobile";});}} onCerrar={function(){setShowHelpMenu(false);}} onPreparar={abrirOnboarding} onClausulas={function(){navegarPrincipal("clausulas");}} onCentro={function(){irAyuda("configuracion","soporte");}} onIA={function(){setShowBot(true);}} movil/>
           {mostrarInstalar&&<button type="button" className="dw-install-btn" onClick={abrirInstalacion} aria-label="Instalar DocWorks como app"><DWIcon name="download" size={14} strokeWidth={2}/>Instalar</button>}
           <button type="button" className="mobile-topbar-avatar topbar-avatar" onClick={function(){setMobilePerfilMenuOpen(function(v){return !v;});}} title="Abrir menú de usuario" aria-label="Abrir menú de usuario" aria-haspopup="menu" aria-expanded={mobilePerfilMenuOpen} style={{display:"flex",alignItems:"center",gap:6,width:"auto",padding:"0 4px",borderRadius:20,background:"transparent",border:0,color:"rgba(241,245,249,.88)"}}>
             <span style={{width:30,height:30,borderRadius:"50%",overflow:"hidden",display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{(ctx&&ctx.usuario&&perfil.broker_fotos&&perfil.broker_fotos[ctx.usuario.id])?<img src={perfil.broker_fotos[ctx.usuario.id]} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="Foto de perfil"/>:(ctx&&ctx.usuario&&formatearNombreUsuarioVisible(ctx,perfil).charAt(0).toUpperCase()||"U")}</span>
@@ -8791,7 +8866,7 @@ function DocWorksApp(){
           <aside className="sidebar">
             {navItems.map(function(n){
               return(
-                <button key={n.id} className={"nav-item premium-nav-item "+(view===n.id?"active":"")} onClick={function(){if(showForm){var draft=lsGet("draftOperacion",null);if(draft&&draft.data&&draftTieneContenido(draft.data)){setNavPendiente(n.id);setConfirmCloseForm(true);return;}setShowForm(false);setEditOp(null);setFormInitialOverride(null);}setView(n.id);}} aria-label={n.label} aria-current={view===n.id?"page":undefined}>
+                <button key={n.id} className={"nav-item premium-nav-item "+(view===n.id?"active":"")} onClick={function(){navegarPrincipal(n.id);}} aria-label={n.label} aria-current={view===n.id?"page":undefined}>
                   <span>{n.ico?<FormalIcon name={n.ico} size={22}/>:n.icon}</span>
                   <span className="tooltip">{n.label}</span>
                 </button>
@@ -8799,7 +8874,7 @@ function DocWorksApp(){
             })}
             <div className="sidebar-spacer"/>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:7,paddingBottom:8}}>
-              <div style={{position:"relative"}}><button type="button" className="sidebar-bottom-icon" onClick={function(){setShowHelpMenu(function(v){return !v;});}} title="Ayuda" aria-label="Ayuda"><FormalIcon name="help" size={20}/></button>{showHelpMenu&&<div role="menu" style={{position:"absolute",left:42,bottom:0,width:190,zIndex:300,background:"var(--card)",border:"1px solid var(--border2)",borderRadius:10,padding:5,boxShadow:"0 12px 35px rgba(0,0,0,.22)"}}><button type="button" role="menuitem" onClick={function(){setShowHelpMenu(false);abrirOnboarding();}} style={{display:"block",width:"100%",textAlign:"left",padding:"9px 10px",border:0,borderRadius:7,background:"transparent",color:"var(--text)",fontSize:12,cursor:"pointer"}}>Preparar mi inmobiliaria</button><button type="button" role="menuitem" onClick={function(){setShowHelpMenu(false);setView("clausulas");}} style={{display:"block",width:"100%",textAlign:"left",padding:"9px 10px",border:0,borderRadius:7,background:"transparent",color:"var(--text)",fontSize:12,fontWeight:700,cursor:"pointer"}}>Editar cláusulas</button><button type="button" role="menuitem" className="btn btn-ghost" style={{width:"100%",justifyContent:"flex-start"}} onClick={function(){setShowHelpMenu(false);irAyuda("configuracion","soporte");}}>Centro de ayuda y soporte</button></div>}</div>
+              <MenuAyudaDocWorks abierto={showHelpMenu==="desktop"} onToggle={function(){setShowHelpMenu(function(v){return v==="desktop"?false:"desktop";});}} onCerrar={function(){setShowHelpMenu(false);}} onPreparar={abrirOnboarding} onClausulas={function(){navegarPrincipal("clausulas");}} onCentro={function(){irAyuda("configuracion","soporte");}} onIA={function(){setShowBot(true);}}/>
               <button type="button" className="sidebar-bottom-icon" onClick={function(){toggleDark();}} title={darkMode?"Cambiar a modo claro":"Cambiar a modo oscuro"} aria-label={darkMode?"Cambiar a modo claro":"Cambiar a modo oscuro"}>
                 <FormalIcon name={darkMode?"sun":"moon"} size={20}/>
               </button>
@@ -8815,12 +8890,12 @@ function DocWorksApp(){
                     <div><div className="dw-operation-page-breadcrumb">Operaciones / {editOp?"Editar operación":"Nueva operación"}</div><h1>{editOp?"Editar operación":"Nueva operación"}</h1><p>Completá los datos, revisá las cláusulas y guardá la operación.</p></div>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={cerrarFormularioSeguro}>Volver a operaciones</button>
                   </div>
-                  <OperacionForm key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
+                  <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
                 </section>
               ) : (<>
               {ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks-landing.vercel.app/#planes" style={{color:"inherit"}}>Ver planes</a></div>}
               
-              {view==="dashboard"&&<DashboardView key={claveContextoOperaciones(docworksAuth.contexto)} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario} operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={function(){setFormFocusCampo(null);setEditOp(null);setFormTipo(null);setShowForm(true);}} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
+              {view==="dashboard"&&<DashboardView key={claveContextoOperaciones(docworksAuth.contexto)} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario} operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={abrirNuevaOperacion} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
               {view==="calendario"&&<CalendarioView operaciones={operaciones} onViewOp={function(op){abrirDoc(op);}}/>}
               {view==="clausulas"&&<ClausulasWorkspace key={perfilNube.contexto} perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
               {view==="estadisticas"&&<EstadisticasView onExportarCSV={exportarOperacionesCSV} operaciones={operaciones} equipo={equipo} perfil={perfil} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol}/>}
@@ -8855,35 +8930,23 @@ function DocWorksApp(){
       )}
 
       {/* ── Mobile FAB ── */}
-      <button className="fab" aria-label="Nueva operación" title="Nueva operación" onClick={function(){setFormFocusCampo(null);setEditOp(null);setFormTipo(null);setShowForm(true);}}><DWIcon name="plus" size={24} strokeWidth={2.4}/></button>
+      {!showForm&&!viewDoc&&!confirmCloseForm&&!draftPrompt&&!dwConfirm&&permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario).crear&&<button type="button" className="fab" aria-label="Nueva operación" title="Nueva operación" onClick={abrirNuevaOperacion}><DWIcon name="plus" size={24} strokeWidth={2.4}/></button>}
 
       {/* ── Mobile bottom nav ── */}
-      <nav className="mobile-nav">
+      {!showForm&&<nav className="mobile-nav">
         <div className="mobile-nav-inner">
           {mobileNavItems.map(function(n){
             return(
-              <button key={n.id} className={"mobile-nav-item "+(view===n.id?"active":"")} onClick={function(){setView(n.id);}}>
+              <button key={n.id} className={"mobile-nav-item "+(view===n.id?"active":"")} onClick={function(){navegarPrincipal(n.id);}}>
                 <span>{n.ico?<FormalIcon name={n.ico} size={22}/>:n.icon}</span><span>{n.label}</span>
               </button>
             );
           })}
         </div>
-      </nav>
+      </nav>}
 
-      {/* Bot IA flotante — se esconde mientras hay un modal de carga de
-          documento abierto (formulario u operación), para no tapar los
-          campos ni los botones del pie del formulario. */}
-      {!showForm&&showBot&&<BotIA onClose={function(){setShowBot(false);}} operaciones={operaciones} clausulas={clausulas} bloquesReserva={bloquesReserva} onAddClausula={addClausula}/>}
-      {!showForm&&(
-        <button className="ia-fab" aria-label="Asistente IA" onClick={function(){setShowBot(function(v){return !v;});}} title="Asistente IA" style={{
-          position:"fixed",bottom:80,right:20,zIndex:150,
-          width:48,height:48,borderRadius:"50%",border:"none",cursor:"pointer",
-          background:"var(--gold)",
-          boxShadow:"0 4px 20px rgba(212,168,83,0.4)",
-          display:"flex",alignItems:"center",justifyContent:"center",
-          fontSize:22,transition:"transform 0.2s",
-        }}>✦</button>
-      )}
+      {/* El asistente se abre explícitamente desde Ayuda. */}
+      {showBot&&<BotIA onClose={function(){setShowBot(false);}} onAddClausula={addClausula}/>}
 
       {dwNotice&&<div role="status" aria-live="polite" style={{position:"fixed",right:18,top:18,zIndex:4000,maxWidth:420,padding:"12px 14px",borderRadius:12,border:"1px solid rgba(255,255,255,.12)",background:"rgba(15,23,42,.97)",color:"#f8fafc",boxShadow:"0 14px 40px rgba(0,0,0,.3)",display:"flex",alignItems:"flex-start",gap:10}}>
         <div style={{width:8,height:8,borderRadius:"50%",background:dwNotice.kind==="success"?"#45c486":"#e9a23b",marginTop:5,flex:"0 0 auto"}}/>
@@ -8907,7 +8970,10 @@ function DocWorksApp(){
         />:null}>
         {viewDoc&&<DocumentViewer op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?toggleTarea:undefined} onUpdateOperation={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?onUpdateOperationGlobal:undefined} onActionWorkflow={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}:undefined} onCompleteData={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(op,campo){setViewDoc(null);setDocAutoAction(null);setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}:undefined} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
       </Modal>
-      <ConfirmModal open={confirmCloseForm} title="Salir de la operación" message="Ya cargaste datos. ¿Querés guardar un borrador antes de salir?" confirmLabel="Guardar borrador" cancelLabel="Salir sin guardar" onCancel={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}/>
+      <ConfirmModal open={confirmCloseForm} title="Salir de la operación" message={guardandoSalida?"Guardando el borrador… Si no querés esperar, podés continuar después desde este dispositivo.":"Podés guardar el borrador en Operaciones o conservarlo en este dispositivo para continuar después."} confirmLabel={guardandoSalida?"Guardando…":"Guardar borrador"} confirmDisabled={guardandoSalida} cancelLabel="Seguir editando" onCancel={cancelarSalidaFormulario} secondaryLabel="Salir sin guardar" onSecondary={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}>
+        {errorSalida&&<p role="alert" style={{fontSize:13,color:"var(--red)",lineHeight:1.5}}>{errorSalida}</p>}
+        <button type="button" className="btn btn-secondary" style={{width:"100%",marginBottom:14}} onClick={continuarOperacionDespues}>Volver a Operaciones y continuar después</button>
+      </ConfirmModal>
       <ConfirmModal
         open={!!draftPrompt}
         title="Documento sin guardar"
@@ -8918,7 +8984,7 @@ function DocWorksApp(){
           var d=draftPrompt; if(!d)return;
           var found = d.editId ? operaciones.find(function(o){return o.id===d.editId;}) : null;
           if(found){ setEditOp(Object.assign({},found,d.data)); setFormInitialOverride(null); }
-          else { setEditOp(null); setFormInitialOverride(d.data); }
+          else { setEditOp(null); setFormInitialOverride(Object.assign({},d.data,d.editId?{id:d.editId}:{})); }
           setFormTipo(d.data.tipo||"reserva");
           setShowForm(true);
           setDraftPrompt(null);

@@ -82,9 +82,9 @@ export function normalizarBusqueda(value){
 
 // Estilos globales y estabilidad móvil, extraídos sin cambiar su contenido.
 export const GS = `
-[data-theme="dark"]{--dw-token-required-bg:#123f59;--dw-token-required-text:#bceaff;}
-
-  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap');
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:100 1000;font-display:swap;src:url('/fonts/dm-sans-latin.woff2') format('woff2');}
+  [data-theme="dark"]{--dw-token-required-bg:#123f59;--dw-token-required-text:#bceaff;}
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{overflow-x:hidden;max-width:100vw;min-height:100%;}
   html{scroll-behavior:smooth;}
@@ -108,9 +108,9 @@ export const GS = `
     /* ── Tipografía (escala fija) ── */
     --font-sans:'DM Sans',sans-serif;
     --font-serif:'DM Serif Display',serif;
-    --fs-xs:11px;
-    --fs-sm:12.5px;
-    --fs-md:14px;
+    --fs-xs:12px;
+    --fs-sm:13.5px;
+    --fs-md:15px;
     --fs-lg:16px;
     --fs-xl:20px;
     --fs-2xl:28px;
@@ -270,7 +270,7 @@ export const GS = `
   .badge-gold{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold-line);}
 
   /* ── Buttons (familia clara: primary / secondary / ghost / danger) ── */
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font-sans);font-size:var(--fs-sm);font-weight:600;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--ease);border:none;outline:none;white-space:nowrap;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font-sans);font-size:12.5px;font-weight:600;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--ease);border:none;outline:none;white-space:nowrap;}
   .btn:disabled{opacity:0.45;cursor:not-allowed;}
   .btn-primary{background:linear-gradient(135deg,#c9962a,var(--gold));color:#0a0f1a;padding:9px 16px;box-shadow:var(--shadow-gold);font-weight:700;}
   .btn-primary:hover:not(:disabled){filter:brightness(1.05);box-shadow:0 6px 20px rgba(212,168,83,0.35);transform:translateY(-1px);}
@@ -284,7 +284,7 @@ export const GS = `
   .btn-orange:hover:not(:disabled){background:rgba(251,146,60,0.25);}
   .btn-danger{background:rgba(248,113,113,0.1);color:var(--red);border:1px solid rgba(248,113,113,0.2);padding:8px 12px;}
   .btn-danger:hover:not(:disabled){background:rgba(248,113,113,0.2);}
-  .btn-sm{padding:5px 11px;font-size:var(--fs-xs);}
+  .btn-sm{padding:5px 11px;font-size:11px;}
 
   /* ── Inputs ── */
   .field{display:flex;flex-direction:column;gap:5px;}
@@ -302,10 +302,17 @@ export const GS = `
 /* Editor de operaciones como página completa. */
 .dw-operation-page-content{width:100%;max-width:none!important;box-sizing:border-box;}
 .dw-operation-page{width:100%;max-width:none;min-width:0;display:flex;flex-direction:column;gap:16px;}
-.dw-operation-page-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:4px 0 16px;border-bottom:1px solid var(--border);}
+.dw-operation-page-heading{position:sticky;top:0;z-index:25;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:4px 0 16px;border-bottom:1px solid var(--border);}
 .dw-operation-page-heading h1{font-family:var(--font-serif);font-size:clamp(24px,2.1vw,34px);margin:5px 0;color:var(--text);}
+@media(max-width:640px){.dw-operation-page-heading{gap:8px;padding:8px 0}.dw-operation-page-heading h1{font-size:22px}.dw-operation-page-heading p{display:none}.dw-operation-page-heading>button{min-height:44px}}
 .dw-operation-page-heading p{margin:0;color:var(--muted);font-size:13px;}
 .dw-operation-page-breadcrumb{font-size:12px;font-weight:650;color:var(--dim);}
+.dw-operation-form-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding-top:16px;border-top:1px solid var(--border);margin-top:14px}
+.dw-operation-form-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-left:auto;max-width:100%}
+.dw-operation-next-action{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.dw-operation-save{display:inline-flex;align-items:center}
+.dw-operation-save [role=status]{justify-content:center;min-width:40px;min-height:40px;box-sizing:border-box;padding:7px 9px;border:1px solid var(--border2);border-radius:10px;background:var(--surface2)}
+.dw-operation-save [aria-hidden=true]{font-size:20px!important}
 .dw-operation-page .grid2>.field{min-width:0;max-width:none;}
 
 /* Nueva operación: un poco más de definición sin cambiar la identidad visual. */
@@ -478,15 +485,15 @@ export const GS = `
   .dw-operation-page .grid2{grid-template-columns:repeat(2,minmax(0,1fr));}
   .dw-operation-page .grid3{grid-template-columns:repeat(3,minmax(0,1fr));}
   .dw-operation-page .field{gap:3px;min-width:0;}
-  .dw-operation-page .inp{min-height:36px;padding:7px 10px;font-size:14px;}
+  .dw-operation-page .inp{min-height:36px;padding:7px 10px;font-size:15px;}
   .dw-operation-page textarea.inp{min-height:74px;resize:vertical;}
-  .dw-operation-page .field-label{font-size:12px;}
+  .dw-operation-page .field-label{font-size:13px;}
 }
 
 @media(max-width:640px){.dw-operation-page-heading{align-items:flex-start;}.dw-operation-page-heading h1{font-size:24px;}.dw-operation-page{gap:12px;}}
 
   /* ── Modal ── */
-  .modal-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);height:100vh;height:100dvh;overflow:hidden;overscroll-behavior:contain;}
+  .modal-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);height:100vh;height:100dvh;overflow:hidden;overscroll-behavior:contain;}
   .modal-box{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-lg);width:100%;max-height:92vh;max-height:92dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
   .modal-box.wide{max-width:700px;}
   .modal-box.narrow{max-width:460px;}
@@ -1639,6 +1646,22 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .dw-confirm-overlay .dw-confirm-box .modal-body>div:last-child{position:sticky;bottom:0;background:var(--card);padding-top:8px;}
 }
 
+
+/* Encabezado del visor: título y acciones separados para evitar botones comprimidos. */
+@media(max-width:640px){
+ .viewer-modal .modal-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:start!important;row-gap:10px!important}
+ .viewer-modal .modal-head>div:first-child{grid-column:1;grid-row:1;min-width:0!important;width:100%;align-self:center}
+ .viewer-modal .modal-head>div:last-child{display:contents!important}
+ .viewer-modal .modal-title{max-width:100%!important;width:100%;white-space:normal!important}
+ .viewer-modal .dw-viewer-heading-operation{max-width:100%!important}
+ .viewer-modal .modal-head .modal-close{grid-column:2;grid-row:1;margin:0!important;align-self:start}
+ .viewer-modal .doc-header-actions{grid-column:1/-1;grid-row:2;justify-content:flex-start;flex-wrap:wrap;gap:8px!important;width:100%}
+ .viewer-modal .doc-header-actions .doc-action{flex:0 0 auto;min-height:40px!important;width:auto!important;padding:6px 10px!important;gap:6px!important;white-space:nowrap}
+ .viewer-modal .doc-header-actions .doc-action-edit span,.viewer-modal .doc-header-actions .doc-action-share span,.viewer-modal .doc-header-actions .doc-action-download>span:not(.doc-download-chevron){display:inline!important;font-size:11px!important}
+ .viewer-modal .doc-header-actions .doc-action-download{height:40px!important;width:auto!important;padding:6px 10px!important}
+ .viewer-modal .doc-header-actions .doc-action-download .doc-download-chevron{display:inline!important}
+ .viewer-modal .doc-download-menu{left:auto;right:0;max-width:calc(100vw - 48px)}
+}
 
 `;
 
@@ -5081,7 +5104,7 @@ export function crearOperacionForm(deps){
  const {AutosaveIndicator, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
-function OperacionForm({contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
+function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
   const [grupo,setGrupo]=useState(initial ? (
     ["reserva","boleto"].includes(initial.tipo)?"compra":
     ["alquiler","reserva_alquiler"].includes(initial.tipo)?"alquiler":
@@ -5162,7 +5185,9 @@ function OperacionForm({contextoBorrador=undefined,initial,clausulas,perfil,equi
   const initialIdRef = useRef(initial ? initial.id || null : null);
   const guardandoFormRef = useRef(false);
   const dataRef = useRef(data);
-  useEffect(function(){ dataRef.current=data; }, [data]);
+  dataRef.current=data;
+  if(snapshotRef)snapshotRef.current={data:data,editId:initialIdRef.current,contexto:contextoBorrador||null};
+  useEffect(function(){return function(){if(snapshotRef)snapshotRef.current=null;};},[snapshotRef]);
   const draftPayload = useMemo(function(){
     return draftTieneContenido(data) ? { data:data, editId:initialIdRef.current, contexto:contextoBorrador||null } : null;
   }, [data,contextoBorrador&&contextoBorrador.inmobiliariaId,contextoBorrador&&contextoBorrador.usuarioId]);
@@ -5201,10 +5226,11 @@ function OperacionForm({contextoBorrador=undefined,initial,clausulas,perfil,equi
   // por defecto): al elegir el tipo de documento en una operación NUEVA, se
   // preseleccionan automáticamente (filtradas por las que aplican a ese tipo).
   // Si ya se está editando una operación existente, no se tocan sus cláusulas.
-  const set=useCallback(function(k,v){setData(function(d){
+  const set=useCallback(function(k,v){
+    if(k==="tipo"&&onTipoChange)onTipoChange(v);
+    setData(function(d){
     var next=Object.assign({},d,{[k]:v});
     if(k==="tipo"){
-      if(onTipoChange)onTipoChange(v);
       if(v==="alquiler" || v==="reserva_alquiler") next=limpiarComisionesIncompatibles(next);
       if(v==="exclusividad"){
         // La Autorización de Venta no tiene un "Interesado": la segunda parte es
@@ -5390,17 +5416,17 @@ function OperacionForm({contextoBorrador=undefined,initial,clausulas,perfil,equi
         </div>
       </div>
       <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
-      {step<=total&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:14}}>
+      {step<=total&&<div className="dw-operation-form-footer">
         <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Cambiar grupo":"← Anterior"}</Btn>
-        {modoEdicion ? (
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>
-            {step<total&&<Btn onClick={function(){setStep(function(s){return s+1;});}}>Siguiente →</Btn>}
-            {step===total&&<Btn onClick={function(){setStep(total+1);}}>Revisar →</Btn>}
+        <div className="dw-operation-form-actions">
+          {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
+          <div className="dw-operation-next-action">
+            {saveStatus&&<span className="dw-operation-save"><AutosaveIndicator status={saveStatus} compact={false}/></span>}
+            {step<total?<Btn onClick={function(){setStep(function(s){return s+1;});}}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={function(){setStep(total+1);}}>{modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
           </div>
-        ) : (step<total?<Btn onClick={function(){setStep(function(s){return s+1;});}}>Siguiente →</Btn>:<Btn v="success" onClick={function(){setStep(total+1);}}>Revisar y finalizar →</Btn>)}
+        </div>
       </div>}
-      {saveStatus&&<div style={{display:"flex",justifyContent:"flex-end",paddingTop:8}}><AutosaveIndicator status={saveStatus} compact={true}/></div>}
+      {step>total&&saveStatus&&<div style={{display:"flex",justifyContent:"flex-end",paddingTop:8}}><AutosaveIndicator status={saveStatus} compact={true}/></div>}
     </div>
   );
 }

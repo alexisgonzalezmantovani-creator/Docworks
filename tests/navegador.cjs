@@ -27,7 +27,7 @@ function EstadisticasHarness(){return <><GStyles/><main style={{maxWidth:1000,ma
 createRoot(document.getElementById('root')).render(location.pathname==='/superadmin'?<><GStyles/><PanelSuperadminPrueba contexto={{usuario:{nombre:'Administración de prueba'}}} onLogout={()=>{}}/></>:location.pathname==='/aspecto'?<AspectoHarness/>:location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
 `;
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+harness,resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:path.join(out,'harness.js')});
-const server=http.createServer((req,res)=>{if(req.url.startsWith('/pdfjs-6.5.438/')){const target=path.join(root,'public',req.url);if(!fs.existsSync(target)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',target.endsWith('.mjs')?'text/javascript':target.endsWith('.wasm')?'application/wasm':'application/octet-stream');res.end(fs.readFileSync(target));}else if(req.url==='/docworks-header-logo.png'){res.setHeader('Content-Type','image/png');res.end(fs.readFileSync(path.join(root,'public/docworks-header-logo.png')));}else if(req.url==='/harness.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(out,'harness.js')));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/harness.js"></script></body></html>');}});
+const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.woff2'){res.setHeader('Content-Type','font/woff2');res.end(fs.readFileSync(path.join(root,'public/fonts/dm-sans-latin.woff2')));}else if(req.url.startsWith('/pdfjs-6.5.438/')){const target=path.join(root,'public',req.url);if(!fs.existsSync(target)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',target.endsWith('.mjs')?'text/javascript':target.endsWith('.wasm')?'application/wasm':'application/octet-stream');res.end(fs.readFileSync(target));}else if(req.url==='/docworks-header-logo.png'){res.setHeader('Content-Type','image/png');res.end(fs.readFileSync(path.join(root,'public/docworks-header-logo.png')));}else if(req.url==='/harness.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(out,'harness.js')));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/harness.js"></script></body></html>');}});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await browserType.launchPersistentContext(path.join(out,'profile'),{headless:true,...(engine==='chromium'?{executablePath:process.env.DOCWORKS_BROWSER_EXECUTABLE||undefined,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-zygote','--single-process','--use-gl=angle','--use-angle=swiftshader']}:{})});
@@ -103,6 +103,15 @@ const server=http.createServer((req,res)=>{if(req.url.startsWith('/pdfjs-6.5.438
 
   }
   await page.locator('#dw-modelo-documento').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
+  const primeraClausula=page.locator('.dw-clause-compact').first();
+  await primeraClausula.locator('.dw-clause-toggle').click();
+  const nombreClausula=primeraClausula.locator('.dw-clause-name');
+  assert.ok(await nombreClausula.evaluate(el=>el.getBoundingClientRect().width>=60),name+' título de cláusula legible');checks++;
+  assert.ok(await nombreClausula.evaluate(el=>el.getBoundingClientRect().height<=parseFloat(getComputedStyle(el).lineHeight)*1.1),name+' Precio no se parte');checks++;
+  for(const titulo of ['Subir','Bajar']){assert.ok(await primeraClausula.locator('button[title="'+titulo+'"]').evaluate(el=>el.getBoundingClientRect().width>=36),name+' '+titulo+' sin comprimir');checks++;}
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' cláusula abierta sin desborde');checks++;
+  await primeraClausula.screenshot({path:path.join(out,'clausula-precio-'+name+'.png')});
+  await primeraClausula.locator('.dw-clause-toggle').click();
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
   assert.equal(await nav.getByRole('button').count(),3);checks++;
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
