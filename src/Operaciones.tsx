@@ -5445,7 +5445,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesAlquiler data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
       if(step===6)return <StepGarantia data={data} onChange={set} faltantes={camposFaltantes}/>;
-      if(step===7)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil}/>;
+      if(step===7)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     }
     if(esResAlq){
       if(step===1)return <StepTipo data={data} onChange={set} grupo="alquiler"/>;
@@ -5453,7 +5453,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===3)return <StepPersona data={data} onChange={set} prefix="locador" titulo="Locador" faltantes={camposFaltantes}/>;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesReservaAlq data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
-      if(step===6)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil}/>;
+      if(step===6)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     }
     if(esDocSimple){
       var grupoReal=grupo||"otros";
@@ -5461,7 +5461,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===2)return data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes}/>;
       if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes}/>;
       if(step===4)return <StepDocSimple data={data} onChange={set}/>;
-      if(step===5)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil}/>;
+      if(step===5)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
       return null;
     }
     // Compra normal (reserva / boleto)
@@ -5470,7 +5470,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo="Vendedor" faltantes={camposFaltantes}/>;
     if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
     if(step===5)return <StepEconomicoCompra data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
-    if(step===6)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil}/>;
+    if(step===6)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     return null;
   }
   // El porcentaje representa datos realmente completados, nunca pantallas visitadas.

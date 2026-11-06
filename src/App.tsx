@@ -465,7 +465,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.30";
+var DOCWORKS_VERSION = "6.31";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -591,7 +591,14 @@ var ROL_AYUDA={
   INMOBILIARIA:"Inmobiliaria: queda autorizada a comercializar el inmueble; sus datos salen de tu perfil."
 };
 function rolDePrefix(tipo,prefix){ var r=rolesPorTipo(tipo); return (prefix==="locador"||prefix==="vendedor") ? r[0] : (r[1]||r[0]); }
-function tituloRolForm(tipo,prefix){ if(tipo==="reserva"&&prefix==="comprador") return "Comprador / Oferente"; return capRol(rolDePrefix(tipo,prefix)); }
+function tituloRolForm(tipo,prefix){
+  if(tipo==="reserva"&&prefix==="comprador")return "Comprador (oferente)";
+  var rol=rolDePrefix(tipo,prefix);
+  if(rol==="LOCATARIO")return "Locatario (inquilino)";
+  if(rol==="COMODANTE")return "Comodante (entrega el inmueble)";
+  if(rol==="COMODATARIO")return "Comodatario (recibe el inmueble)";
+  return capRol(rol);
+}
 function ayudaRolForm(tipo,prefix){ if(tipo==="reserva"&&prefix==="comprador") return ROL_AYUDA.OFERENTE; return ROL_AYUDA[rolDePrefix(tipo,prefix)]||""; }
 function reemplazarRolesDocumento(texto,tipo){
   if(!texto) return texto;
@@ -1856,6 +1863,7 @@ function parseMontoAR(valor){
 function esMontoMayorACero(valor){ var n=parseMontoAR(valor); return isFinite(n) && n>0; }
 // 4.29: el paso depende del tipo de documento (en Reserva de alquiler el locatario va primero; en documentos simples todo lo demás está en el paso 4).
 function getPasoDeCampo(campo,tipo){
+  if(tipo==="alquiler"&&(campo==="alquiler_seguro_dias"||campo==="alquiler_incluye_seguro"))return 7;
   if(campo==="entrega_aires_detalle"||campo==="entrega_muebles_detalle"||campo==="alquiler_inventario"){var pasos=getSteps(tipo);return pasos[pasos.length-1].id;}
   var simple=["comodato","exclusividad","refuerzo_reserva","devolucion_reserva"].indexOf(tipo)>=0;
   var m=String(campo||"").match(/^(comprador|vendedor|locador|locatario)_/);
@@ -4206,7 +4214,7 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   var doc=Array.isArray(bloquesPlantilla)&&bloquesPlantilla.length
     ? buildDocSectionsFromEditableBody(op,clausulasLib||[],tipo,bloquesPlantilla)
     : buildDocSectionsStandard(op,clausulasLib||[],tipo);
-  doc.secciones=(doc.secciones||[]).filter(function(sec){return !bloqueComisionOculto(sec,op);});
+  doc.secciones=(doc.secciones||[]).filter(function(sec){return !bloqueComisionOculto(sec,op)&&!((tipo||op.tipo)==="alquiler"&&op.alquiler_incluye_seguro===false&&(/^[0-9]+\.\s*SEGURO$/.test(sec.titulo)||sec._bloqueId==="alquiler.seguro"));});
   if((tipo||op.tipo)==="reserva_alquiler"&&op.res_alq_dia_pago){
     var pago="El pago mensual se efectuará "+periodoPagoMensualTexto(op,"res_alq_dia_pago")+" de cada mes.-";
     var condiciones=doc.secciones.find(function(c){return /CONDICIONES ESTIMADAS DE LOCACI[ÓO]N/i.test(c.titulo);});
@@ -4746,9 +4754,7 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
   function onBlurNombreCotitular(i){ return function(){ var p=cotitulares[i]; if(!p) return; var cap=capitalizarNombrePropio(p.nombre); if(cap!==p.nombre) actualizarCotitular(i,"nombre",cap); }; }
   return(
     <div>
-      <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:3}} title={ayudaRolForm(data.tipo,prefix)}>{tituloRolForm(data.tipo,prefix)}</div>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:ayudaRolForm(data.tipo,prefix)?6:12}}>Completá los datos de {tituloRolForm(data.tipo,prefix).toLowerCase()}.</p>
-      {ayudaRolForm(data.tipo,prefix)&&<div className="dw-rol-ayuda" style={{fontSize:12.5,fontWeight:600,lineHeight:1.55,color:"var(--text)",background:"var(--surface2)",border:"1px solid rgba(212,168,83,0.38)",borderLeft:"3px solid var(--gold)",borderRadius:9,padding:"9px 12px",marginBottom:12}}>ⓘ {ayudaRolForm(data.tipo,prefix)}</div>}
+      <div role="heading" aria-level={2} style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:12}}>{tituloRolForm(data.tipo,prefix)}</div>
       <div className="dw-persona-fields">
         <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
         <div className="dw-persona-half dw-persona-identificacion"><IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="20-12345678-9" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/></div>
@@ -4796,7 +4802,7 @@ function StepInmobiliariaAutorizada({data,perfil}){
   return(
     <div>
       <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:3}}>Inmobiliaria autorizada</div>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Estos datos se cargan automáticamente desde Configuración → Mi cuenta. No hace falta completar nuevamente los datos de tu inmobiliaria.</p>
+      <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Datos del perfil de la inmobiliaria.</p>
       <div style={{padding:"16px 18px",borderRadius:14,border:"1px solid rgba(212,168,83,.22)",background:"linear-gradient(135deg,rgba(212,168,83,.08),transparent)",display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:12}}>
         <div style={{gridColumn:"1 / -1"}}>
           <div style={{fontSize:12,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Razón social / nombre comercial</div>
@@ -5226,10 +5232,9 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
 
 
 
-      <div className="col2" style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginTop:6,marginBottom:2}}>Mora, seguro y rescisión</div>
+      <div className="col2" style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginTop:6,marginBottom:2}}>Mora y rescisión</div>
       <Inp id="dw-field-alquiler_interes_punitorio" label="Interés punitorio mensual (%)" value={data.alquiler_interes_punitorio??"5"} onChange={function(e){onChange("alquiler_interes_punitorio",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_interes_punitorio","5");}} placeholder="5" type="number" hint="Por mora en el pago del canon" {...estiloCampoFaltante(faltantes,"alquiler_interes_punitorio","Ingresá un número válido igual o mayor a cero.")}/>
       <Inp id="dw-field-alquiler_penalidad_meses" label="Cláusula penal (meses de alquiler)" value={data.alquiler_penalidad_meses??"2"} onChange={function(e){onChange("alquiler_penalidad_meses",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_penalidad_meses","2");}} placeholder="2" type="number" hint="Por cada mes de demora en restituir" {...estiloCampoFaltante(faltantes,"alquiler_penalidad_meses","Ingresá un número válido igual o mayor a cero.")}/>
-      {data.alquiler_incluye_seguro!==false&&<Inp id="dw-field-alquiler_seguro_dias" label="Plazo para contratar seguro (días)" value={data.alquiler_seguro_dias??"10"} onChange={function(e){onChange("alquiler_seguro_dias",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_seguro_dias","10");}} placeholder="10" type="number" hint="Seguro de RC e Incendio" {...estiloCampoFaltante(faltantes,"alquiler_seguro_dias","Ingresá un número válido igual o mayor a cero.")}/>}
       <Inp id="dw-field-alquiler_aviso_meses" label="Preaviso de rescisión anticipada (meses)" value={data.alquiler_aviso_meses??"1"} onChange={function(e){onChange("alquiler_aviso_meses",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_aviso_meses","1");}} placeholder="1" type="number" {...estiloCampoFaltante(faltantes,"alquiler_aviso_meses","Ingresá un número válido igual o mayor a cero.")}/>
     </div></div>
   );
@@ -5366,20 +5371,21 @@ function StepGarantia({data,onChange,faltantes}){
   );
 }
 
-function OpcionalesCuerpo({data,onChange}){
+function SeguroOperacion({data,onChange,faltantes=[]}){
   var items=[];
   // El refuerzo de reserva se configura en Económico, no entre cláusulas opcionales.
-  if(data.tipo==="alquiler") items.push({campo:"alquiler_incluye_seguro",label:"Incluir cláusula de seguro",desc:"Cláusula de seguro del inmueble. Destildalo si no corresponde.",def:true});
+  if(data.tipo==="alquiler") items.push({campo:"alquiler_incluye_seguro",label:"Incluir cláusula de seguro",desc:"Responsabilidad civil e incendio del inmueble. Se incorpora al contrato cuando está incluida.",def:true});
   if(!items.length) return null;
   return <div style={{marginBottom:14,padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"rgba(212,168,83,0.04)"}}>
-    <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Condiciones adicionales</div>
+    <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Seguro del inmueble</div>
     {items.map(function(it){ var v=typeof data[it.campo]==="boolean"?data[it.campo]:it.def; return <label key={it.campo} style={{display:"flex",alignItems:"flex-start",fontSize:12.5,color:"var(--text)",cursor:"pointer",gap:2}}>
       <input type="checkbox" checked={v} onChange={function(e){onChange(it.campo,e.target.checked);}}/>
       <span><b>{it.label}</b><br/><span style={{color:"var(--muted)",fontSize:12}}>{it.desc}</span></span>
     </label>; })}
+    {data.alquiler_incluye_seguro!==false&&<Inp id="dw-field-alquiler_seguro_dias" label="Plazo para contratar el seguro (días)" value={data.alquiler_seguro_dias??"10"} onChange={function(e){onChange("alquiler_seguro_dias",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_seguro_dias","10");}} placeholder="10" type="number" {...estiloCampoFaltante(faltantes,"alquiler_seguro_dias","Ingresá un número válido igual o mayor a cero.")}/>}
   </div>;
 }
-function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
+function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]}){
   var selected=data.clausulas_ids||[];
   var cfgOpcionales=obtenerPlantillaConfig(perfil,data.tipo,clausulas);
   var idsOpcionales=Array.isArray(cfgOpcionales.clausulas_ids)?cfgOpcionales.clausulas_ids:[];
@@ -5411,6 +5417,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil}){
   async function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
   return <div>
     <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.55,marginBottom:14}}>Tu documento se completa automáticamente con los datos del formulario. Si esta operación necesita una condición adicional, podés elegirla acá.</p>
+    <SeguroOperacion data={data} onChange={onChange} faltantes={faltantes}/>
     <div style={{fontSize:12,fontWeight:750,color:"var(--text)",margin:"2px 0 8px"}}>Cláusulas adicionales</div>
     {inventarioPrevio&&(<div className="dw-inventario-existente">
         <label style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,border:"1px solid var(--border)",background:data.alquiler_amoblado?"rgba(212,168,83,0.08)":"transparent",cursor:"pointer",fontSize:12.5,color:"var(--text)",width:"fit-content"}}>
@@ -5549,7 +5556,6 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
   var borderMap={compra:"rgba(212,168,83,0.35)",alquiler:"rgba(45,212,191,0.3)",otros:"rgba(148,163,184,0.25)"};
   return(
     <div>
-      <OpcionalesCuerpo data={data} onChange={onChange}/>
       <p className="dw-grupo-intro">Seleccioná el tipo de documento a generar.</p>
       <div className="dw-grupo-tipo-sections">
         {gruposToShow.map(function(entry){
