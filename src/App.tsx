@@ -465,7 +465,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.29";
+var DOCWORKS_VERSION = "6.30";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -612,6 +612,12 @@ const TIPOS = {
   reserva_alquiler:"Reserva de Alquiler", alquiler:"Contrato de Alquiler",
   comodato:"Comodato", exclusividad:"Autorización de Venta",
   refuerzo_reserva:"Refuerzo de Reserva", devolucion_reserva:"Devolución de Reserva",
+};
+const TITULOS_NUEVA_OPERACION = {
+  reserva:"Nueva reserva de compra", boleto:"Nuevo boleto de compraventa",
+  reserva_alquiler:"Nueva reserva de alquiler", alquiler:"Nuevo contrato de locación",
+  comodato:"Nuevo comodato", exclusividad:"Nueva autorización de venta",
+  refuerzo_reserva:"Nuevo refuerzo de reserva", devolucion_reserva:"Nueva devolución de reserva",
 };
 const TIPO_ICON = {
   reserva:<FormalIcon name="lock" size={14} strokeWidth={2}/>,
@@ -4722,8 +4728,8 @@ function sumarDiasISO(fechaISO,dias){
 
 function ContactoDocumentoField({id,label,type,value,onChange,checked,onChecked,placeholder,autoComplete=undefined,error=undefined,style=undefined}){
   var nombre=type==="tel"?"teléfono":"correo electrónico";
-  return <div className="dw-contact-field">
-    <div className="field dw-contact-input"><label className="field-label" htmlFor={id}>{label}</label><input id={id} className="inp" type={type} inputMode={type==="tel"?"tel":"email"} value={value||""} onChange={onChange} placeholder={placeholder} autoComplete={autoComplete} style={style} {...atributosErrorCampo(id,error)}/>{error&&<span id={id+"-error"} className="field-error">{error}</span>}</div>
+  return <div className="dw-contact-field" role="group" aria-labelledby={id+"-label"}>
+    <div className="field dw-contact-input"><label id={id+"-label"} className="field-label" htmlFor={id}>{label}</label><input id={id} className="inp" type={type} inputMode={type==="tel"?"tel":"email"} value={value||""} onChange={onChange} placeholder={placeholder} autoComplete={autoComplete} style={style} {...atributosErrorCampo(id,error)}/>{error&&<span id={id+"-error"} className="field-error">{error}</span>}</div>
     <div className="dw-contact-print"><span>Mostrar en el documento</span><button type="button" className={"dw-ios-sw"+(checked?" on":"")} role="switch" aria-checked={!!checked} aria-label={"Mostrar "+nombre+" en el documento"} aria-controls={id} onClick={function(){onChecked(!checked);}}/></div>
   </div>;
 }
@@ -7004,14 +7010,16 @@ function RegistroScreen({ onBack, onSubmit, loading, error, success }){
   var [email,setEmail]=useState("");
   var [inmobiliaria,setInmobiliaria]=useState("");
   var [password,setPassword]=useState("");
-  var fields=[{id:"nombre",label:"Nombre y apellido",value:nombre,set:setNombre,type:"text",auto:"name",max:120},{id:"inmobiliaria",label:"Inmobiliaria",value:inmobiliaria,set:setInmobiliaria,type:"text",auto:"organization",max:160},{id:"email",label:"Correo electrónico",value:email,set:setEmail,type:"email",auto:"email",max:254},{id:"password",label:"Contraseña (mínimo 8 caracteres)",value:password,set:setPassword,type:"password",auto:"new-password",max:128}];
+  var [website,setWebsite]=useState("");
+  var fields=[{id:"nombre",label:"Nombre y apellido",value:nombre,set:setNombre,type:"text",auto:"name",max:120},{id:"inmobiliaria",label:"Inmobiliaria",value:inmobiliaria,set:setInmobiliaria,type:"text",auto:"organization",max:160},{id:"email",label:"Correo electrónico",value:email,set:setEmail,type:"email",auto:"email",max:254},{id:"password",label:"Contraseña (8 caracteres, letras y números)",value:password,set:setPassword,type:"password",auto:"new-password",max:128}];
   return <div style={{position:"fixed",inset:0,zIndex:400,overflowY:"auto",background:AUTH_BG,padding:16,fontFamily:"'DM Sans',sans-serif",display:"flex"}}>
-    <form onSubmit={function(e){e.preventDefault();if(!loading)onSubmit({nombre:nombre.trim(),email:email.trim().toLowerCase(),inmobiliaria:inmobiliaria.trim(),password:password});}} style={{margin:"auto",width:"100%",maxWidth:410,boxSizing:"border-box",background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:24,display:"flex",flexDirection:"column",gap:14,color:AUTH_TEXT}}>
+    <form onSubmit={function(e){e.preventDefault();if(!loading)onSubmit({nombre:nombre.trim(),email:email.trim().toLowerCase(),inmobiliaria:inmobiliaria.trim(),password:password,website:website});}} style={{margin:"auto",width:"100%",maxWidth:410,boxSizing:"border-box",background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:24,display:"flex",flexDirection:"column",gap:14,color:AUTH_TEXT}}>
       <img src={LOGO_B64} alt="DocWorks" style={{height:90,width:"100%",objectFit:"contain"}}/>
       <h1 style={{fontSize:22,margin:0}}>Probá DocWorks gratis</h1>
       <p style={{fontSize:14,lineHeight:1.5,margin:0,color:AUTH_MUTED}}>Un mes gratis para tu inmobiliaria. Sin tarjeta y sin cobro automático. La prueba empieza cuando verificás tu email.</p>
       {error&&<div role="alert" style={{color:AUTH_RED}}>{error}</div>}
       {success?<div role="status" style={{lineHeight:1.5}}>{success}</div>:<>
+        <div aria-hidden="true" style={{position:"absolute",width:1,height:1,overflow:"hidden",clipPath:"inset(50%)",pointerEvents:"none"}}><label>Sitio web<input name="website" tabIndex={-1} autoComplete="off" value={website} onChange={function(e){setWebsite(e.target.value);}}/></label></div>
         {fields.map(function(f){return <div key={f.id}><label htmlFor={"dw-reg-"+f.id} style={{display:"block",fontSize:13,marginBottom:6}}>{f.label}</label><input id={"dw-reg-"+f.id} name={f.id} autoComplete={f.auto} required type={f.type} minLength={f.id==="password"?8:1} maxLength={f.max} value={f.value} onChange={function(e){f.set(e.target.value);}} style={{width:"100%",boxSizing:"border-box",padding:12,borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16}}/></div>;})}
         <button type="submit" disabled={loading} style={{padding:13,borderRadius:10,border:0,background:AUTH_GOLD,color:"#1a1206",fontSize:16,fontWeight:700,cursor:"pointer"}}>{loading?"Creando cuenta…":"Crear cuenta gratis"}</button>
         <p style={{fontSize:12,lineHeight:1.5,color:AUTH_MUTED,margin:0}}>Usaremos estos datos para crear y administrar tu cuenta.</p>
@@ -7251,8 +7259,10 @@ function useDocWorksSession(){
 
   function solicitarRegistro(datos){
     if(registroLoading)return Promise.resolve({error:true});
+    if(datos.website){setRegistroError("No pudimos validar el formulario. Volvé a intentarlo.");return Promise.resolve({error:true});}
     setRegistroLoading(true); setRegistroError(null); setRegistroSuccess(null);
     if(!datos.nombre||!datos.inmobiliaria||!datos.email||!datos.password||datos.password.length<8){setRegistroLoading(false);setRegistroError("Completá los datos para crear tu cuenta.");return Promise.resolve({error:true});}
+    if(!/[A-Za-z]/.test(datos.password)||!/[0-9]/.test(datos.password)){setRegistroLoading(false);setRegistroError("Usá al menos 8 caracteres, con letras y números.");return Promise.resolve({error:true});}
     return loadSupabaseJs().then(function(sb){
       if(!sb)throw new Error("No se pudo conectar con DocWorks.");
       return sb.auth.signUp({email:datos.email,password:datos.password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{nombre:datos.nombre,inmobiliaria:datos.inmobiliaria,docworks_registro:"trial_month_v1"}}});
@@ -9160,7 +9170,7 @@ function DocWorksApp(){
               {showForm ? (
                 <section className="dw-operation-page" aria-label={editOp?"Editar operación":"Nueva operación"}>
                   <div className="dw-operation-page-heading">
-                    <div><div className="dw-operation-page-breadcrumb">Operaciones / {editOp?"Editar operación":"Nueva operación"}</div><h1>{editOp?((formTipo||editOp.tipo)==="alquiler"?"Contrato de locación":TIPOS[formTipo||editOp.tipo]||"Editar operación"):"Nueva operación"}</h1><p>Completá los datos, revisá las cláusulas y guardá la operación.</p></div>
+                    <div><div className="dw-operation-page-breadcrumb">Operaciones / {editOp?"Editar operación":"Nueva operación"}</div><h1>{editOp?((formTipo||editOp.tipo)==="alquiler"?"Contrato de locación":TIPOS[formTipo||editOp.tipo]||"Editar operación"):(TITULOS_NUEVA_OPERACION[formTipo]||"Nueva operación")}</h1><p>Completá los datos, revisá las cláusulas y guardá la operación.</p></div>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={cerrarFormularioSeguro}>Volver a operaciones</button>
                   </div>
                   <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>

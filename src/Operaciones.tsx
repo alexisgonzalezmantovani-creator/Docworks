@@ -806,8 +806,8 @@ export const GS = `
   .plantilla-appearance-grid .cuenta-doc-preview-wrap{max-width:100%;}
   @media(max-width:900px){.plantilla-appearance-grid{grid-template-columns:1fr !important;}.plantilla-appearance-grid .card{position:static !important;}}
 
-  .plantilla-appearance-grid.dw-aspecto-layout{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(280px,1.15fr);gap:20px;align-items:start;margin-bottom:10px}
-  .dw-aspecto-controls{padding:16px;border:1px solid var(--border);border-radius:14px;max-height:calc(100dvh - 250px);overflow-y:auto;min-width:0;background:var(--card)}
+  .plantilla-appearance-grid.dw-aspecto-layout{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(300px,1.25fr);gap:20px;align-items:start;margin-bottom:10px}
+  .dw-aspecto-controls{padding:16px;border:1px solid var(--border);border-radius:14px;min-width:0;background:var(--card)}
   .dw-aspecto-layout .dw-aspecto-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
   .dw-aspecto-layout .dw-aspecto-nav-item{padding:10px 5px;justify-content:center;text-align:center}
   .dw-aspecto-layout .dw-aspecto-nav-icon,.dw-aspecto-layout .dw-aspecto-nav-arrow,.dw-aspecto-layout .dw-aspecto-nav-copy small{display:none}
@@ -815,7 +815,11 @@ export const GS = `
   .dw-pdf-preview{position:sticky;top:12px;border-radius:14px;padding:14px;background:var(--surface2,var(--card));border:1px solid var(--border);min-width:0}
   .dw-pdf-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--text)}
   .dw-pdf-description{font-size:11px;color:var(--muted);margin:8px 0 12px;line-height:1.5}
-  .dw-pdf-sheet{display:flex;justify-content:center;align-items:center;padding:12px;min-width:0;background:rgba(100,116,139,.09);border-radius:10px}
+  .dw-pdf-toolbar strong{display:flex;align-items:center;gap:8px}
+  .dw-pdf-updating{width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:dw-preview-spin .7s linear infinite}
+  @keyframes dw-preview-spin{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){.dw-pdf-updating{animation:none}}
+  .dw-pdf-sheet{margin-top:10px;display:flex;justify-content:center;align-items:center;padding:12px;min-width:0;background:rgba(100,116,139,.09);border-radius:10px}
   .dw-pdf-sheet canvas{display:block;background:white;box-shadow:0 4px 18px #0002;max-width:100%;height:auto}
   .dw-pdf-pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:8px;font-size:11px;color:var(--muted)}
   .dw-pdf-status{min-height:260px;display:flex;align-items:center;justify-content:center;gap:10px;flex-direction:column;font-size:12px;color:var(--muted)}
@@ -1702,13 +1706,13 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .dw-operation-save-error{font-size:12px;color:var(--red);max-width:220px;line-height:1.4}
 
 /* El control de inclusión pertenece al campo de contacto correspondiente. */
-.dw-contact-field{display:flex;align-items:flex-end;gap:10px;min-width:0}
+.dw-contact-field{display:flex;align-items:flex-end;gap:10px;min-width:0;padding:10px 12px;border:1px solid var(--border2);border-radius:12px;background:var(--surface2);box-sizing:border-box}
 .dw-contact-input{flex:1;min-width:0;margin-bottom:0}
-.dw-contact-print{display:flex;align-items:center;gap:8px;flex:none;min-height:42px;white-space:nowrap;font-size:12px;color:var(--muted)}
+.dw-contact-print{display:flex;align-items:center;gap:8px;flex:none;min-height:42px;white-space:nowrap;font-size:12px;color:var(--muted);padding:3px 8px;border:1px solid var(--border2);border-radius:999px;background:var(--card);box-sizing:border-box}
 .dw-contact-print .dw-ios-sw{appearance:none;-webkit-appearance:none;padding:0;border:0;cursor:pointer}
 .dw-contact-print .dw-ios-sw:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 @media(max-width:1279px){.dw-operation-page .dw-persona-fields .dw-contact-field{grid-column:1/-1}}
-@media(max-width:640px){.dw-contact-field{flex-direction:column;align-items:stretch;gap:6px}.dw-contact-print{justify-content:flex-end;min-height:34px}}
+@media(max-width:640px){.dw-contact-field{flex-direction:column;align-items:stretch;gap:6px}.dw-contact-print{justify-content:flex-start;align-self:flex-start;min-height:34px}}
 
 /* Navegación del formulario más cómoda en computadora. */
 @media(min-width:761px){

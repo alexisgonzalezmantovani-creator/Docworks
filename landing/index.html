@@ -11,7 +11,14 @@
 <meta property="og:site_name" content="DocWorks">
 <meta property="og:title" content="DocWorks · Automatizá tus documentos inmobiliarios">
 <meta property="og:description" content="Reservas, boletos, alquileres y comodatos listos en minutos, con tus cláusulas. PDF y Word, desde el celular.">
+<meta property="og:url" content="https://docworks-landing.vercel.app/">
+<meta property="og:image" content="https://docworks-landing.vercel.app/social-card.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="DocWorks: documentos inmobiliarios, en orden">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://docworks-landing.vercel.app/social-card.png">
+<meta name="twitter:image:alt" content="DocWorks: documentos inmobiliarios, en orden">
+<link rel="canonical" href="https://docworks-landing.vercel.app/">
 <meta name="twitter:title" content="DocWorks · Automatizá tus documentos inmobiliarios">
 <meta name="twitter:description" content="Reservas, boletos, alquileres y comodatos listos en minutos.">
 <script type="application/ld+json">
@@ -35,7 +42,7 @@
     "name": "¿Cuánto demora crear un documento?",
     "acceptedAnswer": {
      "@type": "Answer",
-     "text": "Minutos. Es súper rápido: cargás los datos una vez y el documento queda armado."
+     "text": "Cargás los datos una vez y el documento queda armado. Después revisás el contenido y lo descargás en PDF o Word."
     }
    },
    {
@@ -75,15 +82,15 @@
     "name": "¿Cómo funciona el calendario?",
     "acceptedAnswer": {
      "@type": "Answer",
-     "text": "Reúne en un solo lugar las fechas importantes de tus operaciones. Sus ventajas: Las fechas clave (inicio y vencimiento de contratos, posesión o escritura) salen de los datos que ya cargaste. Te muestra qué requiere atención y lo que viene en los próximos 30 días. Ves todo junto, sin agendas aparte ni planillas."
+     "text": "Reúne en un solo lugar las fechas importantes de tus operaciones. Sus ventajas: Reúne vencimientos de contratos y reservas, plazos de aceptación, refuerzos e inicios estimados a partir de los datos cargados. Te muestra qué requiere atención y lo que viene en los próximos 30 días. Ves todo junto, sin agendas aparte ni planillas."
     }
    },
    {
     "@type": "Question",
-    "name": "¿Es un sistema seguro?",
+    "name": "¿Cómo se controla el acceso a los datos?",
     "acceptedAnswer": {
      "@type": "Answer",
-     "text": "Sí. Cada inmobiliaria trabaja con sus propios usuarios y roles, y el sistema registra quién crea, edita o exporta cada documento."
+     "text": "Cada inmobiliaria tiene su propio espacio de trabajo. Los permisos dependen del rol asignado a cada usuario. El historial registra creaciones y cambios; las exportaciones con faltantes se registran al confirmarlas."
     }
    },
    {
@@ -91,7 +98,7 @@
     "name": "¿Cuántas operaciones puedo hacer?",
     "acceptedAnswer": {
      "@type": "Answer",
-     "text": "Las que necesites: son ilimitadas. El plan solo cambia la cantidad de usuarios de tu equipo."
+     "text": "La capacidad y los usuarios disponibles dependen del plan contratado. Consultá sus condiciones antes de elegirlo."
     }
    }
   ]
@@ -120,6 +127,8 @@
 })();
 </script>
 <style>
+.signup-trap{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);pointer-events:none}
+
 :root{
   --black:#0a0a0a; --black2:#141414; --black3:#1d1d1d;
   --gold:#d4a853; --gold-hi:#f0d08a; --gold-lo:#ae8337;
@@ -421,7 +430,7 @@ section{padding:102px 0}
       <div class="cta">
         <!-- WhatsApp: +54 9 11 4479-5880 -->
         <a class="btn" href="#registro">Probá gratis 1 mes</a>
-        <a class="btn ghost" href="#app">Conocer la app</a>
+        <a class="btn ghost" data-event="pedir_demo" href="https://wa.me/5491144795880?text=Hola%2C%20quiero%20coordinar%20una%20demo%20de%20DocWorks">Pedir una demo</a>
       </div>
       <small style="color:#f0d08a;font-weight:700">Un mes gratis. Sin tarjeta. Sin cobro automático.</small>
       <small>Pensado para inmobiliarias y corredores de Argentina.</small>
@@ -430,7 +439,7 @@ section{padding:102px 0}
     <div class="stage" aria-hidden="true">
       <div class="sheet">
         <h3>RESERVA DE INMUEBLE</h3>
-        <p>En la ciudad de <span class="fill">Pilar</span>, Provincia de <span class="fill">Buenos Aires</span>, entre <span class="fill">María García</span>, en adelante el COMPRADOR, y <span class="miss">falta DNI del vendedor</span>, en adelante el VENDEDOR…</p>
+        <p>En la ciudad de <span class="fill">Pilar</span>, Provincia de <span class="fill">Buenos Aires</span>, entre <span class="fill">María García</span>, en adelante el COMPRADOR, y <span class="fill">Juan López</span>, DNI <span class="miss" aria-label="DNI del vendedor pendiente">pendiente</span>, en adelante el VENDEDOR…</p>
         <p>El COMPRADOR entrega en concepto de reserva la suma de <span class="fill">USD 5.000</span>, con vigencia de <span class="fill">90 días</span>.</p>
         <div class="foot"><span>VENDEDOR</span><span>COMPRADOR</span></div>
       </div>
@@ -526,7 +535,7 @@ section{padding:102px 0}
     <ul class="feat">
       <li><b>Funciona en celular, tablet y compu</b><span>Se instala como app y se adapta a cada pantalla.</span></li>
       <li><b>Equipo con roles</b><span>Administración, brokers y asesores, cada uno con lo suyo.</span></li>
-      <li><b>Historial de acciones</b><span>Sabés quién creó, editó o exportó cada documento.</span></li>
+      <li><b>Historial de acciones</b><span>Consultá creaciones y cambios de las operaciones según los permisos de tu cuenta.</span></li>
       <li><b>Papelera y respaldo</b><span>Recuperá lo que se borró y guardá una copia de tus datos.</span></li>
       <li><b>Calendario y seguimiento</b><span>Tareas, vencimientos y fechas de cada operación en un solo lugar.</span></li>
       <li><b>Modo claro y oscuro</b><span>Cómodo de día en la oficina y de noche en el celular.</span></li>
@@ -536,12 +545,13 @@ section{padding:102px 0}
 
 <section id="registro" class="dark" style="scroll-margin-top:90px">
  <div class="wrap signup-wrap">
-  <div><div class="eyebrow">Empezá hoy</div><h2>Tu inmobiliaria, lista para trabajar</h2><p class="sub">Probá DocWorks durante un mes. Sin tarjeta, sin cobro automático y sin esperar una aprobación.</p><p>Verificá tu email y entrá con los modelos base disponibles. La prueba comienza al confirmar tu correo.</p><p>Al finalizar, tus datos se conservan y podés elegir un plan para continuar. Sin cobro automático.</p><p>¿Ya tenés cuenta? <a href="https://docworks-eight.vercel.app" target="_self">Ingresar a DocWorks</a></p></div>
+  <div><div class="eyebrow">Empezá hoy</div><h2>Tu inmobiliaria, lista para trabajar</h2><p class="sub">Probá DocWorks durante un mes. Sin tarjeta y sin cobro automático.</p><p>Verificá tu email y entrá con los modelos base disponibles. La prueba comienza al confirmar tu correo.</p><p>Al finalizar el mes, la prueba vence y se bloquea la creación y edición de operaciones. Los datos guardados se conservan. Contactanos para elegir un plan y continuar, sin cobro automático.</p><p>¿Ya tenés cuenta? <a href="https://docworks-eight.vercel.app" target="_self">Ingresar a DocWorks</a></p></div>
   <form id="signup-form" class="signup-card">
+    <div class="signup-trap" aria-hidden="true"><label for="signup-website">Sitio web<input id="signup-website" name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
     <label for="signup-name">Nombre y apellido<input id="signup-name" name="nombre" autocomplete="name" maxlength="120" required></label>
     <label for="signup-agency">Inmobiliaria<input id="signup-agency" name="inmobiliaria" autocomplete="organization" maxlength="160" required></label>
     <label for="signup-email">Email<input id="signup-email" type="email" name="email" autocomplete="email" maxlength="254" required></label>
-    <label for="signup-password">Contraseña<input id="signup-password" type="password" name="password" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="signup-password-help"><small id="signup-password-help">Mínimo 8 caracteres.</small></label>
+    <label for="signup-password">Contraseña<input id="signup-password" type="password" name="password" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="signup-password-help"><small id="signup-password-help">Mínimo 8 caracteres, con letras y números.</small></label>
     <button type="submit" class="btn">Crear cuenta gratis</button>
     <p style="font-size:12px;line-height:1.5;color:#cbd5e1">Usaremos estos datos para crear y administrar tu cuenta. <a href="terminos.html">Términos y condiciones</a>.</p>
     <div id="signup-status" class="signup-status" role="status" aria-live="polite"></div>
@@ -565,20 +575,19 @@ section{padding:102px 0}
         <ul class="plan-features"><li>Para equipos de mayor tamaño</li><li>Mayor capacidad de usuarios</li><li>Consultá funciones y límites incluidos</li></ul>
         <a class="plan-action" href="https://wa.me/5491144795880?text=Hola%2C%20quiero%20consultar%20por%20el%20plan%20Premium%20de%20DocWorks">Consultar plan</a></article>
     </div>
-    <p class="plan-note">Las capacidades de usuarios reflejan la propuesta de esta página y deben confirmarse antes de publicar una oferta comercial definitiva.</p>
   </div>
 </section>
 <section id="seguridad" class="trust24">
  <div class="wrap">
   <div class="eyebrow">Control y organización</div>
   <h2>Documentos y equipo, en un mismo lugar</h2>
-  <p class="sub">DocWorks está pensado para organizar el trabajo documental de una inmobiliaria. Estas son algunas de las herramientas de control previstas en la aplicación.</p>
+  <p class="sub">DocWorks está pensado para organizar el trabajo documental de una inmobiliaria. Estas son las herramientas de acceso y seguimiento disponibles.</p>
   <div class="trust-grid">
-   <article class="trust-card"><span class="trust-icon" aria-hidden="true">♙</span><h3>Accesos por rol</h3><p>La aplicación contempla perfiles de usuario con distintos permisos para trabajar dentro de la inmobiliaria.</p></article>
-   <article class="trust-card"><span class="trust-icon" aria-hidden="true">▤</span><h3>Documentos organizados</h3><p>Operaciones, borradores y documentos reunidos para que el equipo pueda darles seguimiento.</p></article>
-   <article class="trust-card"><span class="trust-icon" aria-hidden="true">✓</span><h3>Revisión antes de exportar</h3><p>Los controles de campos faltantes ayudan a detectar información pendiente antes de generar el documento.</p></article>
+   <article class="trust-card"><span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M17 4a3 3 0 0 1 0 6M21 21v-3a6 6 0 0 0-4-5.65"/></svg></span><h3>Accesos por rol</h3><p>Los roles de dueño, administrador, broker, asesor y consulta determinan las acciones disponibles en cada inmobiliaria.</p></article>
+   <article class="trust-card"><span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg></span><h3>Documentos organizados</h3><p>Operaciones, borradores y documentos reunidos para que el equipo pueda darles seguimiento.</p></article>
+   <article class="trust-card"><span class="trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span><h3>Revisión antes de exportar</h3><p>Los controles de campos faltantes ayudan a detectar información pendiente antes de generar el documento.</p></article>
   </div>
-  <p class="trust-disclaimer">La protección de datos depende también de la configuración, los permisos y el uso de la plataforma. Esta sección no implica una certificación de seguridad ni una garantía de disponibilidad.</p>
+  <p class="trust-disclaimer">Los accesos se verifican en el servidor. La inmobiliaria administra su equipo y los permisos de sus usuarios. Estos controles requieren contraseñas protegidas y un uso responsable de las cuentas.</p>
  </div>
 </section>
 <section id="preguntas">
@@ -588,7 +597,7 @@ section{padding:102px 0}
     <div class="faq">
       <details>
         <summary>¿Cuánto demora crear un documento?</summary>
-        <p>Minutos. Es súper rápido: cargás los datos una vez y el documento queda armado.</p>
+        <p>Cargás los datos una vez y el documento queda armado. Después revisás el contenido y lo descargás en PDF o Word.</p>
       </details>
       <details>
         <summary>¿Cómo creo un documento?</summary>
@@ -609,15 +618,15 @@ section{padding:102px 0}
       <details>
         <summary>¿Cómo funciona el calendario?</summary>
         <p>Reúne en un solo lugar las fechas importantes de tus operaciones. Sus ventajas:</p>
-        <ul><li>Las fechas clave (inicio y vencimiento de contratos, posesión o escritura) salen de los datos que ya cargaste.</li><li>Te muestra qué requiere atención y lo que viene en los próximos 30 días.</li><li>Ves todo junto, sin agendas aparte ni planillas.</li></ul>
+        <ul><li>Reúne vencimientos de contratos y reservas, plazos de aceptación, refuerzos e inicios estimados a partir de los datos cargados.</li><li>Te muestra qué requiere atención y lo que viene en los próximos 30 días.</li><li>Ves todo junto, sin agendas aparte ni planillas.</li></ul>
       </details>
       <details>
-        <summary>¿Es un sistema seguro?</summary>
-        <p>Sí. Cada inmobiliaria trabaja con sus propios usuarios y roles, y el sistema registra quién crea, edita o exporta cada documento.</p>
+        <summary>¿Cómo se controla el acceso a los datos?</summary>
+        <p>Cada inmobiliaria tiene su propio espacio de trabajo. Los permisos dependen del rol asignado a cada usuario. El historial registra creaciones y cambios; las exportaciones con faltantes se registran al confirmarlas.</p>
       </details>
       <details>
         <summary>¿Cuántas operaciones puedo hacer?</summary>
-        <p>Las que necesites: son ilimitadas. El plan solo cambia la cantidad de usuarios de tu equipo.</p>
+        <p>La capacidad y los usuarios disponibles dependen del plan contratado. Consultá sus condiciones antes de elegirlo.</p>
       </details>
     </div>
   </div>
@@ -664,7 +673,10 @@ section{padding:102px 0}
  form.addEventListener('submit',async function(event){
   event.preventDefault();if(busy||!form.reportValidity())return;
   var values=new FormData(form), nombre=String(values.get('nombre')||'').trim(), inmobiliaria=String(values.get('inmobiliaria')||'').trim();
+  if(String(values.get('website')||'').trim()){status.textContent='No pudimos validar el formulario. Volvé a intentarlo.';status.dataset.error='true';return;}
+  if(!/[A-Za-z]/.test(String(values.get('password')))||!/[0-9]/.test(String(values.get('password')))){status.textContent='Usá al menos 8 caracteres, con letras y números.';status.dataset.error='true';return;}
   if(!nombre||!inmobiliaria){status.textContent='Completá tu nombre y el de tu inmobiliaria.';status.dataset.error='true';return;}
+  if(window.dwTrack)window.dwTrack('registro_intentado');
   busy=true;button.disabled=true;button.textContent='Creando cuenta…';status.textContent='';status.dataset.error='false';
   var controller=new AbortController(), timer=setTimeout(function(){controller.abort();},20000);
   try{
@@ -673,15 +685,19 @@ section{padding:102px 0}
    if(!response.ok){
     if(response.status===429)throw new Error('Esperá unos minutos antes de volver a intentarlo.');
     if(result.code==='weak_password')throw new Error('Elegí una contraseña más segura, con letras y números.');
+    if(result.code==='user_already_exists'||result.code==='email_exists')throw new Error('Ese correo ya tiene una cuenta. Ingresá o recuperá tu contraseña.');
     if(result.code==='email_address_invalid')throw new Error('Revisá el correo electrónico.');
     throw new Error('No se pudo crear la cuenta. Intentá nuevamente. Si ya tenés cuenta, ingresá o recuperá tu contraseña.');
    }
+   if(window.dwTrack)window.dwTrack('registro_enviado');
    form.reset();form.querySelectorAll('input').forEach(function(input){input.disabled=true;});button.hidden=true;
    status.textContent='Revisá tu correo y verificá tu email para empezar. Si ya tenés cuenta, ingresá o recuperá tu contraseña. No hay cobro automático al finalizar la prueba.';
-  }catch(error){status.dataset.error='true';status.textContent=error.name==='AbortError'?'La conexión tardó demasiado. Revisá tu correo antes de reintentar; la cuenta puede haberse creado.':(error.message||'No se pudo conectar. Intentá nuevamente.');}
+  }catch(error){status.dataset.error='true';status.textContent=error.name==='AbortError'?'La conexión tardó demasiado. Revisá tu correo antes de reintentar; la cuenta puede haberse creado.':(/^(Esperá|Elegí|Revisá|No se pudo crear|Ese correo)/.test(error.message||'')?error.message:'No se pudo conectar. Revisá tu conexión y volvé a intentarlo.');}
   finally{clearTimeout(timer);busy=false;button.disabled=false;button.textContent='Crear cuenta gratis';}
  });
 })();
 </script>
+<script src="analytics-config.js"></script>
+<script src="analytics.js"></script>
 </body>
 </html>

@@ -31,6 +31,8 @@ const {JSDOM}=require('jsdom');
  await React.act(async()=>api.solicitarRegistro({nombre:'Ale',inmobiliaria:'Prueba',email:'ale@example.invalid',password:'Password123'}));
  assert.equal(signup.length,1);assert.ok(!('consentimiento_prueba' in signup[0].options.data));assert.equal(signup[0].options.emailRedirectTo,'https://docworks-eight.vercel.app/');assert.equal(signup[0].options.data.docworks_registro,'trial_month_v1');assert.match(api.registroSuccess,/verificá tu email/);
  await React.act(async()=>api.solicitarRegistro({nombre:'',password:'x'}));assert.equal(signup.length,1);assert.ok(api.registroError);
+ await React.act(async()=>api.solicitarRegistro({nombre:'Prueba',inmobiliaria:'Prueba',email:'prueba@example.invalid',password:'12345678'}));assert.equal(signup.length,1);assert.match(api.registroError,/letras y números/);
+ await React.act(async()=>api.solicitarRegistro({nombre:'Prueba',inmobiliaria:'Prueba',email:'prueba@example.invalid',password:'Password123',website:'bot.invalid'}));assert.equal(signup.length,1);assert.match(api.registroError,/validar el formulario/);
  await React.act(async()=>root.unmount());fs.rmSync(tmp,{recursive:true,force:true});appDom.window.close();console.log('OK app: acceso directo, signup, confirmación y validación sin RPC manual');
  process.exit(0);
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://docworks-landing.vercel.app/sitemap.xml
