@@ -67,6 +67,7 @@
     "fn_super_listar_inmobiliarias",
     "fn_super_listar_planes",
     "fn_super_listar_solicitudes_registro",
+    "fn_super_metricas_uso",
     "fn_super_operaciones_inmobiliaria",
     "fn_super_pagos",
     "fn_super_plantillas_inmobiliaria",

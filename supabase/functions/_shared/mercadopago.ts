@@ -82,13 +82,11 @@ export function crearManejadorSuscripciones(deps: Dependencies) {
       // Cambiar de plan requiere un flujo de migración: abrir un checkout no habilita beneficios.
       if (membership.plan_id !== p.id) throw new ErrorHTTP(409, 'El plan solicitado no coincide con la membresía. Solicitá el cambio de plan antes de iniciar el pago.');
       const back = retornoSeguro(body.back_url, deps.env('DOCWORKS_APP_URL') || 'https://docworks-eight.vercel.app/');
-      let mpPlanId = p.mercadopago_plan_id;
-      if (!mpPlanId) {
-        const created = await c.mp('/preapproval_plan', { method: 'POST', body: JSON.stringify({ reason: 'DocWorks - ' + p.nombre, auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: Number(p.precio_mensual), currency_id: p.moneda || 'ARS' }, payment_methods_allowed: { payment_types: [{ id: 'credit_card' }, { id: 'debit_card' }] }, back_url: back }) });
-        mpPlanId = resourceId(created.id); await c.q('planes?id=eq.' + p.id, 'PATCH', { mercadopago_plan_id: mpPlanId });
-      }
+      requerido(deps.env, 'MERCADOPAGO_WEBHOOK_SECRET');
+      // Checkout alojado sin tarjeta previa: suscripción pending SIN plan de MP asociado.
+      // El plan comercial de DocWorks sigue siendo el de la membresía y fija el importe.
       const ext = 'DOCWORKS-' + inmobId + '-' + (deps.now || Date.now)();
-      const sub = await c.mp('/preapproval', { method: 'POST', body: JSON.stringify({ preapproval_plan_id: mpPlanId, reason: 'DocWorks - ' + p.nombre, external_reference: ext, payer_email: String(body.payer_email).trim(), back_url: back, status: 'pending' }) });
+      const sub = await c.mp('/preapproval', { method: 'POST', body: JSON.stringify({ auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: Number(p.precio_mensual), currency_id: p.moneda || "ARS" }, reason: 'DocWorks - ' + p.nombre, external_reference: ext, payer_email: String(body.payer_email).trim(), back_url: back, status: 'pending' }) });
       const link = urlCheckout(sub.init_point); resourceId(sub.id);
       await c.q('membresias?id=eq.' + membership.id, 'PATCH', { mercadopago_preapproval_id: sub.id, mercadopago_init_point: link, mercadopago_status: sub.status || 'pending', mercadopago_last_sync_at: new Date((deps.now || Date.now)()).toISOString() });
       return json({ ok: true, init_point: link, subscription_id: sub.id }, 200, true);

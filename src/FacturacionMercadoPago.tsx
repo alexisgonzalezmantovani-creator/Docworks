@@ -28,7 +28,7 @@ export function FacturacionMercadoPago({perfil,facturacion,onRequest,onPersist,o
   }
   return <div className="dw-mercadopago-panel" style={{marginTop:12,padding:12,borderRadius:10,background:'rgba(74,222,128,.045)',border:'1px solid rgba(74,222,128,.15)'}}>
     <div style={{fontSize:12,fontWeight:700,color:'var(--text)'}}>Pago de la suscripción</div>
-    <div style={{fontSize:12,color:'var(--muted)',marginTop:3,lineHeight:1.45}}>El pago se procesa en Mercado Pago. DocWorks guarda estados y referencias; no solicita números de tarjeta ni códigos de seguridad.</div>
+    <div style={{fontSize:12,color:'var(--muted)',marginTop:3,lineHeight:1.45}}>Confirmás el importe y el cobro mensual en Mercado Pago. DocWorks guarda estados y referencias; los datos de tarjeta se cargan en Mercado Pago.</div>
     {error&&<p role="alert" style={{fontSize:12,color:'var(--red)',lineHeight:1.45}}>{error}</p>}
     <button type="button" className="btn btn-primary" disabled={!!busy} aria-busy={busy==='create_checkout'} style={{marginTop:10,width:'100%'}} onClick={()=>ejecutar('create_checkout')}>{busy==='create_checkout'?'Abriendo pago…':'Continuar con Mercado Pago →'}</button>
     <button type="button" className="btn btn-secondary" disabled={!!busy} aria-busy={busy==='sync'} style={{marginTop:7,width:'100%'}} onClick={()=>ejecutar('sync')}>{busy==='sync'?'Actualizando…':'↻ Actualizar estado'}</button>

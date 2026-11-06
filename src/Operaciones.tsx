@@ -1,3 +1,4 @@
+import { UsoInmobiliarias } from './UsoInmobiliarias';
 import { crearAccesoCuenta } from './AccesoCuenta';
 import { VistaPreviaAspecto } from './VistaPreviaAspecto';
 import { mostrarUbicacionDocumento } from './Exportaciones';
@@ -74,7 +75,7 @@ export function fechaPagoValida(fecha){
   return !isNaN(d.getTime())&&d.getFullYear()===Number(v.slice(0,4))&&d.getMonth()+1===Number(v.slice(5,7))&&d.getDate()===Number(v.slice(8,10));
 }
 
-export function fechaHoyISO(){ return new Date().toISOString().slice(0,10); }
+export function fechaHoyISO(){ var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 
 export function normalizarBusqueda(value){
   return String(value||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
@@ -312,8 +313,6 @@ export const GS = `
 .dw-operation-form-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-left:auto;max-width:100%}
 .dw-operation-next-action{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .dw-operation-save{display:inline-flex;align-items:center}
-.dw-operation-save-floating{position:fixed;right:max(16px,env(safe-area-inset-right,0px));z-index:600;max-width:calc(100vw - 32px);pointer-events:none;filter:drop-shadow(0 4px 12px rgba(0,0,0,.22))}
-.dw-operation-save-floating [role=status]{min-width:44px!important;min-height:44px!important;background:var(--card)!important}
 .dw-operation-page{padding-bottom:72px;overflow-anchor:none}
 
 .dw-operation-save [role=status]{justify-content:center;min-width:40px;min-height:40px;box-sizing:border-box;padding:7px 9px;border:1px solid var(--border2);border-radius:10px;background:var(--surface2)}
@@ -1683,9 +1682,6 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 /* Próximo lote: encabezado, acciones y guardado discretos. */
 .dw-operation-exit-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px!important}
 .dw-operation-exit-actions .btn{min-width:0;min-height:44px;padding:9px 4px;white-space:normal;font-size:12px;line-height:1.25;text-align:center}
-.dw-operation-save-floating{filter:none;opacity:.78}
-.dw-operation-save-floating [role=status]{min-width:0!important;min-height:0!important;padding:3px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
-.dw-operation-save-floating [aria-hidden=true]{font-size:17px!important}
 .dw-viewer-heading-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;min-width:0}
 .dw-viewer-heading-type{font-size:18px;white-space:normal;line-height:1.25}
 .dw-viewer-heading-status{flex:none;font-size:11px;line-height:1.25}
@@ -1695,6 +1691,15 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
  .dw-dashboard-root .op-card-side .op-actions{justify-content:flex-end;width:100%;margin-left:auto}
  .dw-dashboard-root .op-card-side .op-actions .btn{flex:0 0 auto;min-width:0!important}
 }
+
+/* El recorrido termina en las acciones: no reservar sitio para la navegación que se oculta. */
+.app-wrap .content.dw-operation-page-content{padding-bottom:max(12px,env(safe-area-inset-bottom,0px))!important}
+.app-wrap .dw-operation-page{padding-bottom:0!important}
+.dw-operation-save-slot{display:inline-flex;align-items:center;justify-content:center;width:24px;flex:0 0 24px}
+.dw-operation-save-inline{display:inline-flex;align-items:center;opacity:.78}
+.dw-operation-save-inline [role=status]{padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important;min-width:0!important;min-height:0!important}
+.dw-operation-save-inline [aria-hidden=true]{font-size:18px!important}
+.dw-operation-save-error{font-size:12px;color:var(--red);max-width:220px;line-height:1.4}
 
 /* El control de inclusión pertenece al campo de contacto correspondiente. */
 .dw-contact-field{display:flex;align-items:flex-end;gap:10px;min-width:0}
@@ -1784,6 +1789,7 @@ function useSuperAdmin(activo){
   var [metricasUso,setMetricasUso]=useState(null);
   var [anuncioGlobal,setAnuncioGlobal]=useState(null);
   var [metricasLoading,setMetricasLoading]=useState(false);
+  var [metricasError,setMetricasError]=useState(null);
 
   function rpc(nombre, params={}){
     return loadSupabaseJs().then(function(sb){
@@ -1793,15 +1799,15 @@ function useSuperAdmin(activo){
   }
 
   function recargar(){
-    setLoading(true); setError(null);
+    setLoading(true); setError(null);setMetricasLoading(true);setMetricasError(null);
     Promise.all([ rpc("fn_super_dashboard"), rpc("fn_super_listar_inmobiliarias"), rpc("fn_super_listar_planes"), rpc("fn_super_metricas_uso", {}) ]).then(function(res){
-      setLoading(false);
+      setLoading(false);setMetricasLoading(false);setMetricasError(res[3]?.error?traducirError(res[3].error.message):null);
       if (res[0].error) { setError(traducirError(res[0].error.message)); return; }
       setDashboard(res[0].data);
       setInmobiliarias(res[1].error ? [] : (res[1].data||[]));
       setPlanes(res[2].error ? [] : (res[2].data||[]));
       setMetricasUso(res[3].error ? null : (res[3].data||null));
-    }).catch(function(err){ setLoading(false); setError(traducirError(err && err.message ? err.message : "No se pudieron cargar el panel.")); });
+    }).catch(function(err){ setLoading(false);setMetricasLoading(false);setMetricasError("No se pudieron cargar las estadísticas."); setError(traducirError(err && err.message ? err.message : "No se pudieron cargar el panel.")); });
   }
 
   useEffect(function(){ if (activo) { recargar(); cargarRegistroSolicitudes(); cargarAnuncio(); } }, [activo]);
@@ -1927,7 +1933,7 @@ function useSuperAdmin(activo){
     detalleClausulas:detalleClausulas, detallePlantillas:detallePlantillas, detalleClausulasLoading:detalleClausulasLoading,
     setEstadoUsuario:setEstadoUsuario, setRolUsuario:setRolUsuario,
     auditoria:auditoria, auditoriaLoading:auditoriaLoading, cargarAuditoria:cargarAuditoria,
-    pagos:pagos, pagosLoading:pagosLoading, cargarPagos:cargarPagos, registroSolicitudes:registroSolicitudes, registroSolicitudesLoading:registroSolicitudesLoading, cargarRegistroSolicitudes:cargarRegistroSolicitudes, resolverRegistroSolicitud:resolverRegistroSolicitud, enviarRegistroSolicitud:enviarRegistroSolicitud, metricasUso:metricasUso, anuncioGlobal:anuncioGlobal, registrarPago:registrarPago, extenderMembresia:extenderMembresia, reenviarInvitacion:reenviarInvitacion, resetPassword:resetPassword, transferirDueno:transferirDueno, guardarNotaInmobiliaria:guardarNotaInmobiliaria, archivarInmobiliaria:archivarInmobiliaria, setLimites:setLimites, setAnuncio:setAnuncio, cargarAnuncio:cargarAnuncio };
+    pagos:pagos, pagosLoading:pagosLoading, cargarPagos:cargarPagos, registroSolicitudes:registroSolicitudes, registroSolicitudesLoading:registroSolicitudesLoading, cargarRegistroSolicitudes:cargarRegistroSolicitudes, resolverRegistroSolicitud:resolverRegistroSolicitud, enviarRegistroSolicitud:enviarRegistroSolicitud, metricasUso:metricasUso,metricasLoading:metricasLoading,metricasError:metricasError, anuncioGlobal:anuncioGlobal, registrarPago:registrarPago, extenderMembresia:extenderMembresia, reenviarInvitacion:reenviarInvitacion, resetPassword:resetPassword, transferirDueno:transferirDueno, guardarNotaInmobiliaria:guardarNotaInmobiliaria, archivarInmobiliaria:archivarInmobiliaria, setLimites:setLimites, setAnuncio:setAnuncio, cargarAnuncio:cargarAnuncio };
 }
 
 
@@ -2246,11 +2252,12 @@ function SuperAdminDashboard({ contexto, onLogout }){
 
               </details>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:10,marginBottom:18}}>
-                <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>INACTIVAS · 30 DÍAS</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:24,marginTop:4}}>{sa.metricasUso&&sa.metricasUso.inmobiliarias_inactivas_30_dias!=null?sa.metricasUso.inmobiliarias_inactivas_30_dias:"—"}</div></div>
+                <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>SIN OPERACIONES · 30 DÍAS</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:24,marginTop:4}}>{sa.metricasUso&&sa.metricasUso.inmobiliarias_inactivas_30_dias!=null?sa.metricasUso.inmobiliarias_inactivas_30_dias:"—"}</div></div>
                 <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>OPERACIONES · MES</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:24,marginTop:4}}>{sa.metricasUso&&sa.metricasUso.operaciones_mes!=null?sa.metricasUso.operaciones_mes:"—"}</div></div>
-                <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>USUARIOS ACTIVOS</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:24,marginTop:4}}>{sa.metricasUso&&sa.metricasUso.usuarios_activos!=null?sa.metricasUso.usuarios_activos:"—"}</div></div>
-                <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>INGRESOS · MES</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:18,marginTop:6}}>{sa.metricasUso&&sa.metricasUso.ingresos_mes_por_plan?Object.keys(sa.metricasUso.ingresos_mes_por_plan).map(function(k){return <div key={k}>{k}: {sa.metricasUso.ingresos_mes_por_plan[k]}</div>;}):"—"}</div></div>
+                <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>USUARIOS HABILITADOS</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:24,marginTop:4}}>{sa.metricasUso&&sa.metricasUso.usuarios_activos!=null?sa.metricasUso.usuarios_activos:"—"}</div></div>
+                <div className="stat-card" style={{padding:13,textAlign:"left"}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700}}>INGRESOS · MES</div><div style={{fontFamily:"'DM Serif Display',serif",fontSize:18,marginTop:6}}>{sa.metricasUso&&sa.metricasUso.ingresos_mes_por_moneda?Object.keys(sa.metricasUso.ingresos_mes_por_moneda).map(function(k){return <div key={k}>{k}: {Number(sa.metricasUso.ingresos_mes_por_moneda[k]).toLocaleString("es-AR",{maximumFractionDigits:2})}</div>;}):"—"}</div></div>
               </div>
+              <UsoInmobiliarias metricas={sa.metricasUso} loading={sa.metricasLoading} error={sa.metricasError} onRetry={sa.recargar}/>
               <details className="sa-more-metrics"><summary>Anuncio global para los usuarios</summary><SASection title="Anuncio global" right={<SABadge tone="gold">VISIBLE PARA TODOS</SABadge>}>
                 <div className="op-card" style={{padding:14}}>
                   <div className="sa-announcement-grid">
@@ -3845,10 +3852,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
             <div className="dw-billing-layout" style={{display:"grid",gridTemplateColumns:"minmax(0,1.15fr) minmax(280px,.85fr)",gap:12,alignItems:"start"}}>
               <div className="card" style={{padding:16}}>
                 <div style={{fontFamily:"DM Serif Display,serif",fontSize:16,color:"var(--text)",marginBottom:4}}>💳 Medio de pago</div>
-                <div style={{fontSize:12,color:"var(--dim)",marginBottom:12}}>El medio elegido se guarda como referencia. DocWorks no debe almacenar números completos de tarjeta.</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:7}}>
-                  {["Tarjeta de crédito","Tarjeta de débito","Transferencia bancaria"].map(function(m){var sel=metodo===m;return <button key={m} type="button" onClick={function(){guardarFact({metodo_pago:m});}} style={{textAlign:"left",padding:11,borderRadius:10,border:sel?"1px solid rgba(212,168,83,.5)":"1px solid var(--border)",background:sel?"rgba(212,168,83,.09)":"rgba(255,255,255,.015)",color:sel?"var(--gold)":"var(--text)",cursor:"pointer"}}><div style={{fontSize:17}}>{m.indexOf("Tarjeta")===0?"💳":"🏦"}</div><div style={{fontSize:12,fontWeight:650,marginTop:5}}>{m}</div>{sel&&<div style={{fontSize:12,color:"var(--green)",marginTop:4}}>✓ Seleccionado</div>}</button>;})}
-                </div>
+                <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,lineHeight:1.5}}>La suscripción se confirma en Mercado Pago. Allí elegís la tarjeta o el medio disponible y autorizás el cobro mensual. El medio efectivo se actualiza después de consultar a Mercado Pago.</div>
                 <FacturacionMercadoPago key={String(ctx?.inmobiliaria?.id||"")+"|"+String(currentUserId||"")} perfil={localPerfil} facturacion={fact} onRequest={docworksMercadoPago} onPersist={onChange} onUpdated={setLocalPerfil} onNotify={dwNotify}/>
               </div>
 
@@ -5175,7 +5179,7 @@ export function enfocarCampoOperacion(campo){
 }
 
 export function crearOperacionForm(deps){
- const {FloatingOperationSave, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -5406,7 +5410,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:14}}>
           <Btn v="ghost" onClick={onCancel}>Cancelar</Btn>
         </div>
-        {saveStatus&&<FloatingOperationSave status={saveStatus}/>}
       </div>
     );
   }
@@ -5418,7 +5421,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesAlquiler data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
-      if(step===6)return <StepGarantia data={data} onChange={set}/>;
+      if(step===6)return <StepGarantia data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===7)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil}/>;
     }
     if(esResAlq){
@@ -5492,13 +5495,14 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       {step<=total&&<div className="dw-operation-form-footer">
         <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Volver a opciones":"← Anterior"}</Btn>
         <div className="dw-operation-form-actions">
+          {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           <div className="dw-operation-next-action">
+            <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
             {step<total?<Btn onClick={function(){setStep(function(s){return s+1;});}}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={function(){setStep(total+1);}}>{modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
           </div>
         </div>
       </div>}
-      {saveStatus&&<FloatingOperationSave status={saveStatus}/>}
     </div>
   );
 }
