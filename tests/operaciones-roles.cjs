@@ -23,6 +23,7 @@ const handlerNames=['accionPapeleraConfirmada','eliminarOpDirecto','restoreOp','
 for(const name of handlerNames)assert.ok(functions[name],name);
 source+=`\nfunction crearAccionesPrueba(inicial,servidor,contexto){
  let operaciones=inicial.operaciones.slice(),papelera=inicial.papelera.slice(),editOp=null,formTipo=null,showForm=false,confirmVaciar=true;
+ const perfil=inicial.perfil||{rol:"dueno",plantillas:{}},clausulas=[],bloquesReserva=[];
  const docworksAuth={contexto,session:{}},opsSupabase=servidor,documentosPendientesRef={current:new Map()},showFormRef={current:false},draftPromptRef={current:null},accionesContextoRef={current:crearControlContextoOperaciones(claveContextoOperaciones(contexto))};
  const setOperaciones=f=>{operaciones=typeof f==='function'?f(operaciones):f},setPapelera=f=>{papelera=typeof f==='function'?f(papelera):f};
  const setEditOp=x=>{editOp=x},setFormTipo=x=>{formTipo=x},setShowForm=x=>{showForm=x},setConfirmVaciarPapelera=x=>{confirmVaciar=x};
@@ -124,6 +125,11 @@ const initial={operaciones:[fakeOp],papelera:[{...fakeOp,id:'trash',deleted_at:'
  await a.duplicarOp(sourceOp);check('duplicar autorizado conserva snapshot y cotitulares',()=>{assert.deepEqual(sent.plantilla_snapshot,sourceOp.plantilla_snapshot);assert.deepEqual(sent.comprador_cotitulares,sourceOp.comprador_cotitulares);assert.equal(sent.estado,'borrador');assert.notEqual(sent.id,sourceOp.id)});
  a=app.crearAccionesPrueba({...initial,operaciones:[sourceOp]},{guardar:op=>{sent=op;return Promise.resolve({operacion:op})}},context('broker','broker'));await a.convertirABoleto(sourceOp);
  check('conversión confirmada abre el nuevo documento propio',()=>{assert.equal(a.estado().formTipo,'boleto');assert.equal(a.estado().showForm,true);assert.equal(sent.parent_id,'op-own');assert.equal(sent.broker_id,'broker')});
+ check('documento vinculado captura su propio modelo antes del primer guardado',()=>{assert.equal(sent.plantilla_snapshot.tipo,'boleto');assert.ok(sent.plantilla_snapshot.body_blocks.length>0);assert.equal(sent.plantilla_version,1)});
+ const perfilDestino={rol:'dueno',plantillas:{boleto:{version:9,clausulas_ids:[],obligatorias_ids:[]}},encabezados_custom:{boleto:'INTRODUCCIÓN DEL MODELO VIGENTE'}};
+ a=app.crearAccionesPrueba({...initial,perfil:perfilDestino},{guardar:op=>{sent=op;return Promise.resolve({operacion:op})}},context());await a.convertirABoleto(fakeOp);
+ perfilDestino.encabezados_custom.boleto='INTRODUCCIÓN MODIFICADA DESPUÉS';
+ check('el modelo del boleto recién creado queda fijado aunque cambie la biblioteca',()=>{assert.equal(sent.plantilla_version,9);assert.equal(sent.plantilla_snapshot.introduccion,'INTRODUCCIÓN DEL MODELO VIGENTE')});
  let countWrites=0;a=app.crearAccionesPrueba(initial,{guardar:()=>{countWrites++;return Promise.resolve({data:[]})}},context('vendedor','vendedor'));await a.onConvertirDevolucion(fakeOp);
  check('vendedor no inicia conversión que requiere editar/cerrar padre',()=>{assert.equal(countWrites,0);assert.equal(a.estado().showForm,false)});
 

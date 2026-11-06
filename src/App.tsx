@@ -465,7 +465,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.27";
+var DOCWORKS_VERSION = "6.28";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -889,6 +889,7 @@ function derivedTokensReserva(op) {
     // del fallback genérico "___" de fmtVarValue.
     comision_porcentaje: valorComisionPredeterminado(op.comision_porcentaje,"3"),
     comision_reserva_texto: (function(){
+      if(op.comision_comprador_ocultar_doc)return "";
       var c=getComisionConfig(op,"comision_comprador",parseMontoAR(op.precio||0),op.moneda||"USD","comision_comprador",valorComisionPredeterminado(op.comision_porcentaje,""));
       if(c.modo==="fijo") return "El Oferente abonará la suma de "+fmt$L(c.valor,c.moneda)+" en concepto de honorarios por labor de intermediación cumplimentada por la inmobiliaria interviniente, al momento de la firma de la Escritura Traslativa de Dominio y/o el Boleto de Compraventa, lo que ocurra primero.-";
       return "El Oferente abonará el "+(c.valor!=="" && c.valor!==null && c.valor!==undefined ? c.valor : "___")+"% del Precio en el momento de la firma de la Escritura Traslativa de Dominio y/o el Boleto de Compraventa, lo que ocurra primero, en concepto de honorarios por labor de intermediación cumplimentada por la inmobiliaria interviniente.-";
@@ -2367,7 +2368,26 @@ function getComisionConfig(op, prefix, base, monedaBase, legacyKey, defaultValue
   if(!isNaN(n) && n>=0){ monto=modo==="fijo" ? n : (parseMontoAR(base)||0)*n/100; }
   return {modo:modo,valor:valor===undefined||valor===null?"":String(valor),moneda:moneda,monto:monto,base:parseMontoAR(base)||0,baseMoneda:monedaBase||"ARS"};
 }
+// La reserva calcula porcentajes sobre un canon; el contrato, sobre todo el plazo.
+// Importar el importe acordado evita multiplicarlo silenciosamente al convertir.
+function comisionesContratoDesdeReserva(op){
+  var datos={alquiler_comisiones_importadas:true};
+  ["locador","locatario"].forEach(function(rol){
+    var origen="res_alq_comision_"+rol,destino="alquiler_comision_"+rol;
+    var c=getComisionConfig(op,origen,op.res_alq_monto_mensual,op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS",origen,valorComisionPredeterminado(op.res_alq_comision,"1"));
+    var n=parseMontoAR(c.valor),base=parseMontoAR(op.res_alq_monto_mensual);
+    var valido=c.valor.trim()!==""&&Number.isFinite(n)&&n>=0&&(c.modo==="fijo"||Number.isFinite(base)&&base>0);
+    datos[destino+"_modo"]="fijo";
+    datos[destino+"_valor"]=valido?String(Math.round((c.monto+Number.EPSILON)*100)/100):"";
+    datos[destino+"_valor_editado"]=true;
+    datos[destino+"_moneda"]=c.moneda;
+    datos[destino+"_ocultar_doc"]=!!op[origen+"_ocultar_doc"];
+    if(op[origen+"_texto"]!==undefined)datos[destino+"_texto"]=op[origen+"_texto"];
+  });
+  return datos;
+}
 function textoComision(op, prefix, rol, baseLabel, base, monedaBase, legacyKey, defaultValue){
+  if(op&&op[prefix+"_ocultar_doc"])return "";
   var c=getComisionConfig(op,prefix,base,monedaBase,legacyKey,defaultValue);
   var actor=String(rol||"").toUpperCase();
   if(c.modo==="fijo") return "El "+actor+" abonará la suma de "+fmt$L(c.valor,c.moneda)+" en concepto de honorarios por la labor de intermediación inmobiliaria.-";
@@ -2545,6 +2565,12 @@ function finReservaAlquilerISO(op){var pl=plazoReservaAlquiler(op);return pl.val
 function antecedentesRefuerzo(op){
   var base="Las partes han suscripto con anterioridad una Reserva de Compra para el inmueble ubicado en "+(op.inmueble_direccion||"___")+", "+(op.inmueble_partido||"___")+".-";
   var detalle=String(op.refuerzo_trayectoria||"").trim();return detalle?base+" Antecedentes adicionales: "+detalle:base;
+}
+function antecedenteReservaParaRefuerzo(op){
+  var fechaExplicita=parseISOLocal(op.fecha_documento);
+  var fechaCreacion=op.created_at&&(parseISOLocal(op.created_at)||!isNaN(new Date(op.created_at).getTime()));
+  var origen=fechaExplicita||fechaCreacion?"Reserva original de fecha "+fmtD(fechaDocumentoISO(op)):"Reserva original vinculada";
+  return origen+" por "+fmt$(op.anticipo,op.moneda)+" de seña sobre precio total "+fmt$(op.precio,op.moneda)+".";
 }
 function plazoComodatoEfectivo(op){
   if(op&&op.comodato_fin)return plazoComodatoDesdeFechas(op.comodato_inicio,op.comodato_fin);
@@ -3781,10 +3807,20 @@ function tokensPagoCompra(op){
   return {compra_condiciones_pago:detalle,compra_pago_redaccion:texto,boleto_pago_acordado:boletoPago,reserva_pago_acordado:reservaPago};
 }
 
+// Ocultar honorarios elimina su apartado, no deja una promesa de pago sin importe.
+// Los IDs de los modelos y los rótulos estándar se conservan también en snapshots.
+function bloqueComisionOculto(b,op){
+  var titulo=String(b.titulo||"").replace(/^\d+\.\s*/,"").trim().toUpperCase();
+  var id=String(b.id||""),tipo=op.tipo;
+  if(op.comision_vendedor_ocultar_doc&&(id==="boleto.honorarios_vendedor"||titulo==="HONORARIOS DEL VENDEDOR"||tipo==="exclusividad"&&(id==="exclusividad.honorarios"||titulo==="HONORARIOS")))return true;
+  if(op.comision_comprador_ocultar_doc&&(id==="boleto.honorarios_comprador"||titulo==="HONORARIOS DEL COMPRADOR"||tipo==="reserva"&&titulo==="HONORARIOS"))return true;
+  var prefijo=tipo==="reserva_alquiler"?"res_alq_comision_":"alquiler_comision_";
+  return (tipo==="alquiler"||tipo==="reserva_alquiler")&&["locador","locatario"].some(function(rol){return op[prefijo+rol+"_ocultar_doc"]&&titulo==="HONORARIOS DEL "+rol.toUpperCase();});
+}
 function buildDocSectionsFromEditableBody(op, clausulasLib, tipo, bloquesPlantilla) {
   var doc = buildDocSectionsStandard(op, clausulasLib, tipo);
   if(!Array.isArray(bloquesPlantilla) || !bloquesPlantilla.length) return doc;
-  var sorted=bloquesPlantilla.map(normalizarBodyBlock).filter(function(b){return b.activo!==false&&evalBodyCondition(b.condicion,op);}).sort(function(a,b){return a.orden-b.orden;});
+  var sorted=bloquesPlantilla.map(normalizarBodyBlock).filter(function(b){return b.activo!==false&&evalBodyCondition(b.condicion,op)&&!bloqueComisionOculto(b,op);}).sort(function(a,b){return a.orden-b.orden;});
   var extras=tokensPagoCompra(op);
   sorted.forEach(function(b,i){extras[tokenNumeroBloque(b.id)]=String(i+1);});
   var secciones=sorted.map(function(b,i){
@@ -4164,6 +4200,7 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   var doc=Array.isArray(bloquesPlantilla)&&bloquesPlantilla.length
     ? buildDocSectionsFromEditableBody(op,clausulasLib||[],tipo,bloquesPlantilla)
     : buildDocSectionsStandard(op,clausulasLib||[],tipo);
+  doc.secciones=(doc.secciones||[]).filter(function(sec){return !bloqueComisionOculto(sec,op);});
   if((tipo||op.tipo)==="reserva_alquiler"&&op.res_alq_dia_pago){
     var pago="El pago mensual se efectuará "+periodoPagoMensualTexto(op,"res_alq_dia_pago")+" de cada mes.-";
     var condiciones=doc.secciones.find(function(c){return /CONDICIONES ESTIMADAS DE LOCACI[ÓO]N/i.test(c.titulo);});
@@ -5171,6 +5208,7 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
       <Field label="Total depósito"><div className="val-box">{totalDeposito}</div></Field>
 
       <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
+        {data.alquiler_comisiones_importadas&&<div role="note" style={{fontSize:12,color:"var(--dim)",marginBottom:8}}>Los honorarios de la reserva se importaron como importes fijos para conservar lo acordado. Revisalos para este contrato.</div>}
         <div style={{fontSize:12,color:"var(--dim)",marginBottom:4}}>El porcentaje se aplica al total del contrato, no al primer canon mensual.</div>
         <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Base estimada para la comisión: {baseComision>0?fmt$(baseComision,data.alquiler_moneda||"ARS"):"completá canon y plazo"}</div>
         <div className="grid2">
@@ -5584,13 +5622,16 @@ function getResumenPartes(op){
   return prefixes.map(function(prefix,i){return {label:roles[i]||roles[0],nombre:op[prefix+"_nombre"]||"",dni:op[prefix+"_dni"]||""};});
 }
 function datosCompraCompartidos(op){
-  var datos={comision_vendedor_valor_editado:op.comision_vendedor_valor_editado,comision_comprador_valor_editado:op.comision_comprador_valor_editado,inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
+  var datos={clausulas_custom:op.clausulas_custom||"",comision_vendedor_valor_editado:op.comision_vendedor_valor_editado,comision_comprador_valor_editado:op.comision_comprador_valor_editado,inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
   ["comprador","vendedor"].forEach(function(prefix){
     datos[prefix+"_telefono"]=op[prefix+"_telefono"]||"";
     datos[prefix+"_email"]=op[prefix+"_email"]||"";
     datos[prefix+"_telefono_en_doc"]=!!op[prefix+"_telefono_en_doc"];
     datos[prefix+"_email_en_doc"]=!!op[prefix+"_email_en_doc"];
     datos[prefix+"_cotitulares"]=(op[prefix+"_cotitulares"]||[]).map(function(p){return Object.assign({},p);});
+  });
+  ["comision_vendedor","comision_comprador"].forEach(function(prefix){
+    ["_ocultar_doc","_texto"].forEach(function(sufijo){if(op[prefix+sufijo]!==undefined)datos[prefix+sufijo]=op[prefix+sufijo];});
   });
   return datos;
 }
@@ -7777,7 +7818,7 @@ const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
 const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
-const OperacionForm = crearOperacionForm({OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
+const OperacionForm = crearOperacionForm({OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
 const ClausulasWorkspace = crearClausulasWorkspace({TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({parseMontoAR, Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
@@ -8808,6 +8849,7 @@ function DocWorksApp(){
     if(documentosPendientesRef.current.has(claveDocumento))return documentosPendientesRef.current.get(claveDocumento);
     var vigente=accionesContextoRef.current.capturar();
     var op=prepararAltaOperacion(usuario,Object.assign({},datos,{id:genId(),estado:"borrador",created_at:new Date().toISOString()}));
+    op=sellarVersionPlantillaOperacion(op,perfil,!!(op.plantilla_snapshot&&op.plantilla_snapshot.tipo&&op.plantilla_snapshot.tipo!==tipo),clausulas,bloquesReserva);
     var promesa=ejecutarCambioConfirmado({vigente:vigente,solicitar:function(){return opsSupabase.guardar(op);},fallar:function(e){dwNotify("error",traducirError(e&&e.message||"No se pudo crear el documento."));},confirmar:function(res){
       op=res.operacion||op;
       setOperaciones(function(ops){return [op].concat(ops.filter(function(o){return o.id!==op.id;}));});
@@ -8840,6 +8882,7 @@ function DocWorksApp(){
       inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",
       clausulas_ids:(op.clausulas_ids||[]).slice(),clausulas_custom_titulo:op.clausulas_custom_titulo||""
     });
+    Object.assign(nuevo,comisionesContratoDesdeReserva(op));
     return crearDocumentoConfirmado(nuevo,"alquiler",true);
   }
   function convertirARefuerzo(op){
@@ -8852,7 +8895,8 @@ function DocWorksApp(){
       vendedor_domicilio:op.vendedor_domicilio||"", vendedor_email:op.vendedor_email||"",
       inmueble_direccion:op.inmueble_direccion||"", inmueble_partido:op.inmueble_partido||"",
       inmueble_provincia:op.inmueble_provincia||"", inmueble_tipo:op.inmueble_tipo||"departamento",
-      refuerzo_trayectoria:"Reserva original firmada el "+new Date(op.created_at).toLocaleDateString("es-AR")+" por "+fmt$(op.anticipo,op.moneda)+" de seña sobre precio total "+fmt$(op.precio,op.moneda)+".",
+      moneda:op.moneda||"USD",
+      refuerzo_trayectoria:antecedenteReservaParaRefuerzo(op),
       clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"",
     });
     Object.assign(nuevo,datosCompraCompartidos(op));
@@ -8876,7 +8920,7 @@ function DocWorksApp(){
   }
   function onConvertirDevolucion(op){
     if(yaConvertido(op.id,"devolucion_reserva")) return;
-    var nuevo=Object.assign({},EMPTY_OP,{tipo:"devolucion_reserva",estado:"borrador",parent_id:op.id,proceso_estado:"pendiente_devolucion",comprador_nombre:op.comprador_nombre||"",comprador_dni:op.comprador_dni||"",comprador_domicilio:op.comprador_domicilio||"",vendedor_nombre:op.vendedor_nombre||"",vendedor_dni:op.vendedor_dni||"",vendedor_domicilio:op.vendedor_domicilio||"",inmueble_direccion:op.inmueble_direccion||"",inmueble_partido:op.inmueble_partido||"",inmueble_provincia:op.inmueble_provincia||"",precio:op.anticipo||op.precio||"",moneda:op.moneda||"USD",devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",negociacion_historial:op.negociacion_historial||[],clausulas_ids:op.clausulas_ids||[]});
+    var nuevo=Object.assign({},EMPTY_OP,{tipo:"devolucion_reserva",estado:"borrador",parent_id:op.id,proceso_estado:"pendiente_devolucion",comprador_nombre:op.comprador_nombre||"",comprador_dni:op.comprador_dni||"",comprador_domicilio:op.comprador_domicilio||"",vendedor_nombre:op.vendedor_nombre||"",vendedor_dni:op.vendedor_dni||"",vendedor_domicilio:op.vendedor_domicilio||"",inmueble_direccion:op.inmueble_direccion||"",inmueble_partido:op.inmueble_partido||"",inmueble_provincia:op.inmueble_provincia||"",precio:op.anticipo??"",moneda:op.moneda||"USD",devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",negociacion_historial:op.negociacion_historial||[],clausulas_ids:op.clausulas_ids||[]});
     Object.assign(nuevo,datosCompraCompartidos(op));
     return crearDocumentoConfirmado(nuevo,"devolucion_reserva",true);
   }

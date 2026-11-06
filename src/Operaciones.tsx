@@ -5179,7 +5179,7 @@ export function enfocarCampoOperacion(campo){
 }
 
 export function crearOperacionForm(deps){
- const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -5375,7 +5375,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       vendedor_nombre:op.vendedor_nombre||"", vendedor_dni:op.vendedor_dni||"", vendedor_domicilio:op.vendedor_domicilio||"",
       inmueble_direccion:op.inmueble_direccion||"", inmueble_partido:op.inmueble_partido||"", inmueble_provincia:op.inmueble_provincia||"",
       inmueble_tipo:op.inmueble_tipo||"departamento", inmueble_tipo_otro:op.inmueble_tipo_otro||"", inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"", inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",
-      precio:op.anticipo||op.precio||"", moneda:op.moneda||"USD",
+      precio:op.anticipo??"", moneda:op.moneda||"USD",
       devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",
       clausulas_ids:op.clausulas_ids||[]
     });
@@ -5391,7 +5391,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       inmueble_provincia:op.inmueble_provincia||"", inmueble_tipo:op.inmueble_tipo||"departamento", inmueble_tipo_otro:op.inmueble_tipo_otro||"",
       inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",
       inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",
-      refuerzo_trayectoria:"Reserva original firmada el "+new Date(op.created_at).toLocaleDateString("es-AR")+" por "+fmt$(op.anticipo,op.moneda)+" de seña sobre precio total "+fmt$(op.precio,op.moneda)+".",
+      moneda:op.moneda||"USD",
+      refuerzo_trayectoria:antecedenteReservaParaRefuerzo(op),
       clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"", clausulas_custom_titulo:op.clausulas_custom_titulo||"",
     });
   }
