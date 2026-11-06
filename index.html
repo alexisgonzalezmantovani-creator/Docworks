@@ -2,7 +2,7 @@
 <html lang="es-AR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <meta name="theme-color" content="#0b1730" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -10,6 +10,8 @@
 
     <link rel="icon" type="image/svg+xml" href="/docworks-favicon-mark.svg?v=5" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <style id="dw-startup-critical">html,body{margin:0;background:#0b1730}.dw-startup{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#0b1730;color:#e8edf6}.dw-startup-logo{width:min(80vw,400px);height:auto;max-height:48vh;object-fit:contain}.dw-startup-status{font:600 13px system-ui,sans-serif}</style>
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="stylesheet" href="/startup.css" />
     <link rel="preload" as="image" href="/docworks-startup-logo.png" />
 
@@ -17,7 +19,7 @@
   </head>
   <body>
     <div id="root">
-      <div class="dw-startup" aria-label="Iniciando DocWorks" aria-busy="true">
+      <div class="dw-startup" data-dw-boot-shell aria-label="Iniciando DocWorks" aria-busy="true">
         <img class="dw-startup-logo" src="/docworks-startup-logo.png" alt="DocWorks" width="1254" height="1254" />
         <div class="dw-startup-status" role="status" aria-live="polite">
           <span class="dw-startup-spinner" aria-hidden="true"></span>
@@ -25,6 +27,26 @@
         </div>
       </div>
     </div>
+    <script>
+      (function(){
+        var root=document.getElementById('root'),done=false;
+        function offerRetry(){
+          if(done)return;
+          var shell=root.querySelector('[data-dw-boot-shell]');if(!shell){finish();return;}
+          if(shell.querySelector('#dw-boot-retry'))return;
+          shell.setAttribute('aria-busy','false');
+          var status=shell.querySelector('.dw-startup-status');
+          if(status){status.textContent='No pudimos completar el inicio. Revisá tu conexión y volvé a intentar.';status.setAttribute('role','alert');status.style.cssText='max-width:360px;text-align:center;line-height:1.6;padding:12px;';}
+          var retry=document.createElement('button');retry.type='button';retry.id='dw-boot-retry';retry.className='dw-startup-retry';retry.textContent='Volver a intentar';retry.addEventListener('click',function(){window.location.reload();});shell.appendChild(retry);
+        }
+        function onError(e){if(e.target&&e.target.tagName==='SCRIPT'||e.message)offerRetry();}
+        function onRejection(){offerRetry();}
+        function finish(){if(done)return;done=true;clearTimeout(timer);observer.disconnect();window.removeEventListener('error',onError,true);window.removeEventListener('unhandledrejection',onRejection);}
+        var timer=setTimeout(offerRetry,20000);
+        var observer=new MutationObserver(function(){if(!root.querySelector('[data-dw-boot-shell]'))finish();});observer.observe(root,{childList:true,subtree:true});
+        window.addEventListener('error',onError,true);window.addEventListener('unhandledrejection',onRejection);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

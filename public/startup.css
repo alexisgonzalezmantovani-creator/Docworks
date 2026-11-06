@@ -10,6 +10,7 @@
   box-sizing: border-box;
   padding: 24px;
   overflow: auto;
+  overscroll-behavior: none;
   background: radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%);
   color: #e8edf6;
   font-family: "DM Sans", system-ui, sans-serif;

@@ -7,14 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "test": "node src/verificar-modulos.cjs && node src/check-integracion.cjs && node tests/privacidad-ia.cjs && node tests/revision-local.cjs && node tests/operaciones-roles.cjs && node tests/documentos.cjs && node tests/editores.cjs && node tests/sesiones-perfil.cjs && node tests/workspace.cjs && node tests/condiciones-especiales.cjs && node tests/biblioteca-simple.cjs && node tests/superadmin.cjs && node tests/registro.cjs && node tests/inicio-soporte.cjs && node tests/lote-diez.cjs && node tests/pago-mensual.cjs && node tests/campos-operacion.cjs && node tests/auditoria-formularios.cjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --lib ES2022,DOM,DOM.Iterable --skipLibCheck supabase/functions/_shared/mercadopago.ts",
+    "test": "node src/verificar-modulos.cjs && node src/check-integracion.cjs && node tests/privacidad-ia.cjs && node tests/revision-local.cjs && node tests/operaciones-roles.cjs && node tests/documentos.cjs && node tests/editores.cjs && node tests/sesiones-perfil.cjs && node tests/workspace.cjs && node tests/condiciones-especiales.cjs && node tests/biblioteca-simple.cjs && node tests/superadmin.cjs && node tests/registro.cjs && node tests/inicio-soporte.cjs && node tests/lote-diez.cjs && node tests/pago-mensual.cjs && node tests/campos-operacion.cjs && node tests/auditoria-formularios.cjs && node tests/pagos-seguridad.cjs && node tests/facturacion.cjs && node tests/acceso-cuenta.cjs",
     "check": "npm run typecheck && npm test && npm run test:database && npm run build",
-    "test:browser": "node tests/navegador.cjs && node tests/landing-responsive.cjs && node tests/inicio-soporte-browser.cjs && node tests/salida-operacion-browser.cjs && node tests/importes-browser.cjs",
+    "test:browser": "node tests/navegador.cjs && node tests/landing-responsive.cjs && node tests/inicio-soporte-browser.cjs && node tests/salida-operacion-browser.cjs && node tests/importes-browser.cjs && node tests/inicio-pwa-browser.cjs",
     "test:webkit": "node tests/navegador.cjs --webkit && node tests/landing-responsive.cjs --webkit && node tests/inicio-soporte-browser.cjs --webkit && node tests/salida-operacion-browser.cjs --webkit",
     "test:database": "node tests/database/permisos-operaciones.cjs && node tests/database/biblioteca-base.cjs && node tests/database/biblioteca-compartida-624.cjs",
     "predev": "node scripts/copiar-pdf-preview.cjs",
-    "prebuild": "node scripts/copiar-pdf-preview.cjs"
+    "prebuild": "node scripts/copiar-pdf-preview.cjs",
+    "audit:rpc": "node tests/database/contrato-rpc.cjs"
   },
   "dependencies": {
     "pdfjs-dist": "6.5.438",

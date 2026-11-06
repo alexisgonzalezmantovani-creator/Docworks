@@ -1,3 +1,4 @@
+import { crearAccesoCuenta } from './AccesoCuenta';
 import { VistaPreviaAspecto } from './VistaPreviaAspecto';
 import { mostrarUbicacionDocumento } from './Exportaciones';
 import { permisosOperacion } from './AccionesOperaciones';
@@ -1772,6 +1773,7 @@ function saEstadoVencimiento(fecha,estado){
 function saDescargarCSVConFiltros(filas,nombre){ return descargarCSV(filas,nombre); }
 
 function useSuperAdmin(activo){
+  const [accesoCuenta]=useState(()=>crearAccesoCuenta({loadClient:loadSupabaseJs,origin:window.location.origin,clipboard:navigator.clipboard}));
   var [dashboard,setDashboard]=useState(null);
   var [inmobiliarias,setInmobiliarias]=useState([]);
   var [planes,setPlanes]=useState([]);
@@ -1909,8 +1911,8 @@ function useSuperAdmin(activo){
   function extenderMembresia(id,dias,modo,nota){
     return rpc("fn_super_extender_membresia", {p_inmobiliaria_id:id,p_dias:dias,p_modo:modo||"extension",p_nota:nota||null}).then(function(res){ if(!res.error){cargarDetalle(id);recargar();} return res; });
   }
-  function reenviarInvitacion(usuarioId,detalleId){ return rpc("fn_super_reenviar_invitacion", {p_usuario_id:usuarioId}).then(function(res){ if(!res.error&&detalleId) cargarDetalle(detalleId); return res; }); }
-  function resetPassword(usuarioId,detalleId){ return rpc("fn_super_reset_password", {p_usuario_id:usuarioId}).then(function(res){ if(!res.error&&detalleId) cargarDetalle(detalleId); return res; }); }
+  function reenviarInvitacion(email){ return accesoCuenta.copiarAcceso(email); }
+  function resetPassword(email){ return accesoCuenta.recuperar(email); }
   function transferirDueno(inmobiliariaId,usuarioId){ return rpc("fn_super_transferir_dueno", {p_inmobiliaria_id:inmobiliariaId,p_nuevo_dueno_usuario_id:usuarioId}).then(function(res){ if(!res.error) cargarDetalle(inmobiliariaId); return res; }); }
   function guardarNotaInmobiliaria(id,nota){ return rpc("fn_super_nota_inmobiliaria", {p_inmobiliaria_id:id,p_nota:nota||null}).then(function(res){ if(!res.error) cargarDetalle(id); return res; }); }
   function archivarInmobiliaria(id,archivar){ return rpc("fn_super_archivar_inmobiliaria", {p_inmobiliaria_id:id,p_archivar:!!archivar}).then(function(res){ if(!res.error){cargarDetalle(id);recargar();} return res; }); }
@@ -2087,9 +2089,6 @@ function SuperAdminDashboard({ contexto, onLogout }){
   var [auditExpandida,setAuditExpandida] = useState(null);
   var [pagosFiltro,setPagosFiltro] = useState("");
   var [metodoPagoFiltro,setMetodoPagoFiltro] = useState("todos");
-  var [showCheckout,setShowCheckout] = useState(false);
-  var [checkoutPlan,setCheckoutPlan] = useState(null);
-  var [checkoutMetodo,setCheckoutMetodo] = useState("Tarjeta de crédito");
 
   useEffect(function(){ if (tab==="auditoria") sa.cargarAuditoria(auditFiltro||null); }, [tab, auditFiltro]);
   useEffect(function(){ if (tab==="pagos") sa.cargarPagos(pagosFiltro||null); }, [tab, pagosFiltro]);
@@ -2454,7 +2453,6 @@ function SuperAdminDashboard({ contexto, onLogout }){
                   {metodosPago.map(function(m){return <option key={m} value={m}>{m}</option>;})}
                 </select>
               </div>
-              <button className="btn btn-primary btn-sm" onClick={function(){setCheckoutPlan(sa.planes.find(function(p){return p.activo;})||null);setShowCheckout(true);}}>+ Simular alta de suscripción</button>
               {sa.pagosLoading && <div style={{fontSize:12,color:"var(--dim)"}}>Cargando…</div>}
               <button className="btn btn-ghost btn-sm" onClick={function(){saDescargarCSVConFiltros(pagosFiltrados,"docworks-pagos.csv");}}>CSV</button>
               <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -2488,19 +2486,6 @@ function SuperAdminDashboard({ contexto, onLogout }){
         )}
         </main>
       </div>
-
-      <Modal open={showCheckout} onClose={function(){setShowCheckout(false);}} title="Nueva suscripción · PRO">
-        <div style={{display:"flex",flexDirection:"column",gap:15}}>
-          <div style={{padding:14,borderRadius:12,border:"1px solid rgba(212,168,83,.25)",background:"rgba(212,168,83,.06)"}}>
-            <div style={{fontWeight:800,fontSize:14}}>Pago de DocWorks</div>
-            <div style={{fontSize:12,color:"var(--dim)",marginTop:4}}>Vista preparada para conectar una pasarela de pago. DocWorks no almacena números completos de tarjeta.</div>
-          </div>
-          <Field label="Plan"><select className="inp" value={checkoutPlan?checkoutPlan.codigo:""} onChange={function(e){setCheckoutPlan(sa.planes.find(function(p){return p.codigo===e.target.value;})||null);}}>{sa.planes.filter(function(p){return p.activo;}).map(function(p){return <option key={p.codigo} value={p.codigo}>{p.nombre} · {fmt$(p.precio_mensual,p.moneda)}</option>;})}</select></Field>
-          <Field label="Medio de pago"><select className="inp" value={checkoutMetodo} onChange={function(e){setCheckoutMetodo(e.target.value);}}>{metodosPago.map(function(m){return <option key={m}>{m}</option>;})}</select></Field>
-          {checkoutMetodo.indexOf("Tarjeta")===0 && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}><input className="inp" placeholder="Número de tarjeta (demo)"/><input className="inp" placeholder="MM/AA · CVV (demo)"/></div>}
-          <div style={{display:"flex",justifyContent:"flex-end",gap:8}}><button className="btn btn-ghost" onClick={function(){setShowCheckout(false);}}>Cancelar</button><button className="btn btn-primary" onClick={function(){setShowCheckout(false);dwNotify("success","Pago preparado. Falta conectar la pasarela de pago para procesar el cobro real.");}}>Continuar al pago</button></div>
-        </div>
-      </Modal>
 
       {/* Nueva inmobiliaria */}
       <Modal open={showNueva} onClose={function(){setShowNueva(false);}} title="Nueva inmobiliaria">
@@ -2615,8 +2600,8 @@ function SuperAdminDashboard({ contexto, onLogout }){
                             <SABadge tone={u.activo?"green":"red"}>{u.activo?"activo":"inactivo"}</SABadge>
                             <div style={{width:130,maxWidth:"100%"}}><select className="inp" value={u.rol_base} onChange={function(e){cambiarRol(u.id, e.target.value);}}>{ROLES_BASE.map(function(r){return <option key={r} value={r}>{r}</option>;})}</select></div>
                             <button className="btn btn-ghost btn-sm" disabled={rolBusy===u.id} onClick={function(){toggleActivo(u.id, u.activo);}}>{u.activo?"Desactivar":"Activar"}</button>
-                            <button className="btn btn-ghost btn-sm" onClick={function(){sa.reenviarInvitacion(u.id,detalleId).then(function(res){dwNotify(res.error?"error":"success",res.error?traducirError(res.error.message):"Invitación reenviada.");});}}>Reenviar</button>
-                            <button className="btn btn-ghost btn-sm" onClick={function(){sa.resetPassword(u.id,detalleId).then(function(res){dwNotify(res.error?"error":"success",res.error?traducirError(res.error.message):"Mail de recuperación enviado.");});}}>Reset contraseña</button>
+                            <button className="btn btn-ghost btn-sm" onClick={function(){sa.reenviarInvitacion(u.email).then(function(res){dwNotify(res.error?"error":"success",res.error?traducirError(res.error.message):"Acceso copiado. Compartilo con el usuario.");});}}>Copiar acceso</button>
+                            <button className="btn btn-ghost btn-sm" onClick={function(){sa.resetPassword(u.email).then(function(res){dwNotify(res.error?"error":"success",res.error?traducirError(res.error.message):"Solicitud de recuperación enviada. El usuario debe revisar su correo.");});}}>Reset contraseña</button>
                             {u.rol_base!=="dueno"&&<button className="btn btn-ghost btn-sm" onClick={function(){requestDwConfirm("¿Transferir el rol de dueño a "+(u.nombre||u.email)+"?",function(){sa.transferirDueno(detalleId,u.id);});}}>Hacer dueño</button>}
                           </div>
                         </div>
@@ -2744,7 +2729,7 @@ return SuperAdminDashboard;
 }
 
 export function crearConfiguracionView(deps){
- const {parseMontoAR, generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
+ const {FacturacionMercadoPago, parseMontoAR, generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
 function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, onChange, currentUserId, currentUserRole, darkMode, onToggleDark, equipo, equipoSupabase, operaciones, clausulas, onAddClausula, onEditClausula, onDeleteClausula, onMoveClausula, onDuplicateClausula, bloquesReserva, onUpdateBloqueReserva, onMoveBloqueReserva, bloquesError, bloquesLoading, onRetryBloques, clausulasError, onRetryClausulas, papelera, auditLog, auditoriaSupabase, onExportarRespaldo, onImportarRespaldo, onVaciarAuditoria, puedeInstalar, onInstalar, onStartTour, ctx }) {
   const [tab, setTab] = useState(requestedTab?.tab||"cuenta");
   useEffect(function(){if(requestedTab?.tab)pedirCambioTab(requestedTab.tab);},[requestedTab?.request]);
@@ -3864,7 +3849,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:7}}>
                   {["Tarjeta de crédito","Tarjeta de débito","Transferencia bancaria"].map(function(m){var sel=metodo===m;return <button key={m} type="button" onClick={function(){guardarFact({metodo_pago:m});}} style={{textAlign:"left",padding:11,borderRadius:10,border:sel?"1px solid rgba(212,168,83,.5)":"1px solid var(--border)",background:sel?"rgba(212,168,83,.09)":"rgba(255,255,255,.015)",color:sel?"var(--gold)":"var(--text)",cursor:"pointer"}}><div style={{fontSize:17}}>{m.indexOf("Tarjeta")===0?"💳":"🏦"}</div><div style={{fontSize:12,fontWeight:650,marginTop:5}}>{m}</div>{sel&&<div style={{fontSize:12,color:"var(--green)",marginTop:4}}>✓ Seleccionado</div>}</button>;})}
                 </div>
-                <div style={{marginTop:12,padding:12,borderRadius:10,background:"rgba(74,222,128,.045)",border:"1px solid rgba(74,222,128,.15)"}}><div style={{fontSize:12,fontWeight:700,color:"var(--green)"}}>🔐 Mercado Pago conectado</div><div style={{fontSize:12,color:"var(--dim)",marginTop:3,lineHeight:1.45}}>El pago se procesa en Mercado Pago. DocWorks guarda únicamente identificadores, estados y referencias; nunca números completos de tarjeta.</div><button type="button" className="btn btn-primary" style={{marginTop:10,width:"100%"}} onClick={async function(){try{var code=fact.plan_codigo||localPerfil.plan_codigo||localPerfil.plan||"profesional";var r=await docworksMercadoPago("create_checkout",{plan_codigo:code,payer_email:fact.email||localPerfil.email||"" ,back_url:window.location.href});if(r.init_point){window.location.href=r.init_point;}else{throw new Error("Mercado Pago no devolvió el enlace para continuar con el pago.");}}catch(e){dwNotify("error",traducirError(e&&e.message?e.message:String(e)));}}}>Continuar con Mercado Pago →</button><button type="button" className="btn btn-secondary" style={{marginTop:7,width:"100%"}} onClick={async function(){try{var r=await docworksMercadoPago("sync",{});if(r.subscription){var s=r.subscription;var next=Object.assign({},localPerfil,{facturacion:Object.assign({},fact,{estado_pago:s.status||fact.estado_pago,proximo_vencimiento:s.next_payment_date||fact.proximo_vencimiento,metodo_pago:s.payment_method_id||fact.metodo_pago})});setLocalPerfil(next);onChange(next);dwNotify("success","Estado de Mercado Pago actualizado.");}else{dwNotify("info","Todavía no hay una suscripción de Mercado Pago asociada.");}}catch(e){dwNotify("error",traducirError(e&&e.message?e.message:String(e)));}}}>↻ Actualizar estado</button></div>
+                <FacturacionMercadoPago key={String(ctx?.inmobiliaria?.id||"")+"|"+String(currentUserId||"")} perfil={localPerfil} facturacion={fact} onRequest={docworksMercadoPago} onPersist={onChange} onUpdated={setLocalPerfil} onNotify={dwNotify}/>
               </div>
 
               <div className="card" style={{padding:16}}>

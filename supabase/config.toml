@@ -1,0 +1,7 @@
+# No contiene credenciales. La autenticación de cada función también se valida en el manejador.
+[functions.mp-subscriptions]
+verify_jwt = true
+
+# Mercado Pago no envía JWT de Supabase: este endpoint exige la firma HMAC del proveedor.
+[functions.mp-webhook]
+verify_jwt = false

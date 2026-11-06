@@ -1,3 +1,4 @@
+import { FacturacionMercadoPago } from './FacturacionMercadoPago';
 import { permisosOperacion, prepararAltaOperacion, claveContextoOperaciones, crearControlContextoOperaciones, ejecutarCambioConfirmado, contextoBorradorOperacion, borradorDelContexto, mismoBorrador } from './AccionesOperaciones';
 // Tipos de extensiones de navegador utilizadas por DocWorks.
 declare global {
@@ -464,7 +465,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.25";
+var DOCWORKS_VERSION = "6.26";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -507,8 +508,8 @@ var PWA_MANIFEST = {
   short_name: "DocWorks",
   description: "Generación de documentos legales para inmobiliarias argentinas",
   version: DOCWORKS_VERSION,
-  id: "/?v=" + encodeURIComponent(DOCWORKS_VERSION),
-  start_url: "/?v=" + encodeURIComponent(DOCWORKS_VERSION),
+  id: "/",
+  start_url: "/",
   scope: "/",
   display: "standalone",
   background_color: "#0b1730",
@@ -551,8 +552,8 @@ function initPWA() {
     // por el propio dominio. Si no existe todavía (por ejemplo en este entorno
     // de desarrollo/preview), el .catch() evita que rompa la carga de la app.
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator &&
-        typeof location !== "undefined" && (location.protocol === "https:" || location.hostname === "localhost")) {
-      navigator.serviceWorker.register("/sw.js").catch(function(err){
+        typeof location !== "undefined" && (location.protocol === "https:" || ["localhost","127.0.0.1","[::1]"].includes(location.hostname))) {
+      navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"}).catch(function(err){
         // El service worker es opcional: su ausencia no debe impedir usar DocWorks.
         console.info("DocWorks: modo sin conexión ampliado no disponible; la app sigue funcionando.", err);
       });
@@ -7759,7 +7760,7 @@ async function generarVistaPreviaAspecto(perfil){
   var doc=aplicarEncabezadoPersonalizado(buildDocSections(opParaDocumento(op),[],"reserva"),op,"reserva",perfil);
   return generarPDF(doc,perfil.logoDataUrl,perfil);
 }
-const ConfiguracionView = crearConfiguracionView({parseMontoAR, generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
+const ConfiguracionView = crearConfiguracionView({FacturacionMercadoPago, parseMontoAR, generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge: SuperAdminDashboard.SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState});
 
 function DocWorksApp(){
   var docworksAuth = useDocWorksSession();
