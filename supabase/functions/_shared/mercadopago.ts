@@ -85,10 +85,28 @@ export function crearManejadorSuscripciones(deps: Dependencies) {
       requerido(deps.env, 'MERCADOPAGO_WEBHOOK_SECRET');
       // Checkout alojado sin tarjeta previa: suscripción pending SIN plan de MP asociado.
       // El plan comercial de DocWorks sigue siendo el de la membresía y fija el importe.
-      const ext = 'DOCWORKS-' + inmobId + '-' + (deps.now || Date.now)();
-      const sub = await c.mp('/preapproval', { method: 'POST', body: JSON.stringify({ auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: Number(p.precio_mensual), currency_id: p.moneda || "ARS" }, reason: 'DocWorks - ' + p.nombre, external_reference: ext, payer_email: String(body.payer_email).trim(), back_url: back, status: 'pending' }) });
+      requerido(deps.env, 'MERCADOPAGO_ACCESS_TOKEN');
+      const intento = await c.q('rpc/fn_mp_reservar_checkout', 'POST', { p_membresia_id: membership.id, p_plan_id: p.id, p_monto: Number(p.precio_mensual), p_moneda: p.moneda || 'ARS', p_correo: String(body.payer_email).trim(), p_previo_id: membership.mercadopago_preapproval_id || null });
+      if (!intento?.clave || !intento?.referencia) throw new ErrorHTTP(502, 'No se pudo reservar el checkout.');
+      let sub: any;
+      if (intento.nuevo) {
+        // Una sola instancia recibe nuevo=true. Un fallo ambiguo conserva la reserva.
+        sub = await c.mp('/preapproval', { method: 'POST', body: JSON.stringify({ auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: Number(p.precio_mensual), currency_id: p.moneda || "ARS" }, reason: 'DocWorks - ' + p.nombre, external_reference: intento.referencia, payer_email: intento.correo, back_url: back, status: 'pending' }) });
+      } else {
+        // Nunca repetir POST después de un timeout: recuperar sólo por referencia exacta.
+        const found: any[] = [];
+        for (let offset = 0; offset < 1000; offset += 100) {
+          const search = await c.mp('/preapproval/search?payer_email=' + encodeURIComponent(intento.correo) + '&limit=100&offset=' + offset);
+          if (!Array.isArray(search.results)) throw new ErrorHTTP(502, 'No se pudo verificar el checkout anterior.');
+          found.push(...search.results.filter((x: any) => String(x.external_reference) === intento.referencia));
+          if (search.results.length < 100 || offset + 100 >= Number(search.paging?.total || 0)) break;
+        }
+        if (found.length !== 1) throw new ErrorHTTP(409, 'El checkout anterior sigue en verificación. No se inició otro. Sincronizá o contactá a soporte.');
+        sub = await c.mp('/preapproval/' + resourceId(found[0].id));
+        if (String(sub.external_reference) !== intento.referencia || Number(sub.auto_recurring?.transaction_amount) !== Number(intento.monto) || sub.auto_recurring?.currency_id !== intento.moneda) throw new ErrorHTTP(409, 'El checkout recuperado no coincide con la reserva. Contactá a soporte.');
+      }
       const link = urlCheckout(sub.init_point); resourceId(sub.id);
-      await c.q('membresias?id=eq.' + membership.id, 'PATCH', { mercadopago_preapproval_id: sub.id, mercadopago_init_point: link, mercadopago_status: sub.status || 'pending', mercadopago_last_sync_at: new Date((deps.now || Date.now)()).toISOString() });
+      await c.q('rpc/fn_mp_finalizar_checkout', 'POST', { p_membresia_id: membership.id, p_clave: intento.clave, p_id: String(sub.id), p_enlace: link, p_estado: sub.status || 'pending' });
       return json({ ok: true, init_point: link, subscription_id: sub.id }, 200, true);
     } catch (error) { return errorResponse(error, true); }
   };
@@ -96,7 +114,7 @@ export function crearManejadorSuscripciones(deps: Dependencies) {
 function subscriptionPatch(s: any, deps: Dependencies) {
   const patch: any = { mercadopago_status: s.status || null, mercadopago_payment_method_id: s.payment_method_id || null, proximo_pago_en: s.next_payment_date || null, mercadopago_last_sync_at: new Date((deps.now || Date.now)()).toISOString() };
   // Pending/paused no eliminan una prueba o período ya abonado. La confirmación autoritativa activa/cancela.
-  if (['authorized', 'active'].includes(s.status)) patch.estado = 'activa';
+  if (['authorized', 'active'].includes(s.status)) { patch.estado = 'activa'; patch.es_prueba = false; }
   if (s.status === 'cancelled') patch.estado = 'cancelada';
   return patch;
 }
