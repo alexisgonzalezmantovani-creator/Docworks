@@ -5179,7 +5179,7 @@ export function enfocarCampoOperacion(campo){
 }
 
 export function crearOperacionForm(deps){
- const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -5189,7 +5189,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     ["refuerzo_reserva","devolucion_reserva","comodato","exclusividad"].includes(initial.tipo)?"otros":null
   ) : null);
   const [step,setStep]=useState(1);
-  const [data,setData]=useState(initial ? limpiarComisionesIncompatibles(initial) : EMPTY_OP);
+  // La identidad nace con el formulario y acompaña al borrador local. Si el
+  // servidor guarda pero se pierde su respuesta, reintentar actualiza el mismo registro.
+  const [data,setData]=useState(function(){
+    var base=initial?limpiarComisionesIncompatibles(initial):Object.assign({},EMPTY_OP);
+    return Object.assign({},base,{id:base.id||genId(),created_at:base.created_at||new Date().toISOString()});
+  });
   useEffect(function(){
     if(initial&&focusCampo) setStep(getPasoDeCampo(focusCampo,initial.tipo));
   },[initial,focusCampo]);
@@ -5258,12 +5263,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // inmediatamente, y además se hace un flush síncrono al salir/ocultar la
   // pestaña. Importante: NO se elimina al desmontar el componente, porque una recarga
   // del navegador también desmonta React; borrarlo ahí anulaba toda la red de seguridad.
-  const initialIdRef = useRef(initial ? initial.id || null : null);
+  const initialIdRef = useRef(data.id);
   const guardandoFormRef = useRef(false);
   const dataRef = useRef(data);
   dataRef.current=data;
   if(snapshotRef)snapshotRef.current={data:data,editId:initialIdRef.current,contexto:contextoBorrador||null};
-  useEffect(function(){return function(){if(snapshotRef)snapshotRef.current=null;};},[snapshotRef]);
+  useEffect(function(){return function(){if(snapshotRef&&snapshotRef.current&&snapshotRef.current.data===dataRef.current)snapshotRef.current=null;};},[snapshotRef]);
   const draftPayload = useMemo(function(){
     return draftTieneContenido(data) ? { data:data, editId:initialIdRef.current, contexto:contextoBorrador||null } : null;
   }, [data,contextoBorrador&&contextoBorrador.inmobiliariaId,contextoBorrador&&contextoBorrador.usuarioId]);
@@ -5302,11 +5307,24 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // por defecto): al elegir el tipo de documento en una operación NUEVA, se
   // preseleccionan automáticamente (filtradas por las que aplican a ese tipo).
   // Si ya se está editando una operación existente, no se tocan sus cláusulas.
+  const compradorAnteriorAutorizacionRef=useRef(null);
   const set=useCallback(function(k,v){
     if(k==="tipo"&&onTipoChange)onTipoChange(v);
     setData(function(d){
     var next=Object.assign({},d,{[k]:v});
     if(k==="tipo"){
+      var camposComprador=["nombre","dni","domicilio","email","telefono","cotitulares","telefono_en_doc","email_en_doc"];
+      if(d.tipo!=="exclusividad"&&v==="exclusividad"){
+        var compradorAnterior={};
+        camposComprador.forEach(function(campo){var key="comprador_"+campo;compradorAnterior[key]=d[key];next[key]=campo==="cotitulares"?[]:campo.endsWith("_en_doc")?false:"";});
+        compradorAnteriorAutorizacionRef.current=compradorAnterior;
+      }
+      if(d.tipo==="exclusividad"&&v!=="exclusividad"){
+        var anterior=compradorAnteriorAutorizacionRef.current||{};
+        camposComprador.forEach(function(campo){var key="comprador_"+campo;next[key]=anterior[key]!==undefined?anterior[key]:campo==="cotitulares"?[]:campo.endsWith("_en_doc")?false:"";});
+        if(d.exclusividad_inmobiliaria_autofill)["nombre","matricula","domicilio","email","telefono"].forEach(function(campo){delete next["inmobiliaria_"+campo];});
+        next.exclusividad_inmobiliaria_autofill=false;
+      }
       if(v==="alquiler" || v==="reserva_alquiler") next=limpiarComisionesIncompatibles(next);
       if(v==="exclusividad"){
         // La Autorización de Venta no tiene un "Interesado": la segunda parte es

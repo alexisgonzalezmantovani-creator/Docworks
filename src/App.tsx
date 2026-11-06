@@ -465,7 +465,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.28";
+var DOCWORKS_VERSION = "6.29";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -1550,7 +1550,7 @@ function draftTieneContenido(d) {
   }
   // Los datos de la inmobiliaria insertados automáticamente al seleccionar Exclusividad
   // no son progreso escrito por el usuario y nunca deben crear un borrador vacío.
-  function esDatoInstitucionalAutomatico(c){return d.tipo==="exclusividad" && d.exclusividad_inmobiliaria_autofill===true && /^comprador_(?:nombre|dni|domicilio|email|telefono)$/.test(c);}
+  function esDatoInstitucionalAutomatico(c){return d.tipo==="exclusividad" && d.exclusividad_inmobiliaria_autofill===true && /^(?:comprador_(?:nombre|dni|domicilio|email|telefono)|inmobiliaria_(?:nombre|matricula|domicilio|email|telefono))$/.test(c);}
   if(campos.some(function(c){
     if(esDatoInstitucionalAutomatico(c)||!tieneValor(d[c])) return false;
     var def=EMPTY_OP && EMPTY_OP[c];
@@ -7818,7 +7818,7 @@ const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
 const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
-const OperacionForm = crearOperacionForm({OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
+const OperacionForm = crearOperacionForm({OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
 const ClausulasWorkspace = crearClausulasWorkspace({TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({parseMontoAR, Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
@@ -8091,16 +8091,17 @@ function DocWorksApp(){
     var revision=++salidaRevisionRef.current,vigente=accionesContextoRef.current.capturar();
     var draft=borradorFormularioActual();
     if(draft&&draft.data&&draftTieneContenido(draft.data)){
-      var existingId=draft.editId||null;
+      var existingId=draft.editId||draft.data.id||formSaveIdRef.current||null;
       var op;
       if(existingId){
         var existente=operaciones.find(function(o){return o.id===existingId;});
-        op=Object.assign({},existente||{},draft.data,{id:existingId,created_at:(existente&&existente.created_at)||new Date().toISOString(),estado:(existente&&existente.estado==="activo")?"activo":"borrador"});
+        op=Object.assign({},existente||{},draft.data,{id:existingId,created_at:(existente&&existente.created_at)||draft.data.created_at||new Date().toISOString(),estado:(existente&&existente.estado==="activo")?"activo":"borrador"});
       } else {
-        op=Object.assign({},draft.data,{id:genId(),created_at:new Date().toISOString(),estado:"borrador"});
+        op=Object.assign({},draft.data,{id:genId(),created_at:draft.data.created_at||new Date().toISOString(),estado:"borrador"});
       }
+      op=sellarVersionPlantillaOperacion(op,perfil,!!(op.plantilla_snapshot&&op.plantilla_snapshot.tipo!==op.tipo),clausulas,bloquesReserva);
       formSaveIdRef.current=op.id;
-      draft=Object.assign({},draft,{editId:op.id});
+      draft=Object.assign({},draft,{editId:op.id,data:op});
       if(formSnapshotRef.current)formSnapshotRef.current=draft;
       lsSet("draftOperacion",Object.assign({},draft,{ts:Date.now()}));
       marcarOperacionPendiente(op.id);
@@ -8108,7 +8109,7 @@ function DocWorksApp(){
       try { saveDraftRes=await opsSupabase.guardar(op); } catch(e) { saveDraftRes={error:e}; }
       desmarcarOperacionPendiente(op.id);
       if(!vigente())return;
-      if(saveDraftRes&&!saveDraftRes.error)setOperaciones(function(ops){return ops.some(function(o){return o.id===op.id;})?ops.map(function(o){return o.id===op.id?op:o;}):[op].concat(ops);});
+      if(saveDraftRes&&!saveDraftRes.error){op=saveDraftRes.operacion||op;setOperaciones(function(ops){return ops.some(function(o){return o.id===op.id;})?ops.map(function(o){return o.id===op.id?op:o;}):[op].concat(ops);});}
       if(revision!==salidaRevisionRef.current)return;
       salidaEnCursoRef.current=false;setGuardandoSalida(false);
       if(!saveDraftRes||saveDraftRes.error){
@@ -8610,7 +8611,8 @@ function DocWorksApp(){
     if(editOp){
       opGuardada=Object.assign({},data,{id:editOp.id,created_at:editOp.created_at});
     } else {
-      opGuardada=Object.assign({},data,{id:genId(),created_at:new Date().toISOString()});
+      opGuardada=Object.assign({},data,{id:data.id||formSaveIdRef.current||genId(),created_at:data.created_at||new Date().toISOString()});
+      formSaveIdRef.current=opGuardada.id;
     }
     var estadoElegido;
     var estadoOriginal=editOp ? (editOp.estado||"borrador") : null;
@@ -8623,7 +8625,7 @@ function DocWorksApp(){
     opGuardada.estado=estadoElegido;
     // Una operación nueva queda asociada a la versión de plantilla vigente.
     // Al editar un contrato existente conservamos la versión histórica.
-    opGuardada=sellarVersionPlantillaOperacion(opGuardada,perfil,!editOp,clausulas,bloquesReserva);
+    opGuardada=sellarVersionPlantillaOperacion(opGuardada,perfil,!editOp||editOp.tipo!==opGuardada.tipo,clausulas,bloquesReserva);
     var parentParaCerrar=(opGuardada.tipo==="devolucion_reserva" && opGuardada.parent_id && opGuardada.estado!=="borrador") ? operaciones.find(function(o){return o.id===opGuardada.parent_id;}) : null;
     if(parentParaCerrar&&!permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,parentParaCerrar).editar){
       var errorPermiso={message:"No tenés permiso para cerrar la reserva vinculada."};dwNotify("error",errorPermiso.message);return {error:errorPermiso};
@@ -8631,6 +8633,7 @@ function DocWorksApp(){
     marcarOperacionPendiente(opGuardada.id);
     if(parentParaCerrar) marcarOperacionPendiente(parentParaCerrar.id);
     reportSave("saving");
+    var devolucionConfirmada=false;
     try {
       var res=await opsSupabase.guardar(opGuardada);
       if(!vigente()||res&&res.contextoObsoleto)return Object.assign({},res,{contextoObsoleto:true});
@@ -8643,8 +8646,9 @@ function DocWorksApp(){
       }
       if(res&&res.contextoObsoleto)return res;
       if(res&&res.operacion)opGuardada=res.operacion;
+      devolucionConfirmada=!!parentParaCerrar;
       setOperaciones(function(ops){
-        var base = esNueva ? [opGuardada].concat(ops) : ops.map(function(o){return o.id===editOp.id?opGuardada:o;});
+        var base = esNueva ? [opGuardada].concat(ops.filter(function(o){return o.id!==opGuardada.id;})) : ops.map(function(o){return o.id===editOp.id?opGuardada:o;});
         if(opGuardada.tipo==="devolucion_reserva" && opGuardada.parent_id && opGuardada.estado!=="borrador") {
           return base.map(function(o){return o.id===opGuardada.parent_id?Object.assign({},o,{proceso_estado:"rechazada",estado:"cerrado"}):o;});
         }
@@ -8683,7 +8687,7 @@ function DocWorksApp(){
       if(!vigente())return {contextoObsoleto:true};
       // Si la devolución ya se guardó/localizó pero el cierre del padre falla por
       // desconexión o excepción de red, persistimos una marca local para reintentar.
-      if(parentParaCerrar) {
+      if(parentParaCerrar&&devolucionConfirmada) {
         var parentPendiente=Object.assign({},parentParaCerrar,{estado:"cerrado",proceso_estado:"pendiente_cierre_devolucion"});
         try{lsSet("docworks:devolucion:cierre-pendiente:"+parentPendiente.id,{parentId:parentPendiente.id,devolucionId:opGuardada.id,ts:Date.now(),mensaje:traducirError(e&&e.message?e.message:"Error de comunicación con Supabase.")});}catch(_eMark){}
         setOperaciones(function(ops){return ops.map(function(o){return o.id===parentPendiente.id?Object.assign({},o,{proceso_estado:"pendiente_cierre_devolucion"}):o;});});
@@ -8691,7 +8695,7 @@ function DocWorksApp(){
       reportSave("error");
       desmarcarOperacionPendiente(opGuardada.id);
       if(parentParaCerrar) desmarcarOperacionPendiente(parentParaCerrar.id);
-      dwNotify("error",parentParaCerrar
+      dwNotify("error",parentParaCerrar&&devolucionConfirmada
         ? "No se pudo completar el guardado/cierre por un problema de conexión. La reserva quedó marcada para reintentar el cierre cuando vuelva la conexión. "+traducirError(e&&e.message?e.message:"Error de comunicación con Supabase.")
         : "No se pudo guardar la operación. "+traducirError(e&&e.message?e.message:"Error de comunicación con Supabase."));
       return {error:e};
@@ -8707,9 +8711,25 @@ function DocWorksApp(){
     if(showFormRef.current||draftPromptRef.current)return;
     var draft=lsGet("draftOperacion",null);if(!draft||!draft.data||!draftTieneContenido(draft.data))return;
     if(!borradorDelContexto(draft,docworksAuth.contexto))return;
-    var existingId=draft.editId||null,existente=existingId?operaciones.find(function(o){return o.id===existingId;}):null;
-    var op=Object.assign({},existente||{},draft.data,{id:existingId||genId(),created_at:(existente&&existente.created_at)||new Date().toISOString(),estado:(existente&&existente.estado)||"borrador"});
-    try{var res=await opsSupabase.guardar(op);if(res&&!res.error&&!res.contextoObsoleto){op=res.operacion||op;setOperaciones(function(ops){return existingId?ops.map(function(o){return o.id===existingId?op:o;}):[op].concat(ops);});if(mismoBorrador(draft,lsGet("draftOperacion",null)))lsRemove("draftOperacion");dwNotify("success","La operación cargada sin conexión ya fue sincronizada con DocWorks.");}}catch(e){console.warn("DocWorks: no se pudo sincronizar el borrador offline.",e);}
+    var vigente=accionesContextoRef.current.capturar();
+    var existingId=draft.editId||draft.data.id||null,existente=existingId?operaciones.find(function(o){return o.id===existingId;}):null;
+    var op=Object.assign({},existente||{},draft.data,{id:existingId||genId(),created_at:(existente&&existente.created_at)||draft.data.created_at||new Date().toISOString(),estado:(existente&&existente.estado)||"borrador"});
+    op=sellarVersionPlantillaOperacion(op,perfil,!!(op.plantilla_snapshot&&op.plantilla_snapshot.tipo!==op.tipo),clausulas,bloquesReserva);
+    // Guardar la identidad antes de enviar: una respuesta perdida no debe crear
+    // otro registro al recargar o recuperar la conexión.
+    draft=Object.assign({},draft,{data:op,editId:op.id});
+    if(!lsSet("draftOperacion",draft))return;
+    try{
+      var res=await opsSupabase.guardar(op);
+      if(!vigente()||res&&res.contextoObsoleto)return;
+      if(res&&!res.error){
+        op=res.operacion||op;
+        setOperaciones(function(ops){return [op].concat(ops.filter(function(o){return o.id!==op.id;}));});
+        if(mismoBorrador(draft,lsGet("draftOperacion",null)))lsRemove("draftOperacion");
+        dwNotify("success","La operación cargada sin conexión ya fue sincronizada con DocWorks.");
+      }
+    }catch(e){console.warn("DocWorks: no se pudo sincronizar el borrador offline.",e);}
+
   }
   // Reintenta cierres de reservas que quedaron pendientes después de guardar
   // una devolución. La devolución ya existe; este proceso solo completa el cierre

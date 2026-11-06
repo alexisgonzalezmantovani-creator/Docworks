@@ -18,6 +18,7 @@ function SalidaHarness(){
  const formSnapshotRef=useRef(null),formSaveIdRef=useRef(null),salidaEnCursoRef=useRef(false),salidaRevisionRef=useRef(0),accionesContextoRef=useRef(crearControlContextoOperaciones(claveContextoOperaciones(docworksAuth.contexto))),resolver=useRef(null);
  useEffect(()=>{if(!showForm)formSaveIdRef.current=null;},[showForm]);
  useOperationPageScroll(showForm);
+ const bloquesReserva=[];
  const perfil={rol:'dueno',nombre:'Ejemplo',plantillas:new URLSearchParams(location.search).has('equipamiento')?crearPlantillasIniciales():{}},clausulas=new URLSearchParams(location.search).has('equipamiento')?CLAUSULAS_DEFAULT:[],equipo=[],reportSave=()=>{},addClausula=()=>{},saveOp=()=>{},viewDoc=null,dwConfirm=null,ctx=docworksAuth.contexto;
  const marcarOperacionPendiente=()=>{},desmarcarOperacionPendiente=()=>{};
  const opsSupabase={guardar:async op=>{setCalls(n=>n+1);if(mode==='error')return {error:{message:'Sin conexión de prueba'}};if(mode==='lento')return new Promise(r=>resolver.current=()=>r({data:op}));return {data:op};}};
