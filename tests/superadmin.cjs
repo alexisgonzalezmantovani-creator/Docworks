@@ -23,6 +23,7 @@ async function select(label,value){await a.act(async()=>{const e=document.queryS
  check('búsqueda por email encuentra la inmobiliaria',()=>{assert.equal(document.querySelectorAll('[data-testid=sa-org-card]').length,1);assert.ok(document.querySelector('[data-testid=sa-org-card]').textContent.includes('Norte Inmuebles'));});
  await click(btn('Ver detalle →'));
  check('detalle conserva gestión de plan, acceso y pagos',()=>{assert.ok(document.querySelector('.modal-box'));assert.ok(document.body.textContent.includes('Extender 30 días'));assert.ok(document.body.textContent.includes('Bloques del modelo:'));assert.ok(a.saDemoCalls.some(c=>c.nombre==='fn_super_detalle_inmobiliaria'&&c.params.p_inmobiliaria_id==='dos'));});
+ check('detalle recupera nota y límite persistidos',()=>{assert.equal(document.querySelector('.sa-detail-settings-grid input').value,'7');assert.ok(document.querySelector('.sa-detail-content textarea').value.startsWith('Nota privada'));});
  await click(document.querySelector('.modal-close'));
  await click([...document.querySelectorAll('nav button')].find(b=>b.textContent.trim().startsWith('Solicitudes')));
  check('solicitudes mantiene aprobación y rechazo sin ejecutar escrituras',()=>{assert.ok(btn('Aprobar'));assert.ok(btn('Rechazar'));assert.ok(!a.saDemoCalls.some(c=>c.nombre.includes('resolver')));});

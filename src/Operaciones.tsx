@@ -1756,7 +1756,7 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 `;
 
 // Panel Superadmin: extracción funcional con dependencias explícitas.
-import {useState,useEffect} from "react";
+import {useState,useEffect,useRef} from "react";
 export function crearSuperAdminDashboard(deps){
   const { AUTH_RED, AUTH_MUTED, descargarCSV, loadSupabaseJs, traducirError, Field, dwNotify, requestDwConfirm, fmt$, Modal, DWIcon } = deps;
 var ESTADOS_MEMBRESIA = ["activa","pendiente","vencida","suspendida","cancelada","archivada"];
@@ -1850,10 +1850,10 @@ function useSuperAdmin(activo){
     return rpc("fn_super_editar_inmobiliaria", { p_inmobiliaria_id:id, p_nombre:nombre }).then(function(res){ if(!res.error) recargar(); return res; });
   }
   function asignarPlan(id, planCodigo){
-    return rpc("fn_super_asignar_plan", { p_inmobiliaria_id:id, p_plan_codigo:planCodigo }).then(function(res){ if(!res.error) recargar(); return res; });
+    return rpc("fn_super_asignar_plan", { p_inmobiliaria_id:id, p_plan_codigo:planCodigo }).then(function(res){ if(!res.error){cargarDetalle(id);recargar();} return res; });
   }
   function setEstadoMembresia(id, estado){
-    return rpc("fn_super_set_estado_membresia", { p_inmobiliaria_id:id, p_estado:estado }).then(function(res){ if(!res.error) recargar(); return res; });
+    return rpc("fn_super_set_estado_membresia", { p_inmobiliaria_id:id, p_estado:estado }).then(function(res){ if(!res.error){cargarDetalle(id);recargar();} return res; });
   }
   function crearPlan(codigo, nombre, descripcion, precio, moneda, limite){
     return rpc("fn_super_crear_plan", { p_codigo:codigo, p_nombre:nombre, p_descripcion:descripcion, p_precio:precio, p_moneda:moneda, p_limite_usuarios:limite }).then(function(res){ if(!res.error) recargar(); return res; });
@@ -2090,6 +2090,10 @@ function SuperAdminDashboard({ contexto, onLogout }){
   var [limiteCustom,setLimiteCustom] = useState("");
   var [notaInmob,setNotaInmob] = useState("");
   var [showPagoManual,setShowPagoManual] = useState(false);
+  var [pagoBusy,setPagoBusy] = useState(false);
+  var pagoClave = useRef(null);
+  useEffect(function(){if(showPagoManual)pagoClave.current=crypto.randomUUID();},[showPagoManual]);
+  useEffect(function(){var d=sa.detalle;if(!d||!detalleId||d.inmobiliaria?.id!==detalleId)return;setNotaInmob(d.nota_interna||"");setLimiteCustom(d.limite_usuarios_override==null?"":String(d.limite_usuarios_override));},[sa.detalle,detalleId]);
   var [pagoForm,setPagoForm] = useState({monto:"",moneda:"ARS",metodo:"Transferencia bancaria",fecha:new Date().toISOString().slice(0,10),periodo_desde:"",periodo_hasta:"",nota:""});
 
   // Auditoría y pagos globales
@@ -2103,7 +2107,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
   useEffect(function(){ if (tab==="auditoria") sa.cargarAuditoria(auditFiltro||null); }, [tab, auditFiltro]);
   useEffect(function(){ if (tab==="pagos") sa.cargarPagos(pagosFiltro||null); }, [tab, pagosFiltro]);
 
-  function abrirDetalle(id, nombreActual){ setDetalleId(id); setDetalleTab("resumen"); setNuevoPlanDetalle(""); setRenombrando(false); setNombreDetalle(nombreActual||""); sa.cargarDetalle(id); }
+  function abrirDetalle(id, nombreActual){ setNotaInmob("");setLimiteCustom("");setDetalleId(id); setDetalleTab("resumen"); setNuevoPlanDetalle(""); setRenombrando(false); setNombreDetalle(nombreActual||""); sa.cargarDetalle(id); }
   function cerrarDetalle(){ setDetalleId(null); setNuevoPlanDetalle(""); setRenombrando(false); sa.limpiarDetalle(); }
 
   function crearInmobiliaria(){
@@ -2267,7 +2271,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
                   <div className="sa-announcement-grid">
                     <Field label="Mensaje"><input className="inp" value={anuncioForm.mensaje} onChange={function(e){setAnuncioForm(function(f){return Object.assign({},f,{mensaje:e.target.value});});}} placeholder="Mensaje que verán los usuarios al entrar"/></Field>
                     <Field label="Fecha de fin"><input className="inp" type="date" value={anuncioForm.fecha_fin} onChange={function(e){setAnuncioForm(function(f){return Object.assign({},f,{fecha_fin:e.target.value});});}}/></Field>
-                    <button className="btn btn-primary" onClick={function(){sa.setAnuncio({p_mensaje:anuncioForm.mensaje||null,p_fecha_fin:anuncioForm.fecha_fin||null}).then(function(res){if(!res.error)dwNotify("success","Anuncio global actualizado.");});}}>Publicar</button>
+                    <button className="btn btn-primary" onClick={function(){sa.setAnuncio({p_mensaje:anuncioForm.mensaje||null,p_fecha_fin:anuncioForm.fecha_fin?anuncioForm.fecha_fin+"T23:59:59-03:00":null}).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));else dwNotify("success","Anuncio global actualizado.");});}}>Publicar</button>
                   </div>
                   {sa.anuncioGlobal&&sa.anuncioGlobal.mensaje&&<div style={{marginTop:10,fontSize:12,color:"var(--dim)"}}>Actual: <b style={{color:"var(--text)"}}>{sa.anuncioGlobal.mensaje}</b> · hasta {saFechaCorta(sa.anuncioGlobal.fecha_fin)}</div>}
                 </div>
@@ -2563,27 +2567,27 @@ function SuperAdminDashboard({ contexto, onLogout }){
                           {sa.planes.filter(function(p){return p.activo;}).map(function(p){return <option key={p.codigo} value={p.codigo}>{p.nombre}</option>;})}
                         </select>
                       </div>
-                      <button className="btn btn-secondary btn-sm" disabled={!nuevoPlanDetalle} onClick={function(){sa.asignarPlan(detalleId, nuevoPlanDetalle).then(function(){setNuevoPlanDetalle("");});}}>Aplicar plan</button>
+                      <button className="btn btn-secondary btn-sm" disabled={!nuevoPlanDetalle} onClick={function(){sa.asignarPlan(detalleId, nuevoPlanDetalle).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));else setNuevoPlanDetalle("");});}}>Aplicar plan</button>
                     </div>
                     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:12}}>
                       {ESTADOS_MEMBRESIA.map(function(e){
                         var activo = det.membresia && det.membresia.estado===e;
                         var t = SA_TONE[ESTADO_MEMBRESIA_TONE[e]]||SA_TONE.dim;
-                        return <button key={e} onClick={function(){sa.setEstadoMembresia(detalleId, e);}}
+                        return <button key={e} onClick={function(){(e==="archivada"?sa.archivarInmobiliaria(detalleId,true):sa.setEstadoMembresia(detalleId,e)).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));});}}
                           style={{padding:"6px 13px",borderRadius:20,border:"1px solid "+t.bd,background:activo?t.bg:"transparent",color:t.fg,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{e}</button>;
                       })}
                     </div>
                     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
                       <button className="btn btn-primary btn-sm" onClick={function(){sa.extenderMembresia(detalleId,30,"extension","").then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));});}}>Extender 30 días</button>
                       <button className="btn btn-secondary btn-sm" onClick={function(){sa.extenderMembresia(detalleId,30,"prueba_gratis","Prueba gratis").then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));});}}>Dar prueba gratis</button>
-                      {det.membresia&&det.membresia.estado==="archivada"?<button className="btn btn-secondary btn-sm" onClick={function(){requestDwConfirm("¿Reactivar esta inmobiliaria?",function(){sa.archivarInmobiliaria(detalleId,false);});}}>Reactivar</button>:<button className="btn btn-ghost btn-sm" onClick={function(){requestDwConfirm("¿Archivar esta inmobiliaria? Se aplicará soft delete y no se borrará físicamente.",function(){requestDwConfirm("Confirmación final: ¿querés archivar la inmobiliaria?",function(){sa.archivarInmobiliaria(detalleId,true);});});}}>Archivar</button>}
+                      {det.membresia&&det.membresia.estado==="archivada"?<button className="btn btn-secondary btn-sm" onClick={function(){requestDwConfirm("¿Reactivar esta inmobiliaria?",function(){sa.archivarInmobiliaria(detalleId,false).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));});});}}>Reactivar</button>:<button className="btn btn-ghost btn-sm" onClick={function(){requestDwConfirm("¿Archivar esta inmobiliaria? Se aplicará soft delete y no se borrará físicamente.",function(){requestDwConfirm("Confirmación final: ¿querés archivar la inmobiliaria?",function(){sa.archivarInmobiliaria(detalleId,true).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));});});});}}>Archivar</button>}
                     </div>
                     <div className="sa-detail-settings-grid">
                       <Field label="Límite personalizado de usuarios"><input className="inp" type="number" min="0" value={limiteCustom} onChange={function(e){setLimiteCustom(e.target.value);}} placeholder={det.limite_usuarios!=null?String(det.limite_usuarios):"Usar límite del plan"}/></Field>
                       <button className="btn btn-secondary btn-sm" onClick={function(){sa.setLimites(detalleId,limiteCustom).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));});}}>Guardar límite</button>
                       <button className="btn btn-ghost btn-sm" onClick={function(){sa.setLimites(detalleId,null);setLimiteCustom("");}}>Quitar override</button>
                     </div>
-                    <div style={{marginTop:12}}><Field label="Nota interna · solo Super Admin"><textarea className="inp" rows={3} value={notaInmob} onChange={function(e){setNotaInmob(e.target.value);}} placeholder="Información privada de seguimiento…"/></Field><div style={{display:"flex",justifyContent:"flex-end",marginTop:6}}><button className="btn btn-secondary btn-sm" onClick={function(){sa.guardarNotaInmobiliaria(detalleId,notaInmob).then(function(res){if(!res.error)dwNotify("success","Nota interna guardada.");});}}>Guardar nota</button></div></div>
+                    <div style={{marginTop:12}}><Field label="Nota interna · solo Super Admin"><textarea className="inp" rows={3} value={notaInmob} onChange={function(e){setNotaInmob(e.target.value);}} placeholder="Información privada de seguimiento…"/></Field><div style={{display:"flex",justifyContent:"flex-end",marginTop:6}}><button className="btn btn-secondary btn-sm" onClick={function(){sa.guardarNotaInmobiliaria(detalleId,notaInmob).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));else dwNotify("success","Nota interna guardada.");});}}>Guardar nota</button></div></div>
                   </SASection>
                   <SASection title="Resumen de actividad">
                     <div className="sa-kv">
@@ -2697,13 +2701,13 @@ function SuperAdminDashboard({ contexto, onLogout }){
         )}
       </Modal>
 
-      <Modal open={showPagoManual} onClose={function(){setShowPagoManual(false);}} title="Registrar pago manual">
+      <Modal open={showPagoManual} onClose={function(){if(!pagoBusy)setShowPagoManual(false);}} title="Registrar pago manual">
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div className="grid2"><Field label="Monto"><input className="inp" type="number" value={pagoForm.monto} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{monto:e.target.value});});}}/></Field><Field label="Moneda"><select className="inp" value={pagoForm.moneda} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{moneda:e.target.value});});}}><option>ARS</option><option>USD</option></select></Field></div>
           <div className="grid2"><Field label="Método"><select className="inp" value={pagoForm.metodo} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{metodo:e.target.value});});}}>{metodosPago.map(function(m){return <option key={m}>{m}</option>;})}</select></Field><Field label="Fecha"><input className="inp" type="date" value={pagoForm.fecha} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{fecha:e.target.value});});}}/></Field></div>
           <div className="grid2"><Field label="Período desde"><input className="inp" type="date" value={pagoForm.periodo_desde} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{periodo_desde:e.target.value});});}}/></Field><Field label="Período hasta"><input className="inp" type="date" value={pagoForm.periodo_hasta} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{periodo_hasta:e.target.value});});}}/></Field></div>
           <Field label="Nota"><textarea className="inp" rows={3} value={pagoForm.nota} onChange={function(e){setPagoForm(function(f){return Object.assign({},f,{nota:e.target.value});});}}/></Field>
-          <div style={{display:"flex",justifyContent:"flex-end",gap:8}}><button className="btn btn-ghost" onClick={function(){setShowPagoManual(false);}}>Cancelar</button><button className="btn btn-primary" onClick={function(){sa.registrarPago({p_inmobiliaria_id:detalleId,p_monto:parseFloat(pagoForm.monto),p_moneda:pagoForm.moneda,p_metodo:pagoForm.metodo,p_fecha:pagoForm.fecha,p_periodo_desde:pagoForm.periodo_desde||null,p_periodo_hasta:pagoForm.periodo_hasta||null,p_nota:pagoForm.nota||null}).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));else{setShowPagoManual(false);dwNotify("success","Pago manual registrado.");}});}}>Registrar pago</button></div>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8}}><button className="btn btn-ghost" disabled={pagoBusy} onClick={function(){setShowPagoManual(false);}}>Cancelar</button><button className="btn btn-primary" disabled={pagoBusy} onClick={function(){if(pagoBusy)return;setPagoBusy(true);sa.registrarPago({p_clave:pagoClave.current,p_inmobiliaria_id:detalleId,p_monto:parseFloat(pagoForm.monto),p_moneda:pagoForm.moneda,p_metodo:pagoForm.metodo,p_fecha:pagoForm.fecha,p_periodo_desde:pagoForm.periodo_desde||null,p_periodo_hasta:pagoForm.periodo_hasta||null,p_nota:pagoForm.nota||null}).then(function(res){if(res.error)dwNotify("error",traducirError(res.error.message));else{setShowPagoManual(false);dwNotify("success","Pago manual registrado.");}}).catch(function(){dwNotify("error","No se pudo confirmar el registro. Reintentá sin cerrar esta ventana.");}).finally(function(){setPagoBusy(false);});}}>Registrar pago</button></div>
         </div>
       </Modal>
 

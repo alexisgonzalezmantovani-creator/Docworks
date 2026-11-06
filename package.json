@@ -12,7 +12,7 @@
     "check": "npm run typecheck && npm test && npm run test:database && npm run build",
     "test:browser": "node tests/navegador.cjs && node tests/landing-responsive.cjs && node tests/inicio-soporte-browser.cjs && node tests/salida-operacion-browser.cjs && node tests/importes-browser.cjs && node tests/inicio-pwa-browser.cjs && node tests/pulido-formularios-browser.cjs && node tests/recorridos-browser.cjs && node tests/guardado-resiliente-browser.cjs && node tests/aspecto-fluido-browser.cjs",
     "test:webkit": "node tests/navegador.cjs --webkit && node tests/landing-responsive.cjs --webkit && node tests/inicio-soporte-browser.cjs --webkit && node tests/salida-operacion-browser.cjs --webkit",
-    "test:database": "node tests/database/permisos-operaciones.cjs && node tests/database/biblioteca-base.cjs && node tests/database/biblioteca-compartida-624.cjs && node tests/database/metricas-uso.cjs",
+    "test:database": "node tests/database/permisos-operaciones.cjs && node tests/database/biblioteca-base.cjs && node tests/database/biblioteca-compartida-624.cjs && node tests/database/metricas-uso.cjs && node tests/database/superadmin-cierre.cjs",
     "predev": "node scripts/copiar-pdf-preview.cjs",
     "prebuild": "node scripts/copiar-pdf-preview.cjs",
     "audit:rpc": "node tests/database/contrato-rpc.cjs"

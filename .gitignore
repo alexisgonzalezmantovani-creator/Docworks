@@ -2,3 +2,5 @@ node_modules
 dist/
 .browser-results/
 public/pdfjs-*/
+
+supabase/.temp/

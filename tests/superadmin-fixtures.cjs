@@ -26,7 +26,7 @@ const PanelSuperadminPrueba=crearSuperAdminDashboard({AUTH_RED,AUTH_MUTED,descar
  if(nombre==='fn_super_metricas_uso')return {data:saDemoData.metricas};
  if(nombre==='fn_super_get_anuncio_global')return {data:null};
  if(nombre==='fn_super_pagos')return {data:saDemoData.pagos};
- if(nombre==='fn_super_detalle_inmobiliaria'){const i=saDemoData.inmobiliarias.find(i=>i.inmobiliaria_id===params.p_inmobiliaria_id);return {data:{inmobiliaria:{nombre:i.inmobiliaria_nombre},membresia:{plan_nombre:i.plan_nombre,estado:i.estado,fecha_vencimiento:i.fecha_vencimiento},usuarios:[],pagos:[],auditoria:[],clausulas_count:2,bloques_count:8}};}
+ if(nombre==='fn_super_detalle_inmobiliaria'){const i=saDemoData.inmobiliarias.find(i=>i.inmobiliaria_id===params.p_inmobiliaria_id);return {data:{inmobiliaria:{id:i.inmobiliaria_id,nombre:i.inmobiliaria_nombre},nota_interna:"Nota privada "+i.inmobiliaria_nombre,limite_usuarios_override:7,membresia:{plan_nombre:i.plan_nombre,estado:i.estado,fecha_vencimiento:i.fecha_vencimiento},usuarios:[],pagos:[],auditoria:[],clausulas_count:2,bloques_count:8}};}
  return {data:[]};
 }})});
 `;
