@@ -21,7 +21,7 @@ jobs:
       - name: Instalar dependencias
         run: npm ci --no-audit --no-fund
       - name: Instalar verificador de PDF
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
       - name: Compilar con Vite
         run: npm run check
       - name: Verificar integración
@@ -54,6 +54,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Instalar navegador y bibliotecas
         run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Instalar herramientas de documentos
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
       - name: Preparar visor PDF local
         run: npm run prebuild
       - name: Verificar ocho editores en tres tamaños
