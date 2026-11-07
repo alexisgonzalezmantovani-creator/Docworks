@@ -1,3 +1,4 @@
+import { crearIdentificadorSeguro } from './Identificadores';
 import { RecordatoriosPanel } from './Recordatorios';
 import { FacturacionMercadoPago } from './FacturacionMercadoPago';
 import { permisosOperacion, prepararAltaOperacion, claveContextoOperaciones, crearControlContextoOperaciones, ejecutarCambioConfirmado, contextoBorradorOperacion, borradorDelContexto, mismoBorrador } from './AccionesOperaciones';
@@ -466,7 +467,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.34";
+var DOCWORKS_VERSION = "6.35";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -2613,10 +2614,7 @@ function plazoAlquilerTexto(meses, dias) {
   if (d>0) partes.push(d+(d===1?" día":" días"));
   return partes.length ? partes.join(" y ") : "0 meses";
 }
-function genId() {
-  try { if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
-  return Date.now().toString(36) + Math.random().toString(36).slice(2,10);
-}
+function genId() { return crearIdentificadorSeguro(); }
 
 // ── CACHÉ Y BORRADORES LOCALES (localStorage) ───────────────────────────────
 // Conserva borradores y preferencias ante recargas o desconexiones.

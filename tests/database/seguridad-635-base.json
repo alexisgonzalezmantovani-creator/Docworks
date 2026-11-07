@@ -1,0 +1,191 @@
+[
+  {
+    "firma": "docworks_private.confirmar_prueba()",
+    "nspname": "docworks_private",
+    "proname": "confirmar_prueba",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION docworks_private.confirmar_prueba()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\nbegin\n  if new.email_confirmed_at is not null and new.raw_user_meta_data->>'docworks_registro' in ('trial_14_v1','trial_month_v1') then\n    perform docworks_private.provisionar_prueba(new.id);\n  end if;\n  return new;\nend; $function$\n"
+  },
+  {
+    "firma": "docworks_private.proteger_prueba()",
+    "nspname": "docworks_private",
+    "proname": "proteger_prueba",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION docworks_private.proteger_prueba()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\nbegin\n  if old.es_prueba and auth.uid() is not null and not public.fn_es_super_admin(auth.uid()) then\n    raise exception 'Solo DocWorks puede modificar la membresía de prueba';\n  end if;\n  return new;\nend; $function$\n"
+  },
+  {
+    "firma": "docworks_private.validar_escritura_prueba()",
+    "nspname": "docworks_private",
+    "proname": "validar_escritura_prueba",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION docworks_private.validar_escritura_prueba()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare v_id uuid;\nbegin\n  if auth.uid() is not null and not public.fn_es_super_admin(auth.uid()) then\n    select inmobiliaria_id into v_id from public.usuarios where id=auth.uid();\n    if exists(select 1 from public.membresias where inmobiliaria_id=v_id and es_prueba and\n      (estado not in ('activa','pendiente') or fecha_vencimiento is null or fecha_vencimiento<=statement_timestamp())) then\n      raise exception 'Tu prueba terminó. Elegí un plan para seguir trabajando.';\n    end if;\n  end if;\n  if tg_op='DELETE' then return old; end if;\n  return new;\nend; $function$\n"
+  },
+  {
+    "firma": "dw_clausula_personal_set_owner()",
+    "nspname": "public",
+    "proname": "dw_clausula_personal_set_owner",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.dw_clausula_personal_set_owner()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare v_inmobiliaria uuid;\nbegin\n  select u.inmobiliaria_id into v_inmobiliaria\n  from public.usuarios u\n  where u.id = auth.uid() and u.activo = true;\n  if v_inmobiliaria is null then\n    raise exception 'Usuario DocWorks activo no encontrado';\n  end if;\n  new.creado_por := auth.uid();\n  new.inmobiliaria_id := v_inmobiliaria;\n  new.actualizada_en := now();\n  return new;\nend;\n$function$\n"
+  },
+  {
+    "firma": "dw_clausula_personal_touch()",
+    "nspname": "public",
+    "proname": "dw_clausula_personal_touch",
+    "prosecdef": false,
+    "owner": "postgres",
+    "acl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.dw_clausula_personal_touch()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nbegin\n  new.actualizada_en := now();\n  return new;\nend;\n$function$\n"
+  },
+  {
+    "firma": "fn_auditoria_vaciar()",
+    "nspname": "public",
+    "proname": "fn_auditoria_vaciar",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_auditoria_vaciar()\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_inmob uuid := fn_mi_inmobiliaria();\n  v_rol text;\nbegin\n  select rol_base::text into v_rol\n    from usuarios\n   where id = auth.uid()\n     and inmobiliaria_id = v_inmob;\n\n  if v_rol not in ('dueno','admin') then\n    raise exception 'Solo Dueño o Administrador puede vaciar la auditoría';\n  end if;\n\n  delete from auditoria where inmobiliaria_id = v_inmob;\nend;\n$function$\n"
+  },
+  {
+    "firma": "fn_autoprovisionar_usuario_actual()",
+    "nspname": "public",
+    "proname": "fn_autoprovisionar_usuario_actual",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_autoprovisionar_usuario_actual()\n RETURNS uuid\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare v_email text; v_id uuid;\nbegin\n  if auth.uid() is null then return null; end if;\n  select lower(trim(email)) into v_email from auth.users where id=auth.uid() and email_confirmed_at is not null;\n  if v_email is null then return null; end if;\n  v_id=public.fn_provisionar_usuario_por_email(v_email);\n  if v_id is null then\n    perform docworks_private.provisionar_prueba(auth.uid());\n    select id into v_id from public.usuarios where id=auth.uid();\n  end if;\n  return v_id;\nend; $function$\n"
+  },
+  {
+    "firma": "fn_clausula_mover(uuid,integer)",
+    "nspname": "public",
+    "proname": "fn_clausula_mover",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_clausula_mover(p_clausula_id uuid, p_nuevo_orden integer)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare v_inmob uuid;\nbegin\n  v_inmob := fn_entidad_inmobiliaria('clausula', p_clausula_id);\n  if v_inmob is null or v_inmob <> fn_mi_inmobiliaria() then raise exception 'No autorizado'; end if;\n  update clausulas set orden = p_nuevo_orden, actualizada_en = now() where id = p_clausula_id;\nend;\n$function$\n"
+  },
+  {
+    "firma": "fn_documento_versiones_snapshot()",
+    "nspname": "public",
+    "proname": "fn_documento_versiones_snapshot",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_documento_versiones_snapshot()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  v_version integer;\nbegin\n  if tg_op = 'UPDATE'\n     and (\n       old.datos is distinct from new.datos\n       or old.tipo is distinct from new.tipo\n       or old.parent_id is distinct from new.parent_id\n     ) then\n    select coalesce(max(v.version), 0) + 1\n      into v_version\n      from public.documento_versiones v\n     where v.operacion_id = old.id;\n\n    insert into public.documento_versiones (\n      inmobiliaria_id,\n      operacion_id,\n      version,\n      tipo_documento,\n      documento,\n      creado_por\n    )\n    values (\n      old.inmobiliaria_id,\n      old.id,\n      v_version,\n      old.tipo,\n      jsonb_build_object(\n        'id', old.id,\n        'tipo', old.tipo,\n        'estado', old.estado,\n        'parent_id', old.parent_id,\n        'datos', old.datos,\n        'creado_en', old.creado_en,\n        'actualizado_en', old.actualizado_en,\n        'actualizado_por', old.actualizado_por\n      ),\n      coalesce(new.actualizado_por, old.actualizado_por)\n    );\n  end if;\n\n  return new;\nend;\n$function$\n"
+  },
+  {
+    "firma": "fn_docworks_auditoria_trigger()",
+    "nspname": "public",
+    "proname": "fn_docworks_auditoria_trigger",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_docworks_auditoria_trigger()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_new jsonb;\n  v_old jsonb;\n  v_row jsonb;\n  v_tenant uuid;\n  v_entity uuid;\n  v_actor uuid := auth.uid();\n  v_accion text;\n  v_entidad text := TG_TABLE_NAME;\n  v_inmob_txt text;\n  v_usuario_txt text;\n  v_plantilla_txt text;\nbegin\n  if TG_TABLE_NAME = 'auditoria' then\n    return coalesce(NEW, OLD);\n  end if;\n\n  -- auditoria.inmobiliaria_id es NOT NULL y referencia inmobiliarias(id).\n  -- Si se elimina la propia inmobiliaria, no podemos insertar después del DELETE\n  -- un registro que apunte a una fila que ya no existe. La operación queda fuera\n  -- de esta auditoría para evitar romper el DELETE de la inmobiliaria.\n  if TG_TABLE_NAME = 'inmobiliarias' and TG_OP = 'DELETE' then\n    return OLD;\n  end if;\n\n  v_new := case when TG_OP <> 'DELETE' then to_jsonb(NEW) else null end;\n  v_old := case when TG_OP <> 'INSERT' then to_jsonb(OLD) else null end;\n  v_row := coalesce(v_new, v_old);\n\n  -- ID de la entidad, solo si tiene formato UUID.\n  if v_row ? 'id' and (v_row->>'id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then\n    v_entity := (v_row->>'id')::uuid;\n  end if;\n\n  -- Caso normal: la tabla tiene inmobiliaria_id.\n  if v_row ? 'inmobiliaria_id' then\n    v_inmob_txt := v_row->>'inmobiliaria_id';\n    if v_inmob_txt ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then\n      v_tenant := v_inmob_txt::uuid;\n    end if;\n  end if;\n\n  -- inmobiliarias es una entidad global, pero cada cambio pertenece a esa inmobiliaria.\n  if TG_TABLE_NAME = 'inmobiliarias' and v_entity is not null then\n    v_tenant := v_entity;\n  end if;\n\n  -- bloques -> tenant por plantilla.\n  if v_tenant is null and TG_TABLE_NAME = 'bloques' and v_row ? 'plantilla_id' then\n    v_plantilla_txt := v_row->>'plantilla_id';\n    if v_plantilla_txt ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then\n      select p.inmobiliaria_id into v_tenant from plantillas p where p.id = v_plantilla_txt::uuid;\n    end if;\n  end if;\n\n  -- permisos_broker -> tenant por usuario.\n  if v_tenant is null and TG_TABLE_NAME = 'permisos_broker' and v_row ? 'usuario_id' then\n    v_usuario_txt := v_row->>'usuario_id';\n    if v_usuario_txt ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' then\n      select u.inmobiliaria_id into v_tenant from usuarios u where u.id = v_usuario_txt::uuid;\n    end if;\n  end if;\n\n  -- Si el cambio no se puede asociar a una inmobiliaria, no se inserta en la auditoría\n  -- de tenants porque la columna inmobiliaria_id es NOT NULL.\n  if v_tenant is null then\n    return coalesce(NEW, OLD);\n  end if;\n\n  -- No registrar UPDATE que no cambió ningún dato.\n  if TG_OP = 'UPDATE' and v_old = v_new then\n    return NEW;\n  end if;\n\n  v_accion := case TG_OP\n    when 'INSERT' then 'crear_' || v_entidad\n    when 'UPDATE' then 'actualizar_' || v_entidad\n    when 'DELETE' then 'eliminar_' || v_entidad\n    else lower(TG_OP) || '_' || v_entidad\n  end;\n\n  insert into auditoria(\n    inmobiliaria_id,\n    usuario_id,\n    entidad_tipo,\n    entidad_id,\n    accion,\n    valor_anterior,\n    valor_nuevo,\n    origen\n  ) values (\n    v_tenant,\n    v_actor,\n    v_entidad,\n    v_entity,\n    v_accion,\n    v_old,\n    v_new,\n    'trigger'\n  );\n\n  return coalesce(NEW, OLD);\nend;\n$function$\n"
+  },
+  {
+    "firma": "fn_es_admin(uuid)",
+    "nspname": "public",
+    "proname": "fn_es_admin",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_es_admin(p_usuario_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\n  select coalesce((select rol_base in ('dueno','admin') from usuarios where id = p_usuario_id and activo), false);\n$function$\n"
+  },
+  {
+    "firma": "fn_es_super_admin(uuid)",
+    "nspname": "public",
+    "proname": "fn_es_super_admin",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_es_super_admin(p_usuario_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\n  select exists(select 1 from super_admins where user_id = p_usuario_id);\n$function$\n"
+  },
+  {
+    "firma": "fn_invitaciones_pendientes_count(uuid)",
+    "nspname": "public",
+    "proname": "fn_invitaciones_pendientes_count",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_invitaciones_pendientes_count(p_inmobiliaria_id uuid)\n RETURNS integer\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\n  select count(*)::int from invitaciones\n   where inmobiliaria_id = p_inmobiliaria_id and not usada and expira_en > now();\n$function$\n"
+  },
+  {
+    "firma": "fn_limite_usuarios(uuid)",
+    "nspname": "public",
+    "proname": "fn_limite_usuarios",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_limite_usuarios(p_inmobiliaria_id uuid)\n RETURNS integer\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\n  select coalesce((select s.limite_usuarios from docworks_private.seguimiento s where s.inmobiliaria_id=p_inmobiliaria_id),pl.limite_usuarios) from membresias m join planes pl on pl.id = m.plan_id\n   where m.inmobiliaria_id = p_inmobiliaria_id;\n$function$\n"
+  },
+  {
+    "firma": "fn_operacion_guardar(text,text,text,text,jsonb)",
+    "nspname": "public",
+    "proname": "fn_operacion_guardar",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_operacion_guardar(p_id text, p_tipo text, p_estado text, p_parent_id text, p_datos jsonb)\n RETURNS TABLE(id text, tipo text, estado text, parent_id text, datos jsonb, creado_en timestamp with time zone, actualizado_en timestamp with time zone)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_inmob uuid;\n  v_existe boolean;\nbegin\n  p_datos := docworks_private.exigir_escritura_operacion('guardar',p_id,p_datos);\n  v_inmob := fn_mi_inmobiliaria();\n  if v_inmob is null then raise exception 'No se pudo resolver tu inmobiliaria'; end if;\n  if p_id is null or trim(p_id)='' then raise exception 'id requerido'; end if;\n  if p_parent_id is not null then\n    if p_parent_id = p_id then raise exception 'Una operación no puede ser su propia operación padre'; end if;\n    if not exists(select 1 from operaciones o where o.id=p_parent_id and o.inmobiliaria_id=v_inmob and o.eliminado_en is null and docworks_private.puede_leer_operacion(o.inmobiliaria_id,o.datos,o.creado_por)) then\n      raise exception 'La operación padre no existe o no pertenece a tu inmobiliaria';\n    end if;\n  end if;\n\n  select exists(select 1 from operaciones o where o.id=p_id) into v_existe;\n  if v_existe then\n    update operaciones o set tipo=p_tipo,estado=coalesce(p_estado,'borrador'),parent_id=p_parent_id,datos=p_datos,actualizado_por=auth.uid(),actualizado_en=now()\n    where o.id=p_id and o.inmobiliaria_id=v_inmob;\n    if not found then raise exception 'La operación no existe o no pertenece a tu inmobiliaria'; end if;\n  else\n    insert into operaciones(id,inmobiliaria_id,tipo,estado,parent_id,datos,creado_por,actualizado_por)\n    values(p_id,v_inmob,p_tipo,coalesce(p_estado,'borrador'),p_parent_id,p_datos,auth.uid(),auth.uid());\n    insert into auditoria(inmobiliaria_id,usuario_id,entidad_tipo,accion,valor_nuevo,origen)\n    values(v_inmob,auth.uid(),'operacion','crear',jsonb_build_object('id',p_id,'tipo',p_tipo),'directa');\n  end if;\n  return query select o.id,o.tipo,o.estado,o.parent_id,o.datos,o.creado_en,o.actualizado_en from operaciones o where o.id=p_id;\nend;\n$function$\n"
+  },
+  {
+    "firma": "fn_provisionar_usuario_por_email(text)",
+    "nspname": "public",
+    "proname": "fn_provisionar_usuario_por_email",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_provisionar_usuario_por_email(p_email text)\n RETURNS uuid\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_email text := lower(trim(coalesce(p_email,'')));\n  v_auth_id uuid;\n  v_inv public.invitaciones;\n  v_usuario_id uuid;\nbegin\n  if v_email = '' then return null; end if;\n\n  select id into v_usuario_id\n    from public.usuarios\n   where lower(trim(email)) = v_email\n   limit 1;\n  if v_usuario_id is not null then return v_usuario_id; end if;\n\n  select id into v_auth_id\n    from auth.users\n   where lower(trim(email)) = v_email\n   order by created_at desc\n   limit 1;\n  if v_auth_id is null then return null; end if;\n\n  select * into v_inv\n    from public.invitaciones\n   where lower(trim(email)) = v_email\n     and ((not usada and expira_en > now()) or usada)\n   order by (case when not usada and expira_en > now() then 0 else 1 end), creada_en desc\n   limit 1;\n  if v_inv.id is null then return null; end if;\n\n  insert into public.usuarios(id,inmobiliaria_id,email,nombre,rol_base,perfil_permisos,activo)\n  values (\n    v_auth_id,\n    v_inv.inmobiliaria_id,\n    v_email,\n    split_part(v_email,'@',1),\n    v_inv.rol_base,\n    v_inv.perfil_permisos,\n    true\n  )\n  on conflict (id) do nothing;\n\n  update public.invitaciones set usada=true where id=v_inv.id and not usada;\n\n  insert into public.auditoria(inmobiliaria_id,usuario_id,entidad_tipo,entidad_id,accion,valor_nuevo,origen)\n  values (\n    v_inv.inmobiliaria_id,v_auth_id,'usuario',v_auth_id,\n    'onboarding_autoprovisionado',\n    jsonb_build_object('rol',v_inv.rol_base,'email',v_email),\n    'directa'\n  );\n\n  return v_auth_id;\nexception\n  when unique_violation then\n    select id into v_usuario_id from public.usuarios where id=v_auth_id;\n    return v_usuario_id;\nend;\n$function$\n"
+  },
+  {
+    "firma": "fn_usuarios_activos_count(uuid)",
+    "nspname": "public",
+    "proname": "fn_usuarios_activos_count",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.fn_usuarios_activos_count(p_inmobiliaria_id uuid)\n RETURNS integer\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\n  select count(*)::int from usuarios where inmobiliaria_id = p_inmobiliaria_id and activo;\n$function$\n"
+  },
+  {
+    "firma": "trg_auth_user_onboarding()",
+    "nspname": "public",
+    "proname": "trg_auth_user_onboarding",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.trg_auth_user_onboarding()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\nbegin\n  perform public.fn_provisionar_usuario_por_email(new.email);\n  return new;\nend;\n$function$\n"
+  },
+  {
+    "firma": "trg_invitacion_onboarding()",
+    "nspname": "public",
+    "proname": "trg_invitacion_onboarding",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.trg_invitacion_onboarding()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\nbegin\n  perform public.fn_provisionar_usuario_por_email(new.email);\n  return new;\nend;\n$function$\n"
+  },
+  {
+    "firma": "trg_validar_permiso_broker()",
+    "nspname": "public",
+    "proname": "trg_validar_permiso_broker",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.trg_validar_permiso_broker()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare v_inmob_usuario uuid; v_inmob_entidad uuid; v_rol rol_base_t;\nbegin\n  select inmobiliaria_id, rol_base into v_inmob_usuario, v_rol from usuarios where id = new.usuario_id and activo;\n  if v_inmob_usuario is null then raise exception 'usuario_id inexistente o inactivo'; end if;\n  if v_rol <> 'broker' then raise exception 'permisos_broker es exclusivo para usuarios con rol_base=broker'; end if;\n\n  v_inmob_entidad := fn_entidad_inmobiliaria(new.entidad_tipo, new.entidad_id);\n  if v_inmob_entidad is null then raise exception 'entidad_id inexistente'; end if;\n  if v_inmob_entidad <> v_inmob_usuario then raise exception 'La entidad no pertenece a la inmobiliaria del usuario'; end if;\n  if not fn_es_admin(new.otorgado_por) then raise exception 'otorgado_por debe ser Admin/Dueño'; end if;\n  if (select inmobiliaria_id from usuarios where id = new.otorgado_por) <> v_inmob_usuario then\n    raise exception 'otorgado_por debe pertenecer a la misma inmobiliaria que el broker';\n  end if;\n\n  return new;\nend;\n$function$\n"
+  },
+  {
+    "firma": "trg_validar_solicitud()",
+    "nspname": "public",
+    "proname": "trg_validar_solicitud",
+    "prosecdef": true,
+    "owner": "postgres",
+    "acl": "{postgres=X/postgres,service_role=X/postgres}",
+    "definicion": "CREATE OR REPLACE FUNCTION public.trg_validar_solicitud()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\ndeclare\n  v_inmob_usuario uuid; v_rol rol_base_t; v_activo boolean;\n  v_inmob_entidad uuid;\n  v_inmob_resuelve uuid; v_resuelve_es_admin boolean;\nbegin\n  if TG_OP = 'INSERT' then\n    select inmobiliaria_id, rol_base, activo into v_inmob_usuario, v_rol, v_activo\n      from usuarios where id = new.usuario_id;\n    if v_inmob_usuario is null then raise exception 'usuario_id inexistente'; end if;\n    if not v_activo then raise exception 'usuario_id inactivo'; end if;\n    if v_rol <> 'broker' then raise exception 'Solo brokers pueden generar solicitudes de autorización'; end if;\n    if v_inmob_usuario <> new.inmobiliaria_id then raise exception 'inmobiliaria_id no coincide con el tenant del usuario'; end if;\n\n    v_inmob_entidad := fn_entidad_inmobiliaria(new.entidad_tipo, new.entidad_id);\n    if v_inmob_entidad is null or v_inmob_entidad <> new.inmobiliaria_id then\n      raise exception 'La entidad no pertenece a la inmobiliaria declarada';\n    end if;\n    if new.campo <> all(fn_campos_permitidos(new.accion)) then\n      raise exception 'Campo \"%\" no es válido para la acción \"%\"', new.campo, new.accion;\n    end if;\n    if new.estado <> 'pendiente' then raise exception 'Una solicitud nueva debe crearse en estado pendiente'; end if;\n    if new.resuelta_por is not null or new.resuelta_en is not null then\n      raise exception 'Una solicitud nueva no puede traer resolución ya cargada';\n    end if;\n    return new;\n  end if;\n\n  if TG_OP = 'UPDATE' then\n    if new.inmobiliaria_id is distinct from old.inmobiliaria_id\n       or new.usuario_id is distinct from old.usuario_id\n       or new.entidad_tipo is distinct from old.entidad_tipo\n       or new.entidad_id is distinct from old.entidad_id\n       or new.operacion_id is distinct from old.operacion_id\n       or new.accion is distinct from old.accion\n       or new.campo is distinct from old.campo\n       or new.valor_anterior is distinct from old.valor_anterior\n       or new.valor_propuesto is distinct from old.valor_propuesto\n       or new.creada_en is distinct from old.creada_en then\n      raise exception 'Los datos originales de una solicitud no se pueden modificar, solo su resolución';\n    end if;\n\n    if old.estado <> 'pendiente' then\n      raise exception 'Solo se puede resolver una solicitud pendiente (estado actual: %)', old.estado;\n    end if;\n    if new.estado not in ('aprobada','rechazada') then\n      raise exception 'Transición de estado inválida: % -> %', old.estado, new.estado;\n    end if;\n    if new.resuelta_por is null or new.resuelta_en is null then\n      raise exception 'Toda resolución debe registrar quién y cuándo';\n    end if;\n    if new.estado = 'aprobada' and new.motivo_rechazo is not null then\n      raise exception 'Una solicitud aprobada no lleva motivo_rechazo';\n    end if;\n\n    select inmobiliaria_id, rol_base in ('dueno','admin') into v_inmob_resuelve, v_resuelve_es_admin\n      from usuarios where id = new.resuelta_por and activo;\n    if v_inmob_resuelve is null then raise exception 'resuelta_por inexistente o inactivo'; end if;\n    if not v_resuelve_es_admin then raise exception 'resuelta_por debe ser Admin/Dueño'; end if;\n    if v_inmob_resuelve <> new.inmobiliaria_id then\n      raise exception 'resuelta_por no pertenece a la inmobiliaria de la solicitud';\n    end if;\n    return new;\n  end if;\n\n  return new;\nend;\n$function$\n"
+  }
+]
