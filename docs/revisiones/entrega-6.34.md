@@ -4,6 +4,9 @@ Continúa producción 6.33 (`3727396`). El código de esta entrega no certifica 
 
 ## Implementado
 
+- Visor PDF: las pruebas remotas de WebKit detectaron un ciclo de ResizeObserver. Se agrupan las medidas por frame y se evita redibujar por cambios de altura del propio canvas. Se cancela el frame al desmontar. Se agregaron seis comprobaciones específicas.
+- Verificación remota: se corrige el checkout sin historial, se preparan los recursos de PDF.js y se instalan Poppler/Python en los dos entornos de prueba; sin esos recursos la batería no podía completarse.
+
 - Recuperación de acceso: bloqueo inmediato de doble solicitud, botón y cambio de modo deshabilitados durante el envío, validación y normalización del correo. El mensaje no afirma entrega ni confirma que exista una cuenta.
 - Recordatorios de firma en el Centro de tareas: fecha y hora explícitas de Argentina, aviso un día/una hora antes o a la hora de firma. El dueño/administrador puede elegir al broker asignado o a un responsable activo de su inmobiliaria. Un broker sólo puede programar avisos para sí mismo en su operación.
 - Cola persistente privada, límite de veinte avisos pendientes por operación, deduplicación por evento/destinatario y exclusión entre trabajadores. Cancelación y nueva programación conservan el historial. Papelera, cierre, baja, cambio de rol o reasignación invalidan avisos pendientes antes del procesamiento.

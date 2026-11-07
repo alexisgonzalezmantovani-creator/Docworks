@@ -7,7 +7,7 @@ function HojaPDF({documento,pagina,ampliada=false,onRendered=undefined}){
   const [error,setError]=useState('');
   useEffect(function(){
     if(!documento||!caja.current)return;
-    let vigente=true,render=null,secuencia=Promise.resolve();
+    let vigente=true,render=null,secuencia=Promise.resolve(),frame=0,ultimaCaja='';
     function dibujar(){
       if(render)render.cancel();
       secuencia=secuencia.catch(function(){}).then(async function(){
@@ -27,9 +27,21 @@ function HojaPDF({documento,pagina,ampliada=false,onRendered=undefined}){
         try{await render.promise;if(vigente){setError('');onRendered?.(documento);}}catch(e){if(vigente&&e.name!=='RenderingCancelledException'){setError('No se pudo dibujar la hoja. Intentá nuevamente.');onRendered?.(documento);}}
       }).catch(function(e){if(vigente&&e.name!=='RenderingCancelledException'){setError('No se pudo dibujar la hoja. Intentá nuevamente.');onRendered?.(documento);}});
     }
-    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(dibujar):null;
-    observer?.observe(caja.current);window.addEventListener('resize',dibujar);dibujar();
-    return function(){vigente=false;observer?.disconnect();window.removeEventListener('resize',dibujar);if(render)render.cancel();};
+    // El canvas cambia la altura observada. Dibujar dentro de la notificación
+    // dispara un ciclo de ResizeObserver en WebKit; medir una vez por frame y
+    // descartar notificaciones con las mismas dimensiones evita ese ciclo.
+    function solicitarDibujo(){
+      if(frame||!vigente)return;
+      frame=requestAnimationFrame(function(){
+        frame=0;if(!vigente||!caja.current)return;
+        const medida=[caja.current.clientWidth,caja.current.getBoundingClientRect().top,window.innerHeight,window.devicePixelRatio||1].join('|');
+        if(medida===ultimaCaja)return;
+        ultimaCaja=medida;dibujar();
+      });
+    }
+    const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(solicitarDibujo):null;
+    observer?.observe(caja.current);window.addEventListener('resize',solicitarDibujo);solicitarDibujo();
+    return function(){vigente=false;if(frame)cancelAnimationFrame(frame);observer?.disconnect();window.removeEventListener('resize',solicitarDibujo);if(render)render.cancel();};
   },[documento,pagina,ampliada,onRendered]);
   return <div ref={caja} className="dw-pdf-sheet">{error&&<p role="alert">{error}</p>}<canvas ref={canvas} aria-label={'Vista previa del PDF, página '+pagina} role="img"/></div>;
 }
