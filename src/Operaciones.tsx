@@ -5189,10 +5189,10 @@ export function enfocarCampoOperacion(campo){
 }
 
 export function crearOperacionForm(deps){
- const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {PreparacionDocumento, ReutilizarOperacion, evaluarPreparacionFormulario, OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
-function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
+function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,bloquesReserva=undefined,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
   const [grupo,setGrupo]=useState(initial ? (
     ["reserva","boleto"].includes(initial.tipo)?"compra":
     ["alquiler","reserva_alquiler"].includes(initial.tipo)?"alquiler":
@@ -5227,6 +5227,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // una operación nueva no se muestra nada en rojo hasta que se guarde.
   const modoEdicion = !!initial;
   const [revisando,setRevisando]=useState(false);
+  const [destinoPaso,setDestinoPaso]=useState(null);
+  const avisoAvanceRef=useRef(null);
+  useEffect(function(){if(destinoPaso!==null&&avisoAvanceRef.current)try{avisoAvanceRef.current.scrollIntoView({behavior:"smooth",block:"nearest"});}catch(e){}},[destinoPaso]);
+  useEffect(function(){setDestinoPaso(null);},[step,data]);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
     if(initial) return;
@@ -5236,7 +5240,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       return Object.assign({},d,{comision_vendedor_modo:"porcentaje",comision_vendedor_valor:"3"});
     });
   },[data.tipo]);
-  const faltantesDetalle = (modoEdicion||revisando) ? getCamposFaltantesDetalle(data,perfil) : [];
+  const todosFaltantes=useMemo(function(){return getCamposFaltantesDetalle(data,perfil).filter(function(f,i,arr){return arr.findIndex(function(x){return x.campo===f.campo;})===i;});},[data,perfil]);
+  const faltantesActuales=todosFaltantes.filter(function(f){return f.paso===step;});
+  const cantidades=todosFaltantes.reduce(function(acc,f){acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
+  const preparacion=useMemo(function(){return evaluarPreparacionFormulario(data,perfil,clausulas,bloquesReserva);},[data,perfil,clausulas,bloquesReserva]);
+  function solicitarPaso(next){if(next>step&&faltantesActuales.length){setDestinoPaso(next);return;}setStep(next);}
+  const faltantesDetalle = (modoEdicion||revisando) ? todosFaltantes : [];
   const camposFaltantes = faltantesDetalle.map(function(f){return f.campo;});
   const pasosFaltantes = faltantesDetalle.reduce(function(acc,f){acc[f.paso]=true;return acc;},{});
   // 4.29: marca en rojo el campo puntual que falta (por DOM, así vale para todos los pasos y tipos de documento).
@@ -5510,7 +5519,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           <span>Revisá {faltantesDetalle.length} dato{faltantesDetalle.length===1?"":"s"}: {faltantesDetalle.map(function(f){return f.label;}).join(", ")}.</span>
         </div>
       )}
-      <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(id);}}/></div>
+      <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} cantidades={cantidades} pasosFaltantes={pasosFaltantes} onGoTo={solicitarPaso}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Progreso</span>
@@ -5520,7 +5529,14 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           <div style={{height:"100%",width:pct+"%",background:pct===100?"linear-gradient(90deg,#22c55e,#4ade80)":"linear-gradient(90deg,#c9962a,var(--gold),var(--gold2))",borderRadius:10,transition:"width 0.4s cubic-bezier(0.4,0,0.2,1)"}}/>
         </div>
       </div>
-      <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
+      <PreparacionDocumento resultado={preparacion}/>
+      <ReutilizarOperacion data={data} operaciones={operaciones} contexto={contextoBorrador} onAplicar={setBulk}/>
+      {step<=total&&<div style={{fontSize:12,color:faltantesActuales.length?"var(--gold)":"var(--green)",marginBottom:12}} data-testid="faltantes-paso">{faltantesActuales.length?(faltantesActuales.length===1?"Falta 1 dato crítico":"Faltan "+faltantesActuales.length+" datos críticos")+" en este paso":"✓ Datos críticos de este paso completos"}{faltantesActuales.length>0&&<button type="button" className="btn btn-ghost btn-sm" onClick={function(){irACampo(faltantesActuales[0].campo);}}>Ir al primer dato</button>}</div>}
+      <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} perfil={perfil} clausulas={clausulas} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
+      {destinoPaso!==null&&faltantesActuales.length>0&&<div ref={avisoAvanceRef} role="alert" data-testid="aviso-avanzar" style={{marginTop:12,padding:12,borderRadius:10,border:"1px solid rgba(217,158,36,.4)",background:"rgba(217,158,36,.07)",fontSize:13,overflowWrap:"anywhere"}}>
+        <div>Revisá antes de seguir: {faltantesActuales.slice(0,3).map(function(f){return f.label;}).join(", ")}{faltantesActuales.length>3?" y "+(faltantesActuales.length-3)+" datos más":""}. Podés continuar y guardar el borrador.</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:8}}><Btn v="secondary" onClick={function(){setDestinoPaso(null);irACampo(faltantesActuales[0].campo);}}>Completar datos</Btn><Btn v="ghost" onClick={function(){var next=destinoPaso;setDestinoPaso(null);setStep(next);}}>Seguir igual</Btn></div>
+      </div>}
       {step<=total&&<div className="dw-operation-form-footer">
         <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Volver a opciones":"← Anterior"}</Btn>
         <div className="dw-operation-form-actions">
@@ -5528,7 +5544,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           <div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {step<total?<Btn onClick={function(){setStep(function(s){return s+1;});}}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={function(){setStep(total+1);}}>{modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
+            {step<total?<Btn onClick={function(){solicitarPaso(step+1);}}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={function(){solicitarPaso(total+1);}}>{modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
           </div>
         </div>
       </div>}
