@@ -1407,7 +1407,7 @@ html.dw-modal-open .content,html.dw-modal-open .app-wrap{overflow:hidden!importa
 .op-card .op-card-side .op-actions{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:5px!important;width:100%;}
 .op-card .op-card-side .op-actions>.btn{flex:1 1 0!important;min-width:0!important;padding-left:7px!important;padding-right:7px!important;white-space:nowrap;}
 .op-card .op-card-side .op-actions .op-more{flex:0 0 34px!important;min-width:34px!important;max-width:34px!important;}
-@media (max-width:760px){.op-card .op-card-side .op-actions{width:auto;max-width:100%;margin-left:auto;}.op-card .op-card-side .op-actions>.btn{flex:0 1 auto!important;}}
+@media (max-width:760px){.op-card .op-card-side{align-items:flex-end!important;}.op-card .op-card-side .op-actions{width:max-content!important;max-width:100%;margin-left:auto!important;margin-right:0!important;justify-content:flex-end!important;align-self:flex-end!important;}.op-card .op-card-side .op-actions>.btn{flex:0 1 auto!important;}}
 /* DOCWORKS 4.08 — pulido responsive de facturación, soporte y acciones de Operaciones. */
 .dw-payment-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
 .dw-payment-row:last-child{border-bottom:0;}
