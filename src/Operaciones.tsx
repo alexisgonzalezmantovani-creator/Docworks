@@ -4286,7 +4286,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       {loading && operaciones.length===0 && <div style={{marginBottom:16,fontSize:12.5,color:"var(--muted)"}}>Cargando tus operaciones…</div>}
 
       {enPapelera ? (
-        <PapeleraView puedeGestionar={permisosGenerales.papelera} embedded={true} papelera={papelera} onRestore={onRestore} onDeletePermanente={onDeletePermanente} onVaciar={onVaciarPapelera} confirmVaciar={confirmVaciarPapelera} setConfirmVaciar={setConfirmVaciarPapelera}/>
+        <><div style={{display:"flex",justifyContent:"flex-start",marginBottom:12}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setEstadoTab("todas");}} aria-label="Volver a operaciones">← Volver a Operaciones</button></div><PapeleraView puedeGestionar={permisosGenerales.papelera} embedded={true} papelera={papelera} onRestore={onRestore} onDeletePermanente={onDeletePermanente} onVaciar={onVaciarPapelera} confirmVaciar={confirmVaciarPapelera} setConfirmVaciar={setConfirmVaciarPapelera}/></>
       ) : (
       <>
       <div className="filter-row dw-dashboard-toolbar">
