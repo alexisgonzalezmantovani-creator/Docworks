@@ -7188,7 +7188,7 @@ function useDocWorksSession(){
     var tieneSesionGuardada = dwHaySesionGuardada();
     var timeoutId = setTimeout(function(){
       if (cancelado) return;
-      if (tieneSesionGuardada) { setConnError("La conexión está tardando más de lo normal. Podés reintentar sin borrar tus datos."); setReady(true); return; }
+      if (tieneSesionGuardada) { setConnError("No pudimos completar el inicio en esta tablet. Tocá Reintentar para recuperar tu sesión. Tus documentos y borradores no se borran."); setReady(true); return; }
       setConnError("No se pudo conectar con Supabase (tardó demasiado). Revisá tu conexión e intentá de nuevo."); setReady(true);
     }, 12000);
 
