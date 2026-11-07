@@ -7189,17 +7189,17 @@ function useDocWorksSession(){
     var timeoutId = setTimeout(function(){
       if (cancelado) return;
       if (tieneSesionGuardada) { setConnError("No pudimos completar el inicio. Tocá Reintentar para recuperar tu sesión sin perder tus datos."); setReady(true); return; }
-      setConnError("No se pudo conectar con Supabase (tardó demasiado). Revisá tu conexión e intentá de nuevo."); setReady(true);
+      setConnError("La conexión está tardando más de lo esperado. Revisá tu conexión y tocá Reintentar."); setReady(true);
     }, 12000);
 
     loadSupabaseJs().then(function(sb){
       if (cancelado) return;
-      if (!sb) { clearTimeout(timeoutId); setConnError("No se pudo cargar el cliente de Supabase (¿bloqueado por el navegador o la red?)."); setReady(true); return; }
+      if (!sb) { clearTimeout(timeoutId); setConnError("No pudimos iniciar la aplicación. Revisá tu conexión y tocá Reintentar."); setReady(true); return; }
       var revisionInicial=sesionRevisionRef.current;
       dwObtenerSesionRobusta(sb).then(function(res){
         if (cancelado||revisionInicial!==sesionRevisionRef.current) return;
         clearTimeout(timeoutId);
-        if (res && res.transitorio) { setConnError("No pudimos recuperar tu sesión por la conexión. Tocá Reintentar (no hace falta volver a loguearse)."); setReady(true); return; }
+        if (res && res.transitorio) { setConnError("No pudimos recuperar tu sesión. Tocá Reintentar sin perder tus datos."); setReady(true); return; }
         setConnError(null);
         identificarSesion(res.data.session);
         limpiarAuthUrl();
@@ -7215,7 +7215,7 @@ function useDocWorksSession(){
         if (cancelado||revisionInicial!==sesionRevisionRef.current) return;
         clearTimeout(timeoutId);
         limpiarAuthUrl();
-        setConnError("Error conectando con Supabase: " + (traducirError(err && err.message ? err.message : "desconocido")));
+        setConnError("No pudimos conectar con el servicio. Revisá tu conexión y tocá Reintentar.");
         setReady(true);
       });
       var listener = sb.auth.onAuthStateChange(function(_evt, sess){
@@ -7238,7 +7238,7 @@ function useDocWorksSession(){
     }).catch(function(err){
       if (cancelado) return;
       clearTimeout(timeoutId);
-      setConnError("Error inicializando Supabase: " + (traducirError(err && err.message ? err.message : "desconocido")));
+      setConnError("No pudimos iniciar la aplicación. Tocá Reintentar para volver a probar.");
       setReady(true);
     });
 
