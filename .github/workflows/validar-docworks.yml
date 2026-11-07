@@ -13,11 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Instalar dependencias
         run: npm ci --no-audit --no-fund
+      - name: Instalar verificador de PDF
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
       - name: Compilar con Vite
         run: npm run check
       - name: Verificar integración
@@ -40,6 +44,8 @@ jobs:
         browser: [chromium, webkit]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -48,6 +54,10 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Instalar navegador y bibliotecas
         run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Instalar herramientas de documentos
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
+      - name: Preparar visor PDF local
+        run: npm run prebuild
       - name: Verificar ocho editores en tres tamaños
         env:
           DOCWORKS_BROWSER_OUTPUT: .browser-results/${{ matrix.browser }}
