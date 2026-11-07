@@ -1,5 +1,5 @@
 // Sólo se guarda la pantalla estática de desconexión. Nunca documentos, APIs ni respuestas autenticadas.
-const OFFLINE_CACHE = 'docworks-offline-v1';
+const OFFLINE_CACHE = 'docworks-offline-v638';
 const OFFLINE_URL = '/offline.html';
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(OFFLINE_CACHE).then(cache => cache.add(OFFLINE_URL)).then(() => self.skipWaiting()));
