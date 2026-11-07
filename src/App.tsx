@@ -7190,7 +7190,7 @@ function useDocWorksSession(){
       if (cancelado) return;
       if (tieneSesionGuardada) { setConnError("No pudimos completar el inicio. Tocá Reintentar para recuperar tu sesión sin perder tus datos."); setReady(true); return; }
       setConnError("La conexión está tardando más de lo esperado. Revisá tu conexión y tocá Reintentar."); setReady(true);
-    }, 12000);
+    }, 25000);
 
     loadSupabaseJs().then(function(sb){
       if (cancelado) return;
