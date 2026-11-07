@@ -1,3 +1,4 @@
+import { accionEnlaceCuenta, errorEnlaceCuenta, urlSinCredenciales } from './RetornoCuenta';
 import { AnaliticaVisitas } from './Analitica';
 import { solicitarCaptcha } from './Captcha';
 import { crearIdentificadorSeguro } from './Identificadores';
@@ -469,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.36";
+var DOCWORKS_VERSION = "6.37";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -7127,55 +7128,43 @@ function useDocWorksSession(){
   var [registroSuccess,setRegistroSuccess]=useState(null);
   var solicitudesRecuperacion=useRef(new Set<string>());
 
-  function detectarAuthAction(){
-    try{
-      var raw=(window.location.hash||"")+"&"+(window.location.search||"");
-      var m=raw.match(/(?:[?#&])type=([^&#]+)/i);
-      var type=m?decodeURIComponent(m[1]):"";
-      if(type==="invite") return "invite";
-      if(type==="recovery") return "recovery";
-    }catch(e){ console.warn("DocWorks: no se pudo detectar la acción de autenticación",e); }
-    return null;
-  }
+  var sesionUsuarioRef=useRef(null);
+  var sesionRevisionRef=useRef(0);
+  var contextoSolicitudRef=useRef(0);
+  var accionEnlaceRef=useRef(accionEnlaceCuenta(window.location.href));
 
+  function detectarAuthAction(){return accionEnlaceRef.current;}
   function limpiarAuthUrl(){
-    try{ window.history.replaceState({},document.title,window.location.pathname+window.location.search.replace(/([?&])type=(?:invite|recovery)(&?)/i,function(_,a,b){return b?a:"";})); }catch(e){ console.warn("DocWorks: no se pudo limpiar la URL de autenticación",e); }
+    try{window.history.replaceState({},document.title,urlSinCredenciales(window.location.href));}catch(e){console.warn("DocWorks: no se pudo limpiar el enlace de acceso.");}
   }
-
+  function identificarSesion(sess){
+    var id=sess&&sess.user&&sess.user.id||null;
+    sesionRevisionRef.current++;
+    if(id!==sesionUsuarioRef.current){
+      contextoSolicitudRef.current++;
+      sesionUsuarioRef.current=id;
+      setContexto(null);setSuperDashboard(null);
+    }
+    setSession(sess);
+  }
   function cargarContexto(sb,opts=undefined){
     opts=opts||{};
-    var silent=!!opts.silent;
-    if(!silent) setContextoLoading(true);
-    // Autoprovisionamiento defensivo: si Auth existe pero por cualquier motivo
-    // la fila de `usuarios` no fue creada (por ejemplo, una invitación creada
-    // después del usuario Auth), intentamos reparar el vínculo antes de resolver
-    // el contexto. La RPC es idempotente y solo puede asociar por email a una
-    // invitación válida/existente.
-    sb.rpc("fn_autoprovisionar_usuario_actual", {}).then(function(){
-      return sb.rpc("fn_mi_contexto");
-    }).then(function(res){
-      if(!res.error){
-        setContexto(res.data);
-        if(res.data && res.data.usuario && res.data.usuario.id) lsSet("auth_context_"+res.data.usuario.id,res.data);
-      } else if(!silent){
-        setContexto(null);
-      }
+    var usuario=sesionUsuarioRef.current,revision=++contextoSolicitudRef.current;
+    if(!usuario){setContextoLoading(false);return;}
+    var vigente=function(){return usuario===sesionUsuarioRef.current&&revision===contextoSolicitudRef.current;};
+    if(!opts.silent)setContextoLoading(true);
+    function aplicar(res){
+      if(!vigente())return;
+      if(!res.error){setContexto(res.data);if(res.data&&res.data.usuario&&res.data.usuario.id===usuario)lsSet("auth_context_"+usuario,res.data);}
+      else if(!opts.silent)setContexto(null);
       setContextoLoading(false);
-      if (!res.error && res.data && res.data.es_super_admin) {
-        sb.rpc("fn_super_dashboard").then(function(r2){ if (!r2.error) setSuperDashboard(r2.data); else dwNotify("error","No se pudo actualizar el resumen del Superadministración."); }).catch(function(err){ dwNotify("error", "No se pudo actualizar el resumen del Superadministración."); });
-      }
-    }).catch(function(){
-      // Si la RPC de reparación todavía no existe en el proyecto, mantenemos
-      // el comportamiento anterior y dejamos que fn_mi_contexto determine el estado.
-      sb.rpc("fn_mi_contexto").then(function(res){
-        if(!res.error){
-          setContexto(res.data);
-          if(res.data && res.data.usuario && res.data.usuario.id) lsSet("auth_context_"+res.data.usuario.id,res.data);
-        } else if(!silent){
-          setContexto(null);
-        }
-        setContextoLoading(false);
-      }).catch(function(){ if(!silent){setContexto(null);setContextoLoading(false);} });
+      if(!res.error&&res.data&&res.data.es_super_admin){
+        sb.rpc("fn_super_dashboard").then(function(r){if(!vigente())return;if(!r.error)setSuperDashboard(r.data);else dwNotify("error","No se pudo actualizar el resumen de Superadministración.");}).catch(function(){if(vigente())dwNotify("error","No se pudo actualizar el resumen de Superadministración.");});
+      }else setSuperDashboard(null);
+    }
+    sb.rpc("fn_autoprovisionar_usuario_actual",{}).then(function(){if(!vigente())return null;return sb.rpc("fn_mi_contexto");}).then(function(res){if(res)aplicar(res);}).catch(function(){
+      if(!vigente())return;
+      sb.rpc("fn_mi_contexto").then(aplicar).catch(function(){if(vigente()){if(!opts.silent)setContexto(null);setContextoLoading(false);}});
     });
   }
 
@@ -7189,6 +7178,8 @@ function useDocWorksSession(){
 
   function iniciar(){
     setConnError(null);
+    var errorEnlace=errorEnlaceCuenta(window.location.href);
+    if(errorEnlace){accionEnlaceRef.current=null;setLoginError(errorEnlace);limpiarAuthUrl();}
     var cancelado = false;
     // 4.27: si hay una sesión guardada en el dispositivo, una conexión lenta NUNCA manda al login:
     // se avisa, se sigue esperando en segundo plano y se entra solo apenas responde Supabase.
@@ -7202,35 +7193,42 @@ function useDocWorksSession(){
     loadSupabaseJs().then(function(sb){
       if (cancelado) return;
       if (!sb) { clearTimeout(timeoutId); setConnError("No se pudo cargar el cliente de Supabase (¿bloqueado por el navegador o la red?)."); if(!tieneSesionGuardada) setReady(true); return; }
+      var revisionInicial=sesionRevisionRef.current;
       dwObtenerSesionRobusta(sb).then(function(res){
-        if (cancelado) return;
+        if (cancelado||revisionInicial!==sesionRevisionRef.current) return;
         clearTimeout(timeoutId);
         if (res && res.transitorio) { setConnError("No pudimos recuperar tu sesión por la conexión. Tocá Reintentar (no hace falta volver a loguearse)."); return; }
         setConnError(null);
-        setSession(res.data.session);
+        identificarSesion(res.data.session);
+        limpiarAuthUrl();
         var actionInicial=detectarAuthAction();
         if(actionInicial && res.data.session) setAuthAction(actionInicial);
         if (res.data.session) {
           var cachedCtx=lsGet("auth_context_"+res.data.session.user.id,null);
-          if(cachedCtx){ setContexto(cachedCtx); setContextoLoading(false); }
+          if(cachedCtx&&cachedCtx.usuario&&cachedCtx.usuario.id===res.data.session.user.id){ setContexto(cachedCtx); setContextoLoading(false); }
           cargarContexto(sb,{silent:!!cachedCtx});
         }
         setReady(true);
       }).catch(function(err){
-        if (cancelado) return;
+        if (cancelado||revisionInicial!==sesionRevisionRef.current) return;
         clearTimeout(timeoutId);
+        limpiarAuthUrl();
         setConnError("Error conectando con Supabase: " + (traducirError(err && err.message ? err.message : "desconocido")));
         if(!tieneSesionGuardada) setReady(true);
       });
       var listener = sb.auth.onAuthStateChange(function(_evt, sess){
+        if(cancelado)return;
         // 4.27: eventos con sesión vacía que NO son un cierre real (ej. INITIAL_SESSION mientras carga) no deben sacar al usuario.
         if(!sess && _evt!=="SIGNED_OUT") return;
         if(_evt==="PASSWORD_RECOVERY") setAuthAction("recovery");
         else if(_evt==="SIGNED_IN") { var a=detectarAuthAction(); if(a) setAuthAction(a); }
-        setSession(sess);
+        identificarSesion(sess);
+        clearTimeout(timeoutId);setReady(true);
+        limpiarAuthUrl();
+        if(_evt==="SIGNED_OUT"){accionEnlaceRef.current=null;setAuthAction(null);setPasswordError(null);setPasswordSaving(false);}
         if (sess) {
           var cachedCtx2=lsGet("auth_context_"+sess.user.id,null);
-          if(cachedCtx2){ setContexto(cachedCtx2); setContextoLoading(false); }
+          if(cachedCtx2&&cachedCtx2.usuario&&cachedCtx2.usuario.id===sess.user.id){ setContexto(cachedCtx2); setContextoLoading(false); }
           cargarContexto(sb,{silent:!!cachedCtx2});
         } else { setContexto(null); setContextoLoading(false); setSuperDashboard(null); }
       });
@@ -7248,6 +7246,8 @@ function useDocWorksSession(){
   // Centralizar el cierre de la inicialización y de la suscripción evita
   // listeners duplicados cuando se toca Reintentar con una red inestable.
   function cerrarInicioSesion(){
+    contextoSolicitudRef.current++;
+    sesionRevisionRef.current++;
     if(authInitCleanupRef.current){
       try{authInitCleanupRef.current();}catch(e){}
       authInitCleanupRef.current=null;
@@ -7311,13 +7311,16 @@ function useDocWorksSession(){
     });}).catch(function(err){ return {error:traducirError(err&&err.message||"No se pudo solicitar el enlace. Intentá de nuevo.")}; }).finally(function(){solicitudesRecuperacion.current.delete(correo);});
   }
   function savePassword(password){
+    var usuarioCambio=sesionUsuarioRef.current;
     setPasswordError(null); setPasswordSaving(true);
     return loadSupabaseJs().then(function(sb){
       if(!sb) { setPasswordSaving(false); setPasswordError("No se pudo cargar Supabase. Recargá la página e intentá de nuevo."); return {error:true}; }
+      if(!usuarioCambio||usuarioCambio!==sesionUsuarioRef.current)return {error:true};
       return sb.auth.updateUser({password:password}).then(function(res){
+        if(usuarioCambio!==sesionUsuarioRef.current)return {error:true};
         setPasswordSaving(false);
         if(res.error){ setPasswordError(traducirError(res.error.message)); return {error:true}; }
-        setAuthAction(null); limpiarAuthUrl();
+        accionEnlaceRef.current=null;setAuthAction(null); limpiarAuthUrl();
         if(res.data && res.data.user) cargarContexto(sb);
         return {ok:true};
       });
@@ -7325,7 +7328,9 @@ function useDocWorksSession(){
   }
   function logout(){
     lsRemove("draftOperacion");
-    setAuthAction(null); setPasswordError(null);
+    accionEnlaceRef.current=null;limpiarAuthUrl();
+    sesionUsuarioRef.current=null;contextoSolicitudRef.current++;sesionRevisionRef.current++;
+    setAuthAction(null); setPasswordError(null);setPasswordSaving(false);
     setSession(null); setContexto(null); setContextoLoading(false); setSuperDashboard(null);
     loadSupabaseJs().then(function(sb){ if (sb) return sb.auth.signOut(); });
   }

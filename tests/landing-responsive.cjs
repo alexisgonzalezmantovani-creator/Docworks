@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {chromium,webkit}=require('playwright');
 const engine=process.argv.includes('--webkit')?'webkit':'chromium';
 const html=fs.readFileSync(path.resolve(__dirname,'../landing/index.html'));
-const server=http.createServer((req,res)=>{if(req.url==='/analytics-config.js'||req.url==='/analytics.js'){res.setHeader('Content-Type','text/javascript');res.end(fs.readFileSync(path.resolve(__dirname,'../landing'+req.url)));return;}res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);});
+const server=http.createServer((req,res)=>{if(/^\/capturas\/(operaciones|formulario|documento)\.webp$/.test(req.url)){res.setHeader('Content-Type','image/webp');res.end(fs.readFileSync(path.resolve(__dirname,'../landing'+req.url)));return;}if(req.url==='/analytics-config.js'||req.url==='/analytics.js'){res.setHeader('Content-Type','text/javascript');res.end(fs.readFileSync(path.resolve(__dirname,'../landing'+req.url)));return;}res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
  try{
@@ -26,7 +26,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/analytics-config.js'||
   }
   for(const width of [390,1440]){
    await page.setViewportSize({width,height:844});await page.goto('http://127.0.0.1:'+server.address().port);
-   const track=page.locator('#track');await page.locator('#next').click();await page.waitForFunction(()=>document.getElementById('track').scrollLeft>20);await page.waitForTimeout(450);const moved=await track.evaluate(el=>el.scrollLeft);await page.locator('#prev').click();await page.waitForFunction(x=>document.getElementById('track').scrollLeft<x,moved);
+   const track=page.locator('#track');await track.scrollIntoViewIfNeeded();await page.waitForFunction(()=>document.querySelector('.shot img').naturalWidth>0);await page.locator('#next').click();await page.waitForFunction(()=>document.getElementById('track').scrollLeft>20);await page.waitForTimeout(450);const moved=await track.evaluate(el=>el.scrollLeft);await page.locator('#prev').click();await page.waitForFunction(x=>document.getElementById('track').scrollLeft<x,moved);
    for(const href of await page.locator('a[href*="wa.me"]').evaluateAll(nodes=>nodes.map(n=>n.href))){const u=new URL(href);assert.equal(u.protocol,'https:');assert.equal(u.hostname,'wa.me');assert.equal(u.pathname,'/5491144795880');assert.ok(u.searchParams.get('text'));}
    assert.ok(await page.getByRole('link',{name:'Pedir una demo',exact:true}).isVisible());console.log('OK '+engine+' galería, WhatsApp y demo '+width+'px');
   }

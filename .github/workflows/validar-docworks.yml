@@ -58,6 +58,16 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
       - name: Preparar visor PDF local
         run: npm run prebuild
+      - name: Capturar componentes para la web pública
+        if: matrix.browser == 'chromium'
+        run: npm run capture:gallery
+      - name: Guardar galería con datos ficticios
+        if: matrix.browser == 'chromium'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docworks-galeria
+          path: gallery-results/
+          retention-days: 14
       - name: Verificar ocho editores en tres tamaños
         env:
           DOCWORKS_BROWSER_OUTPUT: .browser-results/${{ matrix.browser }}
