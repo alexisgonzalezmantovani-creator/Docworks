@@ -4,3 +4,5 @@ dist/
 public/pdfjs-*/
 
 supabase/.temp/
+
+.gallery-results/
