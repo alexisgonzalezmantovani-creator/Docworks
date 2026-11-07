@@ -1,0 +1,1000 @@
+{
+  "enums": [
+    {
+      "valor": "editar",
+      "nombre": "accion_permiso_t"
+    },
+    {
+      "valor": "eliminar",
+      "nombre": "accion_permiso_t"
+    },
+    {
+      "valor": "directa",
+      "nombre": "auditoria_origen_t"
+    },
+    {
+      "valor": "autorizacion",
+      "nombre": "auditoria_origen_t"
+    },
+    {
+      "valor": "trigger",
+      "nombre": "auditoria_origen_t"
+    },
+    {
+      "valor": "bloque",
+      "nombre": "entidad_t"
+    },
+    {
+      "valor": "clausula",
+      "nombre": "entidad_t"
+    },
+    {
+      "valor": "activa",
+      "nombre": "membresia_estado_t"
+    },
+    {
+      "valor": "pendiente",
+      "nombre": "membresia_estado_t"
+    },
+    {
+      "valor": "vencida",
+      "nombre": "membresia_estado_t"
+    },
+    {
+      "valor": "suspendida",
+      "nombre": "membresia_estado_t"
+    },
+    {
+      "valor": "cancelada",
+      "nombre": "membresia_estado_t"
+    },
+    {
+      "valor": "archivada",
+      "nombre": "membresia_estado_t"
+    },
+    {
+      "valor": "junior",
+      "nombre": "perfil_permisos_t"
+    },
+    {
+      "valor": "semisenior",
+      "nombre": "perfil_permisos_t"
+    },
+    {
+      "valor": "senior",
+      "nombre": "perfil_permisos_t"
+    },
+    {
+      "valor": "custom",
+      "nombre": "perfil_permisos_t"
+    },
+    {
+      "valor": "A",
+      "nombre": "proteccion_t"
+    },
+    {
+      "valor": "B",
+      "nombre": "proteccion_t"
+    },
+    {
+      "valor": "C",
+      "nombre": "proteccion_t"
+    },
+    {
+      "valor": "permitido",
+      "nombre": "resultado_t"
+    },
+    {
+      "valor": "requiere_autorizacion",
+      "nombre": "resultado_t"
+    },
+    {
+      "valor": "denegado",
+      "nombre": "resultado_t"
+    },
+    {
+      "valor": "dueno",
+      "nombre": "rol_base_t"
+    },
+    {
+      "valor": "admin",
+      "nombre": "rol_base_t"
+    },
+    {
+      "valor": "broker",
+      "nombre": "rol_base_t"
+    },
+    {
+      "valor": "vendedor",
+      "nombre": "rol_base_t"
+    },
+    {
+      "valor": "viewer",
+      "nombre": "rol_base_t"
+    },
+    {
+      "valor": "pendiente",
+      "nombre": "solicitud_estado_t"
+    },
+    {
+      "valor": "aprobada",
+      "nombre": "solicitud_estado_t"
+    },
+    {
+      "valor": "rechazada",
+      "nombre": "solicitud_estado_t"
+    }
+  ],
+  "columnas": [
+    {
+      "tipo": "uuid",
+      "tabla": "auditoria",
+      "columna": "id",
+      "default": "gen_random_uuid()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "auditoria",
+      "columna": "inmobiliaria_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "auditoria",
+      "columna": "usuario_id",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "text",
+      "tabla": "auditoria",
+      "columna": "entidad_tipo",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "auditoria",
+      "columna": "entidad_id",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "text",
+      "tabla": "auditoria",
+      "columna": "accion",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "jsonb",
+      "tabla": "auditoria",
+      "columna": "valor_anterior",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "jsonb",
+      "tabla": "auditoria",
+      "columna": "valor_nuevo",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "public.auditoria_origen_t",
+      "tabla": "auditoria",
+      "columna": "origen",
+      "default": "'directa'::auditoria_origen_t",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "auditoria",
+      "columna": "solicitud_id",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "auditoria",
+      "columna": "autorizado_por",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "auditoria",
+      "columna": "creada_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "clausulas",
+      "columna": "id",
+      "default": "gen_random_uuid()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "clausulas",
+      "columna": "inmobiliaria_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "clausulas",
+      "columna": "titulo",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "clausulas",
+      "columna": "categoria",
+      "default": "'general'::text",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "clausulas",
+      "columna": "contenido",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "jsonb",
+      "tabla": "clausulas",
+      "columna": "tipos",
+      "default": "'[\"todos\"]'::jsonb",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "boolean",
+      "tabla": "clausulas",
+      "columna": "obligatoria",
+      "default": "false",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.proteccion_t",
+      "tabla": "clausulas",
+      "columna": "proteccion",
+      "default": "'B'::proteccion_t",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "boolean",
+      "tabla": "clausulas",
+      "columna": "activo",
+      "default": "true",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "clausulas",
+      "columna": "creada_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "clausulas",
+      "columna": "actualizada_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "integer",
+      "tabla": "clausulas",
+      "columna": "orden",
+      "default": "0",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "clausulas",
+      "columna": "eliminado_en",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "inmobiliarias",
+      "columna": "id",
+      "default": "gen_random_uuid()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "inmobiliarias",
+      "columna": "nombre",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "inmobiliarias",
+      "columna": "plan",
+      "default": "'free'::text",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "inmobiliarias",
+      "columna": "creada_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "invitaciones",
+      "columna": "id",
+      "default": "gen_random_uuid()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "invitaciones",
+      "columna": "inmobiliaria_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "invitaciones",
+      "columna": "email",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.rol_base_t",
+      "tabla": "invitaciones",
+      "columna": "rol_base",
+      "default": "'broker'::rol_base_t",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.perfil_permisos_t",
+      "tabla": "invitaciones",
+      "columna": "perfil_permisos",
+      "default": "'junior'::perfil_permisos_t",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "invitaciones",
+      "columna": "invitado_por",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "invitaciones",
+      "columna": "token",
+      "default": "gen_random_uuid()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "boolean",
+      "tabla": "invitaciones",
+      "columna": "usada",
+      "default": "false",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "invitaciones",
+      "columna": "expira_en",
+      "default": "(now() + '7 days'::interval)",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "invitaciones",
+      "columna": "creada_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "membresias",
+      "columna": "id",
+      "default": "gen_random_uuid()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "membresias",
+      "columna": "inmobiliaria_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "membresias",
+      "columna": "plan_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.membresia_estado_t",
+      "tabla": "membresias",
+      "columna": "estado",
+      "default": "'pendiente'::membresia_estado_t",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "membresias",
+      "columna": "fecha_inicio",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "membresias",
+      "columna": "fecha_renovacion",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "membresias",
+      "columna": "fecha_vencimiento",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "membresias",
+      "columna": "creado_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "membresias",
+      "columna": "actualizado_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "membresias",
+      "columna": "mercadopago_preapproval_id",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "text",
+      "tabla": "membresias",
+      "columna": "mercadopago_init_point",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "text",
+      "tabla": "membresias",
+      "columna": "mercadopago_payment_method_id",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "text",
+      "tabla": "membresias",
+      "columna": "mercadopago_status",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "membresias",
+      "columna": "mercadopago_last_sync_at",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "membresias",
+      "columna": "proximo_pago_en",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "membresias",
+      "columna": "ultimo_pago_en",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "boolean",
+      "tabla": "membresias",
+      "columna": "es_prueba",
+      "default": "false",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "operaciones",
+      "columna": "id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "operaciones",
+      "columna": "inmobiliaria_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "operaciones",
+      "columna": "tipo",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "operaciones",
+      "columna": "estado",
+      "default": "'borrador'::text",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "operaciones",
+      "columna": "parent_id",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "jsonb",
+      "tabla": "operaciones",
+      "columna": "datos",
+      "default": "'{}'::jsonb",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "operaciones",
+      "columna": "creado_por",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "operaciones",
+      "columna": "creado_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "operaciones",
+      "columna": "actualizado_por",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "operaciones",
+      "columna": "actualizado_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "operaciones",
+      "columna": "eliminado_en",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "operaciones",
+      "columna": "eliminado_por",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "permisos_broker",
+      "columna": "id",
+      "default": "gen_random_uuid()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "permisos_broker",
+      "columna": "usuario_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.entidad_t",
+      "tabla": "permisos_broker",
+      "columna": "entidad_tipo",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "permisos_broker",
+      "columna": "entidad_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.accion_permiso_t",
+      "tabla": "permisos_broker",
+      "columna": "accion",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.resultado_t",
+      "tabla": "permisos_broker",
+      "columna": "resultado",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "permisos_broker",
+      "columna": "motivo",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "permisos_broker",
+      "columna": "otorgado_por",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "permisos_broker",
+      "columna": "otorgado_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "planes",
+      "columna": "id",
+      "default": "gen_random_uuid()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "planes",
+      "columna": "codigo",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "planes",
+      "columna": "nombre",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "planes",
+      "columna": "descripcion",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "numeric",
+      "tabla": "planes",
+      "columna": "precio_mensual",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "text",
+      "tabla": "planes",
+      "columna": "moneda",
+      "default": "'ARS'::text",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "integer",
+      "tabla": "planes",
+      "columna": "limite_usuarios",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "jsonb",
+      "tabla": "planes",
+      "columna": "caracteristicas",
+      "default": "'[]'::jsonb",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "boolean",
+      "tabla": "planes",
+      "columna": "activo",
+      "default": "true",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "planes",
+      "columna": "creado_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "planes",
+      "columna": "actualizado_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "planes",
+      "columna": "mercadopago_plan_id",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "id",
+      "default": "gen_random_uuid()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "inmobiliaria_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "usuario_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.entidad_t",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "entidad_tipo",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "entidad_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "operacion_id",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "public.accion_permiso_t",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "accion",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "campo",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "valor_anterior",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "text",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "valor_propuesto",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "public.solicitud_estado_t",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "estado",
+      "default": "'pendiente'::solicitud_estado_t",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "resuelta_por",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "resuelta_en",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "text",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "motivo_rechazo",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "solicitudes_autorizacion",
+      "columna": "creada_en",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "usuarios",
+      "columna": "id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "uuid",
+      "tabla": "usuarios",
+      "columna": "inmobiliaria_id",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "usuarios",
+      "columna": "email",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "text",
+      "tabla": "usuarios",
+      "columna": "nombre",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.rol_base_t",
+      "tabla": "usuarios",
+      "columna": "rol_base",
+      "default": "'broker'::rol_base_t",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "public.perfil_permisos_t",
+      "tabla": "usuarios",
+      "columna": "perfil_permisos",
+      "default": "'junior'::perfil_permisos_t",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "boolean",
+      "tabla": "usuarios",
+      "columna": "activo",
+      "default": "true",
+      "nullable": "NO"
+    },
+    {
+      "tipo": "timestamp with time zone",
+      "tabla": "usuarios",
+      "columna": "creado_en",
+      "default": "now()",
+      "nullable": "NO"
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "SELECT",
+      "qual": "(( SELECT fn_es_admin(( SELECT auth.uid() AS uid)) AS fn_es_admin) AND (inmobiliaria_id = ( SELECT fn_mi_inmobiliaria() AS fn_mi_inmobiliaria)))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "invitaciones",
+      "permissive": "PERMISSIVE",
+      "policyname": "invitaciones_select",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(inmobiliaria_id = fn_mi_inmobiliaria())",
+      "roles": [
+        "public"
+      ],
+      "tablename": "membresias",
+      "permissive": "PERMISSIVE",
+      "policyname": "membresias_select",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "((inmobiliaria_id = fn_mi_inmobiliaria()) OR fn_es_super_admin(( SELECT auth.uid() AS uid)))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "membresias",
+      "permissive": "PERMISSIVE",
+      "policyname": "membresias_update_self",
+      "schemaname": "public",
+      "with_check": "((inmobiliaria_id = fn_mi_inmobiliaria()) OR fn_es_super_admin(( SELECT auth.uid() AS uid)))"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "((membresia_id IN ( SELECT m.id\n   FROM membresias m\n  WHERE (m.inmobiliaria_id = fn_mi_inmobiliaria()))) OR fn_es_super_admin(( SELECT auth.uid() AS uid)))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "pagos",
+      "permissive": "PERMISSIVE",
+      "policyname": "pagos_select",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(( SELECT fn_es_admin(( SELECT auth.uid() AS uid)) AS fn_es_admin) OR (usuario_id = ( SELECT auth.uid() AS uid)))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "permisos_broker",
+      "permissive": "PERMISSIVE",
+      "policyname": "permisos_broker_select",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "((inmobiliaria_id = ( SELECT fn_mi_inmobiliaria() AS fn_mi_inmobiliaria)) AND ((usuario_id = ( SELECT auth.uid() AS uid)) OR ( SELECT fn_es_admin(( SELECT auth.uid() AS uid)) AS fn_es_admin)))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "solicitudes_autorizacion",
+      "permissive": "PERMISSIVE",
+      "policyname": "solicitudes_select",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(inmobiliaria_id = fn_mi_inmobiliaria())",
+      "roles": [
+        "public"
+      ],
+      "tablename": "usuarios",
+      "permissive": "PERMISSIVE",
+      "policyname": "usuarios_select",
+      "schemaname": "public",
+      "with_check": null
+    }
+  ]
+}
