@@ -1,6 +1,6 @@
 // Captura componentes reales con datos ficticios, sin cuentas ni backend.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),http=require('node:http'),assert=require('node:assert/strict');
-const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-galeria-')),out=path.resolve(process.env.DOCWORKS_GALLERY_OUTPUT||'.gallery-results');fs.mkdirSync(out,{recursive:true});
+const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-galeria-')),out=path.resolve(process.env.DOCWORKS_GALLERY_OUTPUT||'gallery-results');fs.mkdirSync(out,{recursive:true});
 const harness=`
 import {createRoot} from 'react-dom/client';
 window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}})},rpc:async()=>({data:null})})};
