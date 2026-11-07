@@ -487,7 +487,7 @@ var DOCWORKS_VERSION = "6.38";
 // 3.13: estabilización — errores de auth, cleanup de suscripción, rollback de operaciones y estados de devolución.
 
 // Logo público usado por la app y por el favicon.
-const LOGO_B64 = "/docworks-startup-logo.png";
+const LOGO_B64 = "/docworks-startup-logo.png?v=638";
 
 // Título visible de la web: siempre refleja la versión del documento.
 if (typeof document !== "undefined") document.title = "DocWorks v" + DOCWORKS_VERSION;
