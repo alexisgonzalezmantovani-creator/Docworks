@@ -52,6 +52,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Instalar navegador y bibliotecas
         run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Preparar visor PDF local
+        run: npm run prebuild
       - name: Verificar ocho editores en tres tamaños
         env:
           DOCWORKS_BROWSER_OUTPUT: .browser-results/${{ matrix.browser }}
