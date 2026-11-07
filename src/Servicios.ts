@@ -23,19 +23,23 @@ export function dwCrearCliente(){
 // 4.29 — Recupera la sesión guardada con reintentos: refrescar la página nunca debe cerrar la sesión por lentitud.
 export async function dwObtenerSesionRobusta(sb){
   var hay=dwHaySesionGuardada(), ultimo=null;
-  for(var i=0;i<5;i++){
+  // getSession ya recupera/refresca la sesión cuando corresponde.
+  // No llamar refreshSession en paralelo: dos renovaciones consumen el mismo refresh token.
+  for(var i=0;i<3;i++){
     try{
-      var r=await sb.auth.getSession();
+      var r=await Promise.race([
+        sb.auth.getSession(),
+        new Promise(function(_,reject){setTimeout(function(){reject(new Error("session_timeout"));},8000);})
+      ]);
       if(r && r.data && r.data.session) return r;
       ultimo=r;
       if(!hay) return r;
-      try{
-        var rf=await sb.auth.refreshSession();
-        if(rf && rf.data && rf.data.session) return {data:{session:rf.data.session},error:null};
-        if(rf && rf.error && /invalid|expired|not found|revoked|already used/i.test(String(rf.error.message||""))) return r;
-      }catch(e2){}
-    }catch(e){ ultimo={data:{session:null},error:e}; if(!hay) throw e; }
-    await new Promise(function(ok){ setTimeout(ok,700*(i+1)); });
+      if(r && r.error && /invalid|expired|revoked|not found/i.test(String(r.error.message||""))) return r;
+    }catch(e){
+      ultimo={data:{session:null},error:e};
+      if(!hay) throw e;
+    }
+    if(i<2) await new Promise(function(ok){setTimeout(ok,800*(i+1));});
   }
   return {data:{session:null},error:(ultimo&&ultimo.error)||null,transitorio:true};
 }
