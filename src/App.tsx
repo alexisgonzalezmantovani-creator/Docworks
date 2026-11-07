@@ -1,3 +1,5 @@
+import { AnaliticaVisitas } from './Analitica';
+import { solicitarCaptcha } from './Captcha';
 import { crearIdentificadorSeguro } from './Identificadores';
 import { RecordatoriosPanel } from './Recordatorios';
 import { FacturacionMercadoPago } from './FacturacionMercadoPago';
@@ -467,7 +469,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.35";
+var DOCWORKS_VERSION = "6.36";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -6987,21 +6989,21 @@ function AuthPasswordSetupScreen({onSave,mode,error,loading,onLogout}){
     onSave(password);
   }
   return (
-    <div style={{position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",padding:16,fontFamily:"'DM Sans',sans-serif"}}>
-      <form onSubmit={submit} style={{width:"100%",maxWidth:390,background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:28,display:"flex",flexDirection:"column",gap:14,boxShadow:"0 18px 55px rgba(0,0,0,0.38),0 0 0 1px rgba(212,168,83,0.035)"}}>
+    <div style={{position:"fixed",inset:0,zIndex:500,overflowY:"auto",display:"flex",background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",padding:16,fontFamily:"'DM Sans',sans-serif"}}>
+      <form onSubmit={submit} style={{margin:"auto",boxSizing:"border-box",width:"100%",maxWidth:390,background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:28,display:"flex",flexDirection:"column",gap:14,boxShadow:"0 18px 55px rgba(0,0,0,0.38),0 0 0 1px rgba(212,168,83,0.035)"}}>
         <div style={{textAlign:"center",marginBottom:4}}>
-          <img src={LOGO_B64} alt="DocWorks" style={{height:120,width:"auto",maxWidth:"300px",objectFit:"contain",marginBottom:8}}/>
+          <img src={LOGO_B64} alt="DocWorks" style={{height:120,width:"100%",maxWidth:"100%",objectFit:"contain",marginBottom:8}}/>
           <div style={{fontSize:15,fontWeight:700,color:AUTH_TEXT}}>{mode==="invite"?"Activá tu cuenta":"Restablecé tu contraseña"}</div>
           <div style={{fontSize:12,color:AUTH_MUTED,marginTop:5,lineHeight:1.45}}>{mode==="invite"?"Elegí una contraseña para ingresar a DocWorks.":"Ingresá una nueva contraseña para recuperar el acceso."}</div>
         </div>
         {(error||localError)&&<div style={{fontSize:12.5,color:AUTH_RED,background:"rgba(248,113,113,.12)",padding:"8px 10px",borderRadius:8,fontWeight:600}}>{localError||error}</div>}
         <div style={{display:"flex",flexDirection:"column",gap:5}}>
-          <label style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Nueva contraseña</label>
-          <input type="password" name="new-password" autoComplete="new-password" minLength={8} required value={password} onChange={function(e){setPassword(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} />
+          <label htmlFor="dw-new-password" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Nueva contraseña</label>
+          <input type="password" id="dw-new-password" name="new-password" autoComplete="new-password" minLength={8} required value={password} onChange={function(e){setPassword(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16}} />
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:5}}>
-          <label style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Repetir contraseña</label>
-          <input type="password" name="confirm-password" autoComplete="new-password" minLength={8} required value={confirm} onChange={function(e){setConfirm(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} />
+          <label htmlFor="dw-confirm-password" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Repetir contraseña</label>
+          <input type="password" id="dw-confirm-password" name="confirm-password" autoComplete="new-password" minLength={8} required value={confirm} onChange={function(e){setConfirm(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16}} />
         </div>
         <button type="submit" disabled={loading} style={{marginTop:3,padding:"11px 14px",borderRadius:10,border:"none",background:AUTH_GOLD,color:"#1a1206",fontWeight:700,fontSize:14,cursor:loading?"default":"pointer",opacity:loading?.6:1}}>{loading?"Guardando…":"Guardar contraseña y continuar"}</button>
         {onLogout&&<button type="button" onClick={onLogout} style={{background:"transparent",border:"none",color:AUTH_MUTED,cursor:"pointer",fontSize:12,textDecoration:"underline",padding:0}}>Cerrar sesión</button>}
@@ -7059,15 +7061,15 @@ function LoginScreen({ onLogin, onRecover, onRegister, error, loading, connError
     onLogin(email.trim(), password);
   }
   return (
-    <div style={{position:"fixed",inset:0,zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",padding:16,fontFamily:"'DM Sans',sans-serif"}}>
-      <form onSubmit={submit} style={{width:"100%",maxWidth:380,background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:28,display:"flex",flexDirection:"column",gap:14,boxShadow:"0 18px 55px rgba(0,0,0,0.38),0 0 0 1px rgba(212,168,83,0.035)"}}>
+    <div style={{position:"fixed",inset:0,zIndex:400,overflowY:"auto",display:"flex",background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",padding:16,fontFamily:"'DM Sans',sans-serif"}}>
+      <form onSubmit={submit} style={{margin:"auto",boxSizing:"border-box",width:"100%",maxWidth:380,background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:28,display:"flex",flexDirection:"column",gap:14,boxShadow:"0 18px 55px rgba(0,0,0,0.38),0 0 0 1px rgba(212,168,83,0.035)"}}>
         <div style={{textAlign:"center",marginBottom:6}}>
-          <img src={LOGO_B64} alt="DocWorks" style={{height:190,width:"auto",maxWidth:"360px",objectFit:"contain",filter:"drop-shadow(0 0 32px rgba(212,168,83,0.6))",marginBottom:10}}/>
+          <img src={LOGO_B64} alt="DocWorks" style={{height:150,width:"100%",maxWidth:"100%",objectFit:"contain",filter:"drop-shadow(0 0 32px rgba(212,168,83,0.6))",marginBottom:10}}/>
           <div style={{fontSize:12.5,color:AUTH_MUTED,marginTop:2}}>{recoverMode ? "Recuperá el acceso a tu cuenta" : "Iniciá sesión para continuar"}</div>
         </div>
         {esArchivoLocal && <div style={{fontSize:12,color:AUTH_RED,background:"rgba(248,113,113,.12)",padding:"8px 10px",borderRadius:8,fontWeight:600,lineHeight:1.4}}>⚠️ Estás abriendo este archivo directo desde tu disco (file://). El inicio de sesión no va a funcionar así — necesitás servirlo por http(s)://.</div>}
         {connError && <div style={{fontSize:12,color:AUTH_RED,background:"rgba(248,113,113,.12)",padding:"8px 10px",borderRadius:8,fontWeight:600,lineHeight:1.4}}>{connError}</div>}
-        <div style={{display:"flex",flexDirection:"column",gap:5}}><label htmlFor="dw-login-email" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Correo electrónico</label><input type="email" name="username" id="dw-login-email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required value={email} onChange={function(e){setEmail(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} /></div>
+        <div style={{display:"flex",flexDirection:"column",gap:5}}><label htmlFor="dw-login-email" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Correo electrónico</label><input type="email" name="username" id="dw-login-email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required value={email} onChange={function(e){setEmail(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16}} /></div>
         {!recoverMode && <div style={{display:"flex",flexDirection:"column",gap:5}}><label htmlFor="dw-login-password" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED,cursor:"text",padding:"4px 0"}}>Contraseña</label><div style={{position:"relative",display:"flex",alignItems:"center"}}><input type={verPassword?"text":"password"} name="password" id="dw-login-password" autoComplete="current-password" required value={password} onChange={function(e){setPassword(e.target.value);}} style={{width:"100%",boxSizing:"border-box",minHeight:48,padding:"12px 56px 12px 14px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16,touchAction:"manipulation"}} /><button type="button" onClick={function(){setVerPassword(function(v){return !v;});}} aria-label={verPassword?"Ocultar contraseña":"Mostrar contraseña"} aria-pressed={verPassword} title={verPassword?"Ocultar contraseña":"Mostrar contraseña"} style={{position:"absolute",right:2,top:"50%",transform:"translateY(-50%)",border:0,background:"transparent",color:AUTH_MUTED,cursor:"pointer",width:44,height:44,padding:0,display:"flex",alignItems:"center",justifyContent:"center",touchAction:"manipulation"}}><DWIcon name={verPassword?"eye-off":"eye"} size={20} strokeWidth={1.8}/></button></div></div>}
         {error && !recoverMode && <div style={{fontSize:12.5,color:AUTH_RED,background:"rgba(248,113,113,.12)",padding:"8px 10px",borderRadius:8,fontWeight:600}}>{error}</div>}
         {recoverMsg && <div style={{fontSize:12.5,color:recoverMsg.indexOf("No se pudo")===0?AUTH_RED:"#15803d",background:recoverMsg.indexOf("No se pudo")===0?"rgba(248,113,113,.12)":"rgba(34,197,94,.10)",padding:"8px 10px",borderRadius:8,fontWeight:600,lineHeight:1.4}}>{recoverMsg}</div>}
@@ -7272,10 +7274,10 @@ function useDocWorksSession(){
     setRegistroLoading(true); setRegistroError(null); setRegistroSuccess(null);
     if(!datos.nombre||!datos.inmobiliaria||!datos.email||!datos.password||datos.password.length<8){setRegistroLoading(false);setRegistroError("Completá los datos para crear tu cuenta.");return Promise.resolve({error:true});}
     if(!/[A-Za-z]/.test(datos.password)||!/[0-9]/.test(datos.password)){setRegistroLoading(false);setRegistroError("Usá al menos 8 caracteres, con letras y números.");return Promise.resolve({error:true});}
-    return loadSupabaseJs().then(function(sb){
+    return solicitarCaptcha().then(function(captchaToken){return loadSupabaseJs().then(function(sb){
       if(!sb)throw new Error("No se pudo conectar con DocWorks.");
-      return sb.auth.signUp({email:datos.email,password:datos.password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{nombre:datos.nombre,inmobiliaria:datos.inmobiliaria,docworks_registro:"trial_month_v1"}}});
-    }).then(function(res){
+      return sb.auth.signUp({email:datos.email,password:datos.password,options:{captchaToken:captchaToken,emailRedirectTo:window.location.origin+window.location.pathname,data:{nombre:datos.nombre,inmobiliaria:datos.inmobiliaria,docworks_registro:"trial_month_v1"}}});
+    });}).then(function(res){
       if(res.error)throw res.error;
       setRegistroSuccess("Revisá tu correo y verificá tu email para empezar. Si ya tenés cuenta, ingresá o recuperá tu contraseña. No hay cobro automático al finalizar la prueba.");
       return {ok:true};
@@ -7284,29 +7286,29 @@ function useDocWorksSession(){
 
   function login(email, password){
     setLoginError(null); setLoginLoading(true);
-    loadSupabaseJs().then(function(sb){
+    solicitarCaptcha().then(function(captchaToken){return loadSupabaseJs().then(function(sb){
       if (!sb) { setLoginLoading(false); setLoginError("No se pudo cargar Supabase. Recargá la página e intentá de nuevo."); return; }
-      sb.auth.signInWithPassword({ email: email, password: password }).then(function(res){
+      return sb.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: password, options:{captchaToken:captchaToken} }).then(function(res){
         setLoginLoading(false);
         if (res.error) { setLoginError(traducirError(res.error.message)); return; }
       }).catch(function(err){
         setLoginLoading(false);
         setLoginError(traducirError(err && err.message ? err.message : "Error de conexión, intentá de nuevo."));
       });
-    }).catch(function(){ setLoginLoading(false); setLoginError("No se pudo cargar Supabase."); });
+    });}).catch(function(err){ setLoginLoading(false); setLoginError(traducirError(err&&err.message||"No se pudo cargar Supabase.")); });
   }
   function recoverPassword(email){
     var correo=String(email||"").trim().toLowerCase();
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo))return Promise.resolve({error:"Ingresá un correo electrónico válido."});
     if(solicitudesRecuperacion.current.has(correo))return Promise.resolve({error:"La solicitud de recuperación ya se está enviando."});
     solicitudesRecuperacion.current.add(correo);
-    return loadSupabaseJs().then(function(sb){
+    return solicitarCaptcha().then(function(captchaToken){return loadSupabaseJs().then(function(sb){
       if (!sb) return {error:"No se pudo cargar el servicio de recuperación. Intentá de nuevo."};
-      return sb.auth.resetPasswordForEmail(correo, { redirectTo: window.location.origin + window.location.pathname }).then(function(res){
+      return sb.auth.resetPasswordForEmail(correo, { captchaToken:captchaToken, redirectTo: window.location.origin + window.location.pathname }).then(function(res){
         if (res.error) return {error:traducirError(res.error.message)};
         return {ok:true};
       });
-    }).catch(function(){ return {error:"No se pudo solicitar el enlace. Intentá de nuevo."}; }).finally(function(){solicitudesRecuperacion.current.delete(correo);});
+    });}).catch(function(err){ return {error:traducirError(err&&err.message||"No se pudo solicitar el enlace. Intentá de nuevo.")}; }).finally(function(){solicitudesRecuperacion.current.delete(correo);});
   }
   function savePassword(password){
     setPasswordError(null); setPasswordSaving(true);
@@ -9314,5 +9316,5 @@ class DWErrorBoundary extends Component<any,any> {
 }
 
 export default function App(){
-  return <DWErrorBoundary><DocWorksApp/></DWErrorBoundary>;
+  return <DWErrorBoundary><AnaliticaVisitas/><DocWorksApp/></DWErrorBoundary>;
 }

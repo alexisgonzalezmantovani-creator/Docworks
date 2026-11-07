@@ -1,3 +1,4 @@
+import { solicitarCaptcha } from './Captcha';
 import { UsoInmobiliarias } from './UsoInmobiliarias';
 import { crearAccesoCuenta } from './AccesoCuenta';
 import { VistaPreviaAspecto } from './VistaPreviaAspecto';
@@ -2805,7 +2806,8 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
       var usuario=identificacion&&identificacion.data&&identificacion.data.user;
       if(!usuario||!usuario.email)throw new Error("La sesión no está disponible. Volvé a iniciar sesión.");
       // Verificamos la contraseña actual en Supabase y el mismo usuario antes de actualizarla.
-      var verificacion=await sb.auth.signInWithPassword({email:usuario.email,password:claveActual});
+      var captchaToken=await solicitarCaptcha();
+      var verificacion=await sb.auth.signInWithPassword({email:usuario.email,password:claveActual,options:{captchaToken:captchaToken}});
       if(verificacion.error){setClaveError("La contraseña actual no es correcta, o no se pudo verificar.");return;}
       if(!verificacion.data||!verificacion.data.user||verificacion.data.user.id!==usuario.id)throw new Error("No se pudo verificar la identidad de esta sesión.");
       var actualizado=await sb.auth.updateUser({password:claveNueva});
