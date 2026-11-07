@@ -667,6 +667,8 @@ section{padding:102px 0}
 })();
 </script>
 <a class="mobile-cta24" href="#registro" aria-label="Probá DocWorks gratis">Probá gratis 1 mes</a>
+<script src="captcha-config.js"></script>
+<script src="captcha.js"></script>
 <script>
 (function(){
  var form=document.getElementById('signup-form'), status=document.getElementById('signup-status'), button=form.querySelector('button'), busy=false;
@@ -678,9 +680,12 @@ section{padding:102px 0}
   if(!nombre||!inmobiliaria){status.textContent='Completá tu nombre y el de tu inmobiliaria.';status.dataset.error='true';return;}
   if(window.dwTrack)window.dwTrack('registro_intentado');
   busy=true;button.disabled=true;button.textContent='Creando cuenta…';status.textContent='';status.dataset.error='false';
-  var controller=new AbortController(), timer=setTimeout(function(){controller.abort();},20000);
+  var controller=new AbortController(), timer;
   try{
-   var response=await fetch("https://xpjiydwjawjizubyldtk.supabase.co/auth/v1/signup?redirect_to=https%3A%2F%2Fdocworks-eight.vercel.app%2F",{method:'POST',headers:{apikey:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwaml5ZHdqYXdqaXp1YnlsZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDYzMzcsImV4cCI6MjEwMzc4MjMzN30.Mi5DilpMg_EGkNZX_ht6jtrmXX9_9Q-Xyo4hnWDEIvI",'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({email:String(values.get('email')).trim().toLowerCase(),password:String(values.get('password')),data:{nombre:nombre,inmobiliaria:inmobiliaria,docworks_registro:'trial_month_v1'}})});
+   if(!window.DocWorksCaptcha)throw new Error('No se pudo cargar la verificación. Recargá la página.');
+   var captchaToken=await window.DocWorksCaptcha.solicitarCaptcha();
+   timer=setTimeout(function(){controller.abort();},20000);
+   var response=await fetch("https://xpjiydwjawjizubyldtk.supabase.co/auth/v1/signup?redirect_to=https%3A%2F%2Fdocworks-eight.vercel.app%2F",{method:'POST',headers:{apikey:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwaml5ZHdqYXdqaXp1YnlsZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDYzMzcsImV4cCI6MjEwMzc4MjMzN30.Mi5DilpMg_EGkNZX_ht6jtrmXX9_9Q-Xyo4hnWDEIvI",'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({gotrue_meta_security:{captcha_token:captchaToken},email:String(values.get('email')).trim().toLowerCase(),password:String(values.get('password')),data:{nombre:nombre,inmobiliaria:inmobiliaria,docworks_registro:'trial_month_v1'}})});
    var result=await response.json();
    if(!response.ok){
     if(response.status===429)throw new Error('Esperá unos minutos antes de volver a intentarlo.');
@@ -692,7 +697,7 @@ section{padding:102px 0}
    if(window.dwTrack)window.dwTrack('registro_enviado');
    form.reset();form.querySelectorAll('input').forEach(function(input){input.disabled=true;});button.hidden=true;
    status.textContent='Revisá tu correo y verificá tu email para empezar. Si ya tenés cuenta, ingresá o recuperá tu contraseña. No hay cobro automático al finalizar la prueba.';
-  }catch(error){status.dataset.error='true';status.textContent=error.name==='AbortError'?'La conexión tardó demasiado. Revisá tu correo antes de reintentar; la cuenta puede haberse creado.':(/^(Esperá|Elegí|Revisá|No se pudo crear|Ese correo)/.test(error.message||'')?error.message:'No se pudo conectar. Revisá tu conexión y volvé a intentarlo.');}
+  }catch(error){status.dataset.error='true';status.textContent=error.name==='AbortError'?'La conexión tardó demasiado. Revisá tu correo antes de reintentar; la cuenta puede haberse creado.':(/^(Esperá|Elegí|Revisá|No se pudo crear|No se pudo cargar|No se completó|La verificación|No se pudo validar|No se pudo iniciar|Ese correo)/.test(error.message||'')?error.message:'No se pudo conectar. Revisá tu conexión y volvé a intentarlo.');}
   finally{clearTimeout(timer);busy=false;button.disabled=false;button.textContent='Crear cuenta gratis';}
  });
 })();
