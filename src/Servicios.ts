@@ -61,23 +61,30 @@ export function loadSupabaseJs(): Promise<any> {
     }
     // 4.27: si jsDelivr falla o tarda, se prueba un CDN de respaldo antes de rendirse.
     var fuentes = ["https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0", "https://unpkg.com/@supabase/supabase-js@2.45.0/dist/umd/supabase.js"];
+    // Un CDN que no dispara load/error no debe dejar la tablet cargando indefinidamente.
     function cargar(i){
-      var s = document.createElement("script");
-      s.src = fuentes[i];
-      s.async = true;
-      s.onload = function() {
-        if(window.supabase && window.supabase.createClient){
-          supabaseClient = dwCrearCliente();
-          resolve(supabaseClient);
-        } else if(i+1<fuentes.length){ cargar(i+1); }
-        else { supabasePromise = null; resolve(null); }
-      };
-      s.onerror = function() {
-        try{ s.remove(); }catch(e){}
+      var script = document.createElement("script");
+      var terminado = false;
+      var timer = setTimeout(function(){ finalizar(false); }, 5000);
+      function finalizar(ok){
+        if(terminado) return;
+        terminado = true;
+        clearTimeout(timer);
+        script.onload = null;
+        script.onerror = null;
+        if(ok && window.supabase && window.supabase.createClient){
+          try { supabaseClient = dwCrearCliente(); resolve(supabaseClient); return; }
+          catch(e){ console.warn("DocWorks: fallo creando cliente Supabase",e); }
+        }
+        try{script.remove();}catch(e){}
         if(i+1<fuentes.length) cargar(i+1);
         else { supabasePromise = null; resolve(null); }
-      };
-      document.head.appendChild(s);
+      }
+      script.src = fuentes[i];
+      script.async = true;
+      script.onload = function(){ finalizar(true); };
+      script.onerror = function(){ finalizar(false); };
+      document.head.appendChild(script);
     }
     cargar(0);
   });
