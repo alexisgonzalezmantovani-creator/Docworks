@@ -12,15 +12,15 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <style id="dw-startup-critical">html,body{margin:0;background:#0b1730}.dw-startup{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#0b1730;color:#e8edf6}.dw-startup-logo{width:min(80vw,400px);height:auto;max-height:48vh;object-fit:contain}.dw-startup-status{font:600 13px system-ui,sans-serif}</style>
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <link rel="stylesheet" href="/startup.css" />
-    <link rel="preload" as="image" href="/docworks-startup-logo.png" />
+    <link rel="stylesheet" href="/startup.css?v=638" />
+    <link rel="preload" as="image" href="/docworks-startup-logo.png?v=638" />
 
     <title>DocWorks — Gestión inmobiliaria</title>
   </head>
   <body>
     <div id="root">
       <div class="dw-startup" data-dw-boot-shell aria-label="Iniciando DocWorks" aria-busy="true">
-        <img class="dw-startup-logo" src="/docworks-startup-logo.png" alt="DocWorks" width="1254" height="1254" />
+        <img class="dw-startup-logo" src="/docworks-startup-logo.png?v=638" alt="DocWorks" width="1254" height="1254" />
         <div class="dw-startup-status" role="status" aria-live="polite">
           <span class="dw-startup-spinner" aria-hidden="true"></span>
           <span>Cargando…</span>
@@ -47,7 +47,7 @@
         window.addEventListener('error',onError,true);window.addEventListener('unhandledrejection',onRejection);
       })();
     </script>
-    <script src="/captcha-config.js"></script>
+    <script src="/captcha-config.js?v=638"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
