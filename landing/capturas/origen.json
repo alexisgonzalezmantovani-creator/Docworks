@@ -1,0 +1,28 @@
+{
+  "version": "6.37",
+  "commit": "435dceaf6f975bd0c58f87e3197b4f59a02588b0",
+  "datos": "Ficticios, sin backend",
+  "componentes": [
+    "DashboardView",
+    "OperacionForm",
+    "DocumentViewer"
+  ],
+  "archivos": {
+    "operaciones.webp": {
+      "sha256": "1b0cbed4a7ac240b5b25b196f78ac94e8710650a9dad7e83b847d7abf38cb814",
+      "ancho": 1360,
+      "alto": 920
+    },
+    "formulario.webp": {
+      "sha256": "1753e17daa859a2687d6547018b18f960b9b41c92c6adcdc66b20e3cadfab598",
+      "ancho": 1360,
+      "alto": 920
+    },
+    "documento.webp": {
+      "sha256": "8aad325927a533bbb9323b7b1a38fefb46380dfda7b792413a4434ad419a2dc9",
+      "ancho": 1360,
+      "alto": 920
+    }
+  },
+  "artifact_id": 13580888648
+}
