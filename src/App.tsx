@@ -1,3 +1,4 @@
+import { PreparacionDocumento, ReutilizarOperacion } from './AyudaOperacion';
 import { accionEnlaceCuenta, errorEnlaceCuenta, urlSinCredenciales } from './RetornoCuenta';
 import { AnaliticaVisitas } from './Analitica';
 import { solicitarCaptcha } from './Captcha';
@@ -470,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.37";
+var DOCWORKS_VERSION = "6.38";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -5468,7 +5469,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   </div>;
 }
 
-function StepBar({current,tipo,pasosFaltantes,onGoTo}){
+function StepBar({current,tipo,pasosFaltantes,cantidades=undefined,onGoTo}){
   const steps=getSteps(tipo);
   const barRef=useRef(null);
   // En pantallas angostas la barra se desplaza: dejamos siempre centrado el paso activo.
@@ -5483,7 +5484,8 @@ function StepBar({current,tipo,pasosFaltantes,onGoTo}){
   return(
     <div className="steps" ref={barRef}>
       {steps.map(function(s,i){
-        const done=current>s.id,active=current===s.id;
+        const cantidad=cantidades&&cantidades[s.id]||0;
+        const done=current>s.id&&!cantidad,active=current===s.id;
         const flagged=!!(pasosFaltantes&&pasosFaltantes[s.id]);
         return(
           <div key={s.id} className="step-item">
@@ -5496,7 +5498,7 @@ function StepBar({current,tipo,pasosFaltantes,onGoTo}){
               onKeyDown={onGoTo?function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); onGoTo(s.id); } }:undefined}
               style={onGoTo?{cursor:"pointer"}:undefined}
               title={onGoTo?"Ir a "+s.l:undefined}>
-              {flagged?"!":done?"✓":s.id} <span>{s.l}</span>
+              {flagged?"!":done?"✓":s.id} <span>{s.l}</span>{cantidad>0&&<small aria-label={cantidad+" datos por revisar"} style={{fontSize:10,color:"var(--gold)",fontWeight:800}}>({cantidad})</small>}
             </div>
             {i<steps.length-1&&<div className={"step-line "+(done?"done":"")}/>}
           </div>
@@ -5689,10 +5691,10 @@ function getProximoPasoOperacion(op, operaciones){
   if(op.proceso_estado==="en_negociacion") return {icon:"↔",texto:"Continuar negociación",tone:"var(--gold)"};
   return {icon:"→",texto:"Continuar documentación / cierre",tone:"var(--teal)"};
 }
-function PasoResumenFinal({data,clausulas,onVolver,onFinalizarAccion}){
+function PasoResumenFinal({data,clausulas,perfil=undefined,onVolver,onFinalizarAccion}){
   var partes=getResumenPartes(data);
   var monto=getResumenMonto(data);
-  var faltantes=getCamposFaltantesDetalle(data);
+  var faltantes=getCamposFaltantesDetalle(data,perfil);
   var clausulasSel=(data.clausulas_ids||[]).map(function(id){return clausulas.find(function(c){return c.id===id;});}).filter(Boolean);
   var [showMenu,setShowMenu]=useState(false);
   var [menuPaso,setMenuPaso]=useState("estado");
@@ -7848,7 +7850,14 @@ const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
 const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
-const OperacionForm = crearOperacionForm({OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
+function evaluarPreparacionFormulario(data,perfil,clausulas,bloquesReserva){
+  try{
+    var tipo=data.tipo,op=opParaDocumento(Object.assign({},data,{inmobiliaria_nombre:(perfil&&perfil.nombre)||data.inmobiliaria_nombre,inmobiliaria_matricula:(perfil&&perfil.matricula)||data.inmobiliaria_matricula,inmobiliaria_domicilio:(perfil&&perfil.direccion)||data.inmobiliaria_domicilio,inmobiliaria_email:(perfil&&perfil.email)||data.inmobiliaria_email,inmobiliaria_telefono:(perfil&&perfil.telefono)||data.inmobiliaria_telefono}));
+    var doc=aplicarEncabezadoPersonalizado(buildDocSections(op,clausulas||[],tipo,getBodyBlocksForDocument(perfil,tipo,bloquesReserva)),data,tipo,perfil);
+    return validarDocumentoParaExport(data,doc,perfil);
+  }catch(e){return {errores:["No se pudo comprobar el documento. Revisá el modelo y los datos antes de emitir."],avisos:[]};}
+}
+const OperacionForm = crearOperacionForm({PreparacionDocumento, ReutilizarOperacion, evaluarPreparacionFormulario, OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
 const ClausulasWorkspace = crearClausulasWorkspace({TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({parseMontoAR, Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
@@ -9193,7 +9202,7 @@ function DocWorksApp(){
                     <div><div className="dw-operation-page-breadcrumb">Operaciones / {editOp?"Editar operación":"Nueva operación"}</div><h1>{editOp?((formTipo||editOp.tipo)==="alquiler"?"Contrato de locación":TIPOS[formTipo||editOp.tipo]||"Editar operación"):(TITULOS_NUEVA_OPERACION[formTipo]||"Nueva operación")}</h1><p>Completá los datos, revisá las cláusulas y guardá la operación.</p></div>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={cerrarFormularioSeguro}>Volver a operaciones</button>
                   </div>
-                  <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
+                  <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} bloquesReserva={bloquesReserva} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
                 </section>
               ) : (<>
               {ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks-landing.vercel.app/#planes" style={{color:"inherit"}}>Ver planes</a></div>}
