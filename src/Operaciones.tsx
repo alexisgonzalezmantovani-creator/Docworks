@@ -1697,6 +1697,22 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
  .dw-dashboard-root .op-card-side .op-actions .btn{flex:0 0 auto;min-width:0!important}
 }
 
+/* 6.38 iPhone: acciones visibles sin desplazamiento lateral ni recortes. */
+@media (max-width:760px){
+  .op-card,.op-card-premium,.op-card .op-card-inner{min-width:0!important;max-width:100%!important;box-sizing:border-box!important;}
+  .op-card .op-card-inner{display:flex!important;flex-direction:column!important;}
+  .op-card .op-card-side{width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;display:flex!important;flex-wrap:wrap!important;align-items:stretch!important;overflow:visible!important;}
+  .op-card .op-card-side .op-actions{display:flex!important;visibility:visible!important;opacity:1!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:6px 0 0!important;align-self:stretch!important;justify-content:flex-end!important;flex-wrap:wrap!important;gap:6px!important;}
+  .op-card .op-card-side .op-actions>.btn{display:inline-flex!important;visibility:visible!important;flex:0 1 auto!important;min-width:0!important;max-width:100%!important;white-space:normal!important;}
+  .op-card .op-card-side .op-actions .op-more{flex:0 0 40px!important;min-width:40px!important;}
+}
+@media (orientation:landscape) and (hover:none) and (pointer:coarse) and (max-width:1100px){
+  html,body,#root{max-width:100%!important;overflow-x:clip!important;}
+  .app-wrap,.app-body,.main,.content{max-width:100%!important;min-width:0!important;box-sizing:border-box!important;}
+  .app-wrap{overflow-x:clip!important;}
+  .content{overscroll-behavior-x:none!important;-webkit-overflow-scrolling:touch;}
+  .op-card .op-card-side .op-actions{max-width:100%!important;}
+}
 /* El recorrido termina en las acciones: no reservar sitio para la navegación que se oculta. */
 .app-wrap .content.dw-operation-page-content{padding-bottom:max(12px,env(safe-area-inset-bottom,0px))!important}
 .app-wrap .dw-operation-page{padding-bottom:0!important}
