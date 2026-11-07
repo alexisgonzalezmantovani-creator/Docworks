@@ -1713,6 +1713,17 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .content{overscroll-behavior-x:none!important;-webkit-overflow-scrolling:touch;}
   .op-card .op-card-side .op-actions{max-width:100%!important;}
 }
+/* iPhone apaisado: conservar Ayuda en la barra superior; evitar sidebar recortada por altura. */
+@media (orientation:landscape) and (max-height:500px) and (max-width:1100px) and (hover:none) and (pointer:coarse){
+  .app-wrap .sidebar{display:none!important;}
+  .app-wrap .mobile-topbar{display:flex!important;position:relative!important;top:auto!important;left:auto!important;right:auto!important;z-index:550!important;width:100%!important;min-height:44px!important;height:calc(44px + env(safe-area-inset-top,0px))!important;padding:env(safe-area-inset-top,0px) max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px))!important;box-sizing:border-box!important;overflow:visible!important;}
+  .app-wrap{padding-top:0!important;}
+  .app-wrap .app-body{display:flex!important;flex-direction:column!important;min-width:0!important;}
+  .app-wrap .main{width:100%!important;min-width:0!important;overflow:visible!important;}
+  .app-wrap .mobile-topbar button{visibility:visible!important;opacity:1!important;flex-shrink:0!important;}
+  .app-wrap .mobile-nav{display:none!important;}
+  .app-wrap .content{padding-bottom:max(18px,env(safe-area-inset-bottom,0px))!important;}
+}
 /* El recorrido termina en las acciones: no reservar sitio para la navegación que se oculta. */
 .app-wrap .content.dw-operation-page-content{padding-bottom:max(12px,env(safe-area-inset-bottom,0px))!important}
 .app-wrap .dw-operation-page{padding-bottom:0!important}
