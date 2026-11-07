@@ -1,3 +1,4 @@
+import { RecordatoriosPanel } from './Recordatorios';
 import { FacturacionMercadoPago } from './FacturacionMercadoPago';
 import { permisosOperacion, prepararAltaOperacion, claveContextoOperaciones, crearControlContextoOperaciones, ejecutarCambioConfirmado, contextoBorradorOperacion, borradorDelContexto, mismoBorrador } from './AccionesOperaciones';
 // Tipos de extensiones de navegador utilizadas por DocWorks.
@@ -465,7 +466,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.33";
+var DOCWORKS_VERSION = "6.34";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -7042,16 +7043,19 @@ function LoginScreen({ onLogin, onRecover, onRegister, error, loading, connError
   var [recoverMode,setRecoverMode]=useState(false);
   var [recoverMsg,setRecoverMsg]=useState(null);
   var [recoverLoading,setRecoverLoading]=useState(false);
+  var recoverPending=useRef(false);
   var esArchivoLocal = (typeof window!=="undefined" && window.location && window.location.protocol==="file:");
   function submit(e){
     e.preventDefault();
+    if (loading || recoverPending.current) return;
     if (recoverMode) {
+      recoverPending.current=true;
       setRecoverMsg(null); setRecoverLoading(true);
       Promise.resolve(onRecover(email.trim())).then(function(res){
         setRecoverLoading(false);
         if (res && res.error) setRecoverMsg(res.error);
-        else { setRecoverMsg("Te enviamos un enlace para restablecer tu contraseña. Revisá tu correo electrónico."); setRecoverMode(false); }
-      }).catch(function(){ setRecoverLoading(false); setRecoverMsg("No se pudo enviar el enlace. Intentá de nuevo."); });
+        else { setRecoverMsg("Si el correo corresponde a una cuenta, recibirás un enlace para restablecer tu contraseña. Revisá también la carpeta de spam."); setRecoverMode(false); }
+      }).catch(function(){ setRecoverLoading(false); setRecoverMsg("No se pudo enviar el enlace. Intentá de nuevo."); }).finally(function(){recoverPending.current=false;});
       return;
     }
     onLogin(email.trim(), password);
@@ -7065,13 +7069,13 @@ function LoginScreen({ onLogin, onRecover, onRegister, error, loading, connError
         </div>
         {esArchivoLocal && <div style={{fontSize:12,color:AUTH_RED,background:"rgba(248,113,113,.12)",padding:"8px 10px",borderRadius:8,fontWeight:600,lineHeight:1.4}}>⚠️ Estás abriendo este archivo directo desde tu disco (file://). El inicio de sesión no va a funcionar así — necesitás servirlo por http(s)://.</div>}
         {connError && <div style={{fontSize:12,color:AUTH_RED,background:"rgba(248,113,113,.12)",padding:"8px 10px",borderRadius:8,fontWeight:600,lineHeight:1.4}}>{connError}</div>}
-        <div style={{display:"flex",flexDirection:"column",gap:5}}><label style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Correo electrónico</label><input type="email" name="username" id="dw-login-email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required value={email} onChange={function(e){setEmail(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} /></div>
+        <div style={{display:"flex",flexDirection:"column",gap:5}}><label htmlFor="dw-login-email" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Correo electrónico</label><input type="email" name="username" id="dw-login-email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required value={email} onChange={function(e){setEmail(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} /></div>
         {!recoverMode && <div style={{display:"flex",flexDirection:"column",gap:5}}><label htmlFor="dw-login-password" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED,cursor:"text",padding:"4px 0"}}>Contraseña</label><div style={{position:"relative",display:"flex",alignItems:"center"}}><input type={verPassword?"text":"password"} name="password" id="dw-login-password" autoComplete="current-password" required value={password} onChange={function(e){setPassword(e.target.value);}} style={{width:"100%",boxSizing:"border-box",minHeight:48,padding:"12px 56px 12px 14px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16,touchAction:"manipulation"}} /><button type="button" onClick={function(){setVerPassword(function(v){return !v;});}} aria-label={verPassword?"Ocultar contraseña":"Mostrar contraseña"} aria-pressed={verPassword} title={verPassword?"Ocultar contraseña":"Mostrar contraseña"} style={{position:"absolute",right:2,top:"50%",transform:"translateY(-50%)",border:0,background:"transparent",color:AUTH_MUTED,cursor:"pointer",width:44,height:44,padding:0,display:"flex",alignItems:"center",justifyContent:"center",touchAction:"manipulation"}}><DWIcon name={verPassword?"eye-off":"eye"} size={20} strokeWidth={1.8}/></button></div></div>}
         {error && !recoverMode && <div style={{fontSize:12.5,color:AUTH_RED,background:"rgba(248,113,113,.12)",padding:"8px 10px",borderRadius:8,fontWeight:600}}>{error}</div>}
         {recoverMsg && <div style={{fontSize:12.5,color:recoverMsg.indexOf("No se pudo")===0?AUTH_RED:"#15803d",background:recoverMsg.indexOf("No se pudo")===0?"rgba(248,113,113,.12)":"rgba(34,197,94,.10)",padding:"8px 10px",borderRadius:8,fontWeight:600,lineHeight:1.4}}>{recoverMsg}</div>}
-        <button type="submit" disabled={loading} style={{marginTop:4,padding:"11px 14px",borderRadius:10,border:"none",background:AUTH_GOLD,color:"#1a1206",fontWeight:700,fontSize:14,cursor:loading?"default":"pointer",opacity:loading?.6:1}}>{recoverMode ? (recoverLoading ? "Enviando…" : "Enviar enlace") : (loading ? "Ingresando…" : "Ingresar")}</button>
-        {!recoverMode && <button type="button" onClick={onRegister} style={{background:"transparent",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:13,fontWeight:700,padding:"3px 0 0"}}>Registrate</button>}
-        <button type="button" onClick={function(){setRecoverMode(function(v){return !v;});setRecoverMsg(null);setPassword("");}} style={{background:"transparent",border:"none",color:AUTH_MUTED,cursor:"pointer",fontSize:12,textDecoration:"underline",padding:0}}>{recoverMode ? "Volver a iniciar sesión" : "¿Olvidaste tu contraseña? Recuperala"}</button>
+        <button type="submit" disabled={loading||recoverLoading} style={{marginTop:4,padding:"11px 14px",borderRadius:10,border:"none",background:AUTH_GOLD,color:"#1a1206",fontWeight:700,fontSize:14,cursor:loading?"default":"pointer",opacity:loading?.6:1}}>{recoverMode ? (recoverLoading ? "Enviando…" : "Enviar enlace") : (loading ? "Ingresando…" : "Ingresar")}</button>
+        {!recoverMode && <button type="button" disabled={recoverLoading||loading} onClick={onRegister} style={{background:"transparent",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:13,fontWeight:700,padding:"3px 0 0"}}>Registrate</button>}
+        <button type="button" disabled={recoverLoading||loading} onClick={function(){setRecoverMode(function(v){return !v;});setRecoverMsg(null);setPassword("");}} style={{background:"transparent",border:"none",color:AUTH_MUTED,cursor:"pointer",fontSize:12,textDecoration:"underline",padding:0}}>{recoverMode ? "Volver a iniciar sesión" : "¿Olvidaste tu contraseña? Recuperala"}</button>
         <a href="https://docworks-landing.vercel.app" style={{display:"block",textAlign:"center",color:AUTH_MUTED,fontSize:12,textDecoration:"none",padding:"5px 0 0"}}>← Volver al sitio web</a>
       </form>
     </div>
@@ -7121,6 +7125,7 @@ function useDocWorksSession(){
   var [registroLoading,setRegistroLoading]=useState(false);
   var [registroError,setRegistroError]=useState(null);
   var [registroSuccess,setRegistroSuccess]=useState(null);
+  var solicitudesRecuperacion=useRef(new Set<string>());
 
   function detectarAuthAction(){
     try{
@@ -7293,14 +7298,17 @@ function useDocWorksSession(){
     }).catch(function(){ setLoginLoading(false); setLoginError("No se pudo cargar Supabase."); });
   }
   function recoverPassword(email){
+    var correo=String(email||"").trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo))return Promise.resolve({error:"Ingresá un correo electrónico válido."});
+    if(solicitudesRecuperacion.current.has(correo))return Promise.resolve({error:"La solicitud de recuperación ya se está enviando."});
+    solicitudesRecuperacion.current.add(correo);
     return loadSupabaseJs().then(function(sb){
-      if (!sb) return {error:"No se pudo cargar Supabase. Recargá la página e intentá de nuevo."};
-      if (!email) return {error:"Ingresá tu correo electrónico para recuperar la contraseña."};
-      return sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname }).then(function(res){
+      if (!sb) return {error:"No se pudo cargar el servicio de recuperación. Intentá de nuevo."};
+      return sb.auth.resetPasswordForEmail(correo, { redirectTo: window.location.origin + window.location.pathname }).then(function(res){
         if (res.error) return {error:traducirError(res.error.message)};
         return {ok:true};
       });
-    }).catch(function(){ return {error:"No se pudo enviar el enlace. Intentá de nuevo."}; });
+    }).catch(function(){ return {error:"No se pudo solicitar el enlace. Intentá de nuevo."}; }).finally(function(){solicitudesRecuperacion.current.delete(correo);});
   }
   function savePassword(password){
     setPasswordError(null); setPasswordSaving(true);
@@ -7828,7 +7836,8 @@ function LoginGate({docworksAuth}){
 // exactamente el apartado que se está explicando. No usa blur para no degradar
 // la lectura ni desenfocar el contexto de la aplicación.
 const PapeleraView = crearPapeleraView({Btn, ConfirmModal, PAPELERA_DIAS, TIPOS, TIPO_ICON, nombreConSufijo, useState});
-const TareasPanel = crearTareasPanel({Btn, genId, getTareasDeOp, useState});
+const TareasChecklist = crearTareasPanel({Btn, genId, getTareasDeOp, useState});
+function TareasPanel(props){return <><TareasChecklist {...props}/><RecordatoriosPanel key={String(props.op?.id||"")} op={props.op} loadClient={loadSupabaseJs}/></>;}
 const NegociacionPanel = crearNegociacionPanel({Btn, Inp, Slt, Txa, fechaHoyISO, fmt$, fmtD, genId, useState});
 const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
 const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});

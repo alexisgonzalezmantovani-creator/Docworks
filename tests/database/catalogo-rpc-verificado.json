@@ -1,5 +1,5 @@
 {
-  "verificado_en": "2026-11-06",
+  "verificado_en": "2026-11-07",
   "project_id": "xpjiydwjawjizubyldtk",
   "alcance": "Nombres de funciones public consultados en pg_proc. No certifica firmas, permisos ni implementación.",
   "funciones": [
@@ -37,6 +37,8 @@
     "fn_mi_contexto",
     "fn_mi_inmobiliaria",
     "fn_mi_plantilla_reserva",
+    "fn_mp_finalizar_checkout",
+    "fn_mp_reservar_checkout",
     "fn_operacion_eliminar",
     "fn_operacion_eliminar_permanente",
     "fn_operacion_guardar",
@@ -51,6 +53,11 @@
     "fn_plantilla_crear",
     "fn_plantilla_editar",
     "fn_provisionar_usuario_por_email",
+    "fn_recordatorio_cancelar",
+    "fn_recordatorio_guardar",
+    "fn_recordatorio_resultado",
+    "fn_recordatorios_contexto",
+    "fn_recordatorios_tomar",
     "fn_registrar_inmobiliaria",
     "fn_resolver_solicitud",
     "fn_revocar_excepcion_broker",

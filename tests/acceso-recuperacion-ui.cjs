@@ -1,0 +1,25 @@
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
+const dom=new JSDOM('<html><body><div id="root"></div></body></html>',{url:'https://docworks-eight.vercel.app/'});
+for(const k of ['window','document','HTMLElement','CustomEvent','Event','Node','localStorage'])global[k]=dom.window[k];global.IS_REACT_ACT_ENVIRONMENT=true;
+const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-recovery-ui-'));
+require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.resolve(__dirname,'../src/App.tsx'),'utf8')+'\nimport {act,createElement} from "react";import {createRoot} from "react-dom/client";export {act,createElement,createRoot,LoginScreen,useDocWorksSession,RecordatoriosPanel};',resolveDir:path.resolve(__dirname,'../src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
+const app=require(tmp+'/app.cjs');const root=app.createRoot(document.getElementById('root'));let n=0;
+const check=(label,f)=>{f();n++;console.log('OK',label)};
+(async()=>{
+ let calls=0,resolve;
+ const props={onLogin(){},onRegister(){},onRecover:()=>{calls++;return new Promise(r=>resolve=r)},loading:false};
+ await app.act(async()=>root.render(app.createElement(app.LoginScreen,props)));
+ await app.act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Olvidaste')).click());
+ const input=document.querySelector('#dw-login-email');await app.act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'broker@example.invalid');input.dispatchEvent(new Event('input',{bubbles:true}));});
+ const form=document.querySelector('form');await app.act(async()=>{form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));});
+ check('dos envíos inmediatos solicitan un único enlace',()=>assert.equal(calls,1));
+ check('botón y cambio de modo bloqueados mientras espera',()=>{assert.equal(form.querySelector('[type=submit]').disabled,true);assert.equal([...document.querySelectorAll('button')].find(b=>b.textContent.includes('Volver a iniciar')).disabled,true)});
+ await app.act(async()=>resolve({ok:true}));check('no afirma entrega ni revela existencia de cuenta',()=>{assert.match(document.body.textContent,/Si el correo corresponde/);assert.ok(!document.body.textContent.includes('Te enviamos'));});
+ let antigua;const loadClient=async()=>({rpc:async(nombre,params)=>params.p_operacion_id==='antigua'?new Promise(resolve=>antigua=resolve):({data:{habilitado:false,destinatarios:[],recordatorios:[]}})});
+ await app.act(async()=>root.render(app.createElement(app.RecordatoriosPanel,{op:{id:'antigua'},loadClient})));
+ await app.act(async()=>root.render(app.createElement(app.RecordatoriosPanel,{op:{id:'actual'},loadClient})));
+ await app.act(async()=>antigua({data:{habilitado:true,destinatarios:[{id:'otro',nombre:'No debe aparecer'}],recordatorios:[]}}));
+ check('respuesta tardía de otra operación no reemplaza el contexto actual',()=>assert.match(document.body.textContent,/todavía no están habilitados/));
+ check('correo apagado no ofrece programar un envío',()=>assert.equal(document.querySelector('button[type=submit]'),null));
+ await app.act(async()=>root.unmount());dom.window.close();console.log('APROBADAS '+n+' pruebas DOM de acceso y recordatorios sin enviar correos.');process.exit(0);
+})().catch(e=>{console.error(e);process.exit(1)});

@@ -5,3 +5,7 @@ verify_jwt = true
 # Mercado Pago no envía JWT de Supabase: este endpoint exige la firma HMAC del proveedor.
 [functions.mp-webhook]
 verify_jwt = false
+
+# El programador se autentica dentro del manejador con un secreto dedicado.
+[functions.recordatorios]
+verify_jwt = false
