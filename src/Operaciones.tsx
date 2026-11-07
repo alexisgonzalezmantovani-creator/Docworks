@@ -5228,6 +5228,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const modoEdicion = !!initial;
   const [revisando,setRevisando]=useState(false);
   const [destinoPaso,setDestinoPaso]=useState(null);
+  const avisoAvanceRef=useRef(null);
+  useEffect(function(){if(destinoPaso!==null&&avisoAvanceRef.current)try{avisoAvanceRef.current.scrollIntoView({behavior:"smooth",block:"nearest"});}catch(e){}},[destinoPaso]);
   useEffect(function(){setDestinoPaso(null);},[step,data]);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
@@ -5531,7 +5533,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       <ReutilizarOperacion data={data} operaciones={operaciones} contexto={contextoBorrador} onAplicar={setBulk}/>
       {step<=total&&<div style={{fontSize:12,color:faltantesActuales.length?"var(--gold)":"var(--green)",marginBottom:12}} data-testid="faltantes-paso">{faltantesActuales.length?(faltantesActuales.length===1?"Falta 1 dato crítico":"Faltan "+faltantesActuales.length+" datos críticos")+" en este paso":"✓ Datos críticos de este paso completos"}{faltantesActuales.length>0&&<button type="button" className="btn btn-ghost btn-sm" onClick={function(){irACampo(faltantesActuales[0].campo);}}>Ir al primer dato</button>}</div>}
       <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} perfil={perfil} clausulas={clausulas} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
-      {destinoPaso!==null&&faltantesActuales.length>0&&<div role="alert" data-testid="aviso-avanzar" style={{marginTop:12,padding:12,borderRadius:10,border:"1px solid rgba(217,158,36,.4)",background:"rgba(217,158,36,.07)",fontSize:13,overflowWrap:"anywhere"}}>
+      {destinoPaso!==null&&faltantesActuales.length>0&&<div ref={avisoAvanceRef} role="alert" data-testid="aviso-avanzar" style={{marginTop:12,padding:12,borderRadius:10,border:"1px solid rgba(217,158,36,.4)",background:"rgba(217,158,36,.07)",fontSize:13,overflowWrap:"anywhere"}}>
         <div>Revisá antes de seguir: {faltantesActuales.slice(0,3).map(function(f){return f.label;}).join(", ")}{faltantesActuales.length>3?" y "+(faltantesActuales.length-3)+" datos más":""}. Podés continuar y guardar el borrador.</div>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:8}}><Btn v="secondary" onClick={function(){setDestinoPaso(null);irACampo(faltantesActuales[0].campo);}}>Completar datos</Btn><Btn v="ghost" onClick={function(){var next=destinoPaso;setDestinoPaso(null);setStep(next);}}>Seguir igual</Btn></div>
       </div>}
