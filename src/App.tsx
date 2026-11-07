@@ -7199,7 +7199,7 @@ function useDocWorksSession(){
       dwObtenerSesionRobusta(sb).then(function(res){
         if (cancelado||revisionInicial!==sesionRevisionRef.current) return;
         clearTimeout(timeoutId);
-        if (res && res.transitorio) { setConnError("No pudimos recuperar tu sesión por la conexión. Tocá Reintentar (no hace falta volver a loguearse)."); return; }
+        if (res && res.transitorio) { setConnError("No pudimos recuperar tu sesión por la conexión. Tocá Reintentar (no hace falta volver a loguearse)."); setReady(true); return; }
         setConnError(null);
         identificarSesion(res.data.session);
         limpiarAuthUrl();
