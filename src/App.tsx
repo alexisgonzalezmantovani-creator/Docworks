@@ -7188,13 +7188,13 @@ function useDocWorksSession(){
     var tieneSesionGuardada = dwHaySesionGuardada();
     var timeoutId = setTimeout(function(){
       if (cancelado) return;
-      if (tieneSesionGuardada) { setConnError("La conexión está tardando más de lo normal. Seguimos intentando entrar…"); return; }
+      if (tieneSesionGuardada) { setConnError("La conexión está tardando más de lo normal. Podés reintentar sin borrar tus datos."); setReady(true); return; }
       setConnError("No se pudo conectar con Supabase (tardó demasiado). Revisá tu conexión e intentá de nuevo."); setReady(true);
     }, 12000);
 
     loadSupabaseJs().then(function(sb){
       if (cancelado) return;
-      if (!sb) { clearTimeout(timeoutId); setConnError("No se pudo cargar el cliente de Supabase (¿bloqueado por el navegador o la red?)."); if(!tieneSesionGuardada) setReady(true); return; }
+      if (!sb) { clearTimeout(timeoutId); setConnError("No se pudo cargar el cliente de Supabase (¿bloqueado por el navegador o la red?)."); setReady(true); return; }
       var revisionInicial=sesionRevisionRef.current;
       dwObtenerSesionRobusta(sb).then(function(res){
         if (cancelado||revisionInicial!==sesionRevisionRef.current) return;
@@ -7216,7 +7216,7 @@ function useDocWorksSession(){
         clearTimeout(timeoutId);
         limpiarAuthUrl();
         setConnError("Error conectando con Supabase: " + (traducirError(err && err.message ? err.message : "desconocido")));
-        if(!tieneSesionGuardada) setReady(true);
+        setReady(true);
       });
       var listener = sb.auth.onAuthStateChange(function(_evt, sess){
         if(cancelado)return;
