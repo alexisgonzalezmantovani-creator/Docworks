@@ -6,7 +6,7 @@ Alcance pedido: correo, CAPTCHA, pruebas móviles y analítica. Mercado Pago con
 
 - Turnstile preparado en registro de app y landing, login, recuperación, reset del panel supremo y verificación de contraseña actual al cambiarla desde el perfil. Se solicita un token nuevo inmediatamente antes de cada petición a Auth; no se guarda ni se reutiliza. Cancelación, error, expiración o configuración inválida impiden la petición. El servidor debe validar el token: la interfaz sola no constituye protección.
 - La landing usa el mismo código de CAPTCHA compilado desde `src/Captcha.ts`; `scripts/preparar-acceso.cjs` actualiza los archivos estáticos y copia su configuración pública. El secreto jamás se coloca allí. CAPTCHA permanece apagado hasta disponer de claves reales y activar Auth en orden.
-- Login accesible con scroll en horizontal y pantallas chicas, logo contenido y campo email a 16px para evitar zoom de foco de iOS.
+- Login y restablecimiento de contraseña accesibles con scroll en horizontal y pantallas chicas, logo contenido y campo email a 16px para evitar zoom de foco de iOS.
 - Web Analytics Hobby habilitado en ambos proyectos Vercel, incluido en el plan, sin eventos personalizados pagos. App con paquete oficial fijado; landing con script oficial. Se eliminan query/hash de visitas y en la app sólo se manda `/`, sin IDs de operaciones. No se instrumentan datos de formularios ni documentos. Los registros confirmados y el uso por inmobiliaria se obtienen de los datos reales del panel supremo, no se confunden con intentos de registro de la web.
 
 ## Activación pendiente: CAPTCHA

@@ -6989,21 +6989,21 @@ function AuthPasswordSetupScreen({onSave,mode,error,loading,onLogout}){
     onSave(password);
   }
   return (
-    <div style={{position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",padding:16,fontFamily:"'DM Sans',sans-serif"}}>
-      <form onSubmit={submit} style={{width:"100%",maxWidth:390,background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:28,display:"flex",flexDirection:"column",gap:14,boxShadow:"0 18px 55px rgba(0,0,0,0.38),0 0 0 1px rgba(212,168,83,0.035)"}}>
+    <div style={{position:"fixed",inset:0,zIndex:500,overflowY:"auto",display:"flex",background:"radial-gradient(ellipse at 50% 0%, #142747 0%, #070d19 48%, #03060d 100%)",padding:16,fontFamily:"'DM Sans',sans-serif"}}>
+      <form onSubmit={submit} style={{margin:"auto",boxSizing:"border-box",width:"100%",maxWidth:390,background:AUTH_CARD,border:"1px solid "+AUTH_BORDER,borderRadius:16,padding:28,display:"flex",flexDirection:"column",gap:14,boxShadow:"0 18px 55px rgba(0,0,0,0.38),0 0 0 1px rgba(212,168,83,0.035)"}}>
         <div style={{textAlign:"center",marginBottom:4}}>
-          <img src={LOGO_B64} alt="DocWorks" style={{height:120,width:"auto",maxWidth:"300px",objectFit:"contain",marginBottom:8}}/>
+          <img src={LOGO_B64} alt="DocWorks" style={{height:120,width:"100%",maxWidth:"100%",objectFit:"contain",marginBottom:8}}/>
           <div style={{fontSize:15,fontWeight:700,color:AUTH_TEXT}}>{mode==="invite"?"Activá tu cuenta":"Restablecé tu contraseña"}</div>
           <div style={{fontSize:12,color:AUTH_MUTED,marginTop:5,lineHeight:1.45}}>{mode==="invite"?"Elegí una contraseña para ingresar a DocWorks.":"Ingresá una nueva contraseña para recuperar el acceso."}</div>
         </div>
         {(error||localError)&&<div style={{fontSize:12.5,color:AUTH_RED,background:"rgba(248,113,113,.12)",padding:"8px 10px",borderRadius:8,fontWeight:600}}>{localError||error}</div>}
         <div style={{display:"flex",flexDirection:"column",gap:5}}>
-          <label style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Nueva contraseña</label>
-          <input type="password" name="new-password" autoComplete="new-password" minLength={8} required value={password} onChange={function(e){setPassword(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} />
+          <label htmlFor="dw-new-password" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Nueva contraseña</label>
+          <input type="password" id="dw-new-password" name="new-password" autoComplete="new-password" minLength={8} required value={password} onChange={function(e){setPassword(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16}} />
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:5}}>
-          <label style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Repetir contraseña</label>
-          <input type="password" name="confirm-password" autoComplete="new-password" minLength={8} required value={confirm} onChange={function(e){setConfirm(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:14}} />
+          <label htmlFor="dw-confirm-password" style={{fontSize:12,fontWeight:600,color:AUTH_MUTED}}>Repetir contraseña</label>
+          <input type="password" id="dw-confirm-password" name="confirm-password" autoComplete="new-password" minLength={8} required value={confirm} onChange={function(e){setConfirm(e.target.value);}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid "+AUTH_BORDER,background:AUTH_BG,color:AUTH_TEXT,fontSize:16}} />
         </div>
         <button type="submit" disabled={loading} style={{marginTop:3,padding:"11px 14px",borderRadius:10,border:"none",background:AUTH_GOLD,color:"#1a1206",fontWeight:700,fontSize:14,cursor:loading?"default":"pointer",opacity:loading?.6:1}}>{loading?"Guardando…":"Guardar contraseña y continuar"}</button>
         {onLogout&&<button type="button" onClick={onLogout} style={{background:"transparent",border:"none",color:AUTH_MUTED,cursor:"pointer",fontSize:12,textDecoration:"underline",padding:0}}>Cerrar sesión</button>}
