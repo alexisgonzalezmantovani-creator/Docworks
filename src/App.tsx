@@ -2133,7 +2133,6 @@ function validarDocumentoParaExport(op, doc, perfil){
   }
   var faltantes=getCamposFaltantesDetalle(opValid,perfil);
   faltantes.forEach(function(c){
-    if(op.tipo==="reserva"&&c.campo==="reserva_aceptacion_dias") return;
     errores.push(c.mensaje||("Falta completar: "+c.label+(c.paso?" (paso "+c.paso+")":"")+"."));
   });
   // Los datos críticos y sus inconsistencias se verifican en un único lugar.
