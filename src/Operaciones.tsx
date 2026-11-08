@@ -1970,6 +1970,9 @@ function useSuperAdmin(activo){
 
 
 var SA_CSS = `
+.sa-app .sa-pagehead .sa-top-logout{margin-left:auto;align-self:flex-start;white-space:nowrap;min-height:40px;padding:9px 14px;border:1px solid var(--border2);color:var(--text);order:3}
+@media(max-width:700px){.sa-app .sa-pagehead .sa-top-logout{position:absolute;right:0;top:0;z-index:3}.sa-app .sa-pagehead{padding-top:48px}}
+
 /* Acceso permanente a cerrar sesión cuando la navegación lateral no es visible. */
 .sa-mobile-logout{display:none!important}
 @media(max-width:900px){.sa-app .sa-mobile-logout{display:inline-flex!important;align-items:center;justify-content:center;min-height:40px;border:1px solid var(--border2)!important;color:var(--text)!important}.sa-app .sa-pagehead{position:relative;z-index:2}}
@@ -2263,7 +2266,7 @@ function SuperAdminDashboard({ contexto, onLogout }){
           <div className="sa-account"><span>{contexto&&contexto.usuario&&(contexto.usuario.nombre||contexto.usuario.email)||"Superadministrador"}</span><button type="button" className="btn btn-ghost btn-sm" onClick={onLogout}>Cerrar sesión</button></div>
         </aside>
         <main className="sa-main" aria-label="Panel de superadmin">
-          <header className="sa-pagehead"><div><h1>{TABS_SA.find(function(t){return t[0]===tab;})[1]}</h1><p>{{resumen:"La actividad de DocWorks y lo que necesita tu atención.",inmobiliarias:"Cuentas, accesos y membresías en un solo lugar.",solicitudes:"Revisá las nuevas inmobiliarias que quieren sumarse.",planes:"Administrá precios y límites de cada plan.",auditoria:"Consultá los cambios y la actividad de la plataforma.",pagos:"Revisá cobros y medios de pago por inmobiliaria."}[tab]}</p></div><div className="sa-head-actions"><button type="button" className="btn btn-ghost btn-sm sa-mobile-logout" onClick={onLogout} aria-label="Cerrar sesión de superadministración">Cerrar sesión</button><button type="button" className="btn btn-secondary btn-sm" disabled={sa.loading} onClick={actualizarPanel}>{sa.loading?"Actualizando…":"Actualizar"}</button>{(tab==="resumen"||tab==="inmobiliarias")&&<button type="button" className="btn btn-primary btn-sm" onClick={function(){setShowNueva(true);}}>+ Nueva inmobiliaria</button>}</div></header>
+          <header className="sa-pagehead"><div><h1>{TABS_SA.find(function(t){return t[0]===tab;})[1]}</h1><p>{{resumen:"La actividad de DocWorks y lo que necesita tu atención.",inmobiliarias:"Cuentas, accesos y membresías en un solo lugar.",solicitudes:"Revisá las nuevas inmobiliarias que quieren sumarse.",planes:"Administrá precios y límites de cada plan.",auditoria:"Consultá los cambios y la actividad de la plataforma.",pagos:"Revisá cobros y medios de pago por inmobiliaria."}[tab]}</p></div><div className="sa-head-actions"><button type="button" className="btn btn-secondary btn-sm" disabled={sa.loading} onClick={actualizarPanel}>{sa.loading?"Actualizando…":"Actualizar"}</button>{(tab==="resumen"||tab==="inmobiliarias")&&<button type="button" className="btn btn-primary btn-sm" onClick={function(){setShowNueva(true);}}>+ Nueva inmobiliaria</button>}</div><button type="button" className="btn btn-ghost btn-sm sa-top-logout" onClick={onLogout} aria-label="Cerrar sesión de superadministración">Cerrar sesión</button></header>
         {sa.error && <div role="alert" className="notice notice-amber" style={{marginBottom:16,borderColor:"rgba(248,113,113,0.3)",color:"var(--red)",background:"rgba(248,113,113,0.08)"}}>{sa.error}</div>}
 
         {tab==="resumen" && (
