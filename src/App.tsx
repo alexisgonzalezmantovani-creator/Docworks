@@ -2653,51 +2653,51 @@ function useAutosave(key, value, delay, onStatus) {
   var timerRef = useRef(null);
   var firstRef = useRef(true);
   var savingRef = useRef(false);
+  var pendingRef = useRef(null);
   useEffect(function() {
-    if (firstRef.current) { firstRef.current = false; return; } // no reescribir el valor recién cargado
+    if (firstRef.current) { firstRef.current = false; return; }
     if (timerRef.current) clearTimeout(timerRef.current);
-    // Un mismo autosave tiene un único estado "saving" aunque el usuario
-    // siga escribiendo y el debounce se reprograme varias veces. Antes se
-    // incrementaba el contador en cada tecla y solo se descontaba una vez,
-    // dejando el indicador clavado en "Autoguardando…".
+    pendingRef.current = {key:key,value:value};
     if (!savingRef.current) {
       savingRef.current = true;
       if (onStatus) onStatus("saving");
     }
     function persist(){
-      // No escribir "null" como borrador al pasear por un formulario vacío.
-      // Solo se persiste progreso real; de lo contrario se limpia el marcador local.
-      if(key==="draftOperacion" && (!value || !value.data)){
-        lsRemove(key);
+      var pending=pendingRef.current;
+      if(!pending)return;
+      pendingRef.current=null;
+      var k=pending.key,v=pending.value;
+      if(k==="draftOperacion" && (!v || !v.data)){
+        lsRemove(k);
         savingRef.current=false;
         if(onStatus) onStatus(null);
         return;
       }
-      var persistedValue = (key === "draftOperacion" && value && value.data)
-        ? Object.assign({}, value, {ts:Date.now()})
-        : value;
-      var ok = lsSet(key, persistedValue);
-      savingRef.current = false;
-      if (onStatus) onStatus(ok ? "saved" : "error");
+      var persistedValue=(k==="draftOperacion" && v && v.data)
+        ? Object.assign({},v,{ts:Date.now()}) : v;
+      var ok=lsSet(k,persistedValue);
+      savingRef.current=false;
+      if(onStatus) onStatus(ok?"saved":"error");
     }
-    var wait = delay === undefined || delay === null ? 400 : delay;
-    if(wait <= 0) persist();
-    else timerRef.current = setTimeout(persist, wait);
-    return function(){
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [key, value]);
+    var wait=delay===undefined||delay===null?400:delay;
+    if(wait<=0)persist();
+    else timerRef.current=setTimeout(persist,wait);
+    return function(){if(timerRef.current)clearTimeout(timerRef.current);};
+  },[key,value]);
   useEffect(function(){
     return function(){
-      if (timerRef.current) clearTimeout(timerRef.current);
-      if (savingRef.current) {
-        // Al desmontar con un debounce pendiente no hubo escritura confirmada.
-        // Evitar informar falsamente que el borrador quedó guardado.
-        savingRef.current = false;
-        if (onStatus) onStatus(null);
+      if(timerRef.current)clearTimeout(timerRef.current);
+      // La salida rápida no debe descartar la última edición aún en debounce.
+      var pending=pendingRef.current;
+      pendingRef.current=null;
+      if(pending){
+        var k=pending.key,v=pending.value;
+        if(k==="draftOperacion" && (!v || !v.data))lsRemove(k);
+        else lsSet(k,k==="draftOperacion"&&v&&v.data?Object.assign({},v,{ts:Date.now()}):v);
       }
+      savingRef.current=false;
     };
-  }, []);
+  },[]);
 }
 // ── INDICADOR DE GUARDADO AUTOMÁTICO ─────────────────────────────────────────
 // Todo el estado vive en localStorage (sin backend), así que "sin conexión"
