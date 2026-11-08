@@ -78,6 +78,19 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
    assert.ok(!faltantes.some(f=>f.campo==='reserva_aceptacion_dias'));
   });
  }
+ for(const valor of ['0','-2','abc','1.5']){
+  const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',reserva_aceptacion_modo:'dias',reserva_aceptacion_dias:valor};
+  check('aceptación en días inválida '+valor+' no se omite de los pendientes',()=>{
+   const faltantes=a.getCamposFaltantesDetalle(op);
+   assert.ok(faltantes.some(f=>f.campo==='reserva_aceptacion_dias'));
+  });
+ }
+ for(const modo of ['horas','fecha']){
+  const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',reserva_aceptacion_modo:modo,reserva_aceptacion_dias:'0'};
+  check('plazo en días inactivo no bloquea modalidad '+modo,()=>{
+   assert.ok(!a.getCamposFaltantesDetalle(op).some(f=>f.campo==='reserva_aceptacion_dias'));
+  });
+ }
  for(const modo of ['dias','horas']){
   const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',reserva_aceptacion_modo:modo,reserva_aceptacion_vencimiento:'2026-02-30'};
   check('fecha inactiva no bloquea aceptación por '+modo,()=>assert.ok(!a.getCamposFaltantesDetalle(op).some(f=>f.campo==='reserva_aceptacion_vencimiento')));
