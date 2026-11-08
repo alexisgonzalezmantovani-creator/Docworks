@@ -2294,7 +2294,8 @@ function campoPrincipalErrorExport(op,perfil,errores){
   if(f) return f;
   var t=(errores||[]).join(" | ");
   if(/plazo de aceptación en horas/i.test(t)) return "reserva_aceptacion_horas";
-  if(/plazo de aceptación|vencimiento para la aceptación/i.test(t)) return "reserva_aceptacion_dias";
+  if(/fecha de vencimiento de aceptación|fecha válida de vencimiento|vencimiento para la aceptación/i.test(t)) return "reserva_aceptacion_vencimiento";
+  if(/plazo de aceptación|aceptación en días/i.test(t)) return "reserva_aceptacion_dias";
   if(/cuotas|primer vencimiento/i.test(t)) return "compra_cuotas_cantidad";
   if(/condición especial|medio de pago|importes por medio|vencimientos y condiciones/i.test(t)) return "compra_condiciones_pago";
   if(/entrega inicial supera/i.test(t)) return "anticipo";
