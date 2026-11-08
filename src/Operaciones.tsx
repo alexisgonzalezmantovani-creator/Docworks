@@ -5263,6 +5263,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // una operación nueva no se muestra nada en rojo hasta que se guarde.
   const modoEdicion = !!initial;
   const [revisando,setRevisando]=useState(false);
+  // Solo activar las marcas rojas al llegar al resumen o pedir revisión explícita.
+  useEffect(function(){if(step>=total)setRevisando(true);},[step,total]);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
     if(initial) return;
@@ -5280,7 +5282,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // No mantener un permiso para saltar validaciones después de cambiar datos o paso.
   useEffect(function(){setAvisoPaso(false);},[step,data]);
   function avanzarConAviso(){
-    if(faltantesPasoActual.length && !avisoPaso){setAvisoPaso(true);setRevisando(true);return;}
+    if(faltantesPasoActual.length && !avisoPaso){setAvisoPaso(true);return;}
     setAvisoPaso(false);setStep(function(s){return Math.min(s+1,total+1);});
   }
   const camposFaltantes = faltantesDetalle.map(function(f){return f.campo;});
@@ -5290,7 +5292,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     if(typeof document==="undefined") return;
     var t=setTimeout(function(){
       document.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");});
-      if(modoEdicion||revisando) faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
+      if(revisando) faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
     },60);
     return function(){clearTimeout(t);};
   },[step,data,grupo,modoEdicion,revisando]);
@@ -5559,7 +5561,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         </div>
       )}
       <div role="status" aria-live="polite" style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,fontSize:12,fontWeight:650,color:documentoListo?"var(--green)":"var(--amber)"}}><span aria-hidden="true">{documentoListo?"✓":"!"}</span><span>{documentoListo?"Datos críticos completos · revisá el documento antes de exportar":"Faltan "+faltantesDetalle.length+" dato"+(faltantesDetalle.length===1?"":"s")+" crítico"+(faltantesDetalle.length===1?"":"s")+" para el documento"}</span>{!documentoListo&&<button type="button" onClick={function(){irACampo(faltantesDetalle[0].campo);}} style={{marginLeft:"auto",background:"transparent",border:"none",color:"inherit",fontSize:12,textDecoration:"underline",cursor:"pointer"}}>Revisar</button>}</div>
-      <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));setRevisando(true);}}/></div>
+      <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Progreso</span>
