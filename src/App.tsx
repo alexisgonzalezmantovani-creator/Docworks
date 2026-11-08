@@ -2756,9 +2756,10 @@ function useOperationPageScroll(showForm){
   useEffect(function(){
     var frame=requestAnimationFrame(function(){
       if(window.__dwScrollLocks)return;
-      if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
-      window.scrollTo({top:0,left:0,behavior:"instant"});
-      document.querySelectorAll(".content").forEach(function(el){el.scrollTo({top:0,left:0,behavior:"instant"});});
+      // No quitar el foco a quien está completando un campo al montar la vista.
+      if(!showForm && document.activeElement instanceof HTMLElement)document.activeElement.blur();
+      window.scrollTo({top:0,left:0,behavior:"auto"});
+      document.querySelectorAll(".content").forEach(function(el){el.scrollTo({top:0,left:0,behavior:"auto"});});
     });
     return function(){cancelAnimationFrame(frame);};
   },[showForm]);
@@ -5479,7 +5480,8 @@ function StepBar({current,tipo,pasosFaltantes,onGoTo}){
       var el=barRef.current; if(!el) return;
       var act=el.querySelector('[data-active="1"]'); if(!act) return;
       var r=act.getBoundingClientRect(), b=el.getBoundingClientRect();
-      el.scrollLeft += (r.left-b.left)-((b.width-r.width)/2);
+      var desired=el.scrollLeft+(r.left-b.left)-((b.width-r.width)/2);
+      el.scrollLeft=Math.max(0,Math.min(desired,el.scrollWidth-el.clientWidth));
     }catch(e){ console.debug("DocWorks: no se pudo centrar el paso activo",e); }
   },[current,tipo]);
   return(
