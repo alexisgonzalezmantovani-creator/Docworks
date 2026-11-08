@@ -5225,7 +5225,7 @@ export function enfocarCampoOperacion(campo){
 }
 
 export function crearOperacionForm(deps){
- const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -5285,17 +5285,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // Los campos se validan en el resumen final, nunca se pintan en rojo durante la carga o edición.
   const camposFaltantes = [];
   const pasosFaltantes = (revisando && step>total ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
-  // 4.29: marca en rojo el campo puntual que falta (por DOM, así vale para todos los pasos y tipos de documento).
+  // Limpiar marcas heredadas de versiones anteriores, incluso al volver del resumen.
+  // La revisión final informa los pendientes sin teñir los campos durante la carga.
   useEffect(function(){
     if(typeof document==="undefined") return;
-    var t=setTimeout(function(){
-      document.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");});
-      // Nunca marcar en rojo durante la carga, incluso si se volvió desde el resumen.
-      // Los pendientes se muestran con avisos suaves; el rojo queda para la revisión final.
-      if(revisando && step>total) faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
-    },60);
-    return function(){clearTimeout(t);};
-  },[step,data,grupo,modoEdicion,revisando]);
+    document.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");});
+  },[step,data,grupo,revisando]);
   const focoPendienteRef=useRef(null);
   useEffect(function(){return function(){if(focoPendienteRef.current!=null)window.clearInterval(focoPendienteRef.current);};},[]);
   function irACampo(campo){
@@ -5334,7 +5329,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }, [data,contextoBorrador&&contextoBorrador.inmobiliariaId,contextoBorrador&&contextoBorrador.usuarioId]);
   function guardarDraftLocalAhora(){
     var actual=dataRef.current;
-    if(!draftTieneContenido(actual)) return true;
+    if(!draftTieneContenido(actual)){
+      // Si se borraron todos los datos, no resucitar un borrador previo al ocultar la PWA.
+      lsRemove("draftOperacion");
+      return true;
+    }
     return lsSet("draftOperacion", {data:actual, editId:initialIdRef.current, contexto:contextoBorrador||null, ts:Date.now()});
   }
   // En el formulario el guardado es inmediato (sin debounce): cada cambio de un
@@ -5544,7 +5543,9 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }).length;
   var pct=totalProgreso?Math.round(camposCompletados/totalProgreso*100):0;
   async function handleFinalizarAccion(accion,estadoFinal=undefined){
-    // Evita que un doble toque cree dos documentos (cada guardado de una operación nueva genera un id propio).
+    // Una operación nueva sin datos no debe convertirse en registro ni papelera.
+    // Tampoco iniciar un guardado duplicado por doble toque en móvil.
+    if(!initial && !draftTieneContenido(dataRef.current)) return;
     if(guardandoFormRef.current) return;
     guardandoFormRef.current = true;
     try{

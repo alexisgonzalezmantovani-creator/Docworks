@@ -2747,12 +2747,12 @@ function AutosaveIndicator({status, compact, persistent=false, subtle=false}){
   if(state==="saved" && !showSaved && online && !persistent) return null;
   var saving=state==="saving",error=state==="error";
   var color=error?"var(--red)":!online?"var(--gold)":saving?"var(--dim)":"var(--green)";
-  var description=error?"No se pudieron guardar los cambios":!online?"Sin conexión — guardado local":saving?"Guardando cambios…":"Cambios guardados";
+  var description=error?"No se pudo guardar el borrador en este dispositivo":!online?"Sin conexión — los borradores se guardan solo en este dispositivo":saving?"Guardando en este dispositivo…":"Borrador guardado en este dispositivo";
   return (
     <span role="status" aria-label={description} title={description} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:compact?11:12,color:color,fontFamily:"DM Sans,sans-serif",whiteSpace:"nowrap"}}>
       <span aria-hidden="true" style={{display:"inline-block",fontSize:compact?15:16,animation:saving?"diskpulse 0.9s ease-in-out infinite":"none"}}>💾</span>
       {subtle&&(error||!online)&&<span aria-hidden="true" style={{width:5,height:5,borderRadius:"50%",background:error?"var(--red)":"var(--gold)"}}/>}
-      {!subtle&&(error||!online)&&<span>{error?"Error al guardar":"Sin conexión"}</span>}
+      {!subtle&&(error||!online)&&<span>{error?"Error al guardar localmente":"Sin conexión · guardado local"}</span>}
     </span>
   );
 }
@@ -5419,7 +5419,13 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
     var activando=!selected.includes(id);
     onChange("clausulas_ids",activando?selected.concat([id]):selected.filter(function(x){return x!==id;}));
     var cfg=configDetalleClausula((clausulas||[]).find(function(c){return c.id===id;}));
-    if(activando&&cfg){onChange(cfg.campo+"_id",id);setClausulaExpandida(id);}
+    // Al activar una cláusula, abrir siempre su detalle; no exigir que tenga campos especiales.
+    if(activando){
+      if(cfg)onChange(cfg.campo+"_id",id);
+      setClausulaExpandida(id);
+    } else {
+      setClausulaExpandida(function(actual){return actual===id?null:actual;});
+    }
   }
   var [clausulaExpandida,setClausulaExpandida]=useState(null);
   var [showAdd,setShowAdd]=useState(!!(data.clausulas_custom||data.clausulas_custom_titulo));
@@ -7872,7 +7878,7 @@ const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
 const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
-const OperacionForm = crearOperacionForm({OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
+const OperacionForm = crearOperacionForm({OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
 const ClausulasWorkspace = crearClausulasWorkspace({TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({parseMontoAR, Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
