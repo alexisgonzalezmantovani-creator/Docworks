@@ -2732,6 +2732,7 @@ function AutosaveIndicator({status, compact, persistent=false, subtle=false}){
     return function(){clearTimeout(timer);};
   },[status.state,status.ts]);
   var state=status.state;
+  if((!state || state==="idle") && online) return null;
   if(state==="saved" && !showSaved && online && !persistent) return null;
   var saving=state==="saving",error=state==="error";
   var color=error?"var(--red)":!online?"var(--gold)":saving?"var(--dim)":"var(--green)";
@@ -2745,7 +2746,7 @@ function AutosaveIndicator({status, compact, persistent=false, subtle=false}){
   );
 }
 function OperationSaveInline({status}){
-  if(!status||status.state!=="saving")return null;
+  if(!status||!["saving","error"].includes(status.state))return null;
   return <span className="dw-operation-save-inline"><AutosaveIndicator status={status} compact persistent subtle/></span>;
 }
 
@@ -5486,9 +5487,10 @@ function StepBar({current,tipo,pasosFaltantes,onGoTo}){
       {steps.map(function(s,i){
         const done=current>s.id,active=current===s.id;
         const flagged=!!(pasosFaltantes&&pasosFaltantes[s.id]);
+        const missingCount=pasosFaltantes&&pasosFaltantes[s.id] ? (Array.isArray(pasosFaltantes[s.id])?pasosFaltantes[s.id].length:Number(pasosFaltantes[s.id])||0) : 0;
         return(
           <div key={s.id} className="step-item">
-            <div className={"step-dot "+(flagged?"flag":done?"done":active?"active":"pending")}
+            <div className={"step-dot "+(active?"active":flagged?"flag":done?"done":"pending")}
               data-active={active?"1":undefined}
               aria-current={active?"step":undefined}
               role={onGoTo?"button":undefined}
@@ -5496,7 +5498,7 @@ function StepBar({current,tipo,pasosFaltantes,onGoTo}){
               onClick={onGoTo?function(){onGoTo(s.id);}:undefined}
               onKeyDown={onGoTo?function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); onGoTo(s.id); } }:undefined}
               style={onGoTo?{cursor:"pointer"}:undefined}
-              title={onGoTo?"Ir a "+s.l:undefined}>
+              title={(onGoTo?"Ir a "+s.l:s.l)+(flagged&&missingCount?" · "+missingCount+" campos pendientes":"")}>
               {flagged?"!":done?"✓":s.id} <span>{s.l}</span>
             </div>
             {i<steps.length-1&&<div className={"step-line "+(done?"done":"")}/>}
