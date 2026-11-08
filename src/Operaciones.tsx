@@ -1702,9 +1702,11 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .op-card,.op-card-premium,.op-card .op-card-inner{min-width:0!important;max-width:100%!important;box-sizing:border-box!important;}
   .op-card .op-card-inner{display:flex!important;flex-direction:column!important;}
   .op-card .op-card-side{width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;display:flex!important;flex-wrap:wrap!important;align-items:stretch!important;overflow:visible!important;}
-  .op-card .op-card-side .op-actions{display:flex!important;visibility:visible!important;opacity:1!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:6px 0 0!important;align-self:stretch!important;justify-content:flex-end!important;flex-wrap:wrap!important;gap:6px!important;}
-  .op-card .op-card-side .op-actions>.btn{display:inline-flex!important;visibility:visible!important;flex:0 1 auto!important;min-width:0!important;max-width:100%!important;white-space:normal!important;}
-  .op-card .op-card-side .op-actions .op-more{flex:0 0 40px!important;min-width:40px!important;}
+  /* iPhone: Abrir / Editar / ⋯ juntos, a la derecha y sin scroll lateral. */
+  .op-card .op-card-side>div:has(>.op-actions){width:100%!important;min-width:0!important;display:flex!important;justify-content:flex-end!important;}
+  .op-card .op-card-side .op-actions{display:flex!important;visibility:visible!important;opacity:1!important;width:max-content!important;max-width:100%!important;min-width:0!important;margin:6px 0 0 auto!important;align-self:flex-end!important;justify-content:flex-end!important;flex-wrap:nowrap!important;gap:4px!important;}
+  .op-card .op-card-side .op-actions>.btn{display:inline-flex!important;visibility:visible!important;flex:0 1 auto!important;min-width:0!important;max-width:calc(50% - 22px)!important;padding:7px 6px!important;font-size:11px!important;white-space:nowrap!important;justify-content:center!important;}
+  .op-card .op-card-side .op-actions .op-more{flex:0 0 36px!important;min-width:36px!important;max-width:36px!important;}
 }
 @media (orientation:landscape) and (hover:none) and (pointer:coarse) and (max-width:1100px){
   html,body,#root{max-width:100%!important;overflow-x:clip!important;}
