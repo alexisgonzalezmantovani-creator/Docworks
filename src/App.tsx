@@ -7183,6 +7183,7 @@ function useDocWorksSession(){
     var errorEnlace=errorEnlaceCuenta(window.location.href);
     if(errorEnlace){accionEnlaceRef.current=null;setLoginError(errorEnlace);limpiarAuthUrl();}
     var cancelado = false;
+    var sesionRecibidaPorEvento = false;
     // 4.27: si hay una sesión guardada en el dispositivo, una conexión lenta NUNCA manda al login:
     // se avisa, se sigue esperando en segundo plano y se entra solo apenas responde Supabase.
     var tieneSesionGuardada = dwHaySesionGuardada();
@@ -7197,7 +7198,7 @@ function useDocWorksSession(){
       if (!sb) { clearTimeout(timeoutId); setConnError("No pudimos iniciar la aplicación. Revisá tu conexión y tocá Reintentar."); setReady(true); return; }
       var revisionInicial=sesionRevisionRef.current;
       dwObtenerSesionRobusta(sb).then(function(res){
-        if (cancelado||revisionInicial!==sesionRevisionRef.current) return;
+        if (cancelado||revisionInicial!==sesionRevisionRef.current||sesionRecibidaPorEvento) return;
         clearTimeout(timeoutId);
         if (res && res.transitorio) { setConnError("No pudimos recuperar tu sesión. Tocá Reintentar sin perder tus datos."); setReady(true); return; }
         setConnError(null);
@@ -7212,7 +7213,7 @@ function useDocWorksSession(){
         }
         setReady(true);
       }).catch(function(err){
-        if (cancelado||revisionInicial!==sesionRevisionRef.current) return;
+        if (cancelado||revisionInicial!==sesionRevisionRef.current||sesionRecibidaPorEvento) return;
         clearTimeout(timeoutId);
         limpiarAuthUrl();
         setConnError("No pudimos conectar con el servicio. Revisá tu conexión y tocá Reintentar.");
@@ -7222,6 +7223,8 @@ function useDocWorksSession(){
         if(cancelado)return;
         // 4.27: eventos con sesión vacía que NO son un cierre real (ej. INITIAL_SESSION mientras carga) no deben sacar al usuario.
         if(!sess && _evt!=="SIGNED_OUT") return;
+        sesionRecibidaPorEvento = true;
+        setConnError(null);
         if(_evt==="PASSWORD_RECOVERY") setAuthAction("recovery");
         else if(_evt==="SIGNED_IN") { var a=detectarAuthAction(); if(a) setAuthAction(a); }
         identificarSesion(sess);
