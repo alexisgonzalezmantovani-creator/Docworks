@@ -1914,7 +1914,7 @@ function getInconsistenciasCamposOperacion(op){
   if(compra)fechas.push(["fecha_posesion","Fecha de posesión"]);
   if(op.tipo==="reserva"){
     if(op.reserva_incluye_refuerzo)fechas.push(["reserva_fecha_refuerzo","Fecha del refuerzo"]);
-    fechas.push(["reserva_aceptacion_vencimiento","Vencimiento para la aceptación"]);
+    if(op.reserva_aceptacion_modo==="fecha")fechas.push(["reserva_aceptacion_vencimiento","Vencimiento para la aceptación"]);
     entero("reserva_vigencia_dias","Vigencia de la reserva",1);
     if(op.reserva_aceptacion_modo==="horas")entero("reserva_aceptacion_horas","Plazo de aceptación en horas",1);
     else if(op.reserva_aceptacion_modo!=="fecha")entero("reserva_aceptacion_dias","Plazo de aceptación en días",1);
@@ -2136,11 +2136,8 @@ function validarDocumentoParaExport(op, doc, perfil){
     if(op.tipo==="reserva"&&c.campo==="reserva_aceptacion_dias") return;
     errores.push(c.mensaje||("Falta completar: "+c.label+(c.paso?" (paso "+c.paso+")":"")+"."));
   });
-  // Los modos de aceptación por horas y fecha ya se validan en
-  // getCamposFaltantesDetalle: evitar mensajes duplicados al exportar.
-  if(op.tipo==="reserva"&&String(op.reserva_aceptacion_modo||"dias").toLowerCase()==="dias"
-      &&!esMontoMayorACero(valorCriticoOp(op,"reserva_aceptacion_dias")))
-    errores.push("Indicá un plazo de aceptación en días mayor a cero.");
+  // Los datos críticos y sus inconsistencias se verifican en un único lugar.
+  // Evitar mensajes duplicados para el mismo plazo de aceptación.
   if(op.tipo==="alquiler"){
     var depositoModo=String(op.alquiler_deposito==null?"1":op.alquiler_deposito);
     if(["1","2","otro"].indexOf(depositoModo)<0) errores.push("El depósito no es válido: elegí 1 mes, 2 meses o monto personalizado.");
