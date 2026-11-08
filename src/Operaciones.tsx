@@ -5539,7 +5539,9 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }).length;
   var pct=totalProgreso?Math.round(camposCompletados/totalProgreso*100):0;
   async function handleFinalizarAccion(accion,estadoFinal=undefined){
-    // Evita que un doble toque cree dos documentos (cada guardado de una operación nueva genera un id propio).
+    // Una operación nueva sin datos no debe convertirse en registro ni papelera.
+    // Tampoco iniciar un guardado duplicado por doble toque en móvil.
+    if(!initial && !draftTieneContenido(dataRef.current)) return;
     if(guardandoFormRef.current) return;
     guardandoFormRef.current = true;
     try{
