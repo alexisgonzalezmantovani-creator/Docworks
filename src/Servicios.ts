@@ -23,14 +23,25 @@ export function dwCrearCliente(){
 // 4.29 — Recupera la sesión guardada con reintentos: refrescar la página nunca debe cerrar la sesión por lentitud.
 export async function dwObtenerSesionRobusta(sb){
   var hay=dwHaySesionGuardada(), ultimo=null;
-  // getSession ya recupera/refresca la sesión cuando corresponde.
-  // No llamar refreshSession en paralelo: dos renovaciones consumen el mismo refresh token.
+  // Supabase getSession administra la renovación; no duplicar refreshSession.
+  // Cada intento tiene un límite y limpia su temporizador al finalizar.
   for(var i=0;i<3;i++){
     try{
-      var r=await Promise.race([
-        sb.auth.getSession(),
-        new Promise(function(_,reject){setTimeout(function(){reject(new Error("session_timeout"));},8000);})
-      ]);
+      var r=await new Promise(function(resolve,reject){
+        var terminado=false;
+        var timer=setTimeout(function(){
+          if(terminado)return;
+          terminado=true;
+          reject(new Error("session_timeout"));
+        },8000);
+        Promise.resolve().then(function(){return sb.auth.getSession();}).then(function(resultado){
+          if(terminado)return;
+          terminado=true;clearTimeout(timer);resolve(resultado);
+        },function(error){
+          if(terminado)return;
+          terminado=true;clearTimeout(timer);reject(error);
+        });
+      });
       if(r && r.data && r.data.session) return r;
       ultimo=r;
       if(!hay) return r;
