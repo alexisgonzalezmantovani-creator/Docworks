@@ -5270,7 +5270,14 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       return Object.assign({},d,{comision_vendedor_modo:"porcentaje",comision_vendedor_valor:"3"});
     });
   },[data.tipo]);
-  const faltantesDetalle = (modoEdicion||revisando) ? getCamposFaltantesDetalle(data,perfil) : [];
+  const faltantesDetalle = getCamposFaltantesDetalle(data,perfil);
+  const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
+  const [avisoPaso,setAvisoPaso]=useState(false);
+  useEffect(function(){setAvisoPaso(false);},[step]);
+  function avanzarConAviso(){
+    if(faltantesPasoActual.length && !avisoPaso){setAvisoPaso(true);return;}
+    setAvisoPaso(false);setStep(function(s){return s+1;});
+  }
   const camposFaltantes = faltantesDetalle.map(function(f){return f.campo;});
   const pasosFaltantes = faltantesDetalle.reduce(function(acc,f){acc[f.paso]=true;return acc;},{});
   // 4.29: marca en rojo el campo puntual que falta (por DOM, así vale para todos los pasos y tipos de documento).
@@ -5560,9 +5567,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         <div className="dw-operation-form-actions">
           {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
+          {faltantesPasoActual.length>0&&<span role="status" style={{fontSize:11.5,color:"var(--amber)",maxWidth:240}}>{avisoPaso?"Faltan "+faltantesPasoActual.map(function(f){return f.label;}).join(", ")+". Podés continuar sin completarlos.":faltantesPasoActual.length+" dato"+(faltantesPasoActual.length===1?"":"s")+" pendiente"+(faltantesPasoActual.length===1?"":"s")+" en este paso"}</span>}
           <div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {step<total?<Btn onClick={function(){setStep(function(s){return s+1;});}}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={function(){setStep(total+1);}}>{modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
+            {step<total?<Btn onClick={avanzarConAviso}>{avisoPaso?"Continuar igual →":"Siguiente →"}</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>{avisoPaso?"Continuar igual →":modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
           </div>
         </div>
       </div>}
