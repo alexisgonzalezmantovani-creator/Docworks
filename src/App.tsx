@@ -2691,8 +2691,10 @@ function useAutosave(key, value, delay, onStatus) {
     return function(){
       if (timerRef.current) clearTimeout(timerRef.current);
       if (savingRef.current) {
+        // Al desmontar con un debounce pendiente no hubo escritura confirmada.
+        // Evitar informar falsamente que el borrador quedó guardado.
         savingRef.current = false;
-        if (onStatus) onStatus("saved");
+        if (onStatus) onStatus(null);
       }
     };
   }, []);
