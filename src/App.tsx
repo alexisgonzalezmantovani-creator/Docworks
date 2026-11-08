@@ -2650,52 +2650,51 @@ function lsRemove(key) {
 // Con delay=0 el guardado es inmediato; con delay>0 usa debounce.
 // onStatus(state) opcional, para alimentar el indicador visible de guardado.
 function useAutosave(key, value, delay, onStatus) {
-  var timerRef = useRef(null);
-  var firstRef = useRef(true);
-  var savingRef = useRef(false);
-  var pendingRef = useRef(null);
-  useEffect(function() {
-    if (firstRef.current) { firstRef.current = false; return; }
-    if (timerRef.current) clearTimeout(timerRef.current);
-    pendingRef.current = {key:key,value:value};
-    if (!savingRef.current) {
-      savingRef.current = true;
-      if (onStatus) onStatus("saving");
-    }
-    function persist(){
-      var pending=pendingRef.current;
-      if(!pending)return;
-      pendingRef.current=null;
-      var k=pending.key,v=pending.value;
-      if(k==="draftOperacion" && (!v || !v.data)){
-        lsRemove(k);
-        savingRef.current=false;
-        if(onStatus) onStatus(null);
-        return;
-      }
-      var persistedValue=(k==="draftOperacion" && v && v.data)
-        ? Object.assign({},v,{ts:Date.now()}) : v;
-      var ok=lsSet(k,persistedValue);
+  var timerRef=useRef(null);
+  var firstRef=useRef(true);
+  var savingRef=useRef(false);
+  var pendingRef=useRef(null);
+  var onStatusRef=useRef(onStatus);
+  onStatusRef.current=onStatus;
+  function persistPending(){
+    var pending=pendingRef.current;
+    if(!pending)return;
+    pendingRef.current=null;
+    var k=pending.key,v=pending.value;
+    if(k==="draftOperacion" && (!v || !v.data || !draftTieneContenido(v.data))){
+      lsRemove(k);
       savingRef.current=false;
-      if(onStatus) onStatus(ok?"saved":"error");
+      if(onStatusRef.current)onStatusRef.current(null);
+      return;
+    }
+    var stored=(k==="draftOperacion"&&v&&v.data)?Object.assign({},v,{ts:Date.now()}):v;
+    var ok=lsSet(k,stored);
+    savingRef.current=false;
+    if(onStatusRef.current)onStatusRef.current(ok?"saved":"error");
+  }
+  useEffect(function(){
+    if(firstRef.current){firstRef.current=false;return;}
+    if(timerRef.current)clearTimeout(timerRef.current);
+    pendingRef.current={key:key,value:value};
+    if(!savingRef.current){
+      savingRef.current=true;
+      if(onStatusRef.current)onStatusRef.current("saving");
     }
     var wait=delay===undefined||delay===null?400:delay;
-    if(wait<=0)persist();
-    else timerRef.current=setTimeout(persist,wait);
+    if(wait<=0)persistPending();
+    else timerRef.current=setTimeout(persistPending,wait);
     return function(){if(timerRef.current)clearTimeout(timerRef.current);};
-  },[key,value]);
+  },[key,value,delay]);
   useEffect(function(){
+    function flushOnHide(){if(timerRef.current)clearTimeout(timerRef.current);persistPending();}
+    function flushOnVisibility(){if(document.visibilityState==="hidden")flushOnHide();}
+    // iOS puede suspender la PWA sin desmontar React: guardar antes de ocultarla.
+    window.addEventListener("pagehide",flushOnHide);
+    document.addEventListener("visibilitychange",flushOnVisibility);
     return function(){
-      if(timerRef.current)clearTimeout(timerRef.current);
-      // La salida rápida no debe descartar la última edición aún en debounce.
-      var pending=pendingRef.current;
-      pendingRef.current=null;
-      if(pending){
-        var k=pending.key,v=pending.value;
-        if(k==="draftOperacion" && (!v || !v.data))lsRemove(k);
-        else lsSet(k,k==="draftOperacion"&&v&&v.data?Object.assign({},v,{ts:Date.now()}):v);
-      }
-      savingRef.current=false;
+      window.removeEventListener("pagehide",flushOnHide);
+      document.removeEventListener("visibilitychange",flushOnVisibility);
+      flushOnHide();
     };
   },[]);
 }
