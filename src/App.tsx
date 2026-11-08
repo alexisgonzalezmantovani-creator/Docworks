@@ -9337,7 +9337,6 @@ class DWErrorBoundary extends Component<any,any> {
           <div style={{fontSize:17,fontWeight:600,margin:"18px 0 8px"}}>Algo no salió como esperábamos</div>
           <div style={{fontSize:14,lineHeight:1.55,opacity:.8,marginBottom:20}}>Tus operaciones y borradores siguen guardados en este dispositivo. Recargá la pantalla para continuar.</div>
           <button type="button" onClick={function(){ try{ window.location.reload(); }catch(e){} }} style={{minHeight:48,padding:"0 28px",borderRadius:12,border:"none",background:"#d4a853",color:"#0b1730",fontSize:15,fontWeight:700,cursor:"pointer"}}>Recargar</button>
-          <div style={{marginTop:18,fontSize:11,opacity:.45,wordBreak:"break-word"}}>{msg}</div>
         </div>
       </div>
     );
