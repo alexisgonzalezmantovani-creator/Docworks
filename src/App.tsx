@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.38";
+var DOCWORKS_VERSION = "6.39";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -5586,7 +5586,7 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
                   var sel=data.tipo===t.value;
                   return(
                     <button type="button" key={t.value}
-                      className={"dw-grupo-card dw-grupo-tipo-card dw-grupo-"+key+(sel?" is-selected":"")}
+                      className={"dw-grupo-card dw-grupo-"+key+(sel?" is-selected":"")}
                       aria-pressed={sel}
                       onClick={function(){onChange("tipo",t.value);}}>
                       <span className="dw-grupo-icon" aria-hidden="true">{t.icon}</span>
