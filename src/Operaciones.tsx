@@ -5282,7 +5282,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   function avanzarConAviso(){
     setStep(function(s){return Math.min(s+1,total+1);});
   }
-  const camposFaltantes = faltantesDetalle.map(function(f){return f.campo;});
+  // Los campos se validan en el resumen final, nunca se pintan en rojo durante la carga o edición.
+  const camposFaltantes = [];
   const pasosFaltantes = (revisando && step>total ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
   // 4.29: marca en rojo el campo puntual que falta (por DOM, así vale para todos los pasos y tipos de documento).
   useEffect(function(){
