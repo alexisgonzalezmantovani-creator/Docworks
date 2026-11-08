@@ -25,4 +25,7 @@ assert.match(clauses,/className="dw-op-clause-expand"/,'El botón + tiene contro
 assert.match(form,/lsRemove\("draftOperacion"\)/,'Eliminar borrador si se vacían los datos');
 assert.match(app,/crearOperacionForm\(\{[^;]*lsRemove, lsSet/,'Inyectar limpieza de borrador desde App');
 assert.match(app,/if\(k==="draftOperacion" && \(!v \|\| !v\.data \|\| !draftTieneContenido\(v\.data\)\)\)/,'Autoguardado limpia borradores vacíos');
-console.log('OK: 15 comprobaciones estáticas de validación diferida, borrador y cláusulas');
+assert.match(app,/Guardando en este dispositivo…/,'Indicar que el guardado en curso es local');
+assert.match(app,/Borrador guardado en este dispositivo/,'No confundir autoguardado con sincronización');
+assert.match(app,/No se pudo guardar el borrador en este dispositivo/,'Informar el alcance del error de guardado');
+console.log('OK: 18 comprobaciones estáticas de validación diferida, borrador y cláusulas');
