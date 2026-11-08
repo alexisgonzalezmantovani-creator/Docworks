@@ -17,4 +17,5 @@ assert.match(form,/step<total\?<Btn onClick=\{avanzarConAviso\}>Siguiente/,'Perm
 assert.match(form,/Revisar →/,'Conservar revisión final');
 assert.match(form,/draftTieneContenido\(data\) \? \{ data:data/,'No persistir un formulario vacío como borrador');
 assert.match(form,/dw-operation-save-slot/,'Indicador de guardado junto a siguiente');
-console.log('OK: 9 comprobaciones estáticas de validación diferida, borrador y navegación');
+assert.match(form,/if\(!initial && !draftTieneContenido\(dataRef\.current\)\) return;/,'Impedir guardar operaciones nuevas vacías');
+console.log('OK: 10 comprobaciones estáticas de validación diferida, borrador y navegación');
