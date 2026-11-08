@@ -5280,11 +5280,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // No mantener un permiso para saltar validaciones después de cambiar datos o paso.
   useEffect(function(){setAvisoPaso(false);},[step,data]);
   function avanzarConAviso(){
-    if(faltantesPasoActual.length && !avisoPaso){setAvisoPaso(true);return;}
-    setAvisoPaso(false);setStep(function(s){return Math.min(s+1,total+1);});
+    setStep(function(s){return Math.min(s+1,total+1);});
   }
   const camposFaltantes = faltantesDetalle.map(function(f){return f.campo;});
-  const pasosFaltantes = (modoEdicion||revisando ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
+  const pasosFaltantes = (revisando && step>total ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
   // 4.29: marca en rojo el campo puntual que falta (por DOM, así vale para todos los pasos y tipos de documento).
   useEffect(function(){
     if(typeof document==="undefined") return;
@@ -5292,7 +5291,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       document.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");});
       // Nunca marcar en rojo durante la carga, incluso si se volvió desde el resumen.
       // Los pendientes se muestran con avisos suaves; el rojo queda para la revisión final.
-      if(revisando && step>=total) faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
+      if(revisando && step>total) faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
     },60);
     return function(){clearTimeout(t);};
   },[step,data,grupo,modoEdicion,revisando]);
@@ -5480,7 +5479,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const esDocSimple=esComodato||esExclusividad||esRefuerzo||esDevolucion;
   const total=esAlq?7:esResAlq?6:esDocSimple?5:6;
   // Declarar total antes de usarlo en dependencias: evita ReferenceError en tablet/iPhone.
-  useEffect(function(){setRevisando(step>=total);},[step,total]);
+  useEffect(function(){setRevisando(step>total);},[step,total]);
   // If no group selected yet (new op), show group picker
   if(!grupo){
     return(
@@ -5556,13 +5555,13 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }
   return(
     <div style={{paddingBottom:4}}>
-      {modoEdicion&&faltantesDetalle.length>0&&(
+      {step>total&&faltantesDetalle.length>0&&(
         <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"10px 14px",borderRadius:10,background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",marginBottom:10,fontSize:12.5,color:"var(--red)"}}>
           <span>⚠</span>
           <span>Revisá {faltantesDetalle.length} dato{faltantesDetalle.length===1?"":"s"}: {faltantesDetalle.map(function(f){return f.label;}).join(", ")}.</span>
         </div>
       )}
-      <div role="status" aria-live="polite" style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,fontSize:12,fontWeight:650,color:documentoListo?"var(--green)":"var(--amber)"}}><span aria-hidden="true">{documentoListo?"✓":"!"}</span><span>{documentoListo?"Datos críticos completos · revisá el documento antes de exportar":"Faltan "+faltantesDetalle.length+" dato"+(faltantesDetalle.length===1?"":"s")+" crítico"+(faltantesDetalle.length===1?"":"s")+" para el documento"}</span>{!documentoListo&&<button type="button" onClick={function(){irACampo(faltantesDetalle[0].campo);}} style={{marginLeft:"auto",background:"transparent",border:"none",color:"inherit",fontSize:12,textDecoration:"underline",cursor:"pointer"}}>Revisar</button>}</div>
+      {step>total&&<div role="status" aria-live="polite" style={{marginBottom:12,fontSize:13,color:"var(--text)"}}>{documentoListo?"Todo listo para generar el documento.":"Datos por completar: "+faltantesDetalle.length+". Podés revisarlos o guardar el borrador."}</div>}
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
@@ -5579,10 +5578,9 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         <div className="dw-operation-form-actions">
           {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
-          {faltantesPasoActual.length>0&&<span role="status" style={{fontSize:12.5,lineHeight:1.45,fontWeight:650,color:"var(--text)",maxWidth:300,overflowWrap:"anywhere"}}>{avisoPaso?"Faltan "+resumenPendientesPaso+". Podés continuar sin completarlos.":faltantesPasoActual.length+" dato"+(faltantesPasoActual.length===1?"":"s")+" pendiente"+(faltantesPasoActual.length===1?"":"s")+" en este paso"}</span>}
           <div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {step<total?<Btn onClick={avanzarConAviso}>{avisoPaso?"Continuar igual →":"Siguiente →"}</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>{avisoPaso?"Continuar igual →":modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
+            {step<total?<Btn onClick={avanzarConAviso}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
           </div>
         </div>
       </div>}
