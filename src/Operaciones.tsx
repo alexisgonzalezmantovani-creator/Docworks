@@ -5280,7 +5280,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     setAvisoPaso(false);setStep(function(s){return s+1;});
   }
   const camposFaltantes = faltantesDetalle.map(function(f){return f.campo;});
-  const pasosFaltantes = (modoEdicion||revisando ? faltantesDetalle : []).reduce(function(acc,f){acc[f.paso]=true;return acc;},{});
+  const pasosFaltantes = (modoEdicion||revisando ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
   // 4.29: marca en rojo el campo puntual que falta (por DOM, así vale para todos los pasos y tipos de documento).
   useEffect(function(){
     if(typeof document==="undefined") return;
