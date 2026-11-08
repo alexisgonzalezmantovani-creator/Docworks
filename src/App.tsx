@@ -1982,6 +1982,24 @@ function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
   }
   var campoPago=op.tipo==="reserva_alquiler"?"res_alq_dia_pago":"alquiler_dia_pago";
   if(["alquiler","reserva_alquiler"].includes(op.tipo)&&op[campoPago]==="otro")lista.push([campoPago+"_otro","Día de pago (1 al 31)"]);
+  // La reserva permite aceptación por días, horas o fecha. Validar solo el
+  // modo elegido para que el resumen coincida con la exportación.
+  if(op.tipo==="reserva"){
+    var aceptacionModo=String(op.reserva_aceptacion_modo||"dias").toLowerCase();
+    if(aceptacionModo==="horas"||aceptacionModo==="fecha"){
+      lista=lista.filter(function(f){return f[0]!=="reserva_aceptacion_dias";});
+      if(aceptacionModo==="horas"){
+        var horas=op.reserva_aceptacion_horas;
+        if(horas===undefined||horas===null||String(horas).trim()==="")horas="48";
+        if(!esMontoMayorACero(horas))lista.push(["reserva_aceptacion_horas","Plazo de aceptación en horas"]);
+      } else {
+        var fecha=String(op.reserva_aceptacion_vencimiento||"");
+        var parsed=/^\d{4}-\d{2}-\d{2}$/.test(fecha)?new Date(fecha+"T00:00:00"):null;
+        if(!parsed||isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==fecha)
+          lista.push(["reserva_aceptacion_vencimiento","Fecha de vencimiento de aceptación"]);
+      }
+    }
+  }
   var faltantes=lista.filter(function(f){
     var v=valorCriticoOp(op,f[0]);
     if(/dia_pago_otro$/.test(f[0]))return !/^(?:[1-9]|[12][0-9]|3[01])$/.test(String(v||""));
