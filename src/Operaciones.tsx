@@ -5273,19 +5273,19 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const faltantesDetalle = getCamposFaltantesDetalle(data,perfil);
   const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
   const [avisoPaso,setAvisoPaso]=useState(false);
-  useEffect(function(){setAvisoPaso(false);},[step]);
+  useEffect(function(){setAvisoPaso(false);},[step,data]);
   function avanzarConAviso(){
     if(faltantesPasoActual.length && !avisoPaso){setAvisoPaso(true);return;}
     setAvisoPaso(false);setStep(function(s){return s+1;});
   }
   const camposFaltantes = faltantesDetalle.map(function(f){return f.campo;});
-  const pasosFaltantes = faltantesDetalle.reduce(function(acc,f){acc[f.paso]=true;return acc;},{});
+  const pasosFaltantes = (modoEdicion||revisando ? faltantesDetalle : []).reduce(function(acc,f){acc[f.paso]=true;return acc;},{});
   // 4.29: marca en rojo el campo puntual que falta (por DOM, así vale para todos los pasos y tipos de documento).
   useEffect(function(){
     if(typeof document==="undefined") return;
     var t=setTimeout(function(){
       document.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");});
-      faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
+      if(modoEdicion||revisando) faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
     },60);
     return function(){clearTimeout(t);};
   },[step,data,grupo,modoEdicion,revisando]);
