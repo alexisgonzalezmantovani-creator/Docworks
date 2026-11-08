@@ -2747,12 +2747,12 @@ function AutosaveIndicator({status, compact, persistent=false, subtle=false}){
   if(state==="saved" && !showSaved && online && !persistent) return null;
   var saving=state==="saving",error=state==="error";
   var color=error?"var(--red)":!online?"var(--gold)":saving?"var(--dim)":"var(--green)";
-  var description=error?"No se pudieron guardar los cambios":!online?"Sin conexión — guardado local":saving?"Guardando cambios…":"Cambios guardados";
+  var description=error?"No se pudo guardar el borrador en este dispositivo":!online?"Sin conexión — los borradores se guardan solo en este dispositivo":saving?"Guardando en este dispositivo…":"Borrador guardado en este dispositivo";
   return (
     <span role="status" aria-label={description} title={description} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:compact?11:12,color:color,fontFamily:"DM Sans,sans-serif",whiteSpace:"nowrap"}}>
       <span aria-hidden="true" style={{display:"inline-block",fontSize:compact?15:16,animation:saving?"diskpulse 0.9s ease-in-out infinite":"none"}}>💾</span>
       {subtle&&(error||!online)&&<span aria-hidden="true" style={{width:5,height:5,borderRadius:"50%",background:error?"var(--red)":"var(--gold)"}}/>}
-      {!subtle&&(error||!online)&&<span>{error?"Error al guardar":"Sin conexión"}</span>}
+      {!subtle&&(error||!online)&&<span>{error?"Error al guardar localmente":"Sin conexión · guardado local"}</span>}
     </span>
   );
 }
