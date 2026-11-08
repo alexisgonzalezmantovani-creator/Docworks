@@ -5419,7 +5419,13 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
     var activando=!selected.includes(id);
     onChange("clausulas_ids",activando?selected.concat([id]):selected.filter(function(x){return x!==id;}));
     var cfg=configDetalleClausula((clausulas||[]).find(function(c){return c.id===id;}));
-    if(activando&&cfg){onChange(cfg.campo+"_id",id);setClausulaExpandida(id);}
+    // Al activar una cláusula, abrir siempre su detalle; no exigir que tenga campos especiales.
+    if(activando){
+      if(cfg)onChange(cfg.campo+"_id",id);
+      setClausulaExpandida(id);
+    } else {
+      setClausulaExpandida(function(actual){return actual===id?null:actual;});
+    }
   }
   var [clausulaExpandida,setClausulaExpandida]=useState(null);
   var [showAdd,setShowAdd]=useState(!!(data.clausulas_custom||data.clausulas_custom_titulo));
