@@ -5577,7 +5577,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         <div className="dw-operation-form-actions">
           {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
-          {faltantesPasoActual.length>0&&<span role="status" style={{fontSize:11.5,color:"var(--amber)",maxWidth:240}}>{avisoPaso?"Faltan "+resumenPendientesPaso+". Podés continuar sin completarlos.":faltantesPasoActual.length+" dato"+(faltantesPasoActual.length===1?"":"s")+" pendiente"+(faltantesPasoActual.length===1?"":"s")+" en este paso"}</span>}
+          {faltantesPasoActual.length>0&&<span role="status" style={{fontSize:12.5,lineHeight:1.45,fontWeight:650,color:"var(--text)",maxWidth:300,overflowWrap:"anywhere"}}>{avisoPaso?"Faltan "+resumenPendientesPaso+". Podés continuar sin completarlos.":faltantesPasoActual.length+" dato"+(faltantesPasoActual.length===1?"":"s")+" pendiente"+(faltantesPasoActual.length===1?"":"s")+" en este paso"}</span>}
           <div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
             {step<total?<Btn onClick={avanzarConAviso}>{avisoPaso?"Continuar igual →":"Siguiente →"}</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>{avisoPaso?"Continuar igual →":modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
