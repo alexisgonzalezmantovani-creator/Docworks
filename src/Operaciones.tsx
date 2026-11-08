@@ -5285,17 +5285,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // Los campos se validan en el resumen final, nunca se pintan en rojo durante la carga o edición.
   const camposFaltantes = [];
   const pasosFaltantes = (revisando && step>total ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
-  // 4.29: marca en rojo el campo puntual que falta (por DOM, así vale para todos los pasos y tipos de documento).
+  // Limpiar marcas heredadas de versiones anteriores, incluso al volver del resumen.
+  // La revisión final informa los pendientes sin teñir los campos durante la carga.
   useEffect(function(){
     if(typeof document==="undefined") return;
-    var t=setTimeout(function(){
-      document.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");});
-      // Nunca marcar en rojo durante la carga, incluso si se volvió desde el resumen.
-      // Los pendientes se muestran con avisos suaves; el rojo queda para la revisión final.
-      if(revisando && step>total) faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
-    },60);
-    return function(){clearTimeout(t);};
-  },[step,data,grupo,modoEdicion,revisando]);
+    document.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");});
+  },[step,data,grupo,revisando]);
   const focoPendienteRef=useRef(null);
   useEffect(function(){return function(){if(focoPendienteRef.current!=null)window.clearInterval(focoPendienteRef.current);};},[]);
   function irACampo(campo){
