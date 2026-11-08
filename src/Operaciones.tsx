@@ -5225,7 +5225,7 @@ export function enfocarCampoOperacion(campo){
 }
 
 export function crearOperacionForm(deps){
- const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -5329,7 +5329,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }, [data,contextoBorrador&&contextoBorrador.inmobiliariaId,contextoBorrador&&contextoBorrador.usuarioId]);
   function guardarDraftLocalAhora(){
     var actual=dataRef.current;
-    if(!draftTieneContenido(actual)) return true;
+    if(!draftTieneContenido(actual)){
+      // Si se borraron todos los datos, no resucitar un borrador previo al ocultar la PWA.
+      lsRemove("draftOperacion");
+      return true;
+    }
     return lsSet("draftOperacion", {data:actual, editId:initialIdRef.current, contexto:contextoBorrador||null, ts:Date.now()});
   }
   // En el formulario el guardado es inmediato (sin debounce): cada cambio de un
