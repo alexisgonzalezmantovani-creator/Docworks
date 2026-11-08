@@ -2133,18 +2133,11 @@ function validarDocumentoParaExport(op, doc, perfil){
     if(op.tipo==="reserva"&&c.campo==="reserva_aceptacion_dias") return;
     errores.push(c.mensaje||("Falta completar: "+c.label+(c.paso?" (paso "+c.paso+")":"")+"."));
   });
-  if(op.tipo==="reserva"){
-    var modo=String(op.reserva_aceptacion_modo||"dias").toLowerCase();
-    if(modo==="horas"){
-      // 4.16: el formulario y el documento usan 48 h si no se guardó nada; se valida lo mismo que se ve.
-      var hEf=op.reserva_aceptacion_horas; if(hEf===undefined||hEf===null||String(hEf).trim()==="") hEf="48";
-      if(!esMontoMayorACero(hEf)) errores.push("Indicá un plazo de aceptación en horas mayor a cero.");
-    } else if(modo==="fecha"){
-      var vf=String(op.reserva_aceptacion_vencimiento||"");
-      var fechaAceptacion=/^\d{4}-\d{2}-\d{2}$/.test(vf)?new Date(vf+"T00:00:00"):null;
-      if(!fechaAceptacion||isNaN(fechaAceptacion.getTime())||fechaAceptacion.toISOString().slice(0,10)!==vf) errores.push("Indicá una fecha válida de vencimiento para la aceptación de la reserva.");
-    } else if(!esMontoMayorACero(valorCriticoOp(op,"reserva_aceptacion_dias"))) errores.push("Indicá un plazo de aceptación en días mayor a cero."); // 4.16: usa el valor por defecto (5) que muestra el formulario
-  }
+  // Los modos de aceptación por horas y fecha ya se validan en
+  // getCamposFaltantesDetalle: evitar mensajes duplicados al exportar.
+  if(op.tipo==="reserva"&&String(op.reserva_aceptacion_modo||"dias").toLowerCase()==="dias"
+      &&!esMontoMayorACero(valorCriticoOp(op,"reserva_aceptacion_dias")))
+    errores.push("Indicá un plazo de aceptación en días mayor a cero.");
   if(op.tipo==="alquiler"){
     var depositoModo=String(op.alquiler_deposito==null?"1":op.alquiler_deposito);
     if(["1","2","otro"].indexOf(depositoModo)<0) errores.push("El depósito no es válido: elegí 1 mes, 2 meses o monto personalizado.");
@@ -5732,6 +5725,9 @@ function PasoResumenFinal({data,clausulas,onVolver,onFinalizarAccion}){
     <div>
       <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:3}}>Resumen — revisá antes de emitir</div>
       <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Ficha técnica de todo lo cargado. Revisá nombres, DNI, montos y fechas para evitar errores tipográficos en el documento definitivo.</p>
+      <div role="status" style={{fontSize:12.5,fontWeight:700,color:faltantes.length?"var(--gold)":"var(--green)",marginBottom:12}}>
+        {faltantes.length?"⚠ Faltan "+faltantes.length+" datos críticos para el documento":"✓ Datos críticos completos para el documento"}
+      </div>
       {faltantes.length>0&&(
         <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"10px 14px",borderRadius:10,background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",marginBottom:12,fontSize:12.5,color:"var(--red)"}}>
           <span>⚠</span>
