@@ -5290,7 +5290,9 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     if(typeof document==="undefined") return;
     var t=setTimeout(function(){
       document.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");});
-      if(revisando) faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
+      // Nunca marcar en rojo durante la carga, incluso si se volvió desde el resumen.
+      // Los pendientes se muestran con avisos suaves; el rojo queda para la revisión final.
+      if(revisando && step>=total) faltantesDetalle.forEach(function(f){ var el=document.getElementById("dw-field-"+f.campo); if(el) el.setAttribute("data-falta","1"); });
     },60);
     return function(){clearTimeout(t);};
   },[step,data,grupo,modoEdicion,revisando]);
@@ -5478,7 +5480,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const esDocSimple=esComodato||esExclusividad||esRefuerzo||esDevolucion;
   const total=esAlq?7:esResAlq?6:esDocSimple?5:6;
   // Declarar total antes de usarlo en dependencias: evita ReferenceError en tablet/iPhone.
-  useEffect(function(){if(step>=total)setRevisando(true);},[step,total]);
+  useEffect(function(){setRevisando(step>=total);},[step,total]);
   // If no group selected yet (new op), show group picker
   if(!grupo){
     return(
