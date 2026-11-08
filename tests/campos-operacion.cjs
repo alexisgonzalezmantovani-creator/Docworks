@@ -65,6 +65,23 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
  check('los controles son parte de sus propios campos',()=>{for(const el of document.querySelectorAll('.dw-contact-field')){assert.ok(el.querySelector('input'));assert.ok(el.querySelector('[role="switch"]'));}});
  await click([...document.querySelectorAll('button')].find(x=>x.textContent.includes('Agregar otro titular')));
  const flags=document.querySelectorAll('[aria-label="Mostrar correo electrónico en el documento"]');await click(flags[1]);check('cotitular cambia su switch sin modificar al principal',()=>{assert.equal(state.comprador_email_en_doc,true);assert.equal(state.comprador_cotitulares[0].email_en_doc,false);});
+ for(const [modo,campo,valor] of [
+  ['horas','reserva_aceptacion_horas','0'],
+  ['horas','reserva_aceptacion_horas','abc'],
+  ['fecha','reserva_aceptacion_vencimiento','2026-02-30'],
+  ['fecha','reserva_aceptacion_vencimiento','mal-fecha']
+ ]){
+  const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',reserva_aceptacion_modo:modo,[campo]:valor};
+  check('aceptación '+modo+' inválida '+valor+' se informa en el campo correcto',()=>{
+   const faltantes=a.getCamposFaltantesDetalle(op);
+   assert.ok(faltantes.some(f=>f.campo===campo));
+   assert.ok(!faltantes.some(f=>f.campo==='reserva_aceptacion_dias'));
+  });
+ }
+ for(const modo of ['dias','horas']){
+  const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',reserva_aceptacion_modo:modo,reserva_aceptacion_vencimiento:'2026-02-30'};
+  check('fecha inactiva no bloquea aceptación por '+modo,()=>assert.ok(!a.getCamposFaltantesDetalle(op).some(f=>f.campo==='reserva_aceptacion_vencimiento')));
+ }
  check('ceros numéricos no se reemplazan por porcentajes o plazos sugeridos',()=>{const tokens=a.derivedTokensGenerales({...a.EMPTY_OP,tipo:'alquiler',alquiler_interes_punitorio:0,alquiler_penalidad_meses:0,alquiler_seguro_dias:0,alquiler_aviso_meses:0});for(const key of ['alquiler_interes_punitorio','alquiler_penalidad_meses','alquiler_seguro_dias','alquiler_aviso_meses'])assert.equal(Number(tokens[key]),0);});
  const text=a.docToPlainText(a.buildDocSections(a.opParaDocumento(state),[],'reserva',a.getDefaultBodyBlocks('reserva')));check('contactos seleccionados llegan al documento',()=>{assert.ok(text.includes('1122223333'));assert.ok(text.includes('contacto@example.test'));});
  await a.act(async()=>root.unmount());dom.window.close();console.log('APROBADAS '+count+' verificaciones de campos, monedas, conversiones y contactos.');
