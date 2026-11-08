@@ -5274,6 +5274,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
   const documentoListo = faltantesDetalle.length===0;
   const [avisoPaso,setAvisoPaso]=useState(false);
+  // No mantener un permiso para saltar validaciones después de cambiar datos o paso.
   useEffect(function(){setAvisoPaso(false);},[step,data]);
   function avanzarConAviso(){
     if(faltantesPasoActual.length && !avisoPaso){setAvisoPaso(true);return;}
@@ -5552,7 +5553,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           <span>Revisá {faltantesDetalle.length} dato{faltantesDetalle.length===1?"":"s"}: {faltantesDetalle.map(function(f){return f.label;}).join(", ")}.</span>
         </div>
       )}
-      <div role="status" aria-live="polite" style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,fontSize:12,fontWeight:650,color:documentoListo?"var(--green)":"var(--amber)"}}><span aria-hidden="true">{documentoListo?"✓":"!"}</span><span>{documentoListo?"Listo para generar el documento":"Faltan "+faltantesDetalle.length+" dato"+(faltantesDetalle.length===1?"":"s")+" para generar el documento"}</span>{!documentoListo&&<button type="button" onClick={function(){irACampo(faltantesDetalle[0].campo);}} style={{marginLeft:"auto",background:"transparent",border:"none",color:"inherit",fontSize:12,textDecoration:"underline",cursor:"pointer"}}>Revisar</button>}</div>
+      <div role="status" aria-live="polite" style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,fontSize:12,fontWeight:650,color:documentoListo?"var(--green)":"var(--amber)"}}><span aria-hidden="true">{documentoListo?"✓":"!"}</span><span>{documentoListo?"Datos críticos completos · revisá el documento antes de exportar":"Faltan "+faltantesDetalle.length+" dato"+(faltantesDetalle.length===1?"":"s")+" crítico"+(faltantesDetalle.length===1?"":"s")+" para el documento"}</span>{!documentoListo&&<button type="button" onClick={function(){irACampo(faltantesDetalle[0].campo);}} style={{marginLeft:"auto",background:"transparent",border:"none",color:"inherit",fontSize:12,textDecoration:"underline",cursor:"pointer"}}>Revisar</button>}</div>
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(id);}}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
