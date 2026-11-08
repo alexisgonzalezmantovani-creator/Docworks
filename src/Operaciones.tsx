@@ -5272,13 +5272,14 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   },[data.tipo]);
   const faltantesDetalle = getCamposFaltantesDetalle(data,perfil);
   const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
+  const resumenPendientesPaso = faltantesPasoActual.slice(0,3).map(function(f){return f.label;}).join(", ")+(faltantesPasoActual.length>3?" y "+(faltantesPasoActual.length-3)+" más":"");
   const documentoListo = faltantesDetalle.length===0;
   const [avisoPaso,setAvisoPaso]=useState(false);
   // No mantener un permiso para saltar validaciones después de cambiar datos o paso.
   useEffect(function(){setAvisoPaso(false);},[step,data]);
   function avanzarConAviso(){
-    if(faltantesPasoActual.length && !avisoPaso){setAvisoPaso(true);return;}
-    setAvisoPaso(false);setStep(function(s){return s+1;});
+    if(faltantesPasoActual.length && !avisoPaso){setAvisoPaso(true);setRevisando(true);return;}
+    setAvisoPaso(false);setStep(function(s){return Math.min(s+1,total+1);});
   }
   const camposFaltantes = faltantesDetalle.map(function(f){return f.campo;});
   const pasosFaltantes = (modoEdicion||revisando ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
@@ -5291,15 +5292,17 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     },60);
     return function(){clearTimeout(t);};
   },[step,data,grupo,modoEdicion,revisando]);
+  const focoPendienteRef=useRef(null);
+  useEffect(function(){return function(){if(focoPendienteRef.current!=null)window.clearInterval(focoPendienteRef.current);};},[]);
   function irACampo(campo){
     if(!campo){ setStep(total); return; }
     setRevisando(true);
-    setStep(getPasoDeCampo(campo,data.tipo));
+    setStep(Math.min(Math.max(1,getPasoDeCampo(campo,data.tipo)),total));
+    if(focoPendienteRef.current!=null)window.clearInterval(focoPendienteRef.current);
     var intentos=0;
-    var iv=window.setInterval(function(){
+    focoPendienteRef.current=window.setInterval(function(){
       intentos++;
-      if(enfocarCampoOperacion(campo))window.clearInterval(iv);
-      else if(intentos>15) window.clearInterval(iv);
+      if(enfocarCampoOperacion(campo)||intentos>15){window.clearInterval(focoPendienteRef.current);focoPendienteRef.current=null;}
     },100);
   }
   useEffect(function(){
@@ -5554,7 +5557,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         </div>
       )}
       <div role="status" aria-live="polite" style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,fontSize:12,fontWeight:650,color:documentoListo?"var(--green)":"var(--amber)"}}><span aria-hidden="true">{documentoListo?"✓":"!"}</span><span>{documentoListo?"Datos críticos completos · revisá el documento antes de exportar":"Faltan "+faltantesDetalle.length+" dato"+(faltantesDetalle.length===1?"":"s")+" crítico"+(faltantesDetalle.length===1?"":"s")+" para el documento"}</span>{!documentoListo&&<button type="button" onClick={function(){irACampo(faltantesDetalle[0].campo);}} style={{marginLeft:"auto",background:"transparent",border:"none",color:"inherit",fontSize:12,textDecoration:"underline",cursor:"pointer"}}>Revisar</button>}</div>
-      <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(id);}}/></div>
+      <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));setRevisando(true);}}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Progreso</span>
@@ -5570,7 +5573,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         <div className="dw-operation-form-actions">
           {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
-          {faltantesPasoActual.length>0&&<span role="status" style={{fontSize:11.5,color:"var(--amber)",maxWidth:240}}>{avisoPaso?"Faltan "+faltantesPasoActual.map(function(f){return f.label;}).join(", ")+". Podés continuar sin completarlos.":faltantesPasoActual.length+" dato"+(faltantesPasoActual.length===1?"":"s")+" pendiente"+(faltantesPasoActual.length===1?"":"s")+" en este paso"}</span>}
+          {faltantesPasoActual.length>0&&<span role="status" style={{fontSize:11.5,color:"var(--amber)",maxWidth:240}}>{avisoPaso?"Faltan "+resumenPendientesPaso+". Podés continuar sin completarlos.":faltantesPasoActual.length+" dato"+(faltantesPasoActual.length===1?"":"s")+" pendiente"+(faltantesPasoActual.length===1?"":"s")+" en este paso"}</span>}
           <div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
             {step<total?<Btn onClick={avanzarConAviso}>{avisoPaso?"Continuar igual →":"Siguiente →"}</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>{avisoPaso?"Continuar igual →":modoEdicion?"Revisar →":"Revisar y finalizar →"}</Btn>}
