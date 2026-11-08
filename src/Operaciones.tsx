@@ -5263,8 +5263,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // una operación nueva no se muestra nada en rojo hasta que se guarde.
   const modoEdicion = !!initial;
   const [revisando,setRevisando]=useState(false);
-  // Solo activar las marcas rojas al llegar al resumen o pedir revisión explícita.
-  useEffect(function(){if(step>=total)setRevisando(true);},[step,total]);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
     if(initial) return;
@@ -5479,6 +5477,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const esRefuerzo=data.tipo==="refuerzo_reserva",esDevolucion=data.tipo==="devolucion_reserva";
   const esDocSimple=esComodato||esExclusividad||esRefuerzo||esDevolucion;
   const total=esAlq?7:esResAlq?6:esDocSimple?5:6;
+  // Declarar total antes de usarlo en dependencias: evita ReferenceError en tablet/iPhone.
+  useEffect(function(){if(step>=total)setRevisando(true);},[step,total]);
   // If no group selected yet (new op), show group picker
   if(!grupo){
     return(
