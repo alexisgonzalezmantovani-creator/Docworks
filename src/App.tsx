@@ -6367,10 +6367,7 @@ function ClausulaFormBody({form,setForm,onCancel,onSubmit,editId,guardando,habil
             {CATS.map(function(c){return <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>;})}
           </Slt>
           {!creacionSimple&&<TipoSelector value={tiposSeguros} onChange={function(t){setForm(function(f){return Object.assign({},f,{tipos:t});});}}/>}
-          {!creacionSimple&&<label style={{display:"flex",alignItems:"flex-start",gap:8,padding:"9px 11px",borderRadius:8,border:"1px solid var(--border)",background:form.obligatoria?"rgba(180,83,9,0.08)":"transparent",cursor:"pointer",fontSize:12.5,color:"var(--text)"}}>
-            <input type="checkbox" checked={!!form.obligatoria} onChange={function(e){setForm(function(f){return Object.assign({},f,{obligatoria:e.target.checked});});}} style={{marginTop:2}}/>
-            <span><b>Obligatoria en la biblioteca</b> — configuración administrada por Dueño/Administrador.</span>
-          </label>}
+
         </div>}
       </div>
       <div>
