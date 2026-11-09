@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.43";
+var DOCWORKS_VERSION = "6.44";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -5143,7 +5143,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
 
           </div>
         </details>
-        <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
+        <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
           <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Para cada parte podés elegir porcentaje o un monto fijo. La moneda del honorario fijo también se define por separado.</div>
           <div className="dw-commissions-stack">
             <div><ComisionEditor data={data} onChange={onChange} prefix="comision_vendedor" legacyKey="comision_vendedor" label="Vendedor" base={precio} monedaBase={data.moneda||"USD"} defaultPct="3"/>
@@ -5181,7 +5181,7 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
       <Slt id="dw-field-alquiler_moneda" label="Moneda" value={data.alquiler_moneda||"ARS"} onChange={function(e){onChange("alquiler_moneda",e.target.value);}}><option value="ARS">ARS</option><option value="USD">USD</option></Slt>
       <Slt id="dw-field-alquiler_destino" label="Destino" value={data.alquiler_destino||"vivienda"} onChange={function(e){onChange("alquiler_destino",e.target.value);}}><option value="vivienda">Vivienda</option><option value="comercial">Comercial</option><option value="profesional">Profesional</option></Slt>
 
-      <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Plazo del contrato</div>
+      <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:8}}>Plazo del contrato</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           <Inp id="dw-field-alquiler_plazo_meses" label="Meses" value={data.alquiler_plazo_meses??"24"} onChange={function(e){onChange("alquiler_plazo_meses",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_plazo_meses","24");}} placeholder="24" type="number" hint="Plazo pactado libremente por las partes" {...estiloCampoFaltante(faltantes,"alquiler_plazo_meses")}/>
           <Inp id="dw-field-alquiler_plazo_dias" label="Días adicionales" value={data.alquiler_plazo_dias??""} onChange={function(e){onChange("alquiler_plazo_dias",e.target.value);}} onFocus={function(e){if(e.target.value==="0")e.target.select();}} onBlur={function(e){if(/^\d+$/.test(e.target.value))onChange("alquiler_plazo_dias",String(parseInt(e.target.value,10)));}} placeholder="0" type="number" min="0" step="1" {...estiloCampoFaltante(faltantes,"alquiler_plazo_dias","Ingresá un número válido igual o mayor a cero.")}/>
@@ -5213,7 +5213,7 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
       </div>}
 
       <div className="col2">
-        <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Forma de pago (elegí una o más)</div>
+        <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:8}}>Forma de pago (elegí una o más)</div>
         <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
           {FORMAS_PAGO.map(function(f){
             var checked=formaPagoArr(data.alquiler_forma_pago).indexOf(f.value)>=0;
@@ -5238,7 +5238,7 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
       </div>
       <Field label="Total depósito"><div className="val-box">{totalDeposito}</div></Field>
 
-      <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
+      <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
         {data.alquiler_comisiones_importadas&&<div role="note" style={{fontSize:12,color:"var(--dim)",marginBottom:8}}>Los honorarios de la reserva se importaron como importes fijos para conservar lo acordado. Revisalos para este contrato.</div>}
         <div style={{fontSize:12,color:"var(--dim)",marginBottom:4}}>El porcentaje se aplica al total del contrato, no al primer canon mensual.</div>
         <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Base estimada para la comisión: {baseComision>0?fmt$(baseComision,data.alquiler_moneda||"ARS"):"completá canon y plazo"}</div>
@@ -5251,7 +5251,7 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
 
 
 
-      <div className="col2" style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginTop:6,marginBottom:2}}>Mora y rescisión</div>
+      <div className="col2" style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginTop:6,marginBottom:2}}>Mora y rescisión</div>
       <Inp id="dw-field-alquiler_interes_punitorio" label="Interés punitorio mensual (%)" value={data.alquiler_interes_punitorio??"5"} onChange={function(e){onChange("alquiler_interes_punitorio",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_interes_punitorio","5");}} placeholder="5" type="number" hint="Por mora en el pago del canon" {...estiloCampoFaltante(faltantes,"alquiler_interes_punitorio","Ingresá un número válido igual o mayor a cero.")}/>
       <Inp id="dw-field-alquiler_penalidad_meses" label="Cláusula penal (meses de alquiler)" value={data.alquiler_penalidad_meses??"2"} onChange={function(e){onChange("alquiler_penalidad_meses",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_penalidad_meses","2");}} placeholder="2" type="number" hint="Por cada mes de demora en restituir" {...estiloCampoFaltante(faltantes,"alquiler_penalidad_meses","Ingresá un número válido igual o mayor a cero.")}/>
       <Inp id="dw-field-alquiler_aviso_meses" label="Preaviso de rescisión anticipada (meses)" value={data.alquiler_aviso_meses??"1"} onChange={function(e){onChange("alquiler_aviso_meses",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_aviso_meses","1");}} placeholder="1" type="number" {...estiloCampoFaltante(faltantes,"alquiler_aviso_meses","Ingresá un número válido igual o mayor a cero.")}/>
@@ -5273,7 +5273,7 @@ function StepCondicionesReservaAlq({data,onChange,equipo,faltantes}){
         <Inp id="dw-field-res_alq_monto_mensual" label="Valor del alquiler mensual" value={data.res_alq_monto_mensual||""} onChange={function(e){onChange("res_alq_monto_mensual",e.target.value);}} placeholder="180.000" money {...estiloCampoFaltante(faltantes,"res_alq_monto_mensual")}/>
         <PagoMensualField data={data} onChange={onChange} reserva/>
         {data.res_alq_monto_mensual_moneda&&data.res_alq_monto_mensual_moneda!==data.res_alq_moneda&&<div className="col2 notice" style={{fontSize:12}}>Reserva: {data.res_alq_moneda||"ARS"} · Alquiler mensual: {data.res_alq_monto_mensual_moneda}. Cambiar la moneda de la operación aplica la elegida a ambos importes.</div>}
-        <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Plazo estimado del contrato</div>
+        <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:8}}>Plazo estimado del contrato</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <Inp id="dw-field-res_alq_plazo_cantidad" label="Cantidad" value={data.res_alq_plazo_cantidad||""} onChange={function(e){onChange("res_alq_plazo_cantidad",e.target.value);}} placeholder="24" type="number"/>
             <Slt id="dw-field-res_alq_plazo_unidad" label="Unidad" value={data.res_alq_plazo_unidad||"meses"} onChange={function(e){onChange("res_alq_plazo_unidad",e.target.value);}}><option value="semanas">Semanas</option><option value="meses">Meses</option><option value="años">Años</option></Slt>
@@ -5285,7 +5285,7 @@ function StepCondicionesReservaAlq({data,onChange,equipo,faltantes}){
           {data.res_alq_vigencia_dias&&!["3","5","7","10","15","30"].includes(String(data.res_alq_vigencia_dias))&&<option value={data.res_alq_vigencia_dias}>{data.res_alq_vigencia_dias} días</option>}
           {["3","5","7","10","15","30"].map(function(d){return <option key={d} value={d}>{d} días</option>;})}
         </Slt>
-        <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
+        <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
           <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Cada parte puede tener porcentaje o monto fijo.</div>
           <div className="grid2">
             <ComisionEditor data={data} onChange={onChange} prefix="res_alq_comision_locador" legacyKey="res_alq_comision_locador" label="Locador" base={parseMontoAR(data.res_alq_monto_mensual)||0} monedaBase={data.res_alq_monto_mensual_moneda||data.res_alq_moneda||"ARS"} defaultPct={data.res_alq_comision!==undefined && data.res_alq_comision!==null && String(data.res_alq_comision)!=="" ? data.res_alq_comision : "1"}/>
@@ -5396,7 +5396,7 @@ function SeguroOperacion({data,onChange,faltantes=[]}){
   if(data.tipo==="alquiler") items.push({campo:"alquiler_incluye_seguro",label:"Incluir cláusula de seguro",desc:"Responsabilidad civil e incendio del inmueble. Se incorpora al contrato cuando está incluida.",def:true});
   if(!items.length) return null;
   return <div style={{marginBottom:14,padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"rgba(212,168,83,0.04)"}}>
-    <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Seguro del inmueble</div>
+    <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.06em",marginBottom:8}}>Seguro del inmueble</div>
     {items.map(function(it){ var v=typeof data[it.campo]==="boolean"?data[it.campo]:it.def; return <label key={it.campo} style={{display:"flex",alignItems:"flex-start",fontSize:12.5,color:"var(--text)",cursor:"pointer",gap:2}}>
       <input type="checkbox" checked={v} onChange={function(e){onChange(it.campo,e.target.checked);}}/>
       <span><b>{it.label}</b><br/><span style={{color:"var(--muted)",fontSize:12}}>{it.desc}</span></span>
@@ -5840,12 +5840,12 @@ function FichaOperacionPanel({op,operaciones,onClose,embedded,summaryContent=und
     {tab==="resumen"&&summaryContent}
     {tab==="resumen"&&!summaryContent&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
       <div className="card" style={{padding:14,border:"1px solid rgba(212,168,83,.22)",background:"linear-gradient(135deg,rgba(212,168,83,.05),transparent)"}}>
-        <div style={{fontSize:12,color:"var(--dim)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em"}}>Próximo paso</div>
+        <div style={{fontSize:12,color:"var(--dim)",fontWeight:700,letterSpacing:".08em"}}>Próximo paso</div>
         <div style={{display:"flex",alignItems:"center",gap:9,marginTop:7}}><span style={{fontSize:18,color:proximo.tone}}>{proximo.icon}</span><div style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>{proximo.texto}</div></div>
       </div>
       <div className="grid2">
-        <div className="card" style={{padding:14}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Operación</div><div style={{fontSize:12,lineHeight:1.8,color:"var(--text)"}}><div><span style={{color:"var(--dim)"}}>Documento:</span> <b>{TIPOS[op.tipo]||op.tipo}</b></div><div><span style={{color:"var(--dim)"}}>Estado:</span> <b>{ESTADOS[op.estado]||op.estado}</b></div><div><span style={{color:"var(--dim)"}}>Proceso:</span> <b style={{color:"var(--gold)"}}>{String(op.proceso_estado||"pendiente_aceptacion").replace(/_/g," ")}</b></div><div><span style={{color:"var(--dim)"}}>Monto:</span> <b>{getResumenMonto(op)||"—"}</b></div></div></div>
-        <div className="card" style={{padding:14}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Inmueble</div><div style={{fontSize:12,lineHeight:1.7,color:"var(--text)"}}>{tipoInmuebleLabel(op.inmueble_tipo,op.inmueble_tipo_otro)}<div style={{marginTop:4}}>{op.inmueble_direccion||"Sin dirección"}</div><div style={{color:"var(--dim)",marginTop:2}}>{[op.inmueble_partido,op.inmueble_provincia].filter(Boolean).join(" — ")}</div></div></div>
+        <div className="card" style={{padding:14}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,letterSpacing:".08em",marginBottom:8}}>Operación</div><div style={{fontSize:12,lineHeight:1.8,color:"var(--text)"}}><div><span style={{color:"var(--dim)"}}>Documento:</span> <b>{TIPOS[op.tipo]||op.tipo}</b></div><div><span style={{color:"var(--dim)"}}>Estado:</span> <b>{ESTADOS[op.estado]||op.estado}</b></div><div><span style={{color:"var(--dim)"}}>Proceso:</span> <b style={{color:"var(--gold)"}}>{String(op.proceso_estado||"pendiente_aceptacion").replace(/_/g," ")}</b></div><div><span style={{color:"var(--dim)"}}>Monto:</span> <b>{getResumenMonto(op)||"—"}</b></div></div></div>
+        <div className="card" style={{padding:14}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,letterSpacing:".08em",marginBottom:8}}>Inmueble</div><div style={{fontSize:12,lineHeight:1.7,color:"var(--text)"}}>{tipoInmuebleLabel(op.inmueble_tipo,op.inmueble_tipo_otro)}<div style={{marginTop:4}}>{op.inmueble_direccion||"Sin dirección"}</div><div style={{color:"var(--dim)",marginTop:2}}>{[op.inmueble_partido,op.inmueble_provincia].filter(Boolean).join(" — ")}</div></div></div>
       </div>
       {venc&&<div className="card" style={{padding:14}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em"}}>Vencimiento de aceptación</div><div style={{marginTop:5,fontSize:14,fontWeight:800,color:proximo.tone}}>{fmtD(venc)}</div></div>}
     </div>}
@@ -5862,7 +5862,7 @@ function HistorialAccionesCard({op}){
   var lista=todo?hs:hs.slice(0,3);
   return <div className="card op-clean-card" style={{padding:16,marginBottom:12}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:10}}>
-      <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Historial de acciones</div>
+      <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em"}}>Historial de acciones</div>
       {hs.length>3&&<button type="button" onClick={function(){setTodo(function(v){return !v;});}} style={{border:"none",background:"transparent",color:"var(--gold)",fontWeight:700,fontSize:12,cursor:"pointer"}}>{todo?"Ver menos":"Ver todo ("+hs.length+")"}</button>}
     </div>
     {hs.length===0?<div style={{fontSize:12.5,color:"var(--dim)"}}>Todavía no hay movimientos registrados.</div>:<div style={{display:"flex",flexDirection:"column",gap:7,maxHeight:todo?260:"none",overflowY:todo?"auto":"visible"}}>
@@ -5881,10 +5881,10 @@ function DocSummaryPanel({op, perfil, tabsDocs, onLeer, operaciones, onToggleTar
   var completo = faltantes.length===0;
   return (
     <div className="doc-summary-panel">
-      {(()=>{var pp=getProximoPasoOperacion(op,operaciones||[]);return <div className="card" style={{padding:"10px 12px",marginBottom:12,border:"1px solid rgba(212,168,83,.18)",display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:15,color:pp.tone}}>{pp.icon}</span><div><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em"}}>Próximo paso</div><div style={{fontSize:12.5,color:"var(--text)",fontWeight:700,marginTop:2}}>{pp.texto}</div></div></div>;})()}
+      {(()=>{var pp=getProximoPasoOperacion(op,operaciones||[]);return <div className="card" style={{padding:"10px 12px",marginBottom:12,border:"1px solid rgba(212,168,83,.18)",display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:15,color:pp.tone}}>{pp.icon}</span><div><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,letterSpacing:".08em"}}>Próximo paso</div><div style={{fontSize:12.5,color:"var(--text)",fontWeight:700,marginTop:2}}>{pp.texto}</div></div></div>;})()}
       <HistorialAccionesCard op={op}/>
       <div className="card op-clean-card" style={{padding:16,marginBottom:12}}>
-        <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>Partes</div>
+        <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:10}}>Partes</div>
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {partes.map(function(p,i){
             return (
@@ -5897,7 +5897,7 @@ function DocSummaryPanel({op, perfil, tabsDocs, onLeer, operaciones, onToggleTar
         </div>
       </div>
       <div className="card op-clean-card" style={{padding:16,marginBottom:12}}>
-        <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>Inmueble y monto</div>
+        <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:10}}>Inmueble y monto</div>
         <div style={{display:"flex",flexDirection:"column",gap:8,fontSize:13}}>
           <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
             <span style={{color:"var(--dim)"}}>Dirección</span>
@@ -5915,7 +5915,7 @@ function DocSummaryPanel({op, perfil, tabsDocs, onLeer, operaciones, onToggleTar
       </div>
       
       <div className="card op-clean-card" style={{padding:16,marginBottom:12,border:"1px solid "+(completo?"rgba(74,222,128,0.25)":"rgba(239,68,68,0.45)")}}>
-        <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>Estado de los datos</div>
+        <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:10}}>Estado de los datos</div>
         {completo
           ? <div style={{fontSize:13,color:"var(--green)",display:"flex",alignItems:"center",gap:7}}>✓ Todos los datos críticos están completos.</div>
           : (
