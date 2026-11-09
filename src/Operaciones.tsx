@@ -1139,7 +1139,8 @@ export var MOBILE_STABILITY_CSS = `
   }
   @media (orientation:landscape) and (max-width:1100px){
     .content{padding-left:18px !important;padding-right:18px !important;}
-    .mobile-nav{display:none !important;}
+    /* Mantener navegación inferior al girar el iPhone: sin sidebar no debe desaparecer el menú. */
+    .mobile-nav{display:block !important;}
     /* En PWA iOS, forzar 100dvh dentro del shell flex crea una segunda
        superficie desplazable que puede tapar el encabezado al rebotar. */
     .main{min-height:0;max-height:100%;overflow:hidden;}
@@ -1768,8 +1769,9 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .app-wrap .app-body{display:flex!important;flex-direction:column!important;min-width:0!important;}
   .app-wrap .main{width:100%!important;min-width:0!important;overflow:visible!important;}
   .app-wrap .mobile-topbar button{visibility:visible!important;opacity:1!important;flex-shrink:0!important;}
-  .app-wrap .mobile-nav{display:none!important;}
-  .app-wrap .content{padding-bottom:max(18px,env(safe-area-inset-bottom,0px))!important;}
+  .app-wrap .mobile-nav{display:block!important;position:fixed!important;left:0!important;right:0!important;bottom:0!important;z-index:520!important;}
+  .app-wrap .mobile-nav-inner{display:flex!important;max-width:100%!important;overflow-x:auto!important;overscroll-behavior-x:contain!important;}
+  .app-wrap .content{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))!important;}
 }
 /* El recorrido termina en las acciones: no reservar sitio para la navegación que se oculta. */
 .app-wrap .content.dw-operation-page-content{padding-bottom:max(12px,env(safe-area-inset-bottom,0px))!important}
