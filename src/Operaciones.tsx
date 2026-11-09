@@ -5330,6 +5330,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // No mantener un permiso para saltar validaciones después de cambiar datos o paso.
   useEffect(function(){setAvisoPaso(false);},[step,data]);
   function avanzarConAviso(){
+    if(step<total && faltantesPasoActual.length>0 && !avisoPaso){
+      setAvisoPaso(true);
+      return;
+    }
+    setAvisoPaso(false);
     setStep(function(s){return Math.min(s+1,total+1);});
   }
   // Los campos se validan en el resumen final, nunca se pintan en rojo durante la carga o edición.
@@ -5630,9 +5635,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         <div className="dw-operation-form-actions">
           {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
+          {avisoPaso&&step<total&&faltantesPasoActual.length>0&&<span role="status" style={{fontSize:12,color:"var(--text-muted, #aeb9c8)",maxWidth:320}}>Faltan {resumenPendientesPaso}. Podés continuar y completar después.</span>}
           <div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {step<total?<Btn onClick={avanzarConAviso}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
+            {step<total?<Btn onClick={avanzarConAviso}>{avisoPaso?"Continuar igual →":"Siguiente →"}</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
           </div>
         </div>
       </div>}
