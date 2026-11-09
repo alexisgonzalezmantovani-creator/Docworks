@@ -1614,6 +1614,12 @@ label:has(>input[type="checkbox"]){line-height:1.3;}
 .dw-ios-sw.on{background:var(--gold);}
 .dw-ios-sw.on::before{transform:translateX(18px);}
 .dw-ios-sw.locked{opacity:.55;}
+/* Switches de contacto: reset completo del botón para evitar el círculo negro
+   y los estilos nativos de iOS/Safari. No modifica los switches de cláusulas. */
+.dw-contact-print .dw-ios-sw{appearance:none;-webkit-appearance:none;box-sizing:border-box;display:inline-block;position:relative;flex:0 0 46px;width:46px;min-width:46px;max-width:46px;height:28px;min-height:28px;max-height:28px;margin:0;padding:0;border:0;border-radius:999px;cursor:pointer;vertical-align:middle;outline-offset:3px;}
+.dw-contact-print .dw-ios-sw::before{content:"";display:block;position:absolute;top:2px;left:2px;width:24px;height:24px;border:0;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.22);}
+.dw-contact-print .dw-ios-sw:focus-visible{outline:2px solid var(--gold);}
+@media(prefers-reduced-motion:reduce){.dw-contact-print .dw-ios-sw,.dw-contact-print .dw-ios-sw::before{transition:none;}}
 /* Selector de cláusulas: mismo switch iOS que en el resto de la aplicación.
    El reset del botón evita el estilo nativo del navegador y mantiene el pulgar redondo. */
 .dw-op-clause-switch.dw-ios-sw{appearance:none;-webkit-appearance:none;box-sizing:border-box;padding:0;border:0;outline-offset:3px;cursor:pointer;vertical-align:middle;min-width:46px;min-height:28px;max-width:46px;max-height:28px;margin:0;}
