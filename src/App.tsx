@@ -4858,15 +4858,15 @@ function BarrioComplejoField({data,onChange,faltantes=undefined}){
 function StepInmueble({data,onChange,faltantes}){
   return(
     <div>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Datos del inmueble.</p>
+      
       <div className="grid2">
         <Slt id="dw-field-inmueble_tipo" label="Tipo de inmueble" value={data.inmueble_tipo||"departamento"} onChange={function(e){onChange("inmueble_tipo",e.target.value);}} className={data.inmueble_tipo==="otro"?"":"col2"}>
           {TIPO_INMUEBLE_OPCIONES.map(function(o){return <option key={o.value} value={o.value}>{o.label}</option>;})}
         </Slt>
         {data.inmueble_tipo==="otro"&&<Inp id="dw-field-inmueble_tipo_otro" label="¿Cuál?" value={data.inmueble_tipo_otro||""} onChange={function(e){onChange("inmueble_tipo_otro",e.target.value);}} placeholder="Ej: Cochera, Depósito..."/>}
-        <Inp id="dw-field-inmueble_direccion" label="Dirección" value={data.inmueble_direccion||""} onChange={function(e){onChange("inmueble_direccion",e.target.value);}} placeholder="Calle Falsa 123" className="col2" {...estiloCampoFaltante(faltantes,"inmueble_direccion")}/>
+        <Inp id="dw-field-inmueble_direccion" label="Dirección" value={data.inmueble_direccion||""} onChange={function(e){onChange("inmueble_direccion",e.target.value);}} placeholder="Ej.: Av. San Martín 123" className="col2" {...estiloCampoFaltante(faltantes,"inmueble_direccion")}/>
         <BarrioComplejoField data={data} onChange={onChange} faltantes={faltantes}/>
-        <Inp id="dw-field-inmueble_partido" label="Partido / Municipio" value={data.inmueble_partido||""} onChange={function(e){onChange("inmueble_partido",e.target.value);}} placeholder="Lomas de Zamora" {...estiloCampoFaltante(faltantes,"inmueble_partido")}/>
+        <Inp id="dw-field-inmueble_partido" label="Partido / Municipio" value={data.inmueble_partido||""} onChange={function(e){onChange("inmueble_partido",e.target.value);}} placeholder="Ej.: Pilar" {...estiloCampoFaltante(faltantes,"inmueble_partido")}/>
         <Inp id="dw-field-inmueble_provincia" label="Provincia" value={data.inmueble_provincia||""} onChange={function(e){onChange("inmueble_provincia",e.target.value);}} placeholder="Buenos Aires" {...estiloCampoFaltante(faltantes,"inmueble_provincia")}/>
       </div>
     </div>
@@ -5007,7 +5007,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
   useEffect(function(){if(data.tipo==="reserva"&&(data.reserva_aceptacion_modo||"dias")==="dias"&&!data.reserva_aceptacion_vencimiento){onChange("reserva_aceptacion_vencimiento",sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),data.reserva_aceptacion_dias||5));}},[data.tipo,data.reserva_aceptacion_modo,data.reserva_aceptacion_vencimiento,data.reserva_aceptacion_dias,data.reserva_fecha_reserva]);
   return(
     <div>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Condiciones económicas.</p>
+      
       <div className="grid2">
         <Inp id="dw-field-precio" label="Precio total" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="100.000" money {...estiloCampoFaltante(faltantes,"precio")}/>
         <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
@@ -5583,7 +5583,7 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
   var borderMap={compra:"rgba(212,168,83,0.35)",alquiler:"rgba(45,212,191,0.3)",otros:"rgba(148,163,184,0.25)"};
   return(
     <div>
-      <p className="dw-grupo-intro">Seleccioná el tipo de documento a generar.</p>
+      
       <div className="dw-grupo-tipo-sections">
         {gruposToShow.map(function(entry){
           var key=entry[0],g=entry[1];
