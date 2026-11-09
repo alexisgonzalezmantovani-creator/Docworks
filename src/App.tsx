@@ -8707,7 +8707,7 @@ function DocWorksApp(){
     try {
       var res=await opsSupabase.guardar(opGuardada);
       if(!vigente()||res&&res.contextoObsoleto)return Object.assign({},res,{contextoObsoleto:true});
-      if(!res){
+      if(!res||(!res.error&&!res.contextoObsoleto&&!res.operacion)){
         reportSave("error");
         desmarcarOperacionPendiente(opGuardada.id);
         if(parentParaCerrar)desmarcarOperacionPendiente(parentParaCerrar.id);
