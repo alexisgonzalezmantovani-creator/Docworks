@@ -8772,7 +8772,9 @@ function DocWorksApp(){
   // Refs para leer el estado actual (el efecto de abajo conserva una versión vieja de la función).
   const showFormRef=useRef(false); showFormRef.current=showForm;
   const draftPromptRef=useRef(null); draftPromptRef.current=draftPrompt;
+  const sincronizacionDraftEnCursoRef=useRef(false);
   async function sincronizarDraftOffline(){
+    if(sincronizacionDraftEnCursoRef.current)return;
     if(!navigator.onLine||!docworksAuth.session)return;
     // Con el formulario abierto o mientras se pregunta si recuperar el borrador no se sube en silencio:
     // eso duplicaba operaciones y borraba el borrador en uso.
@@ -8787,6 +8789,7 @@ function DocWorksApp(){
     // otro registro al recargar o recuperar la conexión.
     draft=Object.assign({},draft,{data:op,editId:op.id});
     if(!lsSet("draftOperacion",draft))return;
+    sincronizacionDraftEnCursoRef.current=true;
     try{
       var res=await opsSupabase.guardar(op);
       if(!vigente()||res&&res.contextoObsoleto)return;
@@ -8797,6 +8800,7 @@ function DocWorksApp(){
         dwNotify("success","La operación cargada sin conexión ya fue sincronizada con DocWorks.");
       }
     }catch(e){console.warn("DocWorks: no se pudo sincronizar el borrador offline.",e);}
+    finally{sincronizacionDraftEnCursoRef.current=false;}
 
   }
   // Reintenta cierres de reservas que quedaron pendientes después de guardar
