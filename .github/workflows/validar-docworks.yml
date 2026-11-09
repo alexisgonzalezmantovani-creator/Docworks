@@ -27,8 +27,6 @@ jobs:
         run: |
           npm run typecheck
           npm run build
-      - name: Verificar módulos y pruebas de aplicación
-        run: npm test
       - name: Verificar permisos y base de datos
         run: npm run test:database
       - name: Verificar integración
@@ -40,6 +38,26 @@ jobs:
         with:
           name: docworks-vite-dist
           path: dist/
+
+  pruebas_aplicacion:
+    name: Pruebas de aplicación (grupo ${{ matrix.grupo }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        grupo: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+      - name: Instalar herramientas de documentos
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
+      - name: Ejecutar pruebas del grupo
+        run: node scripts/test-shard.cjs ${{ matrix.grupo }}
 
   browsers:
     name: Editores en ${{ matrix.browser }}

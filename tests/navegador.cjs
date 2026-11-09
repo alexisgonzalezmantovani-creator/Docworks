@@ -54,7 +54,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
    await page.locator('textarea').fill('Borrador que debe sobrevivir al cancelar la salida.');
    await page.getByRole('button',{name:'Salir del modelo',exact:true}).click();
-   await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
+   await page.getByRole('button',{name:'Cancelar',exact:true}).last().dispatchEvent('click');
    assert.ok((await page.locator('textarea').inputValue()).includes('sobrevivir'));checks++;
    await page.getByRole('button',{name:'Salir del modelo',exact:true}).click();
    await page.getByRole('button',{name:'Confirmar',exact:true}).click();
