@@ -8668,6 +8668,8 @@ function DocWorksApp(){
 
   async function saveOp(data,accion,estadoFinal){
     var vigente=accionesContextoRef.current.capturar();
+    // No borrar un borrador más reciente ni uno perteneciente a otra sesión.
+    var borradorAlIniciarGuardado=lsGet("draftOperacion",null);
     var permisosGuardado=permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,editOp);
     if(editOp?!permisosGuardado.editar:!permisosGuardado.crear){var errorPermiso={message:"No tenés permiso para guardar esta operación."};dwNotify("error",errorPermiso.message);return {error:errorPermiso};}
     var esNueva=!editOp;
@@ -8745,7 +8747,7 @@ function DocWorksApp(){
       }
       desmarcarOperacionPendiente(opGuardada.id);
       reportSave("saved");
-      lsRemove("draftOperacion");
+      if(borradorAlIniciarGuardado && borradorDelContexto(borradorAlIniciarGuardado,docworksAuth.contexto) && mismoBorrador(borradorAlIniciarGuardado,lsGet("draftOperacion",null)))lsRemove("draftOperacion");
       setShowForm(false);setEditOp(null);setFormInitialOverride(null);
       if(accion==="pdf"||accion==="whatsapp"){
         setDocAutoAction(accion==="whatsapp"?"whatsapp":null);
