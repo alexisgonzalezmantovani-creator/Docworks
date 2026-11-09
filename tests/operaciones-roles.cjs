@@ -24,7 +24,7 @@ for(const name of handlerNames)assert.ok(functions[name],name);
 source+=`\nfunction crearAccionesPrueba(inicial,servidor,contexto){
  let operaciones=inicial.operaciones.slice(),papelera=inicial.papelera.slice(),editOp=null,formTipo=null,showForm=false,confirmVaciar=true;
  const perfil=inicial.perfil||{rol:"dueno",plantillas:{}},clausulas=[],bloquesReserva=[];
- const docworksAuth={contexto,session:{}},opsSupabase=servidor,documentosPendientesRef={current:new Map()},showFormRef={current:false},draftPromptRef={current:null},accionesContextoRef={current:crearControlContextoOperaciones(claveContextoOperaciones(contexto))};
+ const docworksAuth={contexto,session:{}},opsSupabase=servidor,documentosPendientesRef={current:new Map()},showFormRef={current:false},draftPromptRef={current:null},sincronizacionDraftEnCursoRef={current:false},cierresDevolucionEnCursoRef={current:false},accionesContextoRef={current:crearControlContextoOperaciones(claveContextoOperaciones(contexto))};
  const setOperaciones=f=>{operaciones=typeof f==='function'?f(operaciones):f},setPapelera=f=>{papelera=typeof f==='function'?f(papelera):f};
  const setEditOp=x=>{editOp=x},setFormTipo=x=>{formTipo=x},setShowForm=x=>{showForm=x},setConfirmVaciarPapelera=x=>{confirmVaciar=x};
  ${handlerNames.map(n=>functions[n]).join('\n')}
