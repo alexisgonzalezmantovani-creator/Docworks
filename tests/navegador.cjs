@@ -198,7 +198,8 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.getByRole('button',{name:'Reintentar habilitación',exact:true}).click();
   await page.locator('#dw-clausula-texto').waitFor({state:'detached'});
   assert.equal(await page.getByTestId('altas').textContent(),'2');checks++;
-  await nav.getByRole('button',{name:'Papelera',exact:true}).click();
+  await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+   await page.locator('#dw-biblioteca-documento').getByRole('button',{name:/Papelera/}).click();
   await page.getByRole('heading',{name:'Papelera de cláusulas',exact:true}).waitFor();checks++;
   assert.equal(await page.locator('#dw-biblioteca-documento').count(),0);checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' papelera overflow');checks++;
