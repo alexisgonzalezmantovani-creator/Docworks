@@ -21,7 +21,7 @@ export function dwCrearCliente(){
   return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,lock:function(name,acquireTimeout,fn){return fn();}}});
 }
 // 4.29 — Recupera la sesión guardada con reintentos: refrescar la página nunca debe cerrar la sesión por lentitud.
-export async function dwObtenerSesionRobusta(sb){
+export async function dwObtenerSesionRobusta(sb): Promise<any>{
   var hay=dwHaySesionGuardada(), ultimo=null;
   // Supabase getSession administra la renovación; no duplicar refreshSession.
   // Cada intento tiene un límite y limpia su temporizador al finalizar.
