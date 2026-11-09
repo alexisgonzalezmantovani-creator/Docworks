@@ -5508,8 +5508,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     }
     if(esResAlq){
       if(step===1)return <StepTipo data={data} onChange={set} grupo="alquiler"/>;
-      if(step===2)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;
-      if(step===3)return <StepPersona data={data} onChange={set} prefix="locador" titulo="Locador" faltantes={camposFaltantes}/>;
+      if(step===2)return <StepPersona data={data} onChange={set} prefix="locador" titulo="Locador (propietario)" faltantes={camposFaltantes}/>;
+      if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesReservaAlq data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
       if(step===6)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
