@@ -113,7 +113,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await primeraClausula.screenshot({path:path.join(out,'clausula-precio-'+name+'.png')});
   await primeraClausula.locator('.dw-clause-toggle').click();
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
-  assert.equal(await nav.getByRole('button').count(),3);checks++;
+  assert.equal(await nav.getByRole('button').count(),2,'Documentos y Biblioteca de cláusulas');checks++;
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
   assert.equal(await page.locator('#dw-model-preview-area').count(),1);checks++;
   const acciones=page.getByTestId('dw-model-actions');
