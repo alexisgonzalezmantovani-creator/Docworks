@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.44";
+var DOCWORKS_VERSION = "6.45";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -5658,7 +5658,7 @@ function StepGrupo({onSelect}){
 function getResumenPartes(op){
   var prefixes=(op.tipo==="alquiler"||op.tipo==="reserva_alquiler")?["locador","locatario"]:["vendedor","comprador"];
   var roles=rolesPorTipo(op.tipo);
-  return prefixes.map(function(prefix,i){return {label:roles[i]||roles[0],nombre:op[prefix+"_nombre"]||"",dni:op[prefix+"_dni"]||""};});
+  return prefixes.map(function(prefix,i){return {label:capRol(roles[i]||roles[0]),nombre:op[prefix+"_nombre"]||"",dni:op[prefix+"_dni"]||""};});
 }
 function datosCompraCompartidos(op){
   var datos={clausulas_custom:op.clausulas_custom||"",comision_vendedor_valor_editado:op.comision_vendedor_valor_editado,comision_comprador_valor_editado:op.comision_comprador_valor_editado,inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
