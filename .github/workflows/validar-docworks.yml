@@ -23,8 +23,14 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Instalar verificador de PDF
         run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
-      - name: Compilar con Vite
-        run: npm run check
+      - name: Verificar tipos y compilación
+        run: |
+          npm run typecheck
+          npm run build
+      - name: Verificar módulos y pruebas de aplicación
+        run: npm test
+      - name: Verificar permisos y base de datos
+        run: npm run test:database
       - name: Verificar integración
         run: |
           if [ -f src/verificar-modulos.cjs ]; then node src/verificar-modulos.cjs; fi
