@@ -6346,7 +6346,7 @@ function TipoSelector({value,onChange}){
 
 function ClausulaFormBody({form,setForm,onCancel,onSubmit,editId,guardando,habilitarParaAsesores,onHabilitarChange,soloHabilitar,bloquearGuardado,guardarLabel,advertencia}){
   const taRef=useRef();
-  const [opcionesAbiertas,setOpcionesAbiertas]=useState(!!editId);
+  const [opcionesAbiertas,setOpcionesAbiertas]=useState(false);
   const CATS=["general","posesion","pago","rescision","impuestos","alquiler"];
   form=form||FORM_CLAUSULA_EMPTY;
   var tiposSeguros=Array.isArray(form.tipos)&&form.tipos.length?form.tipos:["todos"];
