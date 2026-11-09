@@ -1047,6 +1047,15 @@ export const GS = `
   .dw-overview-stat{position:relative;}
   .dw-overview-stat.is-selected::after{content:"";position:absolute;left:12px;right:12px;bottom:5px;height:3px;border-radius:3px;background:var(--gold);}
   .dw-overview-stat:focus-visible{outline:3px solid var(--gold);outline-offset:2px;}
+  /* Tablet: acciones de cada operación visibles sin desbordar las tarjetas. */
+  @media(min-width:701px) and (max-width:1050px){
+    .dw-dashboard-root .op-card-premium,.dw-dashboard-root .op-card-premium .op-card-inner{min-width:0;max-width:100%;}
+    .dw-dashboard-root .op-card-premium .op-card-side{min-width:0;max-width:100%;}
+    .dw-dashboard-root .op-card-premium .op-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:100%;}
+    .dw-dashboard-root .op-card-premium .op-actions .btn{min-width:0;white-space:nowrap;}
+    .dw-dashboard-root .op-card-premium .op-actions .op-more{flex:0 0 auto;}
+  }
+
   .dw-overview-trash .dw-overview-label svg{color:var(--muted);}
   .dw-overview-trash.is-selected .dw-overview-label svg{color:var(--gold);}
   @media(min-width:701px) and (max-width:1050px){.dw-overview-stat.is-selected::after{left:9px;right:9px;bottom:3px;}}
