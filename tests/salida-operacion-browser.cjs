@@ -85,7 +85,7 @@ await open();await selectStep(3);await page.locator('#dw-field-locatario_nombre'
 await fresh();await page.getByRole('button',{name:'Simular demora',exact:true}).click();await open();await selectStep(3);await page.locator('#dw-field-locatario_nombre').fill('Borrador con demora de prueba');await page.getByRole('button',{name:'Volver a operaciones',exact:true}).click();await page.getByRole('button',{name:'Guardar borrador',exact:true}).dblclick();assert.equal(await page.getByTestId('calls').textContent(),'1');checks++;
 await page.getByRole('button',{name:'Seguir editando',exact:true}).click();assert.ok(await page.locator('#dw-field-locatario_nombre').isVisible());checks++;
 await page.getByRole('button',{name:'Resolver demora',exact:true}).click();assert.equal(await page.locator('.dw-operation-page').count(),1);checks++;
-await fresh();await open();await page.locator('.dw-grupo-tipo-card').filter({hasText:'Contrato de Alquiler'}).click();await selectStep(5);
+await fresh();await open();await page.locator('.dw-grupo-tipo-alquiler .dw-grupo-card').filter({hasText:'Contrato de Alquiler'}).click();await selectStep(5);
 assert.equal(await page.locator('.dw-operation-next-action .btn').evaluate(el=>getComputedStyle(el).fontSize),width>=761?'13.5px':'12.5px');checks++;
 if(width>=761){assert.ok(await page.locator('.dw-operation-next-action .btn').evaluate(el=>el.getBoundingClientRect().height>=44));assert.ok(await page.getByRole('button',{name:'Volver a operaciones',exact:true}).evaluate(el=>el.getBoundingClientRect().height>=44));checks++;}
 const meses=page.locator('#dw-field-alquiler_plazo_meses');await meses.fill('');assert.equal(await meses.inputValue(),'');await meses.pressSequentially('12');assert.equal(await meses.inputValue(),'12');checks++;
