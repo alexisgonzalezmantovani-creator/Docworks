@@ -105,12 +105,12 @@ if(width<640){assert.ok(await page.locator('.op-table td:nth-child(3)').first().
 await page.locator('.op-table').getByRole('button',{name:'Abrir',exact:true}).first().click();assert.equal(await page.getByTestId('conversion').textContent(),'ver');checks++;
 await page.getByRole('button',{name:'Vista de tarjetas',exact:true}).click();
 if(width<640){assert.ok(await page.locator('.op-actions').first().evaluate(el=>{const b=el.lastElementChild.getBoundingClientRect(),r=el.getBoundingClientRect();return Math.abs(b.right-r.right)<2;}));checks++;}
-await page.locator('.dw-dashboard-root').getByRole('button',{name:'Agregar documento',exact:true}).first().click();
+await page.locator('.dw-dashboard-root').getByRole('button',{name:/^Documentos?\s*(?:\(\d+\))?$/}).first().click();
 const dialog=page.getByRole('dialog',{name:'Documentos de esta operación',exact:true});await dialog.waitFor();
 assert.ok(await dialog.evaluate(el=>el.parentElement===document.body));checks++;
 const cierre=dialog.getByRole('button',{name:'Cerrar',exact:true});assert.ok(await cierre.isVisible());assert.ok(await cierre.evaluate(el=>{const r=el.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&el.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2));}));checks++;
 await dialog.locator('.modal-body').evaluate(el=>el.scrollTop=el.scrollHeight);await cierre.click();await dialog.waitFor({state:'detached'});checks++;
-await page.locator('.dw-dashboard-root').getByRole('button',{name:'Agregar documento',exact:true}).last().click();await dialog.getByRole('button',{name:'Crear',exact:true}).click();assert.equal(await page.getByTestId('conversion').textContent(),'alquiler');checks++;
+await page.locator('.dw-dashboard-root').getByRole('button',{name:/^Documentos?\s*(?:\(\d+\))?$/}).last().click();await dialog.getByRole('button',{name:'Crear',exact:true}).click();assert.equal(await page.getByTestId('conversion').textContent(),'alquiler');checks++;
 await page.goto(url+'/?viewer=1');const editar=page.getByRole('button',{name:'Editar',exact:true});await editar.waitFor();assert.ok(await editar.locator('span').isVisible());checks++;
 assert.ok(await editar.evaluate(el=>{const r=el.getBoundingClientRect();return r.width>=60&&r.top>=0&&r.bottom<=innerHeight&&el.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2));}));checks++;
 assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));checks++;
