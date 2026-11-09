@@ -727,6 +727,16 @@ export const GS = `
 
   @media(max-width:700px){.dw-dashboard-overview{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;scrollbar-width:none}.dw-dashboard-overview::-webkit-scrollbar{display:none}.dw-overview-stat{flex:1 0 auto!important;min-width:0!important;min-height:42px!important;padding:8px!important;gap:3px!important;border-radius:9px!important}.dw-overview-label{font-size:10px!important;gap:3px!important}.dw-overview-label svg{display:none}.dw-overview-value{font-size:17px!important}.dw-overview-trash{display:none!important}.dw-dashboard-root .op-card-premium .op-card-inner{gap:8px!important}.dw-dashboard-root .op-card-premium .op-side-extra{display:none!important}}
 
+  @media(max-width:700px){
+.dw-dashboard-root .op-card-premium .op-card-inner{padding:10px 12px!important;display:block!important}
+.dw-dashboard-root .op-card-premium .op-card-side{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin-top:7px!important}
+.dw-dashboard-root .op-card-premium .op-docs-count{display:none!important}
+.dw-dashboard-root .op-card-premium .op-side-progress{flex:1!important;min-width:0!important}
+.dw-dashboard-root .op-card-premium .op-actions{gap:5px!important}
+.dw-dashboard-root .op-card-premium .op-actions .btn{min-width:0!important;padding:7px 9px!important}
+.dw-dashboard-root .op-card-premium .op-address-strong{font-size:13px!important}
+.dw-dashboard-root .op-card-premium .op-card-side .op-side-extra{display:none!important}
+}
   /* ── FAB (mobile new op button) ── */
   .fab{display:none;position:fixed;bottom:calc(var(--mobile-nav-h) + 14px);right:16px;z-index:39;width:54px;height:54px;border-radius:50%;background:linear-gradient(145deg,#c9962a,var(--gold));border:1px solid rgba(255,255,255,0.2);cursor:pointer;font-size:24px;color:#0a0f1a;box-shadow:var(--shadow-gold),0 10px 28px rgba(15,23,42,0.18);align-items:center;justify-content:center;transition:all var(--ease-med);}
   .fab:hover{transform:translateY(-2px) scale(1.03);filter:brightness(1.04);}
@@ -4093,6 +4103,13 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     if(filtros.hasta) matchAvanzado=matchAvanzado&&grupoDe(op).some(function(o){return new Date(o.created_at||0)<=new Date(filtros.hasta+"T23:59:59");});
     return matchSearch&&matchTipo&&matchEstado&&matchAvanzado;
   });
+  // Prioridad visual: borradores que requieren completar, luego activas y cerradas; recientes primero.
+  filtered.sort(function(a,b){
+    function prioridad(o){return o.estado==="borrador"?0:o.estado==="activo"?1:o.estado==="cerrado"?2:3;}
+    var p=prioridad(a)-prioridad(b);
+    if(p!==0)return p;
+    return new Date(b.actualizado_en||b.updated_at||b.created_at||0).getTime()-new Date(a.actualizado_en||a.updated_at||a.created_at||0).getTime();
+  });
   var total=raices.length;
   var activas=raices.filter(function(o){return o.estado==="activo";}).length;
   var alq=raices.filter(function(o){return grupoDe(o).some(function(x){return x.tipo==="alquiler"||x.tipo==="reserva_alquiler";});}).length;
@@ -4204,6 +4221,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     // El menú "⋯" concentra las acciones secundarias de la fila.
     // "Abrir" y "Editar" quedan visibles; "Compartir" vive dentro de este menú.
     const menuItems=[
+      permisos.editar?{label:"Editar",icon:<DWIcon name="edit" size={13}/>,onClick:function(){onEdit(op);}}:null,
       {label:"Compartir",icon:<DWIcon name="share" size={13}/>,onClick:function(){shareWhatsApp(op);}},
       {label:"Historial de acciones",icon:<DWIcon name="clock" size={13}/>,onClick:function(){setHistorialOp(op);}},
       permisosGenerales.crear?{label:"Duplicar",icon:<DWIcon name="duplicate" size={13}/>,onClick:function(){onDuplicar(op);}}:null,
@@ -4216,7 +4234,6 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     const acciones=(
       <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
         <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
-        {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}
         <Dropdown items={menuItems}/>
       </div>
     );
