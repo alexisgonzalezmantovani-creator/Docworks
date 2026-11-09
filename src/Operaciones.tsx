@@ -4291,11 +4291,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
               <span style={{fontWeight:700,color:"var(--muted)"}}>{esResAlq?"Locador → Locatario":esReserva?"Vendedor → Comprador":"Partes de la operación"}</span>
               <span>·</span><span>{new Date(op.created_at).toLocaleDateString("es-AR")}</span>
             </div>
-            {(()=>{var pp=getProximoPasoOperacion(op,operaciones);return <div style={{marginTop:9,padding:"7px 9px",borderRadius:8,background:"rgba(212,168,83,.045)",border:"1px solid rgba(212,168,83,.12)",fontSize:12,color:pp.tone,fontWeight:750,display:"inline-flex",alignItems:"center",gap:5}}><span>{pp.icon}</span>{pp.texto}</div>;})()}
-            {hijosOp.length>0&&<div className="op-expediente-resumen" aria-label="Documentos vinculados al expediente" style={{marginTop:9,display:"flex",flexWrap:"wrap",alignItems:"center",gap:6,minWidth:0}}>
-              <span style={{fontSize:11,fontWeight:800,color:"var(--muted)"}}>Expediente · {hijosOp.length+1} documentos</span>
-              {hijosOp.map(function(h){return <span key={h.id} title={TIPOS[h.tipo]||h.tipo} style={{fontSize:11,border:"1px solid var(--border)",borderRadius:7,padding:"3px 6px",maxWidth:"100%",overflowWrap:"anywhere",color:"var(--dim)"}}>{TIPO_ICON[h.tipo]||"📄"} {TIPOS[h.tipo]||h.tipo}</span>;})}
-            </div>}
+
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginTop:10}}>
               {(esReserva||esResAlq)&&permisos.convertir?(function(){var opts=opcionesDoc(op);var faltan=opts.filter(function(o){return !hijosOp.some(function(h){return h.tipo===o.tipo;});}).length;return <Btn v={faltan>0?"orange":"secondary"} s="sm" onClick={function(){setAddDocFor(op);}}><DWIcon name="link" size={12} strokeWidth={2}/> {hijosOp.length>0?"Vinculados ("+hijosOp.length+")":"Agregar documento"}</Btn>;})():<span/>}
             </div>
@@ -4388,8 +4384,10 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
         {addDocFor&&(function(){
           var opts=opcionesDoc(addDocFor);
           var hijosAdd=operaciones.filter(function(o){return o.parent_id===addDocFor.id;});
+          var sugerencia=getProximoPasoOperacion(addDocFor,operaciones);
           return (
             <div>
+              <div style={{padding:"10px 12px",borderRadius:9,background:"rgba(212,168,83,.07)",border:"1px solid rgba(212,168,83,.2)",marginBottom:14,fontSize:13,fontWeight:750,color:sugerencia.tone}}><span style={{marginRight:6}}>{sugerencia.icon}</span>Próximo paso sugerido: {sugerencia.texto}</div>
               <div style={{fontSize:12.5,color:"var(--dim)",marginBottom:16,lineHeight:1.5}}>
                 Todos los documentos que generes acá quedan agrupados en la <b>carpeta de esta operación</b>, junto a {getName(addDocFor)}.
               </div>
