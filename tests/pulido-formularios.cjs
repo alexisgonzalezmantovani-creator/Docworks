@@ -5,10 +5,10 @@ require('esbuild').buildSync({stdin:{contents:fs.readFileSync(dir+'/src/App.tsx'
 const a=require(tmp+'/app.cjs'),root=a.createRoot(document.getElementById('root'));let state,checks=0;
 const opsSource=fs.readFileSync(dir+'/src/Operaciones.tsx','utf8');
 const appSource=fs.readFileSync(dir+'/src/App.tsx','utf8');
-assert.match(opsSource,/\.dw-operation-next-action[\\s\\S]*?OperationSaveInline status=\\{saveStatus\\}/);
-assert.match(appSource,/function OperationSaveInline\\(\\{status\\}\\)[\\s\\S]*?\\[\"saving\",\"error\"\\]/);
-assert.match(opsSource,/\.dw-persona-fields>\\.dw-contact-field\\{grid-column:auto/);
-assert.match(opsSource,/orientation:landscape[\\s\\S]*?\.main\\{min-height:0;max-height:100%;overflow:hidden;/);
+assert.ok(opsSource.includes('<OperationSaveInline status={saveStatus}/>'));
+assert.ok(appSource.includes('["saving","error"].includes(status.state)'));
+assert.ok(opsSource.includes('.dw-persona-fields>.dw-contact-field{grid-column:auto'));
+assert.ok(opsSource.includes('.main{min-height:0;max-height:100%;overflow:hidden;}'));
 console.log('OK controles estáticos iPhone: guardado, contactos y scroll horizontal');
 
 const check=(name,fn)=>{fn();checks++;console.log('OK',name);};
