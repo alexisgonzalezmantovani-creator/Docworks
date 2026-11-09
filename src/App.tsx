@@ -5012,7 +5012,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
         <Inp id="dw-field-precio" label="Precio total" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="100.000" money {...estiloCampoFaltante(faltantes,"precio")}/>
         <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
         <Inp id="dw-field-anticipo" label="Seña / Anticipo" value={data.anticipo||""} onChange={function(e){onChange("anticipo",e.target.value);}} placeholder="10.000" money {...estiloCampoFaltante(faltantes,"anticipo")}/>
-        <Field label="Saldo restante"><div className="val-box">{fmt$(data.saldo||(precio-anticipo),data.moneda)}</div></Field>
+        <Field label="Saldo restante"><div className="val-box" aria-live="polite">{fmt$(Math.max(0,precio-anticipo),data.moneda)}</div>{anticipo>precio&&precio>0&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginTop:6}}>La seña o anticipo supera el precio total. Revisá los importes.</div>}</Field>
         {data.tipo==="reserva"&&<div className="col2 dw-economic-refuerzo-toggle">
           <label className="dw-economic-refuerzo-label">
             <input id="dw-field-reserva_incluye_refuerzo" type="checkbox" checked={!!data.reserva_incluye_refuerzo} onChange={function(e){onChange("reserva_incluye_refuerzo",e.target.checked);}}/>
