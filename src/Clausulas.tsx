@@ -124,7 +124,6 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
   const [filtroTexto,setFiltroTexto]=useState("");
   const [filtroCategoria,setFiltroCategoria]=useState("todas");
   const [soloPersonalizadas,setSoloPersonalizadas]=useState(false);
-  const [soloObligatorias,setSoloObligatorias]=useState(false);
   const [clausulaTab,setClausulaTab]=useState("biblioteca");
   const [historialSeleccionado,setHistorialSeleccionado]=useState(null);
   const [ideaInicial,setIdeaInicial]=useState("");
@@ -201,7 +200,6 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
   });
   var filtradas=bibliotecaVisible.filter(function(c){
     if(soloPersonalizadas&&!esPersonalizada(c))return false;
-    if(soloObligatorias&&!c.obligatoria)return false;
     if(filtroCategoria!=="todas"&&c.categoria!==filtroCategoria)return false;
     if(filtroTexto.trim()){
       var q=filtroTexto.trim().toLowerCase();
@@ -257,7 +255,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
               style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderRadius:10,border:"1px solid "+(soloPersonalizadas?"var(--gold)":"var(--border2)"),background:soloPersonalizadas?"rgba(212,175,55,0.1)":"rgba(255,255,255,0.03)",color:soloPersonalizadas?"var(--gold)":"var(--muted)",fontSize:12,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none"}}>
               {soloPersonalizadas?"✓ ":""}Solo personalizadas
             </div>
-            {editable&&<button type="button" onClick={function(){setSoloObligatorias(function(v){return !v;});}} aria-pressed={soloObligatorias} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderRadius:10,border:"1px solid "+(soloObligatorias?"var(--gold)":"var(--border2)"),background:soloObligatorias?"rgba(212,175,55,0.1)":"rgba(255,255,255,0.03)",color:soloObligatorias?"var(--gold)":"var(--muted)",fontSize:12,cursor:"pointer",whiteSpace:"nowrap"}}>{soloObligatorias?"✓ ":""}Obligatorias</button>}
+            
           </div>
 
           <div style={{fontSize:12,color:"var(--dim)"}}>{filtradas.length} de {bibliotecaVisible.length} cláusula{bibliotecaVisible.length===1?"":"s"}</div>
