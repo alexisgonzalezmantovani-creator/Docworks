@@ -279,7 +279,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
                       <p style={{fontSize:12,color:"var(--dim)",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{c.contenido}</p>
                     </div>
                     <div style={{display:"flex",gap:3,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
-                      {puedeVerHistorial&&<button type="button" onClick={function(){setHistorialSeleccionado(c);}} className="btn btn-ghost btn-sm" style={{padding:"4px 6px",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}
+                      {puedeVerHistorial&&<button type="button" onClick={function(){setHistorialSeleccionado(c);}} className="btn btn-ghost btn-sm" style={{padding:"2px 6px",fontSize:10,lineHeight:1.2,minHeight:24,height:24,whiteSpace:"nowrap",flexShrink:0}}>Historial</button>}
                     {editable&&(
                       <div style={{display:"flex",gap:3,flexShrink:0}}>
                         <button onClick={function(){abrirEdicion(c);}} style={{padding:"4px 7px",borderRadius:6,background:"rgba(255,255,255,0.04)",border:"1px solid var(--border)",color:"var(--muted)",cursor:"pointer",fontSize:12,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><DWIcon name="edit" size={14}/></button>
