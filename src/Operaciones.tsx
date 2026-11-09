@@ -4101,8 +4101,8 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   // vea compacta cuando hay muchas operaciones con documentos vinculados).
   const [openFolders,setOpenFolders]=useState({});
   function getName(op){
-      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return nombreConSufijo(op,"locatario","Locatario")+" (locatario) ← "+nombreConSufijo(op,"locador","Locador")+" (Locador)";
-      return nombreConSufijo(op,"comprador","Comprador")+" (comprador) ← "+nombreConSufijo(op,"vendedor","Vendedor")+" (Vendedor)";
+      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return (op.locatario_nombre?nombreConSufijo(op,"locatario","—"):"—")+" (locatario) ← "+(op.locador_nombre?nombreConSufijo(op,"locador","—"):"—")+" (locador)";
+      return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+" (comprador) ← "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+" (vendedor)";
     }
   function getMonto(op){if(op.tipo==="alquiler")return op.alquiler_monto_inicial?fmt$(op.alquiler_monto_inicial,op.alquiler_moneda)+"/mes":null;if(op.tipo==="reserva_alquiler")return op.res_alq_monto_mensual?fmt$(op.res_alq_monto_mensual,op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS")+"/mes est.":null;return op.precio?fmt$(op.precio,op.moneda):null;}
 
@@ -5608,7 +5608,7 @@ function PapeleraView({puedeGestionar=false,papelera,onRestore,onDeletePermanent
     var dias=Math.ceil((venc-Date.now())/(24*60*60*1000));
     return Math.max(0,dias);
   }
-  function getName(op){if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler")return nombreConSufijo(op,"locatario","Locatario")+" (locatario) ← "+nombreConSufijo(op,"locador","Locador")+" (Locador)";return nombreConSufijo(op,"comprador","Comprador")+" (comprador) ← "+nombreConSufijo(op,"vendedor","Vendedor")+" (Vendedor)";}
+  function getName(op){if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler")return (op.locatario_nombre?nombreConSufijo(op,"locatario","—"):"—")+" (locatario) ← "+(op.locador_nombre?nombreConSufijo(op,"locador","—"):"—")+" (locador)";return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+" (comprador) ← "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+" (vendedor)";}
   return(
     <div>
       {!embedded&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18,flexWrap:"wrap",gap:10}}>
