@@ -5322,6 +5322,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       return Object.assign({},d,{comision_vendedor_modo:"porcentaje",comision_vendedor_valor:"3"});
     });
   },[data.tipo]);
+  const esAlq=data.tipo==="alquiler",esResAlq=data.tipo==="reserva_alquiler";
+  const esComodato=data.tipo==="comodato",esExclusividad=data.tipo==="exclusividad";
+  const esRefuerzo=data.tipo==="refuerzo_reserva",esDevolucion=data.tipo==="devolucion_reserva";
+  const esDocSimple=esComodato||esExclusividad||esRefuerzo||esDevolucion;
+  const total=esAlq?7:esResAlq?6:esDocSimple?5:6;
   const faltantesDetalle = getCamposFaltantesDetalle(data,perfil);
   const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
   const resumenPendientesPaso = faltantesPasoActual.slice(0,3).map(function(f){return f.label;}).join(", ")+(faltantesPasoActual.length>3?" y "+(faltantesPasoActual.length-3)+" más":"");
@@ -5528,11 +5533,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"", clausulas_custom_titulo:op.clausulas_custom_titulo||"",
     });
   }
-  const esAlq=data.tipo==="alquiler",esResAlq=data.tipo==="reserva_alquiler";
-  const esComodato=data.tipo==="comodato",esExclusividad=data.tipo==="exclusividad";
-  const esRefuerzo=data.tipo==="refuerzo_reserva",esDevolucion=data.tipo==="devolucion_reserva";
-  const esDocSimple=esComodato||esExclusividad||esRefuerzo||esDevolucion;
-  const total=esAlq?7:esResAlq?6:esDocSimple?5:6;
+
   // Declarar total antes de usarlo en dependencias: evita ReferenceError en tablet/iPhone.
   useEffect(function(){setRevisando(step>total);},[step,total]);
   // If no group selected yet (new op), show group picker
