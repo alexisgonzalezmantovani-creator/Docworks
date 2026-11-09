@@ -56,6 +56,26 @@ await check('un borrador modificado durante la sincronización no se borra',asyn
  resolve();await guardando;
  assert.equal(a.lsGet('draftOperacion',null).data.comprador_nombre,'Cambio mientras guardaba');
 });
+await check('un rechazo explícito del servidor no borra el borrador y permite reintentar',async()=>{
+ let calls=0;const ids=[];
+ const h=a.crearGuardadoPrueba({guardar:async op=>{calls++;ids.push(op.id);return calls===1?{error:{message:'Servicio temporalmente no disponible'}}:{operacion:op}}});
+ a.lsSet('draftOperacion',{data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});
+ await h.sincronizarDraftOffline();
+ assert.ok(a.lsGet('draftOperacion',null));
+ await h.sincronizarDraftOffline();
+ assert.equal(calls,2);assert.equal(ids[0],ids[1]);
+ assert.equal(a.lsGet('draftOperacion',null),null);
+});
+await check('tras fallar una sincronización concurrente el bloqueo se libera',async()=>{
+ let reject;const pending=new Promise((_resolve,r)=>{reject=r});let calls=0;
+ const h=a.crearGuardadoPrueba({guardar:async op=>{calls++;if(calls===1)return pending;return {operacion:op}}});
+ a.lsSet('draftOperacion',{data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});
+ const primero=h.sincronizarDraftOffline();const segundo=h.sincronizarDraftOffline();
+ assert.equal(calls,1);reject(Error('Se cortó internet'));await Promise.all([primero,segundo]);
+ assert.ok(a.lsGet('draftOperacion',null));
+ await h.sincronizarDraftOffline();assert.equal(calls,2);
+ assert.equal(a.lsGet('draftOperacion',null),null);
+});
 await check('un fallo antes de confirmar la devolución no marca la reserva para cerrarla',async()=>{
  const padre={...data,id:'padre-sin-cierre',estado:'activo',proceso_estado:'aceptada'};const h=a.crearGuardadoPrueba({guardar:async()=>{throw Error('Sin conexión antes de guardar')}},{operaciones:[padre]});
  await h.saveOp({...data,tipo:'devolucion_reserva',parent_id:padre.id},'guardar','activo');assert.deepEqual(h.estado().operaciones,[padre]);assert.equal(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),null);
