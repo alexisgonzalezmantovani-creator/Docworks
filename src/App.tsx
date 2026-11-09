@@ -4805,7 +4805,7 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
           );
         })}
         {cotitulares.length>0&&<div style={{fontSize:12,color:"var(--dim)"}}>Los nombres, DNI y domicilios se combinan automáticamente en el documento generado (ej. «Juan Pérez y María Gómez»).</div>}
-      </div>
+      </DetallesFormulario>
     </div>
   );
 }
