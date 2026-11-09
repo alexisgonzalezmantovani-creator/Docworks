@@ -27,7 +27,7 @@ export async function dwObtenerSesionRobusta(sb): Promise<any>{
   // Cada intento tiene un límite y limpia su temporizador al finalizar.
   for(var i=0;i<3;i++){
     try{
-      var r=await new Promise(function(resolve,reject){
+      var r: {data?:{session?:any};error?:{message?:string}}=await new Promise(function(resolve,reject){
         var terminado=false;
         var timer=setTimeout(function(){
           if(terminado)return;
