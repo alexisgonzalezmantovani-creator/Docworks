@@ -151,6 +151,16 @@ await check('cambio de inmobiliaria durante el cierre no modifica operaciones de
  resolve();await guardando;
  assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
 });
+await check('devolución confirmada y cierre sin respuesta conserva marca de reintento',async()=>{
+ const padre={...data,id:'padre-respuesta-vacia',tipo:'reserva',estado:'activo'};
+ const devolucion={...data,id:'devolucion-respuesta-vacia',tipo:'devolucion_reserva',parent_id:padre.id};
+ const h=a.crearGuardadoPrueba({guardar:async op=>op.id===padre.id?{}:{operacion:op}},{operaciones:[padre]});
+ await h.saveOp(devolucion,'guardar','activo');
+ const estado=h.estado();
+ assert.equal(estado.showForm,false);
+ assert.equal(estado.operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
+ assert.equal(estado.operaciones.filter(o=>o.id===devolucion.id).length,1);
+});
 await check('un fallo antes de confirmar la devolución no marca la reserva para cerrarla',async()=>{
  const padre={...data,id:'padre-sin-cierre',estado:'activo',proceso_estado:'aceptada'};const h=a.crearGuardadoPrueba({guardar:async()=>{throw Error('Sin conexión antes de guardar')}},{operaciones:[padre]});
  await h.saveOp({...data,tipo:'devolucion_reserva',parent_id:padre.id},'guardar','activo');assert.deepEqual(h.estado().operaciones,[padre]);assert.equal(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),null);
