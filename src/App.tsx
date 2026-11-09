@@ -8838,11 +8838,13 @@ function DocWorksApp(){
       // si la marca auxiliar de localStorage se perdió; no se crea otra devolución.
       var cerrado=Object.assign({},padre,{estado:"cerrado",proceso_estado:"rechazada"});
       if(!permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,padre).editar)continue;
+      if(!vigente())return;
       marcarOperacionPendiente(cerrado.id);
       try{
         var resultado=await opsSupabase.guardar(cerrado);
         if(!vigente()||resultado&&resultado.contextoObsoleto)return;
         if(!resultado||resultado.error||!resultado.operacion)continue;
+        if(!vigente())return;
         try{lsRemove("docworks:devolucion:cierre-pendiente:"+padre.id);}catch(_e2){}
         setOperaciones(function(prev){return prev.map(function(o){return o.id===cerrado.id?cerrado:o;});});
         dwNotify("success","Se completó el cierre pendiente de la reserva vinculada a la devolución.");
