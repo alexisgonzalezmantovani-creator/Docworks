@@ -8,7 +8,7 @@ function crearGuardadoPrueba(servidor,inicial={}){
  let operaciones=inicial.operaciones||[],editOp=inicial.editOp||null,showForm=true,formInitialOverride=null;
  const perfil={rol:'dueno',plantillas:{}},clausulas=[],bloquesReserva=[];
  const contexto={usuario:{id:'owner',rol_base:'dueno'},inmobiliaria:{id:'tenant-a'},habilitado:true},docworksAuth={contexto,session:{}},opsSupabase=servidor;
- const accionesContextoRef={current:crearControlContextoOperaciones(claveContextoOperaciones(contexto))},formSaveIdRef={current:null},formSnapshotRef={current:null},showFormRef={current:false},draftPromptRef={current:null};
+ const accionesContextoRef={current:crearControlContextoOperaciones(claveContextoOperaciones(contexto))},formSaveIdRef={current:null},formSnapshotRef={current:null},showFormRef={current:false},draftPromptRef={current:null},sincronizacionDraftEnCursoRef={current:false};
  const setOperaciones=f=>{operaciones=typeof f==='function'?f(operaciones):f},setEditOp=x=>{editOp=x},setShowForm=x=>{showForm=x},setFormInitialOverride=x=>{formInitialOverride=x};
  const marcarOperacionPendiente=()=>{},desmarcarOperacionPendiente=()=>{},reportSave=()=>{},setDocAutoAction=()=>{},abrirDoc=()=>{};
  ${fns.saveOp}
@@ -25,6 +25,16 @@ const data={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',comprador_nombre
 await check('respuesta perdida después de guardar no duplica al reintentar',async()=>{const rows=new Map(),attempts=[];let first=true;const h=a.crearGuardadoPrueba({guardar:async op=>{rows.set(op.id,JSON.parse(JSON.stringify(op)));attempts.push(op.id);if(first){first=false;throw Error('Respuesta perdida después del commit')}return {operacion:op}}});await h.saveOp(data,'guardar','borrador');await h.saveOp({...data,comprador_nombre:'Nombre corregido'},'guardar','borrador');assert.equal(rows.size,1);assert.equal(attempts[0],attempts[1]);assert.equal([...rows.values()][0].comprador_nombre,'Nombre corregido');assert.equal(h.estado().operaciones.length,1)});
 await check('sincronización offline conserva identidad después de una respuesta perdida',async()=>{const rows=new Map();let first=true;const h=a.crearGuardadoPrueba({guardar:async op=>{rows.set(op.id,JSON.parse(JSON.stringify(op)));if(first){first=false;throw Error('Respuesta perdida')}return {operacion:op}}});a.lsSet('draftOperacion',{data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});await h.sincronizarDraftOffline();assert.ok(a.lsGet('draftOperacion',null));const recuperado=a.crearGuardadoPrueba({guardar:async op=>{rows.set(op.id,JSON.parse(JSON.stringify(op)));return {operacion:op}}});await recuperado.sincronizarDraftOffline();assert.equal(rows.size,1);assert.equal(a.lsGet('draftOperacion',null),null)});
 
+await check('dos sincronizaciones offline simultáneas solo envían una solicitud',async()=>{
+ let resolve;const pending=new Promise(r=>{resolve=r});let calls=0;
+ const h=a.crearGuardadoPrueba({guardar:async op=>{calls++;await pending;return {operacion:op}}});
+ a.lsSet('draftOperacion',{data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});
+ const primero=h.sincronizarDraftOffline();
+ const segundo=h.sincronizarDraftOffline();
+ assert.equal(calls,1);
+ resolve();await Promise.all([primero,segundo]);
+ assert.equal(calls,1);assert.equal(a.lsGet('draftOperacion',null),null);
+});
 await check('un fallo antes de confirmar la devolución no marca la reserva para cerrarla',async()=>{
  const padre={...data,id:'padre-sin-cierre',estado:'activo',proceso_estado:'aceptada'};const h=a.crearGuardadoPrueba({guardar:async()=>{throw Error('Sin conexión antes de guardar')}},{operaciones:[padre]});
  await h.saveOp({...data,tipo:'devolucion_reserva',parent_id:padre.id},'guardar','activo');assert.deepEqual(h.estado().operaciones,[padre]);assert.equal(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),null);
