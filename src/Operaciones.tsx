@@ -4301,7 +4301,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     var removiendo = !!removingIds[op.id];
 
     const acciones=(
-      <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
+      <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,minWidth:0,maxWidth:"100%",flexWrap:"wrap",justifyContent:"flex-end"}}>
         {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={13}/> <span>{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span></Btn>}
         <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
         {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}
