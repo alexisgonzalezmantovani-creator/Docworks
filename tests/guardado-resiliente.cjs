@@ -141,6 +141,16 @@ await check('reintentos simultáneos de cierre solo realizan una solicitud',asyn
  assert.equal(calls,1);
  assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'rechazada');
 });
+await check('cambio de inmobiliaria durante el cierre no modifica operaciones de la sesión nueva',async()=>{
+ const padre={...data,id:'padre-cambio-tenant',estado:'cerrado',proceso_estado:'pendiente_cierre_devolucion'};
+ const devolucion={...data,id:'devolucion-cambio-tenant',tipo:'devolucion_reserva',parent_id:padre.id,estado:'activo'};
+ let resolve;const pending=new Promise(r=>{resolve=r});
+ const h=a.crearGuardadoPrueba({guardar:async op=>{await pending;return {operacion:op}}},{operaciones:[padre,devolucion]});
+ const guardando=h.reintentarCierresDevolucion();
+ h.cambiarContexto({usuario:{id:'otro',rol_base:'dueno'},inmobiliaria:{id:'tenant-b'},habilitado:true});
+ resolve();await guardando;
+ assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
+});
 await check('un fallo antes de confirmar la devolución no marca la reserva para cerrarla',async()=>{
  const padre={...data,id:'padre-sin-cierre',estado:'activo',proceso_estado:'aceptada'};const h=a.crearGuardadoPrueba({guardar:async()=>{throw Error('Sin conexión antes de guardar')}},{operaciones:[padre]});
  await h.saveOp({...data,tipo:'devolucion_reserva',parent_id:padre.id},'guardar','activo');assert.deepEqual(h.estado().operaciones,[padre]);assert.equal(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),null);
