@@ -1047,7 +1047,7 @@ export const GS = `
   .dw-overview-label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:600;line-height:1.35;}
   .dw-overview-label svg{flex-shrink:0;color:var(--gold);}
   .dw-overview-value{font-size:clamp(25px,2.8vw,34px);font-weight:650;line-height:1;letter-spacing:-.05em;font-variant-numeric:tabular-nums;}
-  @media(min-width:701px) and (max-width:1050px){.dw-dashboard-overview{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  @media(min-width:701px) and (max-width:1050px){.dw-dashboard-overview{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;}.dw-overview-stat{padding:12px 9px;gap:8px;min-height:78px;border-radius:12px;}.dw-overview-label{font-size:10px;gap:4px;overflow-wrap:anywhere;}.dw-overview-label svg{width:14px;height:14px;}.dw-overview-value{font-size:23px;}}
   @media(max-width:700px){
     .dw-dashboard-overview{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:14px;}
     .dw-overview-stat{padding:10px 9px;gap:7px;border-radius:11px;min-height:74px;box-shadow:0 2px 8px rgba(15,23,42,.025);}
