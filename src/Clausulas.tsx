@@ -363,16 +363,17 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
     if(!puedeEditar||!clausula)return;
     if(estadoClausulaGuardando!==null)return;
     setEstadoClausulaError("");
-    if(clausula.obligatoria===true&&estado!=="obligatoria")return Promise.resolve({error:new Error("Esta cláusula es esencial y no se puede desactivar desde este modelo.")});
+    if(clausula.obligatoria===true&&estado!=="obligatoria"){setEstadoClausulaError("Esta cláusula es esencial y no se puede desactivar desde este modelo.");return;}
     var mapa=Object.assign({},perfil&&perfil.plantillas||{}),cfg=Object.assign({},mapa[tipoDocSel]||{});
     var opcionales=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas).clausulas_ids.slice();
+    var tipoAlGuardar=tipoDocSel;
     var obligatorias=Array.isArray(cfg.obligatorias_ids)?cfg.obligatorias_ids.slice():[];
     if(estado==="apagada"){opcionales=opcionales.filter(function(id){return id!==clausula.id;});obligatorias=obligatorias.filter(function(id){return id!==clausula.id;});}
     else if(estado==="obligatoria"){opcionales=opcionales.filter(function(id){return id!==clausula.id;});if(obligatorias.indexOf(clausula.id)<0)obligatorias.push(clausula.id);}
     else {obligatorias=obligatorias.filter(function(id){return id!==clausula.id;});if(opcionales.indexOf(clausula.id)<0)opcionales.push(clausula.id);}
     cfg.clausulas_ids=opcionales;cfg.obligatorias_ids=obligatorias;
     setEstadoClausulaGuardando(clausula.id);
-    try {var resultado=await guardarPerfil(Object.assign({},perfil,{plantillas:Object.assign({},mapa,{[tipoDocSel]:cfg})}));if(resultado&&resultado.error)throw resultado.error;}
+    try {var resultado=await guardarPerfil(Object.assign({},perfilActualRef.current,{plantillas:Object.assign({},perfilActualRef.current&&perfilActualRef.current.plantillas||{},{[tipoAlGuardar]:cfg})}));if(resultado&&resultado.error)throw resultado.error;}
     catch(e){setEstadoClausulaError(e&&e.message?e.message:"No se pudo actualizar la cláusula. Reintentá.");}
     finally{setEstadoClausulaGuardando(null);}
   }
