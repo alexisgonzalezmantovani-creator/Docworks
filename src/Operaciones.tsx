@@ -737,6 +737,7 @@ export const GS = `
 .dw-dashboard-root .op-card-premium .op-address-strong{font-size:13px!important}
 .dw-dashboard-root .op-card-premium .op-card-side .op-side-extra{display:none!important}
 }
+  @media(min-width:701px){.dw-mobile-trash-link{display:none!important}}@media(max-width:700px){.dw-mobile-trash-link{display:flex;justify-content:flex-end;margin:-8px 0 12px}.dw-mobile-trash-link .btn{font-size:11px!important;padding:6px 10px!important}}
   /* ── FAB (mobile new op button) ── */
   .fab{display:none;position:fixed;bottom:calc(var(--mobile-nav-h) + 14px);right:16px;z-index:39;width:54px;height:54px;border-radius:50%;background:linear-gradient(145deg,#c9962a,var(--gold));border:1px solid rgba(255,255,255,0.2);cursor:pointer;font-size:24px;color:#0a0f1a;box-shadow:var(--shadow-gold),0 10px 28px rgba(15,23,42,0.18);align-items:center;justify-content:center;transition:all var(--ease-med);}
   .fab:hover{transform:translateY(-2px) scale(1.03);filter:brightness(1.04);}
@@ -4221,7 +4222,6 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     // El menú "⋯" concentra las acciones secundarias de la fila.
     // "Abrir" y "Editar" quedan visibles; "Compartir" vive dentro de este menú.
     const menuItems=[
-      permisos.editar?{label:"Editar",icon:<DWIcon name="edit" size={13}/>,onClick:function(){onEdit(op);}}:null,
       {label:"Compartir",icon:<DWIcon name="share" size={13}/>,onClick:function(){shareWhatsApp(op);}},
       {label:"Historial de acciones",icon:<DWIcon name="clock" size={13}/>,onClick:function(){setHistorialOp(op);}},
       permisosGenerales.crear?{label:"Duplicar",icon:<DWIcon name="duplicate" size={13}/>,onClick:function(){onDuplicar(op);}}:null,
@@ -4234,6 +4234,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     const acciones=(
       <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
         <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
+        {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}
         <Dropdown items={menuItems}/>
       </div>
     );
@@ -4336,6 +4337,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       <div className="dw-dashboard-overview" aria-label="Resumen de operaciones">
         {[{label:"Todas",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"},{label:"Papelera",value:papelera.length,icon:"trash",tab:"papelera"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat"+(estadoTab===item.tab?" is-selected":"")+(item.tab==="papelera"?" dw-overview-trash":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value" aria-busy={loading&&operaciones.length===0}>{loading&&operaciones.length===0?"—":item.value}</span></button>;})}
       </div>
+      <div className="dw-mobile-trash-link"><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setEstadoTab(enPapelera?"todas":"papelera");}}><DWIcon name="trash" size={13}/> {enPapelera?"Volver a operaciones":"Papelera"}</button></div>
       {error && <div role="alert" style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.25)",color:"var(--red)",fontSize:12.5}}>{error} {onRetry&&<button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{marginLeft:8}}>Reintentar</button>}</div>}
       {papeleraError && <div role="alert" style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(212,168,83,0.08)",border:"1px solid rgba(212,168,83,0.35)",color:"var(--text)",fontSize:12.5}}>{papeleraError} {onRetry&&<button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{marginLeft:8}}>Reintentar</button>}</div>}
       {loading && operaciones.length===0 && <div style={{marginBottom:16,fontSize:12.5,color:"var(--muted)"}}>Cargando tus operaciones…</div>}
