@@ -5004,7 +5004,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
   var precio=parseMontoAR(data.precio)||0,anticipo=parseMontoAR(data.anticipo)||0;
   var pctV=parseFloat(data.comision_vendedor||0),pctC=parseFloat(data.comision_comprador||0);
   useEffect(function(){var saldo=precio>0?String(Math.max(0,Math.round(precio*100)-Math.round(anticipo*100))/100):"";if(data.saldo!==saldo)onChange("saldo",saldo);},[data.precio,data.anticipo]);
-  useEffect(function(){if(data.tipo==="reserva"&&!data.reserva_aceptacion_vencimiento){onChange("reserva_aceptacion_vencimiento",sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),data.reserva_aceptacion_dias||5));}},[data.tipo,data.reserva_aceptacion_dias,data.reserva_fecha_reserva]);
+  useEffect(function(){if(data.tipo==="reserva"&&(data.reserva_aceptacion_modo||"dias")==="dias"&&!data.reserva_aceptacion_vencimiento){onChange("reserva_aceptacion_vencimiento",sumarDiasISO(data.reserva_fecha_reserva||fechaHoyISO(),data.reserva_aceptacion_dias||5));}},[data.tipo,data.reserva_aceptacion_modo,data.reserva_aceptacion_vencimiento,data.reserva_aceptacion_dias,data.reserva_fecha_reserva]);
   return(
     <div>
       <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Condiciones económicas.</p>
@@ -5069,7 +5069,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
           )}
           </div>
         </DetallesFormulario>}
-        {(data.id||String(data.escribania||"").trim())&&<details className="col2 dw-economic-advanced">
+        {<details className="col2 dw-economic-advanced">
           <summary><span className="dw-economic-advanced-title">Escribanía (opcional)</span><span className="dw-economic-advanced-caption">{data.escribania||"Completar cuando esté asignada"}</span><span className="dw-economic-advanced-symbol" aria-hidden="true"/></summary>
           <div className="dw-economic-advanced-content"><Inp id="dw-field-escribania" label="Escribanía" value={data.escribania||""} onChange={function(e){onChange("escribania",e.target.value);}} placeholder="Nombre de la escribanía"/></div>
         </details>}
