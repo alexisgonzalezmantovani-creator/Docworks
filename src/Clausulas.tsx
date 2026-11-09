@@ -125,6 +125,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
   const [filtroCategoria,setFiltroCategoria]=useState("todas");
   const [soloPersonalizadas,setSoloPersonalizadas]=useState(false);
   const [clausulaTab,setClausulaTab]=useState("biblioteca");
+  const [clausulaExpandida,setClausulaExpandida]=useState(null);
   const [historialSeleccionado,setHistorialSeleccionado]=useState(null);
   const [ideaInicial,setIdeaInicial]=useState("");
   const [generandoIdea,setGenerandoIdea]=useState(false);
@@ -265,9 +266,10 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
             {bibliotecaVisible.length>0&&filtradas.length===0&&<div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:13}}>Ninguna cláusula coincide con el filtro.</div>}
             {filtradas.map(function(c){
               var esTodos=!c.tipos||!c.tipos.length||c.tipos.indexOf("todos")!==-1;
+              var expandida=clausulaExpandida===c.id;
               return(
                 <div key={c.id} data-clausula-id={c.id} className="op-card">
-                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                     <div style={{flex:1}}>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap"}}>
                         <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{(c.titulo&&String(c.titulo).trim())?String(c.titulo).trim():"Cláusula sin título"}</span>
@@ -275,9 +277,11 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
                         {esPersonalizada(c)&&<span className="badge badge-activo">Personalizada</span>}
                       </div>
                       <div style={{fontSize:12,color:"var(--dim)",marginBottom:4}}>{esTodos?"Todos los documentos":c.tipos.map(function(t){return TIPOS[t]||t;}).join(", ")}</div>
-                      <p style={{fontSize:12,color:"var(--dim)",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{c.contenido}</p>
+
                     </div>
-                    <div style={{display:"flex",gap:3,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                    <button type="button" aria-expanded={expandida} aria-label={(expandida?"Contraer":"Ver")+" cláusula: "+c.titulo} onClick={function(){setClausulaExpandida(expandida?null:c.id);}} style={{width:40,height:40,flexShrink:0,border:"1px solid var(--border)",borderRadius:9,background:"transparent",color:"var(--text)",fontSize:22,cursor:"pointer"}}>{expandida?"−":"+"}</button>
+                  </div>
+                  {expandida&&<div style={{paddingTop:10,marginTop:8,borderTop:"1px solid var(--border)"}}><p style={{fontSize:13,color:"var(--text)",whiteSpace:"pre-wrap",overflowWrap:"anywhere",lineHeight:1.6}}>{c.contenido}</p><div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end",marginTop:10}}>
                       {puedeVerHistorial&&<button type="button" onClick={function(){setHistorialSeleccionado(c);}} className="btn btn-ghost btn-sm" style={{padding:"2px 6px",fontSize:10,lineHeight:1.2,minHeight:24,height:24,whiteSpace:"nowrap",flexShrink:0}}>Historial</button>}
                     {editable&&(
                       <div style={{display:"flex",gap:3,flexShrink:0}}>
@@ -285,8 +289,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
                         <button type="button" title="Mover a papelera" aria-label={"Mover a papelera: "+c.titulo} onClick={function(){onDelete(c.id);}} style={{padding:"4px 7px",borderRadius:6,background:"rgba(248,113,113,0.05)",border:"1px solid rgba(248,113,113,0.15)",color:"var(--red)",cursor:"pointer",display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:36,minHeight:36}}><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg></button>
                       </div>
                     )}
-                    </div>
-                  </div>
+                    </div></div>
                 </div>
               );
             })}
