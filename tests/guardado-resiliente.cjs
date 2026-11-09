@@ -8,7 +8,7 @@ function crearGuardadoPrueba(servidor,inicial={}){
  let operaciones=inicial.operaciones||[],editOp=inicial.editOp||null,showForm=true,formInitialOverride=null;
  const perfil={rol:'dueno',plantillas:{}},clausulas=[],bloquesReserva=[];
  const contexto={usuario:{id:'owner',rol_base:'dueno'},inmobiliaria:{id:'tenant-a'},habilitado:true},docworksAuth={contexto,session:{}},opsSupabase=servidor;
- const accionesContextoRef={current:crearControlContextoOperaciones(claveContextoOperaciones(contexto))},formSaveIdRef={current:null},formSnapshotRef={current:null},showFormRef={current:false},draftPromptRef={current:null},sincronizacionDraftEnCursoRef={current:false};
+ const accionesContextoRef={current:crearControlContextoOperaciones(claveContextoOperaciones(contexto))},formSaveIdRef={current:null},formSnapshotRef={current:null},showFormRef={current:false},draftPromptRef={current:null},sincronizacionDraftEnCursoRef={current:false},cierresDevolucionEnCursoRef={current:false};
  const setOperaciones=f=>{operaciones=typeof f==='function'?f(operaciones):f},setEditOp=x=>{editOp=x},setShowForm=x=>{showForm=x},setFormInitialOverride=x=>{formInitialOverride=x};
  const marcarOperacionPendiente=()=>{},desmarcarOperacionPendiente=()=>{},reportSave=()=>{},setDocAutoAction=()=>{},abrirDoc=()=>{};
  ${fns.saveOp}
@@ -123,6 +123,23 @@ await check('respuesta vacía en sincronización conserva el borrador offline',a
  await h.sincronizarDraftOffline();
  assert.ok(a.lsGet('draftOperacion',null));
  assert.equal(h.estado().operaciones.length,0);
+});
+await check('reintento de cierre sin confirmación conserva la reserva pendiente',async()=>{
+ const padre={...data,id:'padre-pendiente',estado:'cerrado',proceso_estado:'pendiente_cierre_devolucion'};
+ const devolucion={...data,id:'devolucion-pendiente',tipo:'devolucion_reserva',parent_id:padre.id,estado:'activo'};
+ const h=a.crearGuardadoPrueba({guardar:async()=>({})},{operaciones:[padre,devolucion]});
+ await h.reintentarCierresDevolucion();
+ assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
+});
+await check('reintentos simultáneos de cierre solo realizan una solicitud',async()=>{
+ const padre={...data,id:'padre-concurrente',estado:'cerrado',proceso_estado:'pendiente_cierre_devolucion'};
+ const devolucion={...data,id:'devolucion-concurrente',tipo:'devolucion_reserva',parent_id:padre.id,estado:'activo'};
+ let resolve;const pending=new Promise(r=>{resolve=r});let calls=0;
+ const h=a.crearGuardadoPrueba({guardar:async op=>{calls++;await pending;return {operacion:op}}},{operaciones:[padre,devolucion]});
+ const primero=h.reintentarCierresDevolucion();const segundo=h.reintentarCierresDevolucion();
+ assert.equal(calls,1);resolve();await Promise.all([primero,segundo]);
+ assert.equal(calls,1);
+ assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'rechazada');
 });
 await check('un fallo antes de confirmar la devolución no marca la reserva para cerrarla',async()=>{
  const padre={...data,id:'padre-sin-cierre',estado:'activo',proceso_estado:'aceptada'};const h=a.crearGuardadoPrueba({guardar:async()=>{throw Error('Sin conexión antes de guardar')}},{operaciones:[padre]});
