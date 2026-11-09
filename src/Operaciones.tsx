@@ -1140,7 +1140,10 @@ export var MOBILE_STABILITY_CSS = `
   @media (orientation:landscape) and (max-width:1100px){
     .content{padding-left:18px !important;padding-right:18px !important;}
     .mobile-nav{display:none !important;}
-    .main{min-height:100dvh;}
+    /* En PWA iOS, forzar 100dvh dentro del shell flex crea una segunda
+       superficie desplazable que puede tapar el encabezado al rebotar. */
+    .main{min-height:0;max-height:100%;overflow:hidden;}
+    .content{min-height:0;overscroll-behavior-y:contain;}
   }
 @media (max-width: 700px){
   html,body,#root{min-height:100%;width:100%;overflow-x:hidden;}
