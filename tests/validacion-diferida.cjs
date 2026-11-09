@@ -13,7 +13,11 @@ assert.match(form,/const faltantesDetalle = getCamposFaltantesDetalle\(data,perf
 assert.match(form,/step>total&&faltantesDetalle\.length>0/,'Mostrar pendientes solo en resumen');
 assert.match(form,/document\.querySelectorAll\("\[data-falta\]"\)/,'Limpiar marcas heredadas');
 assert.doesNotMatch(form,/setAttribute\("data-falta"/,'No reintroducir bordes rojos vía DOM');
-assert.match(form,/step<total\?<Btn onClick=\{avanzarConAviso\}>Siguiente/,'Permitir avance libre');
+assert.match(form,/if\(step<total && faltantesPasoActual\.length>0 && !avisoPaso\)/,'Advertir faltantes críticos antes de avanzar');
+assert.match(form,/setAvisoPaso\(true\)/,'Mostrar aviso suave');
+assert.match(form,/avisoPaso\?"Continuar igual →":"Siguiente →"/,'Permitir continuar tras el aviso');
+assert.match(form,/Podés continuar y completar después\./,'Explicar que el aviso no bloquea');
+assert.match(form,/setStep\(function\(s\)\{return Math\.min\(s\+1,total\+1\);\}\)/,'Conservar el avance libre después de confirmar');
 assert.match(form,/Revisar →/,'Conservar revisión final');
 assert.match(form,/draftTieneContenido\(data\) \? \{ data:data/,'No persistir un formulario vacío como borrador');
 assert.match(form,/dw-operation-save-slot/,'Indicador de guardado junto a siguiente');
@@ -33,4 +37,4 @@ assert.match(source,/Próximo paso sugerido:/,'Sugerir próximo paso al abrir do
 assert.match(app,/const STEPS_RES_ALQ=\[\{id:1,l:"Tipo"\},\{id:2,l:"Locador"\},\{id:3,l:"Locatario"\}/,'Reserva alquiler: locador antes de locatario');
 assert.match(source,/if\(esResAlq\)\{[\s\S]{0,260}if\(step===2\)return <StepPersona[^\n]*prefix="locador"/,'Formulario de reserva: locador en paso 2');
 assert.match(app,/function tituloRolForm[\s\S]{0,250}Locador \(propietario\)/,'Rótulo locador propietario');
-console.log('OK: 23 comprobaciones estáticas de validación diferida, borrador, cláusulas y navegación');
+console.log('OK: comprobaciones estáticas de validación diferida, borrador, cláusulas y navegación');
