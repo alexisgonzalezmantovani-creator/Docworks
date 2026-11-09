@@ -331,6 +331,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   const [opcionalError,setOpcionalError]=useState("");
   const [estadoClausulaError,setEstadoClausulaError]=useState("");
   const [estadoClausulaGuardando,setEstadoClausulaGuardando]=useState(null);
+  const estadoClausulaGuardandoRef=useRef(false);
   function abrirEdicionOpcional(c){
     if(!puedeEditar||!c)return;
     setOpcionalEditando(c.id);
@@ -361,7 +362,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   }
   async function cambiarEstadoClausulaBiblioteca(clausula,estado){
     if(!puedeEditar||!clausula)return;
-    if(estadoClausulaGuardando!==null)return;
+    if(estadoClausulaGuardandoRef.current)return;
     setEstadoClausulaError("");
     if(clausula.obligatoria===true&&estado!=="obligatoria"){setEstadoClausulaError("Esta cláusula es esencial y no se puede desactivar desde este modelo.");return;}
     var perfilVigente=perfilActualRef.current;
@@ -373,10 +374,11 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
     else if(estado==="obligatoria"){opcionales=opcionales.filter(function(id){return id!==clausula.id;});if(obligatorias.indexOf(clausula.id)<0)obligatorias.push(clausula.id);}
     else {obligatorias=obligatorias.filter(function(id){return id!==clausula.id;});if(opcionales.indexOf(clausula.id)<0)opcionales.push(clausula.id);}
     cfg.clausulas_ids=opcionales;cfg.obligatorias_ids=obligatorias;
+    estadoClausulaGuardandoRef.current=true;
     setEstadoClausulaGuardando(clausula.id);
     try {var resultado=await guardarPerfil(Object.assign({},perfilVigente,{plantillas:Object.assign({},perfilVigente&&perfilVigente.plantillas||{},{[tipoAlGuardar]:cfg})}));if(resultado&&resultado.error)throw resultado.error;}
     catch(e){setEstadoClausulaError(e&&e.message?e.message:"No se pudo actualizar la cláusula. Reintentá.");}
-    finally{setEstadoClausulaGuardando(null);}
+    finally{estadoClausulaGuardandoRef.current=false;setEstadoClausulaGuardando(null);}
   }
   function contarModelo(tipo){return contarBloquesCuerpo(perfil,tipo,bloquesReserva);}
   var protegidas=obtenerIdsProtegidosDePlantillas(perfil);
