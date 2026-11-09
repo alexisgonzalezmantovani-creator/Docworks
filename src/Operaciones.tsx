@@ -97,7 +97,7 @@ export const GS = `
     --bg:#eef2f7;--surface:#ffffff;--card:#ffffff;--border:rgba(15,23,42,0.07);--border2:rgba(15,23,42,0.12);
     --gold:#d4a853;--gold2:#e8c06a;--gold-soft:rgba(212,168,83,0.10);--gold-line:rgba(212,168,83,0.22);
     --text:#0f172a;--muted:#3f4c5e;--dim:#64748b;
-    --teal:#2dd4bf;--red:#f87171;--green:#4ade80;--amber:#fbbf24;
+    --teal:#0f766e;--red:#b91c1c;--green:#15803d;--amber:#92400e;
     --mobile-nav-h:60px;
     /* Superficies neutras (inputs, secundarios, hovers) — se recalculan en applyTheme(). */
     --surface2:rgba(15,23,42,0.035);
@@ -1211,6 +1211,10 @@ html,body{touch-action:manipulation;}
 @media(max-width:640px){
   .mobile-topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:500!important;background:#102653!important;background:linear-gradient(120deg,#091222 0%,#122a58 48%,#0c1c3d 100%)!important;}
   .app-wrap{padding-top:calc(56px + env(safe-area-inset-top,0px))!important;}
+  /* Evitar que el fondo del documento asome sobre la barra al rebotar en iOS. */
+  .mobile-topbar{isolation:isolate;transform:translateZ(0);-webkit-backface-visibility:hidden;}
+  .mobile-topbar::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:100px;background:#091222;pointer-events:none;}
+
   /* Calendario: tres indicadores compactos en una fila también en iPhone. */
   .calendar-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;}
   .calendar-summary-grid>.card{min-width:0!important;padding:10px 7px!important;}
@@ -4707,8 +4711,8 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{top:0,right:0,left:-20,bottom:0}}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)"/>
-                    <XAxis dataKey="name" tick={{fill:"#94a3b8",fontSize:12}} axisLine={false} tickLine={false}/>
-                    <YAxis tick={{fill:"#94a3b8",fontSize:12}} axisLine={false} tickLine={false} allowDecimals={false}/>
+                    <XAxis dataKey="name" tick={{fill:"var(--muted)",fontSize:12}} axisLine={false} tickLine={false}/>
+                    <YAxis tick={{fill:"var(--muted)",fontSize:12}} axisLine={false} tickLine={false} allowDecimals={false}/>
                     <Tooltip contentStyle={{background:"var(--card)",border:"1px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:12}} itemStyle={{color:"var(--text)"}} labelStyle={{color:"var(--text)"}}/>
                     <Bar dataKey="ops" fill="var(--gold)" radius={[4,4,0,0]} name="Operaciones"/>
                   </BarChart>
@@ -4723,7 +4727,7 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
                     <Pie data={porTipo.length?porTipo:[{name:"Sin datos",v:1,color:"#1e293b"}]} dataKey="v" nameKey="name" cx="50%" cy="50%" outerRadius={65} innerRadius={30}>
                       {(porTipo.length?porTipo:[{color:"#1e293b"}]).map(function(e,i){return <Cell key={i} fill={e.color}/>;})}</Pie>
                     <Tooltip contentStyle={{background:"var(--card)",border:"1px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:12}} itemStyle={{color:"var(--text)"}} labelStyle={{color:"var(--text)"}}/>
-                    <Legend iconType="circle" iconSize={7} wrapperStyle={{fontSize:12,color:"#94a3b8"}}/>
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{fontSize:12,color:"var(--muted)"}}/>
                   </PieChart>
                 </ResponsiveContainer>
               </div>
