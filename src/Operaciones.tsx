@@ -738,6 +738,13 @@ export const GS = `
 .dw-dashboard-root .op-card-premium .op-card-side .op-side-extra{display:none!important}
 }
   @media(min-width:701px){.dw-mobile-trash-link{display:none!important}}@media(max-width:700px){.dw-mobile-trash-link{display:none!important}.dw-mobile-trash-link .btn{font-size:11px!important;padding:6px 10px!important}}
+  @media(max-width:700px){
+.dw-dashboard-root .op-card-premium .op-actions{width:100%!important;display:flex!important;gap:5px!important}
+.dw-dashboard-root .op-card-premium .op-add-doc-action{flex:1 1 0!important;min-width:0!important;white-space:nowrap!important;padding:8px 6px!important;font-size:11px!important}
+.dw-dashboard-root .op-card-premium .op-actions>.btn:first-child:not(.op-add-doc-action){flex:1 1 0!important}
+.dw-dashboard-root .op-card-premium .op-actions .op-add-doc-action+.btn{flex:1 1 0!important}
+.dw-dashboard-root .op-card-premium .op-actions .btn{min-width:0!important}
+}
   /* ── FAB (mobile new op button) ── */
   .fab{display:none;position:fixed;bottom:calc(var(--mobile-nav-h) + 14px);right:16px;z-index:39;width:54px;height:54px;border-radius:50%;background:linear-gradient(145deg,#c9962a,var(--gold));border:1px solid rgba(255,255,255,0.2);cursor:pointer;font-size:24px;color:#0a0f1a;box-shadow:var(--shadow-gold),0 10px 28px rgba(15,23,42,0.18);align-items:center;justify-content:center;transition:all var(--ease-med);}
   .fab:hover{transform:translateY(-2px) scale(1.03);filter:brightness(1.04);}
@@ -4233,6 +4240,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
 
     const acciones=(
       <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
+        {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={13}/> <span>{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span></Btn>}
         <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
         {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}
         <Dropdown items={menuItems}/>
@@ -4313,9 +4321,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
               <span>·</span><span>{new Date(ultima).toLocaleDateString("es-AR")}</span>
             </div>
 
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginTop:10}}>
-              {(esReserva||esResAlq)&&permisos.convertir?(function(){var opts=opcionesDoc(op);var faltan=opts.filter(function(o){return !hijosOp.some(function(h){return h.tipo===o.tipo;});}).length;return <Btn v={faltan>0?"orange":"secondary"} s="sm" onClick={function(){setAddDocFor(op);}}><DWIcon name="link" size={12} strokeWidth={2}/> {hijosOp.length>0?"Vinculados ("+hijosOp.length+")":"Agregar documento"}</Btn>;})():<span/>}
-            </div>
+
           </div>
           <div className="op-card-side">
             <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{haceFecha(ultima)}</div></div>
