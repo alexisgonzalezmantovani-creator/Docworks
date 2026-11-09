@@ -104,6 +104,19 @@ await check('respuesta vacía del servidor no confirma guardado ni cierra el for
  assert.ok(result.error);assert.equal(h.estado().showForm,true);
  assert.equal(h.estado().operaciones.length,0);
 });
+await check('respuesta con objeto vacío no confirma guardado ni cierra el formulario',async()=>{
+ const h=a.crearGuardadoPrueba({guardar:async()=>({})});
+ const result=await h.saveOp(data,'guardar','borrador');
+ assert.ok(result.error);assert.equal(h.estado().showForm,true);
+ assert.equal(h.estado().operaciones.length,0);
+});
+await check('respuesta con objeto vacío en sincronización conserva el borrador',async()=>{
+ const h=a.crearGuardadoPrueba({guardar:async()=>({})});
+ a.lsSet('draftOperacion',{data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});
+ await h.sincronizarDraftOffline();
+ assert.ok(a.lsGet('draftOperacion',null));
+ assert.equal(h.estado().operaciones.length,0);
+});
 await check('respuesta vacía en sincronización conserva el borrador offline',async()=>{
  const h=a.crearGuardadoPrueba({guardar:async()=>null});
  a.lsSet('draftOperacion',{data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});
