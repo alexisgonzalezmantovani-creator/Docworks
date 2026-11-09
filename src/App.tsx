@@ -8750,7 +8750,7 @@ function DocWorksApp(){
           setOperaciones(function(ops){return ops.map(function(o){return o.id===parentCerrado.id?Object.assign({},o,{estado:"cerrado",proceso_estado:"pendiente_cierre_devolucion"}):o;});});
           dwNotify("warning","La devolución se guardó correctamente, pero el cierre de la reserva vinculada quedó pendiente. DocWorks lo reintentará al recuperar la conexión. "+mensajeCierre);
         }
-        else { try{lsRemove("docworks:devolucion:cierre-pendiente:"+parentCerrado.id);}catch(_e){} setOperaciones(function(ops){return ops.map(function(o){return o.id===parentCerrado.id?parentCerrado:o;});}); }
+        else { try{lsRemove("docworks:devolucion:cierre-pendiente:"+parentCerrado.id);}catch(_e){} setOperaciones(function(ops){return ops.map(function(o){return o.id===parentCerrado.id?(parentRes.operacion||parentCerrado):o;});}); }
         desmarcarOperacionPendiente(parentCerrado.id);
       }
       desmarcarOperacionPendiente(opGuardada.id);
