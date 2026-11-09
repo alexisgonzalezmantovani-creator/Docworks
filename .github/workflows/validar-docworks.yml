@@ -1,7 +1,8 @@
-name: Validar DocWorks (rama de prueba)
+name: Validar DocWorks
 on:
   push:
     branches:
+      - main
       - work/docworks-6-pro
   pull_request:
     branches: [main]
