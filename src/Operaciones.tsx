@@ -4101,8 +4101,9 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   // vea compacta cuando hay muchas operaciones con documentos vinculados).
   const [openFolders,setOpenFolders]=useState({});
   function getName(op){
-      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return nombreConSufijo(op,"locador","Locador")+" → "+nombreConSufijo(op,"locatario","Locatario");
-      return nombreConSufijo(op,"vendedor","Vendedor")+" → "+nombreConSufijo(op,"comprador","Comprador");
+      function parte(prefix,rol){var nombre=nombreConSufijo(op,prefix,"");return (nombre&&nombre.trim()?nombre.trim():"—")+" ("+rol+")";}
+      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return parte("locador","locador")+" → "+parte("locatario","locatario");
+      return parte("vendedor","vendedor")+" → "+parte("comprador","comprador");
     }
   function getMonto(op){if(op.tipo==="alquiler")return op.alquiler_monto_inicial?fmt$(op.alquiler_monto_inicial,op.alquiler_moneda)+"/mes":null;if(op.tipo==="reserva_alquiler")return op.res_alq_monto_mensual?fmt$(op.res_alq_monto_mensual,op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS")+"/mes est.":null;return op.precio?fmt$(op.precio,op.moneda):null;}
 
