@@ -4281,11 +4281,12 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     // Para operaciones individuales, el progreso refleja los campos críticos cargados.
     // En carpetas con varios documentos, mantiene el progreso de documentos vinculados.
     var camposCriticos=CAMPOS_CRITICOS_POR_TIPO[op.tipo]||[];
-    var camposPendientes=getCamposFaltantesDetalle(op,perfil).length;
+    var detallePendientes=getCamposFaltantesDetalle(op,perfil);
+    var camposPendientes=detallePendientes.length;
     var progreso=docsTotal>1
       ? Math.max(0,Math.min(100,Math.round((docsHechos/Math.max(1,docsTotal))*100)))
       : (camposCriticos.length>0?Math.max(0,Math.min(100,Math.round((1-camposPendientes/camposCriticos.length)*100))):0);
-    var etiquetaProgreso=docsTotal>1?"Documentos vinculados":"Datos de la operación";
+    var etiquetaProgreso=docsTotal>1?"Avance de documentos vinculados":"Datos completos";
     var ultima=op.actualizado_en||op.updated_at||op.created_at;
     function haceFecha(v){if(!v)return "Sin actividad";var d=new Date(v),ms=Math.max(0,Date.now()-d.getTime()),min=Math.floor(ms/60000),hor=Math.floor(min/60),dias=Math.floor(hor/24);if(min<1)return "Ahora";if(min<60)return "Hace "+min+" min";if(hor<24)return "Hace "+hor+" h";if(dias<30)return "Hace "+dias+" día"+(dias===1?"":"s");return d.toLocaleDateString("es-AR");}
     var direccion=op.inmueble_direccion||"";
@@ -4319,7 +4320,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
           <div className="op-card-side">
             <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{haceFecha(ultima)}</div></div>
             <div><div className="op-docs-count">{docsHechos} {docsHechos===1?"documento":"documentos"}</div></div>
-            <div className="op-side-progress"><div className="op-side-label">{etiquetaProgreso}</div><div className="op-progress-row"><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}% completo</span></div>{docsTotal<=1&&camposPendientes>0&&<div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>{camposPendientes} {camposPendientes===1?"campo pendiente":"campos pendientes"}</div>}</div>
+            <div className="op-side-progress"><div className="op-side-label">{etiquetaProgreso}</div><div className="op-progress-row"><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}% completo</span></div>{docsTotal<=1&&camposPendientes>0&&<div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>{"Faltan "+camposPendientes+" "+(camposPendientes===1?"dato":"datos")+" para completar"}</div>}</div>
             <div>{acciones}</div>
             {op.broker_nombre||op.broker?<div className="op-side-extra"><div className="op-side-label">Agente</div><div style={{fontSize:12,fontWeight:650,color:"var(--text)",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{op.broker_nombre||op.broker}</div></div>:null}
           </div>
