@@ -28,4 +28,9 @@ assert.match(app,/if\(k==="draftOperacion" && \(!v \|\| !v\.data \|\| !draftTien
 assert.match(app,/Guardando en este dispositivo…/,'Indicar que el guardado en curso es local');
 assert.match(app,/Borrador guardado en este dispositivo/,'No confundir autoguardado con sincronización');
 assert.match(app,/No se pudo guardar el borrador en este dispositivo/,'Informar el alcance del error de guardado');
-console.log('OK: 18 comprobaciones estáticas de validación diferida, borrador y cláusulas');
+assert.doesNotMatch(source,/className="op-expediente-resumen"/,'No mostrar resumen de expediente en tarjetas');
+assert.match(source,/Próximo paso sugerido:/,'Sugerir próximo paso al abrir documentos');
+assert.match(app,/const STEPS_RES_ALQ=\[\{id:1,l:"Tipo"\},\{id:2,l:"Locador"\},\{id:3,l:"Locatario"\}/,'Reserva alquiler: locador antes de locatario');
+assert.match(source,/if\(esResAlq\)\{[\s\S]{0,260}if\(step===2\)return <StepPersona[^\n]*prefix="locador"/,'Formulario de reserva: locador en paso 2');
+assert.match(app,/function tituloRolForm[\s\S]{0,250}Locador \(propietario\)/,'Rótulo locador propietario');
+console.log('OK: 23 comprobaciones estáticas de validación diferida, borrador, cláusulas y navegación');

@@ -599,6 +599,7 @@ function rolDePrefix(tipo,prefix){ var r=rolesPorTipo(tipo); return (prefix==="l
 function tituloRolForm(tipo,prefix){
   if(tipo==="reserva"&&prefix==="comprador")return "Comprador (oferente)";
   var rol=rolDePrefix(tipo,prefix);
+  if(rol==="LOCADOR")return "Locador (propietario)";
   if(rol==="LOCATARIO")return "Locatario (inquilino)";
   if(rol==="COMODANTE")return "Comodante (entrega el inmueble)";
   if(rol==="COMODATARIO")return "Comodatario (recibe el inmueble)";
@@ -1874,7 +1875,7 @@ function getPasoDeCampo(campo,tipo){
   var m=String(campo||"").match(/^(comprador|vendedor|locador|locatario)_/);
   if(m){
     var pre=m[1];
-    if(tipo==="reserva_alquiler") return pre==="locatario"?2:3;
+    if(tipo==="reserva_alquiler") return pre==="locador"?2:3;
     if(tipo==="alquiler") return pre==="locador"?2:3;
     return pre==="comprador"?2:3;
   }
@@ -4708,7 +4709,7 @@ function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,
 
 const STEPS_COMPRA=[{id:1,l:"Tipo"},{id:2,l:"Comprador"},{id:3,l:"Vendedor"},{id:4,l:"Inmueble"},{id:5,l:"Económico"},{id:6,l:"Cláusulas opcionales"}];
 const STEPS_ALQUILER=[{id:1,l:"Tipo"},{id:2,l:"Locador"},{id:3,l:"Locatario"},{id:4,l:"Inmueble"},{id:5,l:"Condiciones"},{id:6,l:"Garantía"},{id:7,l:"Cláusulas opcionales"}];
-const STEPS_RES_ALQ=[{id:1,l:"Tipo"},{id:2,l:"Locatario"},{id:3,l:"Locador"},{id:4,l:"Inmueble"},{id:5,l:"Condiciones"},{id:6,l:"Cláusulas opcionales"}];
+const STEPS_RES_ALQ=[{id:1,l:"Tipo"},{id:2,l:"Locador"},{id:3,l:"Locatario"},{id:4,l:"Inmueble"},{id:5,l:"Condiciones"},{id:6,l:"Cláusulas opcionales"}];
 const STEPS_SIMPLE=[{id:1,l:"Tipo"},{id:2,l:"Parte A"},{id:3,l:"Parte B"},{id:4,l:"Datos"},{id:5,l:"Cláusulas opcionales"}];
 // Etiquetas de partes según el tipo de documento "simple" (comodato,
 // autorización de venta, refuerzo, devolución). La autorización identifica
@@ -4763,6 +4764,8 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
   function s(k){return function(e){onChange(prefix+"_"+k,e.target.value);};}
   function onBlurNombre(){ var v=f("nombre"); var cap=capitalizarNombrePropio(v); if(cap!==v) onChange(prefix+"_nombre",cap); }
   var cotitulares = data[prefix+"_cotitulares"]||[];
+  var rolAdicional=rolDePrefix(data.tipo,prefix);
+  var etiquetaParte=({LOCADOR:"propietario",LOCATARIO:"inquilino",VENDEDOR:"vendedor",COMPRADOR:"comprador",COMODANTE:"comodante",COMODATARIO:"comodatario",AUTORIZANTE:"autorizante",INMOBILIARIA:"representante de la inmobiliaria"})[rolAdicional]||"participante";
   function setCotitulares(next){ onChange(prefix+"_cotitulares", next); }
   function agregarCotitular(){ setCotitulares(cotitulares.concat([{nombre:"",dni:"",domicilio:"",email:"",telefono:""}])); }
   function actualizarCotitular(i,k,v){ setCotitulares(cotitulares.map(function(p,idx){ return idx===i ? Object.assign({},p,{[k]:v}) : p; })); }
@@ -4781,14 +4784,14 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
 
       <div style={{marginTop:16,paddingTop:14,borderTop:"1px dashed var(--border2)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:cotitulares.length?10:4}}>
-          <div style={{fontSize:12.5,color:"var(--muted)"}}>¿Hay más de un titular? (ej. el inmueble está a nombre de 2 o más personas)</div>
-          <Btn v="ghost" s="sm" onClick={agregarCotitular}>+ Agregar otro titular</Btn>
+          <div style={{fontSize:12.5,color:"var(--muted)"}}>¿Querés agregar otra persona a esta parte de la operación?</div>
+          <Btn v="ghost" s="sm" onClick={agregarCotitular}>{"+ Agregar otro "+etiquetaParte}</Btn>
         </div>
         {cotitulares.map(function(p,i){
           return(
             <div key={i} style={{padding:"10px 12px",borderRadius:10,background:"rgba(255,255,255,0.02)",border:"1px solid var(--border)",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Co-titular {i+2}</div>
+                <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em"}}>{etiquetaParte.charAt(0).toUpperCase()+etiquetaParte.slice(1)} {i+2}</div>
                 <button onClick={function(){quitarCotitular(i);}} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:12}}>✕ Quitar</button>
               </div>
               <div className="dw-persona-fields">
@@ -5006,9 +5009,9 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
     <div>
       <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Condiciones económicas.</p>
       <div className="grid2">
-        <Inp id="dw-field-precio" label="Precio total" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="100000" money {...estiloCampoFaltante(faltantes,"precio")}/>
+        <Inp id="dw-field-precio" label="Precio total" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="100.000" money {...estiloCampoFaltante(faltantes,"precio")}/>
         <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
-        <Inp id="dw-field-anticipo" label="Seña / Anticipo" value={data.anticipo||""} onChange={function(e){onChange("anticipo",e.target.value);}} placeholder="10000" money {...estiloCampoFaltante(faltantes,"anticipo")}/>
+        <Inp id="dw-field-anticipo" label="Seña / Anticipo" value={data.anticipo||""} onChange={function(e){onChange("anticipo",e.target.value);}} placeholder="10.000" money {...estiloCampoFaltante(faltantes,"anticipo")}/>
         <Field label="Saldo restante"><div className="val-box">{fmt$(data.saldo||(precio-anticipo),data.moneda)}</div></Field>
         {data.tipo==="reserva"&&<div className="col2 dw-economic-refuerzo-toggle">
           <label className="dw-economic-refuerzo-label">
@@ -5174,7 +5177,7 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
     : (monto>0?fmt$(monto*dep,data.alquiler_moneda):"—");
   return(
     <div><div className="grid2">
-      <Inp id="dw-field-alquiler_monto_inicial" label="Alquiler mensual inicial" value={data.alquiler_monto_inicial||""} onChange={function(e){onChange("alquiler_monto_inicial",e.target.value);}} placeholder="150000" money {...estiloCampoFaltante(faltantes,"alquiler_monto_inicial")}/>
+      <Inp id="dw-field-alquiler_monto_inicial" label="Alquiler mensual inicial" value={data.alquiler_monto_inicial||""} onChange={function(e){onChange("alquiler_monto_inicial",e.target.value);}} placeholder="150.000" money {...estiloCampoFaltante(faltantes,"alquiler_monto_inicial")}/>
       <Slt id="dw-field-alquiler_moneda" label="Moneda" value={data.alquiler_moneda||"ARS"} onChange={function(e){onChange("alquiler_moneda",e.target.value);}}><option value="ARS">ARS</option><option value="USD">USD</option></Slt>
       <Slt id="dw-field-alquiler_destino" label="Destino" value={data.alquiler_destino||"vivienda"} onChange={function(e){onChange("alquiler_destino",e.target.value);}}><option value="vivienda">Vivienda</option><option value="comercial">Comercial</option><option value="profesional">Profesional</option></Slt>
 
@@ -5265,9 +5268,9 @@ function StepCondicionesReservaAlq({data,onChange,equipo,faltantes}){
     <div>
       <div className="notice notice-gold" style={{marginBottom:12}}>Reserva previa — los datos se trasladan al contrato definitivo.</div>
       <div className="grid2">
-        <Inp id="dw-field-res_alq_monto_reserva" label="Monto de reserva" value={data.res_alq_monto_reserva||""} onChange={function(e){onChange("res_alq_monto_reserva",e.target.value);}} placeholder="50000" money {...estiloCampoFaltante(faltantes,"res_alq_monto_reserva")}/>
+        <Inp id="dw-field-res_alq_monto_reserva" label="Monto de reserva" value={data.res_alq_monto_reserva||""} onChange={function(e){onChange("res_alq_monto_reserva",e.target.value);}} placeholder="50.000" money {...estiloCampoFaltante(faltantes,"res_alq_monto_reserva")}/>
         <Slt label="Moneda de la operación" value={data.res_alq_moneda||"ARS"} onChange={function(e){onChange("res_alq_moneda",e.target.value);onChange("res_alq_monto_mensual_moneda",e.target.value);}}><option value="ARS">ARS — Pesos argentinos</option><option value="USD">USD — Dólares estadounidenses</option></Slt>
-        <Inp id="dw-field-res_alq_monto_mensual" label="Valor del alquiler mensual" value={data.res_alq_monto_mensual||""} onChange={function(e){onChange("res_alq_monto_mensual",e.target.value);}} placeholder="180000" money {...estiloCampoFaltante(faltantes,"res_alq_monto_mensual")}/>
+        <Inp id="dw-field-res_alq_monto_mensual" label="Valor del alquiler mensual" value={data.res_alq_monto_mensual||""} onChange={function(e){onChange("res_alq_monto_mensual",e.target.value);}} placeholder="180.000" money {...estiloCampoFaltante(faltantes,"res_alq_monto_mensual")}/>
         <PagoMensualField data={data} onChange={onChange} reserva/>
         {data.res_alq_monto_mensual_moneda&&data.res_alq_monto_mensual_moneda!==data.res_alq_moneda&&<div className="col2 notice" style={{fontSize:12}}>Reserva: {data.res_alq_moneda||"ARS"} · Alquiler mensual: {data.res_alq_monto_mensual_moneda}. Cambiar la moneda de la operación aplica la elegida a ambos importes.</div>}
         <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Plazo estimado del contrato</div>
@@ -5321,20 +5324,20 @@ function StepDocSimple({data,onChange}){
             <option value="con">Con exclusividad</option>
             <option value="sin">Sin exclusividad</option>
           </Slt>
-          <Inp id="dw-field-precio" label="Precio de venta" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="100000" money/>
+          <Inp id="dw-field-precio" label="Precio de venta" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="100.000" money/>
           <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
           <Inp id="dw-field-exclusividad_vigencia" label="Vigencia de la autorización" value={data.exclusividad_vigencia||""} onChange={function(e){onChange("exclusividad_vigencia",e.target.value);}} placeholder="90 días" hint="Sugerido: 90 días. Podés cambiarlo." className="col2"/>
           <div className="col2"><ComisionEditor data={data} onChange={onChange} prefix="comision_vendedor" legacyKey="comision_vendedor" label="Comisión del vendedor" base={parseMontoAR(data.precio)||0} monedaBase={data.moneda||"USD"} defaultPct="3"/>
         </div>
         </>}
         {tipo==="refuerzo_reserva"&&<>
-          <Inp id="dw-field-precio" label="Monto del refuerzo" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="10000" money/>
+          <Inp id="dw-field-precio" label="Monto del refuerzo" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="10.000" money/>
           <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
           <Inp id="dw-field-fecha_posesion" label="Fecha del refuerzo" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2"/>
           <Txa id="dw-field-refuerzo_trayectoria" label="Trayectoria de la operación" value={data.refuerzo_trayectoria||""} onChange={function(e){onChange("refuerzo_trayectoria",e.target.value);}} placeholder="Con fecha XX se firmó reserva por $XX..." rows={3} className="col2"/>
         </>}
         {tipo==="devolucion_reserva"&&<>
-          <Inp id="dw-field-precio" label="Monto a devolver" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="10000" money/>
+          <Inp id="dw-field-precio" label="Monto a devolver" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="10.000" money/>
           <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
           <Inp id="dw-field-fecha_posesion" label="Fecha de devolución" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2"/>
           <Txa id="dw-field-devolucion_motivo" label="Motivo de la devolución" value={data.devolucion_motivo||""} onChange={function(e){onChange("devolucion_motivo",e.target.value);}} placeholder="Por mutuo acuerdo..." rows={2} className="col2"/>
