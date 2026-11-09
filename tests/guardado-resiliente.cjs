@@ -76,6 +76,16 @@ await check('tras fallar una sincronización concurrente el bloqueo se libera',a
  await h.sincronizarDraftOffline();assert.equal(calls,2);
  assert.equal(a.lsGet('draftOperacion',null),null);
 });
+await check('guardar una operación no borra un borrador modificado durante la espera',async()=>{
+ let resolve;const pending=new Promise(r=>{resolve=r});
+ const h=a.crearGuardadoPrueba({guardar:async op=>{await pending;return {operacion:op}}});
+ const anterior={data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)};
+ a.lsSet('draftOperacion',anterior);
+ const guardando=h.saveOp(data,'guardar','borrador');
+ a.lsSet('draftOperacion',{...anterior,data:{...data,comprador_nombre:'Modificado mientras guardaba'}});
+ resolve();await guardando;
+ assert.equal(a.lsGet('draftOperacion',null).data.comprador_nombre,'Modificado mientras guardaba');
+});
 await check('un fallo antes de confirmar la devolución no marca la reserva para cerrarla',async()=>{
  const padre={...data,id:'padre-sin-cierre',estado:'activo',proceso_estado:'aceptada'};const h=a.crearGuardadoPrueba({guardar:async()=>{throw Error('Sin conexión antes de guardar')}},{operaciones:[padre]});
  await h.saveOp({...data,tipo:'devolucion_reserva',parent_id:padre.id},'guardar','activo');assert.deepEqual(h.estado().operaciones,[padre]);assert.equal(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),null);
