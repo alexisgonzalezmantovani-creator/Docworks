@@ -1875,7 +1875,7 @@ function getPasoDeCampo(campo,tipo){
   var m=String(campo||"").match(/^(comprador|vendedor|locador|locatario)_/);
   if(m){
     var pre=m[1];
-    if(tipo==="reserva_alquiler") return pre==="locatario"?2:3;
+    if(tipo==="reserva_alquiler") return pre==="locador"?2:3;
     if(tipo==="alquiler") return pre==="locador"?2:3;
     return pre==="comprador"?2:3;
   }
@@ -4709,7 +4709,7 @@ function ConfirmModal({open,title,message,confirmLabel,cancelLabel,danger=false,
 
 const STEPS_COMPRA=[{id:1,l:"Tipo"},{id:2,l:"Comprador"},{id:3,l:"Vendedor"},{id:4,l:"Inmueble"},{id:5,l:"Económico"},{id:6,l:"Cláusulas opcionales"}];
 const STEPS_ALQUILER=[{id:1,l:"Tipo"},{id:2,l:"Locador"},{id:3,l:"Locatario"},{id:4,l:"Inmueble"},{id:5,l:"Condiciones"},{id:6,l:"Garantía"},{id:7,l:"Cláusulas opcionales"}];
-const STEPS_RES_ALQ=[{id:1,l:"Tipo"},{id:2,l:"Locatario"},{id:3,l:"Locador"},{id:4,l:"Inmueble"},{id:5,l:"Condiciones"},{id:6,l:"Cláusulas opcionales"}];
+const STEPS_RES_ALQ=[{id:1,l:"Tipo"},{id:2,l:"Locador"},{id:3,l:"Locatario"},{id:4,l:"Inmueble"},{id:5,l:"Condiciones"},{id:6,l:"Cláusulas opcionales"}];
 const STEPS_SIMPLE=[{id:1,l:"Tipo"},{id:2,l:"Parte A"},{id:3,l:"Parte B"},{id:4,l:"Datos"},{id:5,l:"Cláusulas opcionales"}];
 // Etiquetas de partes según el tipo de documento "simple" (comodato,
 // autorización de venta, refuerzo, devolución). La autorización identifica
