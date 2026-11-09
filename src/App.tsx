@@ -4782,9 +4782,9 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
         <ContactoDocumentoField id={"dw-field-"+prefix+"_email"} label="Correo electrónico" type="email" autoComplete="email" value={f("email")} onChange={s("email")} checked={!!data[prefix+"_email_en_doc"]} onChecked={function(v){onChange(prefix+"_email_en_doc",v);}} placeholder="persona@correo.com" {...estiloCampoFaltante(faltantes,prefix+"_email","Revisá el formato del correo electrónico.")}/>
       </div>
 
-      <div style={{marginTop:16,paddingTop:14,borderTop:"1px dashed var(--border2)"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:cotitulares.length?10:4}}>
-          <div style={{fontSize:12.5,color:"var(--muted)"}}>¿Querés agregar otra persona a esta parte de la operación?</div>
+      <DetallesFormulario key={prefix} inicialmenteAbierto={cotitulares.length>0} style={{marginTop:16,paddingTop:14,borderTop:"1px dashed var(--border2)"}}>
+        <summary style={{cursor:"pointer",fontSize:13,fontWeight:600,color:"var(--text)",padding:"8px 0"}}>Agregar cotitular{cotitulares.length>0?" · "+cotitulares.length+" cargado"+(cotitulares.length===1?"":"s"):""} </summary>
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
           <Btn v="ghost" s="sm" onClick={agregarCotitular}>{"+ Agregar otro "+etiquetaParte}</Btn>
         </div>
         {cotitulares.map(function(p,i){
