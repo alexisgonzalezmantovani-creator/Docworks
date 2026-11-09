@@ -8586,14 +8586,19 @@ function DocWorksApp(){
   // guardado exitoso.
   const [saveStatus,setSaveStatus]=useState({state:"saved",ts:Date.now()});
   const pendingSaves=useRef(0);
+  const saveBatchHadError=useRef(false);
   function reportSave(state){
     if(state==="saving"){
+      // Un lote puede contener varios guardados simultáneos.
+      if(pendingSaves.current===0)saveBatchHadError.current=false;
       pendingSaves.current+=1;
       setSaveStatus(function(prev){return {state:"saving",ts:prev.ts};});
     } else {
+      if(state==="error")saveBatchHadError.current=true;
       pendingSaves.current=Math.max(0,pendingSaves.current-1);
       if(pendingSaves.current===0){
-        setSaveStatus(function(prev){ return state==="error" ? {state:"error",ts:prev.ts} : {state:"saved",ts:Date.now()}; });
+        const fallo=saveBatchHadError.current;
+        setSaveStatus(function(prev){return fallo?{state:"error",ts:prev.ts}:{state:"saved",ts:Date.now()};});
       }
     }
   }
