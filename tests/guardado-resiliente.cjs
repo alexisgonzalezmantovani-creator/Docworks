@@ -170,6 +170,17 @@ await check('devolución confirmada deja reserva cerrada y rechazada según serv
  assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'rechazada');
  assert.equal(h.estado().operaciones.filter(o=>o.id===devolucion.id).length,1);
 });
+await check('borrador creado mientras se espera respuesta mantiene el formulario abierto',async()=>{
+ let resolve;const pending=new Promise(r=>{resolve=r});
+ const h=a.crearGuardadoPrueba({guardar:async op=>{await pending;return {operacion:op}}});
+ a.lsSet('draftOperacion',null);
+ const guardando=h.saveOp(data,'guardar','borrador');
+ a.lsSet('draftOperacion',{data:{...data,comprador_nombre:'Borrador creado durante espera'},editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});
+ resolve();const resultado=await guardando;
+ assert.equal(resultado.borradorPendiente,true);
+ assert.equal(h.estado().showForm,true);
+ assert.equal(a.lsGet('draftOperacion',null).data.comprador_nombre,'Borrador creado durante espera');
+});
 await check('un fallo antes de confirmar la devolución no marca la reserva para cerrarla',async()=>{
  const padre={...data,id:'padre-sin-cierre',estado:'activo',proceso_estado:'aceptada'};const h=a.crearGuardadoPrueba({guardar:async()=>{throw Error('Sin conexión antes de guardar')}},{operaciones:[padre]});
  await h.saveOp({...data,tipo:'devolucion_reserva',parent_id:padre.id},'guardar','activo');assert.deepEqual(h.estado().operaciones,[padre]);assert.equal(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),null);
