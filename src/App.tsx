@@ -5361,7 +5361,7 @@ function StepGarantia({data,onChange,faltantes}){
         {garantias.map(function(g){
           var sel=data.alquiler_garantia_tipo===g.value;
           return(
-            <button key={g.value} onClick={function(){onChange("alquiler_garantia_tipo",g.value);}}
+            <button key={g.value} type="button" aria-pressed={sel} onClick={function(){onChange("alquiler_garantia_tipo",g.value);}}
               style={{padding:"12px",borderRadius:10,border:"2px solid "+(sel?"var(--gold)":"var(--border2)"),background:sel?"rgba(212,168,83,0.08)":"var(--card)",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left",outline:"none"}}>
               <span style={{fontSize:20}}>{g.icon}</span>
               <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{g.label}</div>{sel&&<div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>{g.desc}</div>}</div>
@@ -5379,7 +5379,7 @@ function StepGarantia({data,onChange,faltantes}){
       )}
       {(data.alquiler_garantia_tipo==="seguro_caucion"||data.alquiler_garantia_tipo==="aval_bancario"||data.alquiler_garantia_tipo==="recibo_sueldo")&&(
         <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
-          <Inp id="dw-field-alquiler_garantia_titular" label="Titular / Entidad" value={data.alquiler_garantia_titular||""} onChange={function(e){onChange("alquiler_garantia_titular",e.target.value);}} placeholder="Nombre o entidad" {...estiloCampoFaltante(faltantes,"alquiler_garantia_titular")}/>
+          <Inp id="dw-field-alquiler_garantia_titular" label={data.alquiler_garantia_tipo==="recibo_sueldo"?"Titular del recibo de sueldo":data.alquiler_garantia_tipo==="aval_bancario"?"Entidad bancaria":"Aseguradora / entidad"} value={data.alquiler_garantia_titular||""} onChange={function(e){onChange("alquiler_garantia_titular",e.target.value);}} placeholder={data.alquiler_garantia_tipo==="recibo_sueldo"?"Nombre y apellido":data.alquiler_garantia_tipo==="aval_bancario"?"Nombre del banco":"Nombre de la aseguradora"} {...estiloCampoFaltante(faltantes,"alquiler_garantia_titular")}/>
         </div>
       )}
       <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
