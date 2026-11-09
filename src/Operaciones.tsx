@@ -745,6 +745,18 @@ export const GS = `
 .dw-dashboard-root .op-card-premium .op-actions .op-add-doc-action+.btn{flex:1 1 0!important}
 .dw-dashboard-root .op-card-premium .op-actions .btn{min-width:0!important}
 }
+  @media(max-width:700px){
+.dw-dashboard-root .op-actions .op-add-doc-action{flex:1 1 0!important}
+.dw-dashboard-root .op-actions .op-add-doc-action span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dw-dashboard-root .op-actions .btn{min-height:38px!important;white-space:nowrap!important}
+.dw-dashboard-root .op-card-premium .op-card-inner{min-width:0!important}
+.dw-dashboard-root .op-card-premium .op-card-side{min-width:0!important}
+}
+@media(min-width:701px) and (max-width:1024px){
+.dw-dashboard-root .op-card-premium .op-card-inner{gap:10px!important}
+.dw-dashboard-root .op-card-premium .op-actions{flex-wrap:wrap!important;justify-content:flex-end!important}
+.dw-dashboard-root .op-card-premium .op-card-side{min-width:0!important}
+}
   /* ── FAB (mobile new op button) ── */
   .fab{display:none;position:fixed;bottom:calc(var(--mobile-nav-h) + 14px);right:16px;z-index:39;width:54px;height:54px;border-radius:50%;background:linear-gradient(145deg,#c9962a,var(--gold));border:1px solid rgba(255,255,255,0.2);cursor:pointer;font-size:24px;color:#0a0f1a;box-shadow:var(--shadow-gold),0 10px 28px rgba(15,23,42,0.18);align-items:center;justify-content:center;transition:all var(--ease-med);}
   .fab:hover{transform:translateY(-2px) scale(1.03);filter:brightness(1.04);}
@@ -4113,7 +4125,14 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   });
   // Prioridad visual: borradores que requieren completar, luego activas y cerradas; recientes primero.
   filtered.sort(function(a,b){
-    function prioridad(o){return o.estado==="borrador"?0:o.estado==="activo"?1:o.estado==="cerrado"?2:3;}
+    function prioridad(o){
+      // Priorizar trabajo pendiente real, sin convertir todas las operaciones en alertas.
+      if(o.estado==="borrador"&&getCamposFaltantesDetalle(o,perfil).length>0)return 0;
+      if(o.estado==="activo")return 1;
+      if(o.estado==="borrador")return 2;
+      if(o.estado==="cerrado")return 3;
+      return 4;
+    }
     var p=prioridad(a)-prioridad(b);
     if(p!==0)return p;
     return new Date(b.actualizado_en||b.updated_at||b.created_at||0).getTime()-new Date(a.actualizado_en||a.updated_at||a.created_at||0).getTime();
@@ -4296,6 +4315,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       : (camposCriticos.length>0?Math.max(0,Math.min(100,Math.round((1-camposPendientes/camposCriticos.length)*100))):0);
     var etiquetaProgreso=docsTotal>1?"Avance de documentos vinculados":"Datos completos";
     var ultima=op.actualizado_en||op.updated_at||op.created_at;
+    var fechaUltima=ultima&&!isNaN(new Date(ultima).getTime())?new Date(ultima).toLocaleDateString("es-AR"):"Sin fecha";
     function haceFecha(v){if(!v)return "Sin actividad";var d=new Date(v),ms=Math.max(0,Date.now()-d.getTime()),min=Math.floor(ms/60000),hor=Math.floor(min/60),dias=Math.floor(hor/24);if(min<1)return "Ahora";if(min<60)return "Hace "+min+" min";if(hor<24)return "Hace "+hor+" h";if(dias<30)return "Hace "+dias+" día"+(dias===1?"":"s");return d.toLocaleDateString("es-AR");}
     var direccion=op.inmueble_direccion||"";
     return(
@@ -4318,7 +4338,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
             </div>
             <div style={{fontSize:12,color:"var(--dim)",marginTop:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
               <span style={{fontWeight:700,color:"var(--muted)"}}>{"Actualizado"}</span>
-              <span>·</span><span>{new Date(ultima).toLocaleDateString("es-AR")}</span>
+              <span>·</span><span>{fechaUltima}</span>
             </div>
 
 
