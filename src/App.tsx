@@ -5349,10 +5349,10 @@ function StepDocSimple({data,onChange}){
 
 function StepGarantia({data,onChange,faltantes}){
   var garantias=[
-    {value:"propietario",    label:"Garantía propietaria",  desc:"Garante propietario de inmueble", icon:"🏘"},
-    {value:"seguro_caucion", label:"Seguro de caución",     desc:"Póliza de seguro como garantía",  icon:"🛡"},
+    {value:"propietario",    label:"Garantía propietaria",  desc:"Inmueble ofrecido en garantía", icon:"🏘"},
+    {value:"seguro_caucion", label:"Seguro de caución",     desc:"Póliza de caución",  icon:"🛡"},
     {value:"aval_bancario",  label:"Aval bancario",         desc:"Garantía de entidad bancaria",    icon:"🏦"},
-    {value:"recibo_sueldo",  label:"Recibo de sueldo",      desc:"Garantía mediante recibo haberes",icon:"📋"},
+    {value:"recibo_sueldo",  label:"Recibo de sueldo",      desc:"Respaldo con ingresos",icon:"📋"},
   ];
   return(
     <div>
