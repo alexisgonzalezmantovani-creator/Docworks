@@ -4887,10 +4887,10 @@ function CompartidaBlock({data,onChange,equipo}){
   }
   return (
     <div style={{marginTop:12,paddingTop:12,borderTop:"1px dashed var(--border)"}}>
-      <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:600,color:"var(--text)",cursor:"pointer"}}>
-        <input type="checkbox" checked={on} onChange={function(e){onChange("compartida",e.target.checked);}}/>
-        Operación compartida con otra inmobiliaria
-      </label>
+      <button type="button" aria-expanded={on} onClick={function(){onChange("compartida",!on);}} style={{display:"flex",width:"100%",minHeight:46,alignItems:"center",justifyContent:"space-between",gap:12,padding:"12px 16px",borderRadius:12,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left"}}>
+        <span>{on?"✓ Operación compartida":"+ Operación compartida"}</span>
+        <span aria-hidden="true">{on?"−":"+"}</span>
+      </button>
       {on&&<div style={{marginTop:10}}>
         <div className="grid2">
           <Inp id="dw-field-compartida_inmobiliaria" label="Inmobiliaria colega" value={data.compartida_inmobiliaria||""} onChange={function(e){onChange("compartida_inmobiliaria",e.target.value);}} placeholder="Nombre de la inmobiliaria"/>
