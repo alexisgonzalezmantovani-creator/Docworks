@@ -5302,7 +5302,7 @@ function StepDocSimple({data,onChange}){
   var tipo=data.tipo;
   return(
     <div>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Datos específicos del documento.</p>
+      
       <div className="grid2">
         {data.inmueble_tipo==="otro"&&<Inp id="dw-field-inmueble_tipo_otro" label="Tipo de inmueble" value={data.inmueble_tipo_otro||""} onChange={function(e){onChange("inmueble_tipo_otro",e.target.value);}} className="col2"/>}
         <Inp id="dw-field-inmueble_direccion" label="Dirección del inmueble" value={data.inmueble_direccion||""} onChange={function(e){onChange("inmueble_direccion",e.target.value);}} placeholder="Av. Corrientes 1234, CABA" className="col2"/>
