@@ -4101,8 +4101,8 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   // vea compacta cuando hay muchas operaciones con documentos vinculados).
   const [openFolders,setOpenFolders]=useState({});
   function getName(op){
-      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return nombreConSufijo(op,"locatario","Locatario")+" (locatario) ← "+nombreConSufijo(op,"locador","Locador")+" (Locador)";
-      return nombreConSufijo(op,"comprador","Comprador")+" (comprador) ← "+nombreConSufijo(op,"vendedor","Vendedor")+" (Vendedor)";
+      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return nombreConSufijo(op,"locador","Locador")+" → "+nombreConSufijo(op,"locatario","Locatario");
+      return nombreConSufijo(op,"vendedor","Vendedor")+" → "+nombreConSufijo(op,"comprador","Comprador");
     }
   function getMonto(op){if(op.tipo==="alquiler")return op.alquiler_monto_inicial?fmt$(op.alquiler_monto_inicial,op.alquiler_moneda)+"/mes":null;if(op.tipo==="reserva_alquiler")return op.res_alq_monto_mensual?fmt$(op.res_alq_monto_mensual,op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS")+"/mes est.":null;return op.precio?fmt$(op.precio,op.moneda):null;}
 
@@ -4288,8 +4288,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
               {monto&&<span className="monto-tag">{monto}</span>}
             </div>
             <div style={{fontSize:12,color:"var(--dim)",marginTop:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-              <span style={{fontWeight:700,color:"var(--muted)"}}>{esResAlq?"Locador → Locatario":esReserva?"Vendedor → Comprador":"Partes de la operación"}</span>
-              <span>·</span><span>{new Date(op.created_at).toLocaleDateString("es-AR")}</span>
+              <span>{new Date(op.created_at).toLocaleDateString("es-AR")}</span>
             </div>
 
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginTop:10}}>
@@ -5509,7 +5508,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     if(esResAlq){
       if(step===1)return <StepTipo data={data} onChange={set} grupo="alquiler"/>;
       if(step===2)return <StepPersona data={data} onChange={set} prefix="locador" titulo="Locador (propietario)" faltantes={camposFaltantes}/>;
-      if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;;
+      if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesReservaAlq data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
       if(step===6)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
