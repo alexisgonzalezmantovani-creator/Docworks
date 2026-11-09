@@ -1784,6 +1784,17 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .dw-contact-print .dw-ios-sw:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 @media(max-width:1279px){.dw-operation-page .dw-persona-fields .dw-contact-field{grid-column:1/-1}}
 @media(max-width:640px){.dw-contact-field{flex-direction:column;align-items:stretch;gap:6px}.dw-contact-print{justify-content:flex-start;align-self:flex-start;min-height:34px}}
+/* iPhone: teléfono y correo comparten una fila, con un switch accesible por campo.
+   Se prioriza ancho de escritura y se evita scroll lateral. */
+@media (min-width:350px) and (max-width:640px){
+  .dw-operation-page .dw-persona-fields{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8px;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field{grid-column:auto;min-width:0;padding:8px 7px;gap:6px;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field .dw-contact-input{width:100%;min-width:0;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field .inp{width:100%;min-width:0;padding-left:8px;padding-right:8px;font-size:16px;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field .dw-contact-print{width:100%;min-width:0;justify-content:space-between;gap:5px;padding:4px 5px;white-space:normal;line-height:1.2;font-size:10px;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field .dw-contact-print .dw-ios-sw{flex-shrink:0;}
+}
+
 
 /* Navegación del formulario más cómoda en computadora. */
 @media(min-width:761px){
