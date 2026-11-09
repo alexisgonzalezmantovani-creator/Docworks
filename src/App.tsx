@@ -4764,7 +4764,8 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
   function s(k){return function(e){onChange(prefix+"_"+k,e.target.value);};}
   function onBlurNombre(){ var v=f("nombre"); var cap=capitalizarNombrePropio(v); if(cap!==v) onChange(prefix+"_nombre",cap); }
   var cotitulares = data[prefix+"_cotitulares"]||[];
-  var etiquetaParte=prefix==="locatario"?"inquilino":prefix==="locador"?"propietario":prefix==="comprador"?"comprador":prefix==="vendedor"?"vendedor":prefix==="comodatario"?"comodatario":prefix==="comodante"?"comodante":"participante";
+  var rolAdicional=rolDePrefix(data.tipo,prefix);
+  var etiquetaParte=({LOCADOR:"propietario",LOCATARIO:"inquilino",VENDEDOR:"vendedor",COMPRADOR:"comprador",COMODANTE:"comodante",COMODATARIO:"comodatario",AUTORIZANTE:"autorizante",INMOBILIARIA:"representante de la inmobiliaria"})[rolAdicional]||"participante";
   function setCotitulares(next){ onChange(prefix+"_cotitulares", next); }
   function agregarCotitular(){ setCotitulares(cotitulares.concat([{nombre:"",dni:"",domicilio:"",email:"",telefono:""}])); }
   function actualizarCotitular(i,k,v){ setCotitulares(cotitulares.map(function(p,idx){ return idx===i ? Object.assign({},p,{[k]:v}) : p; })); }
