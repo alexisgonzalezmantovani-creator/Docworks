@@ -679,7 +679,7 @@ const VAR_GROUPS = [
     { key:"inmueble_barrio", label:"Barrio / complejo" },
     { key:"inmueble_unidad_funcional", label:"Unidad funcional / lote" },
     { key:"nomenclatura_catastral",  label:"Nomenclatura catastral" },
-    { key:"descripcion_inmueble",    label:"Detalles adicionales del inmueble" },
+    // Campo legado conservado en datos/documentos existentes, oculto de nuevas selecciones.
   ]},
   { group:"Económico — Compraventa", fields:[
     { key:"precio",              label:"Precio total" },
@@ -6310,7 +6310,7 @@ function VariablePicker({taRef,value,onChange,label=""}){
             return(
               <div key={g.group}>
                 <div className="var-picker-group">{g.group}</div>
-                {g.fields.filter(function(f){return f.key!=="descripcion_inmueble"&&tokensUsados.indexOf(f.key)===-1;}).map(function(f){
+                {g.fields.filter(function(f){return tokensUsados.indexOf(f.key)===-1;}).map(function(f){
                   return <button key={f.key} type="button" className="var-picker-item" onClick={function(){insert(f.key);}}>{f.label}</button>;
                 })}
               </div>
