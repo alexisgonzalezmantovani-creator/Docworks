@@ -725,6 +725,8 @@ export const GS = `
   .logo-upload:hover{border-color:var(--gold);background:rgba(212,168,83,0.04);}
   .logo-preview{height:68px;width:112px;border-radius:10px;border:1px solid var(--border2);object-fit:contain;padding:5px;background:rgba(255,255,255,0.03);}
 
+  @media(max-width:700px){.dw-dashboard-overview{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;scrollbar-width:none}.dw-dashboard-overview::-webkit-scrollbar{display:none}.dw-overview-stat{flex:1 0 auto!important;min-width:0!important;min-height:42px!important;padding:8px!important;gap:3px!important;border-radius:9px!important}.dw-overview-label{font-size:10px!important;gap:3px!important}.dw-overview-label svg{display:none}.dw-overview-value{font-size:17px!important}.dw-overview-trash{display:none!important}.dw-dashboard-root .op-card-premium .op-card-inner{gap:8px!important}.dw-dashboard-root .op-card-premium .op-side-extra{display:none!important}}
+
   /* ── FAB (mobile new op button) ── */
   .fab{display:none;position:fixed;bottom:calc(var(--mobile-nav-h) + 14px);right:16px;z-index:39;width:54px;height:54px;border-radius:50%;background:linear-gradient(145deg,#c9962a,var(--gold));border:1px solid rgba(255,255,255,0.2);cursor:pointer;font-size:24px;color:#0a0f1a;box-shadow:var(--shadow-gold),0 10px 28px rgba(15,23,42,0.18);align-items:center;justify-content:center;transition:all var(--ease-med);}
   .fab:hover{transform:translateY(-2px) scale(1.03);filter:brightness(1.04);}
@@ -4081,7 +4083,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       matchSearch=grupoDe(op).some(function(o){return operacionCoincideBusqueda(o,effectiveSearch);});
     }
     if(filtroTipo!=="todos")matchTipo=grupoDe(op).some(function(o){return o.tipo===filtroTipo;});
-    if(estadoTab!=="todas")matchEstado=grupoDe(op).some(function(o){return o.estado===estadoTab;});
+    if(estadoTab!=="todas"&&estadoTab!=="papelera")matchEstado=op.estado===estadoTab;
     var matchAvanzado=true;
     if(filtros.agente!=="todos") matchAvanzado=grupoDe(op).some(function(o){return String(o.broker_id||"")===String(filtros.agente);});
     if(filtros.sucursal!=="todos") matchAvanzado=matchAvanzado&&grupoDe(op).some(function(o){return String(o.sucursal||o.sucursal_nombre||"")===String(filtros.sucursal);});
@@ -4092,17 +4094,17 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     return matchSearch&&matchTipo&&matchEstado&&matchAvanzado;
   });
   var total=raices.length;
-  var activas=raices.filter(function(o){return grupoDe(o).some(function(x){return x.estado==="activo";});}).length;
+  var activas=raices.filter(function(o){return o.estado==="activo";}).length;
   var alq=raices.filter(function(o){return grupoDe(o).some(function(x){return x.tipo==="alquiler"||x.tipo==="reserva_alquiler";});}).length;
   var compras=raices.filter(function(o){return grupoDe(o).some(function(x){return x.tipo==="boleto"||x.tipo==="reserva";});}).length;
-  var nuevasCount=raices.filter(function(o){return grupoDe(o).some(function(x){return x.estado==="borrador";});}).length;
-  var cerradasCount=raices.filter(function(o){return grupoDe(o).some(function(x){return x.estado==="cerrado";});}).length;
+  var nuevasCount=raices.filter(function(o){return o.estado==="borrador";}).length;
+  var cerradasCount=raices.filter(function(o){return o.estado==="cerrado";}).length;
   // Carpetas abiertas/cerradas (colapsadas por defecto para que la lista se
   // vea compacta cuando hay muchas operaciones con documentos vinculados).
   const [openFolders,setOpenFolders]=useState({});
   function getName(op){
-      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return (op.locatario_nombre?nombreConSufijo(op,"locatario","—"):"—")+" (locatario) ← "+(op.locador_nombre?nombreConSufijo(op,"locador","—"):"—")+" (locador)";
-      return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+" (comprador) ← "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+" (vendedor)";
+      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return (op.locatario_nombre?nombreConSufijo(op,"locatario","—"):"—")+" (locatario) · "+(op.locador_nombre?nombreConSufijo(op,"locador","—"):"—")+" (locador)";
+      return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+" (comprador) · "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+" (vendedor)";
     }
   function getMonto(op){if(op.tipo==="alquiler")return op.alquiler_monto_inicial?fmt$(op.alquiler_monto_inicial,op.alquiler_moneda)+"/mes":null;if(op.tipo==="reserva_alquiler")return op.res_alq_monto_mensual?fmt$(op.res_alq_monto_mensual,op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS")+"/mes est.":null;return op.precio?fmt$(op.precio,op.moneda):null;}
 
@@ -4239,7 +4241,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
                 <span>{dirN||"⚠ Sin dirección cargada"}{op.inmueble_partido?" — "+op.inmueble_partido:""}</span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginTop:8}}>
-                <div style={{fontSize:13,color:"var(--text)",fontWeight:650}}>{getName(op)}</div>
+                <div style={{fontSize:13,color:"var(--text)",fontWeight:650}}>{getName(op)}</div>{((esResAlq||op.tipo==="alquiler")&&!op.locador_nombre)&&<span style={{fontSize:11,color:"#f59e0b"}}>⚠ Falta locador</span>}{((esReserva||op.tipo==="boleto")&&!op.vendedor_nombre)&&<span style={{fontSize:11,color:"#f59e0b"}}>⚠ Falta vendedor</span>}
                 {monto&&<span className="monto-tag">{monto}</span>}
               </div>
               <div style={{fontSize:12,color:"var(--dim)",marginTop:6}}>Creado el {new Date(op.created_at).toLocaleDateString("es-AR")}</div>
@@ -4288,8 +4290,8 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
               {monto&&<span className="monto-tag">{monto}</span>}
             </div>
             <div style={{fontSize:12,color:"var(--dim)",marginTop:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-              <span style={{fontWeight:700,color:"var(--muted)"}}>{esResAlq?"Locador → Locatario":esReserva?"Vendedor → Comprador":"Partes de la operación"}</span>
-              <span>·</span><span>{new Date(op.created_at).toLocaleDateString("es-AR")}</span>
+              <span style={{fontWeight:700,color:"var(--muted)"}}>{"Actualizado"}</span>
+              <span>·</span><span>{new Date(ultima).toLocaleDateString("es-AR")}</span>
             </div>
 
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginTop:10}}>
@@ -4299,7 +4301,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
           <div className="op-card-side">
             <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{haceFecha(ultima)}</div></div>
             <div><div className="op-docs-count">{docsHechos} {docsHechos===1?"documento":"documentos"}</div></div>
-            <div className="op-side-progress"><div className="op-side-label">{etiquetaProgreso}</div><div className="op-progress-row"><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}%</span></div></div>
+            <div className="op-side-progress"><div className="op-side-label">{etiquetaProgreso}</div><div className="op-progress-row"><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}% completo</span></div>{docsTotal<=1&&camposPendientes>0&&<div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>{camposPendientes} {camposPendientes===1?"campo pendiente":"campos pendientes"}</div>}</div>
             <div>{acciones}</div>
             {op.broker_nombre||op.broker?<div className="op-side-extra"><div className="op-side-label">Agente</div><div style={{fontSize:12,fontWeight:650,color:"var(--text)",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{op.broker_nombre||op.broker}</div></div>:null}
           </div>
@@ -4315,7 +4317,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
         {!enPapelera&&permisosGenerales.crear&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
       </div>
       <div className="dw-dashboard-overview" aria-label="Resumen de operaciones">
-        {[{label:"Todas",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"},{label:"Papelera",value:papelera.length,icon:"trash",tab:"papelera"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat"+(estadoTab===item.tab?" is-selected":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value" aria-busy={loading&&operaciones.length===0}>{loading&&operaciones.length===0?"—":item.value}</span></button>;})}
+        {[{label:"Todas",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"},{label:"Papelera",value:papelera.length,icon:"trash",tab:"papelera"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat"+(estadoTab===item.tab?" is-selected":"")+(item.tab==="papelera"?" dw-overview-trash":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value" aria-busy={loading&&operaciones.length===0}>{loading&&operaciones.length===0?"—":item.value}</span></button>;})}
       </div>
       {error && <div role="alert" style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.25)",color:"var(--red)",fontSize:12.5}}>{error} {onRetry&&<button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{marginLeft:8}}>Reintentar</button>}</div>}
       {papeleraError && <div role="alert" style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(212,168,83,0.08)",border:"1px solid rgba(212,168,83,0.35)",color:"var(--text)",fontSize:12.5}}>{papeleraError} {onRetry&&<button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{marginLeft:8}}>Reintentar</button>}</div>}
@@ -4328,7 +4330,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       <div className="filter-row dw-dashboard-toolbar">
         <div className="search-wrap" style={{flex:1,minWidth:180}}>
           <span className="search-icon"><DWIcon name="search" size={16} strokeWidth={2}/></span>
-          <input className="search-inp" value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Buscar nombre, DNI, CUIT, dirección..."/>
+          <input className="search-inp" value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Buscar operación…"/>
         </div>
         <select className="inp filter-tipo" style={{width:"auto"}} value={filtroTipo} onChange={function(e){setFiltroTipo(e.target.value);}}>
           <option value="todos">Todos los tipos</option>
