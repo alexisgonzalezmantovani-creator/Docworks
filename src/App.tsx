@@ -599,6 +599,7 @@ function rolDePrefix(tipo,prefix){ var r=rolesPorTipo(tipo); return (prefix==="l
 function tituloRolForm(tipo,prefix){
   if(tipo==="reserva"&&prefix==="comprador")return "Comprador (oferente)";
   var rol=rolDePrefix(tipo,prefix);
+  if(rol==="LOCADOR")return "Locador (propietario)";
   if(rol==="LOCATARIO")return "Locatario (inquilino)";
   if(rol==="COMODANTE")return "Comodante (entrega el inmueble)";
   if(rol==="COMODATARIO")return "Comodatario (recibe el inmueble)";
@@ -4763,6 +4764,7 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
   function s(k){return function(e){onChange(prefix+"_"+k,e.target.value);};}
   function onBlurNombre(){ var v=f("nombre"); var cap=capitalizarNombrePropio(v); if(cap!==v) onChange(prefix+"_nombre",cap); }
   var cotitulares = data[prefix+"_cotitulares"]||[];
+  var etiquetaParte=prefix==="locatario"?"inquilino":prefix==="locador"?"propietario":prefix==="comprador"?"comprador":prefix==="vendedor"?"vendedor":prefix==="comodatario"?"comodatario":prefix==="comodante"?"comodante":"participante";
   function setCotitulares(next){ onChange(prefix+"_cotitulares", next); }
   function agregarCotitular(){ setCotitulares(cotitulares.concat([{nombre:"",dni:"",domicilio:"",email:"",telefono:""}])); }
   function actualizarCotitular(i,k,v){ setCotitulares(cotitulares.map(function(p,idx){ return idx===i ? Object.assign({},p,{[k]:v}) : p; })); }
@@ -4781,14 +4783,14 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
 
       <div style={{marginTop:16,paddingTop:14,borderTop:"1px dashed var(--border2)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:cotitulares.length?10:4}}>
-          <div style={{fontSize:12.5,color:"var(--muted)"}}>¿Hay más de un titular? (ej. el inmueble está a nombre de 2 o más personas)</div>
-          <Btn v="ghost" s="sm" onClick={agregarCotitular}>+ Agregar otro titular</Btn>
+          <div style={{fontSize:12.5,color:"var(--muted)"}}>¿Querés agregar otra persona a esta parte de la operación?</div>
+          <Btn v="ghost" s="sm" onClick={agregarCotitular}>{"+ Agregar otro "+etiquetaParte}</Btn>
         </div>
         {cotitulares.map(function(p,i){
           return(
             <div key={i} style={{padding:"10px 12px",borderRadius:10,background:"rgba(255,255,255,0.02)",border:"1px solid var(--border)",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em"}}>Co-titular {i+2}</div>
+                <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em"}}>{etiquetaParte.charAt(0).toUpperCase()+etiquetaParte.slice(1)} {i+2}</div>
                 <button onClick={function(){quitarCotitular(i);}} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:12}}>✕ Quitar</button>
               </div>
               <div className="dw-persona-fields">
