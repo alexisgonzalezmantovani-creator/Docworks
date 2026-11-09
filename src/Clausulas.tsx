@@ -289,7 +289,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
                         <button type="button" title="Mover a papelera" aria-label={"Mover a papelera: "+c.titulo} onClick={function(){onDelete(c.id);}} style={{padding:"4px 7px",borderRadius:6,background:"rgba(248,113,113,0.05)",border:"1px solid rgba(248,113,113,0.15)",color:"var(--red)",cursor:"pointer",display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:36,minHeight:36}}><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg></button>
                       </div>
                     )}
-                    </div></div>
+                    </div></div>}
                 </div>
               );
             })}
