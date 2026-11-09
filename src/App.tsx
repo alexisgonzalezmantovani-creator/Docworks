@@ -8758,7 +8758,7 @@ function DocWorksApp(){
       // El formulario puede haber guardado un borrador más reciente mientras la red respondía.
       // En ese caso no cerrar la edición ni descartar lo que todavía falta sincronizar.
       var borradorActual=lsGet("draftOperacion",null);
-      var borradorCambioDuranteGuardado=!!(borradorAlIniciarGuardado && borradorActual && borradorDelContexto(borradorAlIniciarGuardado,docworksAuth.contexto) && !mismoBorrador(borradorAlIniciarGuardado,borradorActual));
+      var borradorCambioDuranteGuardado=!!(borradorActual && borradorDelContexto(borradorActual,docworksAuth.contexto) && (!borradorAlIniciarGuardado || !mismoBorrador(borradorAlIniciarGuardado,borradorActual)));
       if(borradorAlIniciarGuardado && borradorDelContexto(borradorAlIniciarGuardado,docworksAuth.contexto) && mismoBorrador(borradorAlIniciarGuardado,borradorActual))lsRemove("draftOperacion");
       if(borradorCambioDuranteGuardado){dwNotify("warning","Se guardó una versión anterior. Conservamos tus cambios más recientes para que puedas guardarlos.");return {operacion:opGuardada,borradorPendiente:true};}
       setShowForm(false);setEditOp(null);setFormInitialOverride(null);
