@@ -8820,8 +8820,13 @@ function DocWorksApp(){
   // Reintenta cierres de reservas que quedaron pendientes después de guardar
   // una devolución. La devolución ya existe; este proceso solo completa el cierre
   // del padre y nunca crea una segunda devolución.
+  const cierresDevolucionEnCursoRef=useRef(false);
   async function reintentarCierresDevolucion(){
+    if(cierresDevolucionEnCursoRef.current)return;
     if(!navigator.onLine || !docworksAuth.session) return;
+    var vigente=accionesContextoRef.current.capturar();
+    cierresDevolucionEnCursoRef.current=true;
+    try{
     var pendientes=(operaciones||[]).filter(function(o){
       return o && o.id && o.proceso_estado==="pendiente_cierre_devolucion"
         && (operaciones||[]).some(function(h){return h && h.tipo==="devolucion_reserva" && h.parent_id===o.id && h.estado!=="borrador";});
@@ -8836,14 +8841,15 @@ function DocWorksApp(){
       marcarOperacionPendiente(cerrado.id);
       try{
         var resultado=await opsSupabase.guardar(cerrado);
-        if(resultado&&resultado.contextoObsoleto)return;
-        if(resultado && resultado.error) continue;
+        if(!vigente()||resultado&&resultado.contextoObsoleto)return;
+        if(!resultado||resultado.error||!resultado.operacion)continue;
         try{lsRemove("docworks:devolucion:cierre-pendiente:"+padre.id);}catch(_e2){}
         setOperaciones(function(prev){return prev.map(function(o){return o.id===cerrado.id?cerrado:o;});});
         dwNotify("success","Se completó el cierre pendiente de la reserva vinculada a la devolución.");
       }catch(_e3){ /* queda marcado para el próximo intento */ }
       finally{desmarcarOperacionPendiente(cerrado.id);}
     }
+    }finally{cierresDevolucionEnCursoRef.current=false;}
   }
   useEffect(function(){
     var timer=null;
