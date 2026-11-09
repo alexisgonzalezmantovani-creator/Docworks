@@ -98,6 +98,19 @@ await check('si el borrador cambia mientras se guarda el formulario permanece ab
  assert.equal(h.estado().showForm,true);
  assert.equal(a.lsGet('draftOperacion',null).data.comprador_nombre,'Nueva versión sin guardar');
 });
+await check('respuesta vacía del servidor no confirma guardado ni cierra el formulario',async()=>{
+ const h=a.crearGuardadoPrueba({guardar:async()=>null});
+ const result=await h.saveOp(data,'guardar','borrador');
+ assert.ok(result.error);assert.equal(h.estado().showForm,true);
+ assert.equal(h.estado().operaciones.length,0);
+});
+await check('respuesta vacía en sincronización conserva el borrador offline',async()=>{
+ const h=a.crearGuardadoPrueba({guardar:async()=>null});
+ a.lsSet('draftOperacion',{data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});
+ await h.sincronizarDraftOffline();
+ assert.ok(a.lsGet('draftOperacion',null));
+ assert.equal(h.estado().operaciones.length,0);
+});
 await check('un fallo antes de confirmar la devolución no marca la reserva para cerrarla',async()=>{
  const padre={...data,id:'padre-sin-cierre',estado:'activo',proceso_estado:'aceptada'};const h=a.crearGuardadoPrueba({guardar:async()=>{throw Error('Sin conexión antes de guardar')}},{operaciones:[padre]});
  await h.saveOp({...data,tipo:'devolucion_reserva',parent_id:padre.id},'guardar','activo');assert.deepEqual(h.estado().operaciones,[padre]);assert.equal(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),null);
