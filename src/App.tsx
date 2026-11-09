@@ -8741,7 +8741,8 @@ function DocWorksApp(){
         try {
           var parentRes=await opsSupabase.guardar(parentCerrado);
           if(!vigente()||parentRes&&parentRes.contextoObsoleto)return Object.assign({},parentRes,{contextoObsoleto:true});
-          if(parentRes&&parentRes.error) errorCierrePadre=parentRes.error;
+          if(!parentRes||(!parentRes.error&&!parentRes.operacion))errorCierrePadre=new Error("El servidor no confirmó el cierre de la reserva.");
+          else if(parentRes.error)errorCierrePadre=parentRes.error;
         } catch(errCierrePadre) { errorCierrePadre=errCierrePadre; }
         if(errorCierrePadre) {
           var mensajeCierre=traducirError(errorCierrePadre.message||"Error de comunicación con Supabase.");
