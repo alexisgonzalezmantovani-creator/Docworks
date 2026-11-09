@@ -1044,6 +1044,13 @@ export const GS = `
   .dw-overview-stat{appearance:none;text-align:left;min-width:0;display:flex;flex-direction:column;gap:13px;padding:17px 18px;border:1px solid var(--border2);border-radius:16px;background:var(--card);color:var(--text);cursor:pointer;box-shadow:0 3px 13px rgba(15,23,42,.035);transition:border-color .18s ease,box-shadow .18s ease;}
   .dw-overview-stat:hover,.dw-overview-stat.is-selected{border-color:var(--gold-line);box-shadow:0 5px 18px rgba(15,23,42,.07);}
   .dw-overview-stat.is-selected{background:linear-gradient(135deg,var(--card),var(--gold-soft));}
+  .dw-overview-stat{position:relative;}
+  .dw-overview-stat.is-selected::after{content:"";position:absolute;left:12px;right:12px;bottom:5px;height:3px;border-radius:3px;background:var(--gold);}
+  .dw-overview-stat:focus-visible{outline:3px solid var(--gold);outline-offset:2px;}
+  .dw-overview-trash .dw-overview-label svg{color:var(--muted);}
+  .dw-overview-trash.is-selected .dw-overview-label svg{color:var(--gold);}
+  @media(min-width:701px) and (max-width:1050px){.dw-overview-stat.is-selected::after{left:9px;right:9px;bottom:3px;}}
+
   .dw-overview-label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:600;line-height:1.35;}
   .dw-overview-label svg{flex-shrink:0;color:var(--gold);}
   .dw-overview-value{font-size:clamp(25px,2.8vw,34px);font-weight:650;line-height:1;letter-spacing:-.05em;font-variant-numeric:tabular-nums;}
@@ -1055,6 +1062,7 @@ export const GS = `
     .dw-overview-label svg{width:13px;height:13px;}
     .dw-overview-value{font-size:23px;font-weight:650;}
   }
+  @media(max-width:700px){.dw-overview-stat.is-selected::after{left:5px;right:5px;bottom:2px;height:2px;}}
   @media(max-width:360px){.dw-dashboard-overview{gap:5px;}.dw-overview-stat{padding:9px 7px;min-height:70px;}.dw-overview-label{font-size:9px;}.dw-overview-value{font-size:21px;}}
 
   /* Compact search and filter toolbar — dashboard only. */
