@@ -9271,7 +9271,7 @@ function DocWorksApp(){
       )}
 
       {/* ── Mobile FAB ── */}
-      {!showForm&&!viewDoc&&!confirmCloseForm&&!draftPrompt&&!dwConfirm&&permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario).crear&&<button type="button" className="fab" aria-label="Nueva operación" title="Nueva operación" onClick={abrirNuevaOperacion}><DWIcon name="plus" size={24} strokeWidth={2.4}/></button>}
+      {view==="operaciones"&&!showForm&&!viewDoc&&!confirmCloseForm&&!draftPrompt&&!dwConfirm&&permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario).crear&&<button type="button" className="fab" aria-label="Nueva operación" title="Nueva operación" onClick={abrirNuevaOperacion}><DWIcon name="plus" size={24} strokeWidth={2.4}/></button>}
 
       {/* ── Mobile bottom nav ── */}
       {!showForm&&<nav className="mobile-nav">
