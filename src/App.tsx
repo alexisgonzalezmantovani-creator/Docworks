@@ -8707,6 +8707,13 @@ function DocWorksApp(){
     try {
       var res=await opsSupabase.guardar(opGuardada);
       if(!vigente()||res&&res.contextoObsoleto)return Object.assign({},res,{contextoObsoleto:true});
+      if(!res){
+        reportSave("error");
+        desmarcarOperacionPendiente(opGuardada.id);
+        if(parentParaCerrar)desmarcarOperacionPendiente(parentParaCerrar.id);
+        dwNotify("error","No se recibió confirmación del servidor. Conservamos los datos para reintentar.");
+        return {error:new Error("Sin confirmación del servidor")};
+      }
       if(res&&res.error){
         reportSave("error");
         desmarcarOperacionPendiente(opGuardada.id);
@@ -8800,8 +8807,8 @@ function DocWorksApp(){
     try{
       var res=await opsSupabase.guardar(op);
       if(!vigente()||res&&res.contextoObsoleto)return;
-      if(res&&!res.error){
-        op=res.operacion||op;
+      if(res&&!res.error&&res.operacion){
+        op=res.operacion;
         setOperaciones(function(ops){return [op].concat(ops.filter(function(o){return o.id!==op.id;}));});
         if(mismoBorrador(draft,lsGet("draftOperacion",null)))lsRemove("draftOperacion");
         dwNotify("success","La operación cargada sin conexión ya fue sincronizada con DocWorks.");
