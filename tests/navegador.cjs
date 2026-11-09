@@ -141,7 +141,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   assert.equal(await extras.getAttribute('open'),null);checks++;
   await extras.locator('summary').click();
   await page.getByLabel('Estado de Texto reutilizable de ejemplo',{exact:true}).selectOption('asesor');
-  assert.equal(await extras.locator('summary').textContent(),'Cláusulas opcionales');checks++;
+  assert.equal((await extras.locator('summary').textContent()).trim(),'Cláusulas para el asesor');checks++;
   assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' workspace overflow');checks++;
   await page.screenshot({path:path.join(out,'documentos-'+name+'.png'),fullPage:true});
