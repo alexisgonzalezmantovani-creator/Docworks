@@ -28,4 +28,6 @@ assert.match(app,/if\(k==="draftOperacion" && \(!v \|\| !v\.data \|\| !draftTien
 assert.match(app,/Guardando en este dispositivo…/,'Indicar que el guardado en curso es local');
 assert.match(app,/Borrador guardado en este dispositivo/,'No confundir autoguardado con sincronización');
 assert.match(app,/No se pudo guardar el borrador en este dispositivo/,'Informar el alcance del error de guardado');
-console.log('OK: 18 comprobaciones estáticas de validación diferida, borrador y cláusulas');
+assert.match(source,/className="op-expediente-resumen"/,'Mostrar expediente de documentos vinculados');
+assert.match(source,/hijosOp\.map\(function\(h\)/,'Mostrar tipos de documentos vinculados');
+console.log('OK: 20 comprobaciones estáticas de validación diferida, borrador, cláusulas y expediente');
