@@ -1,6 +1,7 @@
 import { IA_HABILITADA, MENSAJE_IA_PAUSADA } from './PrivacidadIA';
 import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
 import { SelectorDocumento } from './SelectorDocumento';
+import { claveModeloLab, leerModeloLab, escribirModeloLab, guardarRevisionModeloLab, recuperarVersionModeloLab } from './ModelosLaboratorio';
 // Módulo extraído sin modificar las declaraciones originales.
 export const CLAUSULAS_DEFAULT = [
   { id:"especial.credito_hipotecario", titulo:"Operación supeditada a crédito hipotecario", categoria:"financiación", tipos:["reserva","boleto"], obligatoria:false, contenido:"La presente operación queda supeditada a la aprobación del crédito hipotecario solicitado por la parte compradora." },
@@ -307,7 +308,16 @@ export function crearClausulasWorkspace(deps){
 
 
 
-function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
+function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usuarioActual}){
+ const clave=claveModeloLab(inmobiliariaId,usuarioActual&&usuarioActual.id);
+ function almacenamientoModelo(){try{return typeof window==="undefined"?null:window.localStorage;}catch(_e){return null;}}
+ const [registro,setRegistro]=useState(function(){
+  return leerModeloLab(almacenamientoModelo(),clave);
+ });
+ const [dirty,setDirty]=useState(false);
+ const [errorGuardar,setErrorGuardar]=useState("");
+ const [confirmarSalir,setConfirmarSalir]=useState(false);
+ const [verVersiones,setVerVersiones]=useState(false);
  const [modo,setModo]=useState("");
  const [titulo,setTitulo]=useState("Reserva de compra");
  const [partes,setPartes]=useState([]);
@@ -319,25 +329,61 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
  const [textoActa,setTextoActa]=useState("El/la vendedor/a {{vendedor_nombre}} manifiesta su conformidad con la oferta de compra presentada por {{comprador_nombre}} sobre el inmueble {{inmueble_direccion}}, conforme a los términos expresamente individualizados en la reserva a la que se vincula esta acta.");
  const [alerta,setAlerta]=useState("");
  const area=useRef(null);
- const lectura=modo==="usar";
+ const lectura=modo==="usar"||modo==="publicado";
  const config=perfil&&perfil.plantillas&&perfil.plantillas.reserva;
  const base=config&&Array.isArray(config.body_blocks)&&config.body_blocks.length?config.body_blocks:
   Array.isArray(bloquesReserva)&&bloquesReserva.length?bloquesReserva:DEFAULT_BLOQUES_RESERVA;
- useEffect(function(){onDirty(!!modo&&!lectura);},[modo,lectura,onDirty]);
+ useEffect(function(){onDirty(!!dirty);},[dirty,onDirty]);
+ useEffect(function(){
+  setRegistro(leerModeloLab(almacenamientoModelo(),clave));
+  setDirty(false);setModo("");
+ },[clave]);
+ function snapshotActual(){
+  return {modo:modo==="publicado"?"adaptar":modo,titulo:titulo,
+   partes:partes.map(function(p){return Object.assign({},p);}),
+   conformidadSeparada:!!conformidadSeparada,tituloActa:tituloActa,textoActa:textoActa};
+ }
+ function recuperar(snapshot,publicado){
+  if(!snapshot||!Array.isArray(snapshot.partes))return;
+  setModo(publicado?"publicado":snapshot.modo==="propio"?"propio":"adaptar");
+  setTitulo(snapshot.titulo||"Reserva de compra");
+  setPartes(JSON.parse(JSON.stringify(snapshot.partes)));
+  setConformidadSeparada(!!snapshot.conformidadSeparada);
+  setTituloActa(snapshot.tituloActa||"Acta de conformidad de reserva");
+  setTextoActa(snapshot.textoActa||"");
+  setDocumentoActivo("reserva");setVista(false);setAbierto(null);
+  setErrorGuardar("");setDirty(false);setConfirmarSalir(false);
+ }
+ function guardarPrueba(publicar){
+  setErrorGuardar("");setAlerta("");
+  if(!clave){setErrorGuardar("No se pudo identificar tu cuenta. No guardamos nada.");return;}
+  if(lectura){setErrorGuardar("Esta versión es de solo lectura.");return;}
+  const resultado=guardarRevisionModeloLab(registro,snapshotActual(),!!publicar,new Date().toISOString());
+  if(!resultado.ok){setErrorGuardar(resultado.errores.join(" "));return;}
+  if(!escribirModeloLab(almacenamientoModelo(),clave,resultado.estado)){
+   setErrorGuardar("No se pudo guardar en este dispositivo. Revisá el espacio disponible o el modo privado.");return;
+  }
+  setRegistro(resultado.estado);setDirty(false);
+  setAlerta(publicar?"Versión "+resultado.version+" publicada solo en el laboratorio de este navegador.":"Borrador guardado como versión "+resultado.version+".");
+ }
+ function descartarYSalir(){
+  setModo("");setVista(false);setAbierto(null);setDirty(false);
+  setConfirmarSalir(false);setErrorGuardar("");
+ }
  function iniciar(op){
-  setModo(op);setTitulo("Reserva de compra");setVista(false);setConformidadSeparada(false);setDocumentoActivo("reserva");setTituloActa("Acta de conformidad de reserva");setTextoActa("El/la vendedor/a {{vendedor_nombre}} manifiesta su conformidad con la oferta de compra presentada por {{comprador_nombre}} sobre el inmueble {{inmueble_direccion}}, conforme a los términos expresamente individualizados en la reserva a la que se vincula esta acta.");setAlerta("");
+  setModo(op);setTitulo("Reserva de compra");setVista(false);setConformidadSeparada(false);setDocumentoActivo("reserva");setTituloActa("Acta de conformidad de reserva");setTextoActa("El/la vendedor/a {{vendedor_nombre}} manifiesta su conformidad con la oferta de compra presentada por {{comprador_nombre}} sobre el inmueble {{inmueble_direccion}}, conforme a los términos expresamente individualizados en la reserva a la que se vincula esta acta.");setAlerta("");setErrorGuardar("");setConfirmarSalir(false);setDirty(false);
   var lista=op==="propio"?[{id:"propio",titulo:"Mi primer apartado",contenido:"",activo:true}]:
    base.map(function(b,i){return {id:b.id||"base"+i,titulo:b.titulo||"Apartado "+(i+1),contenido:b.contenido||"",activo:b.activo!==false};});
   setPartes(lista);setAbierto(op==="propio"?"propio":null);
  }
- function edit(id,campo,valor){setPartes(function(xs){return xs.map(function(x){return x.id===id?Object.assign({},x,{[campo]:valor}):x;});});}
+ function edit(id,campo,valor){setPartes(function(xs){return xs.map(function(x){return x.id===id?Object.assign({},x,{[campo]:valor}):x;});});setDirty(true);}
  function agregar(){
   var id="extra-"+Date.now()+"-"+partes.length;
-  setPartes(function(xs){return xs.concat([{id:id,titulo:"Nueva cláusula",contenido:"",activo:true}]);});setAbierto(id);
+  setPartes(function(xs){return xs.concat([{id:id,titulo:"Nueva cláusula",contenido:"",activo:true}]);});setAbierto(id);setDirty(true);
  }
  function mover(i,d){
   var j=i+d;if(j<0||j>=partes.length)return;
-  var xs=partes.slice(),x=xs[i];xs[i]=xs[j];xs[j]=x;setPartes(xs);
+  var xs=partes.slice(),x=xs[i];xs[i]=xs[j];xs[j]=x;setPartes(xs);setDirty(true);
  }
  function separar(id){
   var p=partes.find(function(x){return x.id===id;});
@@ -345,7 +391,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
   if(!p||typeof n!=="number"||!p.contenido.slice(0,n).trim()||!p.contenido.slice(n).trim()){setAlerta("Ubicá el cursor entre dos párrafos antes de dividir.");return;}
   var nuevo="separado-"+Date.now();
   setPartes(function(xs){var i=xs.findIndex(function(x){return x.id===id;});return xs.slice(0,i).concat([Object.assign({},p,{contenido:p.contenido.slice(0,n)}),{id:nuevo,titulo:"Nuevo apartado",contenido:p.contenido.slice(n),activo:true}],xs.slice(i+1));});
-  setAbierto(nuevo);setAlerta("");
+  setAbierto(nuevo);setAlerta("");setDirty(true);
  }
  var campos=[["comprador_nombre","Comprador"],["vendedor_nombre","Vendedor"],["comprador_dni","DNI del comprador"],["vendedor_dni","DNI del vendedor"],["inmueble_direccion","Dirección"],["precio_letras","Precio en letras"],["anticipo_letras","Monto de reserva"],["fecha_posesion","Posesión"]];
  function vincular(id,campo){
@@ -360,7 +406,15 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
  return <section style={{display:"flex",flexDirection:"column",gap:12,minWidth:0}} aria-label="Laboratorio de modelos">
   <div style={panel}><div style={{color:"var(--gold)",fontWeight:800,fontSize:11}}>LABORATORIO · NO PUBLICADO</div>
    <h2 style={{margin:"5px 0",fontSize:21}}>Crear un modelo</h2>
-   <div style={{fontSize:12,color:"var(--dim)"}}>Probá con Reserva de compra. El original no se modifica. Nada se guarda ni se publica.</div></div>
+   <div style={{fontSize:12,color:"var(--dim)"}}>Probá con Reserva de compra. Los borradores y versiones quedan solo en este navegador. No llegan a los asesores ni modifican los documentos reales. Evitá cargar datos personales reales en esta prueba.</div></div>
+  {!modo&&!!registro.borrador&&<div style={panel}>
+   <div style={{fontSize:13,fontWeight:750,marginBottom:8}}>Tenés un modelo guardado</div>
+   <div style={{fontSize:12,color:"var(--dim)",marginBottom:10}}>{registro.borrador.titulo||"Modelo"} · {registro.versiones.length} versión(es) locales</div>
+   <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+    <button type="button" className="btn btn-primary btn-sm" onClick={function(){recuperar(registro.borrador,false);}}>Recuperar y continuar</button>
+    {registro.publicada!=null&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){var v=recuperarVersionModeloLab(registro,registro.publicada);if(v)recuperar(v,true);}}>Vista asesor (simulada)</button>}
+   </div>
+  </div>}
   {!modo&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,205px),1fr))",gap:10}}>
    {[
     ["usar","Usar modelo DocWorks","Explorá la reserva que ya tenemos."],
@@ -371,16 +425,23 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
   {!!modo&&<div style={panel}>
    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
     <strong>{vista?"Vista previa":"Cláusulas del modelo"}</strong>
-    <button className="btn btn-secondary btn-sm" type="button" onClick={function(){setModo("");setVista(false);setAbierto(null);}}>← Cambiar opción</button>
+    <button className="btn btn-secondary btn-sm" type="button" onClick={function(){if(dirty)setConfirmarSalir(true);else descartarYSalir();}}>← Cambiar opción</button>
+    {confirmarSalir&&<div role="alert" style={{flexBasis:"100%",fontSize:12,padding:8,border:"1px solid var(--border)",borderRadius:8}}>
+      Hay cambios sin guardar. ¿Descartarlos?
+      <div style={{display:"flex",gap:8,marginTop:8}}>
+       <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setConfirmarSalir(false);}}>Seguir editando</button>
+       <button type="button" className="btn btn-secondary btn-sm" onClick={descartarYSalir}>Descartar</button>
+      </div>
+    </div>}
    </div>
    {!vista&&<>
     <label style={{display:"block",fontSize:12,fontWeight:700,marginBottom:12}}>Título del documento
-      <input className="inp" disabled={lectura} value={titulo} onChange={function(e){setTitulo(e.target.value);}} style={{width:"100%",boxSizing:"border-box",marginTop:5}}/>
+      <input className="inp" disabled={lectura} value={titulo} onChange={function(e){setTitulo(e.target.value);setDirty(true);}} style={{width:"100%",boxSizing:"border-box",marginTop:5}}/>
     </label>
     <fieldset style={{border:"1px solid var(--border)",borderRadius:10,padding:11,margin:"0 0 12px"}}>
      <legend style={{fontSize:12,fontWeight:750,padding:"0 5px"}}>Conformidad del vendedor</legend>
-     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,marginBottom:9,cursor:"pointer"}}><input type="radio" name="conformidad-demo" disabled={lectura} checked={!conformidadSeparada} onChange={function(){setConformidadSeparada(false);setDocumentoActivo("reserva");}}/> En el mismo documento</label>
-     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,cursor:"pointer"}}><input type="radio" name="conformidad-demo" disabled={lectura} checked={conformidadSeparada} onChange={function(){setConformidadSeparada(true);setDocumentoActivo("reserva");}}/> En un acta independiente</label>
+     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,marginBottom:9,cursor:"pointer"}}><input type="radio" name="conformidad-demo" disabled={lectura} checked={!conformidadSeparada} onChange={function(){setConformidadSeparada(false);setDocumentoActivo("reserva");setDirty(true);}}/> En el mismo documento</label>
+     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,cursor:"pointer"}}><input type="radio" name="conformidad-demo" disabled={lectura} checked={conformidadSeparada} onChange={function(){setConformidadSeparada(true);setDocumentoActivo("reserva");setDirty(true);}}/> En un acta independiente</label>
      <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:8}}>Esta prueba solo muestra los dos formatos. No modifica el modelo legal ni la exportación actual.</div>
     </fieldset>
     {conformidadSeparada&&<div role="tablist" aria-label="Editar documentos independientes" style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
@@ -388,9 +449,9 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
       <button type="button" role="tab" aria-selected={documentoActivo==="acta"} className={documentoActivo==="acta"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setDocumentoActivo("acta");setAbierto(null);}}>2 · Acta</button>
     </div>}
     {conformidadSeparada&&documentoActivo==="acta"&&<div style={{display:"flex",flexDirection:"column",gap:10,padding:12,border:"1px solid var(--border)",borderRadius:10,marginBottom:12}}>
-      <label style={{fontSize:12,fontWeight:750}}>Título del acta<input className="inp" style={{display:"block",marginTop:5,width:"100%",boxSizing:"border-box"}} value={tituloActa} onChange={function(e){setTituloActa(e.target.value);}}/></label>
-      <label style={{fontSize:12,fontWeight:750}}>Texto de conformidad<textarea className="inp" rows={7} style={{display:"block",marginTop:5,width:"100%",boxSizing:"border-box",resize:"vertical"}} value={textoActa} onChange={function(e){setTextoActa(e.target.value);}}/></label>
-      <label style={{fontSize:12}}>Vincular dato <select className="inp" defaultValue="" onChange={function(e){if(e.target.value)setTextoActa(function(v){return v+" {{"+e.target.value+"}}";});e.target.value="";}} style={{display:"block",marginTop:5,maxWidth:"100%"}}><option value="">＋ Seleccionar campo…</option>{campos.map(function(c){return <option key={c[0]} value={c[0]}>{c[1]}</option>;})}</select></label>
+      <label style={{fontSize:12,fontWeight:750}}>Título del acta<input className="inp" style={{display:"block",marginTop:5,width:"100%",boxSizing:"border-box"}} value={tituloActa} disabled={lectura} onChange={function(e){setTituloActa(e.target.value);setDirty(true);}}/></label>
+      <label style={{fontSize:12,fontWeight:750}}>Texto de conformidad<textarea className="inp" rows={7} style={{display:"block",marginTop:5,width:"100%",boxSizing:"border-box",resize:"vertical"}} value={textoActa} disabled={lectura} onChange={function(e){setTextoActa(e.target.value);setDirty(true);}}/></label>
+      <label style={{fontSize:12}}>Vincular dato <select className="inp" disabled={lectura} defaultValue="" onChange={function(e){if(e.target.value){setTextoActa(function(v){return v+" {{"+e.target.value+"}}";});setDirty(true);}e.target.value="";}} style={{display:"block",marginTop:5,maxWidth:"100%"}}><option value="">＋ Seleccionar campo…</option>{campos.map(function(c){return <option key={c[0]} value={c[0]}>{c[1]}</option>;})}</select></label>
       <div style={{fontSize:11.5,color:"var(--dim)"}}>Es un segundo documento editable, vinculado a la misma reserva. Revisá que la reserva principal no reproduzca la conformidad que querés dejar exclusivamente en el acta.</div>
     </div>}
     {(!conformidadSeparada||documentoActivo==="reserva")&&partes.map(function(p,i){return <div key={p.id} style={{border:"1px solid var(--border)",borderRadius:9,padding:9,marginBottom:8}}>
@@ -406,14 +467,29 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
       {!lectura&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
        <select className="inp" aria-label="Insertar dato automático" defaultValue="" onChange={function(e){vincular(p.id,e.target.value);e.target.value="";}} style={{maxWidth:"100%",width:"auto"}}><option value="">＋ Vincular dato…</option>{campos.map(function(c){return <option key={c[0]} value={c[0]}>{c[1]}</option>;})}</select>
        <button className="btn btn-secondary btn-sm" type="button" onClick={function(){separar(p.id);}}>Dividir aquí</button>
-       {modo==="propio"&&partes.length>1&&<button className="btn btn-secondary btn-sm" type="button" onClick={function(){setPartes(function(xs){return xs.filter(function(x){return x.id!==p.id;});});setAbierto(null);}}>Quitar</button>}
+       {modo==="propio"&&partes.length>1&&<button className="btn btn-secondary btn-sm" type="button" onClick={function(){setPartes(function(xs){return xs.filter(function(x){return x.id!==p.id;});});setAbierto(null);setDirty(true);}}>Quitar</button>}
       </div>}
      </div>}
     </div>;})}
     {!!alerta&&<div role="status" style={{fontSize:12,color:"var(--gold)",marginBottom:8}}>{alerta}</div>}
+    {!!errorGuardar&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginBottom:8}}>{errorGuardar}</div>}
+    {registro.versiones.length>0&&<div style={{marginBottom:10}}>
+      <button type="button" className="btn btn-secondary btn-sm" aria-expanded={verVersiones} onClick={function(){setVerVersiones(!verVersiones);}}>{verVersiones?"− Ocultar versiones":"＋ Historial de versiones"} ({registro.versiones.length})</button>
+      {verVersiones&&<div style={{display:"flex",flexDirection:"column",gap:5,marginTop:8}}>
+       {registro.versiones.slice().reverse().map(function(v){return <div key={v.version} style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center",padding:8,border:"1px solid var(--border)",borderRadius:8}}>
+        <span style={{fontSize:12}}>Versión {v.version}{registro.publicada===v.version?" · Publicada en laboratorio":""}
+         <span style={{color:"var(--dim)",display:"block"}}>{v.fecha?new Date(v.fecha).toLocaleString("es-AR"):""}</span></span>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={function(){const snap=recuperarVersionModeloLab(registro,v.version);if(snap){recuperar(snap,false);setDirty(true);setAlerta("Versión "+v.version+" recuperada para editar. La publicada no se modificó.");}}}>Restaurar</button>
+       </div>;})}
+      </div>}
+    </div>}
     <div style={{display:"flex",gap:8,justifyContent:"space-between",flexWrap:"wrap"}}>
       {!lectura&&(!conformidadSeparada||documentoActivo==="reserva")?<button className="btn btn-secondary btn-sm" type="button" onClick={agregar}>＋ Agregar cláusula</button>:<span/>}
-      <button className="btn btn-primary btn-sm" type="button" disabled={!titulo.trim()} onClick={function(){setVista(true);setDocumentoActivo("reserva");}}>Ver documento →</button>
+      <div style={{display:"flex",gap:7,flexWrap:"wrap",justifyContent:"flex-end"}}>
+       {!lectura&&<button className="btn btn-secondary btn-sm" type="button" disabled={!clave} onClick={function(){guardarPrueba(false);}}>Guardar borrador</button>}
+       {!lectura&&<button className="btn btn-secondary btn-sm" type="button" disabled={!clave} onClick={function(){guardarPrueba(true);}}>Publicar (laboratorio)</button>}
+       <button className="btn btn-primary btn-sm" type="button" disabled={!titulo.trim()} onClick={function(){setVista(true);setDocumentoActivo("reserva");}}>Ver documento →</button>
+      </div>
     </div>
    </>}
    {vista&&<>
@@ -434,7 +510,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
       {partes.filter(function(p){return p.activo!==false;}).map(function(p,i){return <div key={p.id} style={{marginBottom:17}}><strong style={{fontSize:12}}>{i+1}. {p.titulo}</strong><p style={{fontSize:12.5,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{ejemplo(p.contenido)||"［Sin texto］"}</p></div>;})}
      </>}
     </div>
-    <p style={{fontSize:11.5,color:"var(--dim)"}}>Previsualización conceptual: no genera dos archivos reales todavía. El texto definitivo, la distribución de firmas y las cláusulas de aceptación deben revisarse jurídica y técnicamente antes de publicar.</p>
+    <p style={{fontSize:11.5,color:"var(--dim)"}}>Vista conceptual del laboratorio. No genera PDF/DOCX ni publica para otros usuarios. Los textos jurídicos requieren revisión antes de la publicación real.</p>
     <button className="btn btn-secondary btn-sm" type="button" onClick={function(){setVista(false);}}>← Volver a las cláusulas</button>
    </>}
   </div>}
@@ -443,7 +519,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
 
 /* Componente legado de cláusulas personales eliminado: ya no forma parte del producto. */
 
-function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClausula,onEditClausula,onDeleteClausula,papeleraClausulas,papeleraClausulasLoading,papeleraClausulasError,onRecargarPapeleraClausulas,onRestaurarClausula,bloquesReserva,onUpdateBloqueReserva,onMoveBloqueReserva,bloquesError,bloquesLoading,onRetryBloques,clausulasError,clausulasLoading,onRetryClausulas,usuarioActual}) {
+function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clausulas,onAddClausula,onEditClausula,onDeleteClausula,papeleraClausulas,papeleraClausulasLoading,papeleraClausulasError,onRecargarPapeleraClausulas,onRestaurarClausula,bloquesReserva,onUpdateBloqueReserva,onMoveBloqueReserva,bloquesError,bloquesLoading,onRetryBloques,clausulasError,clausulasLoading,onRetryClausulas,usuarioActual}) {
   const [restaurandoClausula,setRestaurandoClausula]=useState(null);
   const [errorPapeleraClausulas,setErrorPapeleraClausulas]=useState("");
   const [laboratorioDirty,setLaboratorioDirty]=useState(false);
@@ -451,7 +527,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   function setSeccion(next){
     if(next===seccion)return;
     function cambiar(){setModeloEditando(false);setIntroduccionEditando(false);setSeccionDirecto(next);if(next==="papelera"){setErrorPapeleraClausulas("");if(onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}}
-    if(seccion==="creador"&&laboratorioDirty){requestDwConfirm("La prueba no se guarda. ¿Salir y descartar los cambios?",cambiar);return;}
+    if(seccion==="creador"&&laboratorioDirty){requestDwConfirm("Tenés cambios sin guardar en el laboratorio. ¿Salir y descartarlos?",cambiar);return;}
     if(seccion==="adicionales"){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando&&next!==seccion)requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",cambiar);else cambiar();
   }
@@ -535,14 +611,14 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var cantidadAdicionalesHeredadas=opcionalesDocumento.filter(function(c){return c.obligatoria===true||(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
   var hayClausulasAdicionalesConfigurables=cantidadAdicionalesEditables>0;
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":seccion==="creador"?"Laboratorio de modelos sin guardado ni publicación.":"Elegí un documento y editá su contenido."}</div></div></div>
+    <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":seccion==="creador"?"Prueba local: borradores, versiones y publicación simulada.":"Elegí un documento y editá su contenido."}</div></div></div>
     {puedeEditar&&<nav aria-label="Cláusulas y documentos" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       <button type="button" aria-pressed={seccion==="modelos"} className={seccion==="modelos"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
       <button type="button" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
       <button type="button" aria-pressed={seccion==="creador"} className={seccion==="creador"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("creador");}}>Prueba de modelos</button>
       
     </nav>}
-    {seccion==="creador"&&puedeEditar&&<CreadorModelosPreview perfil={perfil} bloquesReserva={bloquesReserva} onDirty={setLaboratorioDirty}/>}
+    {seccion==="creador"&&puedeEditar&&<CreadorModelosPreview perfil={perfil} bloquesReserva={bloquesReserva} onDirty={setLaboratorioDirty} inmobiliariaId={inmobiliariaId} usuarioActual={usuarioActual}/>}
     {seccion==="adicionales"&&<div className="card" style={{padding:14}}>
       <h2 style={{fontSize:23,fontWeight:750,fontFamily:"DM Serif Display,serif",color:"var(--text)",margin:"0 0 6px"}}>Biblioteca de cláusulas</h2>
 
