@@ -22,16 +22,24 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
   await app.act(async()=>render());
   await click(button('＋ Agregar cláusula'));
   check(tipo+' alta no persiste',()=>assert.equal(saves,0));
+  check(tipo+' sólo muestra hasta cinco campos sugeridos al abrir',()=>assert.ok(document.querySelectorAll('button[title^="Insertar "]').length<=5));
+  check(tipo+' mantiene el catálogo oculto por defecto',()=>assert.equal(document.querySelector('input[aria-label="Buscar entre todos los campos de la cláusula"]'),null));
   check(tipo+' chips tienen etiquetas inequívocas',()=>{const labels=buttons().map(b=>b.textContent.trim()).filter(t=>t.startsWith('+')&&t.length>1);assert.equal(new Set(labels).size,labels.length);});
+  const abrirTodos=async()=>{const b=buttons().find(b=>b.textContent.includes('Ver todos los campos'));if(b)await click(b);};
   if(tipo==='reserva'){
+   await abrirTodos();
+   const busqueda=document.querySelector('input[aria-label="Buscar entre todos los campos de la cláusula"]');
+   assert.ok(busqueda,'buscador de campos al desplegar');
+   await fill(busqueda,'Reserva alquiler');
    await click(button('+Reserva alquiler · importe numérico'));
    await click(button('+Reserva alquiler · importe en letras'));
    check('chips distinguen monto y redacción legal',()=>{const texto=document.querySelector('textarea').value;assert.ok(texto.includes('{{res_alq_monto_reserva}}'));assert.ok(texto.includes('{{reserva_alquiler_reserva}}'));assert.ok(!buttons().some(b=>b.textContent.trim()==='+Reserva alquiler · importe en letras'));});
   }
 
   await fill(document.querySelector('textarea'),'Texto de prueba con redacción propia.');
-  const chip=buttons().find(b=>b.textContent.trim()==='+Comprador');
-  assert.ok(chip,'chip de comprador disponible');await click(chip);
+  let chip=buttons().find(b=>b.textContent.trim()==='+Comprador');
+  if(!chip){await abrirTodos();chip=buttons().find(b=>b.textContent.trim()==='+Comprador');}
+  assert.ok(chip,'chip de comprador accesible como sugerido o en el catálogo');await click(chip);
   check(tipo+' chip no persiste',()=>assert.equal(saves,0));
   let navigated=0;autoConfirm=false;
   await app.act(async()=>app.navegarConProteccionModelo(()=>navigated++));
