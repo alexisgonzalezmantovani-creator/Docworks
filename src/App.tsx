@@ -6241,9 +6241,10 @@ function BotIAActivo({onClose,onAddClausula}){
 
 // Menú desplegable para insertar variables ({{campo}}) en un texto de cláusula.
 // Inserta en la posición del cursor del textarea referenciado por taRef.
-function VariablePicker({taRef,value,onChange,label=""}){
+function VariablePicker({taRef,value,onChange,label="",tipo="reserva"}){
   const [open,setOpen]=useState(false);
   const [busqueda,setBusqueda]=useState("");
+  const [verTodos,setVerTodos]=useState(false);
   const [pos,setPos]=useState(null);
   const wrapRef=useRef<HTMLDivElement>(null);
   const btnRef=useRef<HTMLButtonElement>(null);
@@ -6252,7 +6253,7 @@ function VariablePicker({taRef,value,onChange,label=""}){
     var el=btnRef.current;
     if(!el)return;
     var r=el.getBoundingClientRect();
-    var menuW=280, margin=8;
+    var menuW=Math.min(300,window.innerWidth-16), margin=8;
     var left=r.left;
     if(left+menuW+margin>window.innerWidth) left=Math.max(margin,window.innerWidth-menuW-margin);
     var maxH=Math.min(340,window.innerHeight-r.bottom-margin);
@@ -6296,31 +6297,33 @@ function VariablePicker({taRef,value,onChange,label=""}){
     var next=value.slice(0,start)+token+value.slice(end);
     onChange(next);
     setOpen(false);
+    setVerTodos(false);
+    setBusqueda("");
     setTimeout(function(){
       if(el){el.focus();var pos2=start+token.length;el.setSelectionRange(pos2,pos2);}
     },0);
   }
-  var consulta=busqueda.trim().toLocaleLowerCase("es");
-  var gruposVisibles=VAR_GROUPS.map(function(g){return {group:g.group,fields:g.fields.filter(function(f){return tokensUsados.indexOf(f.key)===-1&&(!consulta||(f.label+" "+f.key+" "+g.group).toLocaleLowerCase("es").includes(consulta));})};}).filter(function(g){return g.fields.length>0;});
+  var consulta=busqueda.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  var camposDisponibles=VAR_GROUPS.flatMap(function(g){return g.fields;}).filter(function(f){return tokensUsados.indexOf(f.key)===-1;});
+  var favoritosTipo=tipo==="alquiler"?["locador_nombre","locatario_nombre","inmueble_direccion","alquiler_inicio","alquiler_monto_inicial"]:tipo==="reserva_alquiler"?["locador_nombre","locatario_nombre","inmueble_direccion","res_alq_monto_reserva","res_alq_monto_mensual"]:["comprador_nombre","vendedor_nombre","inmueble_direccion","fecha_posesion","precio"];
+  var favoritos=favoritosTipo.map(function(k){return camposDisponibles.find(function(f){return f.key===k;});}).filter(Boolean).slice(0,5);
+  var gruposVisibles=VAR_GROUPS.map(function(g){return {group:g.group,fields:g.fields.filter(function(f){return tokensUsados.indexOf(f.key)===-1&&(consulta?(f.label+" "+f.key+" "+g.group).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(consulta):!favoritos.some(function(x){return x.key===f.key;}));})};}).filter(function(g){return g.fields.length>0;});
   return(
     <div style={{position:"relative",display:"inline-block"}} ref={wrapRef}>
       <span ref={btnRef} style={{display:"inline-block"}}>
-        <Btn v="ghost" s="sm" type="button" onClick={function(){setBusqueda("");setOpen(function(o){return !o;});}}>🔗 {label||"Vincular dato"}</Btn>
+        <Btn v="ghost" s="sm" type="button" onClick={function(){setBusqueda("");setVerTodos(false);setOpen(function(o){return !o;});}}>🔗 {label||"Vincular dato"}</Btn>
       </span>
       {open&&pos&&(
-        <div className="var-picker-menu" style={{position:"fixed",left:pos.left,top:pos.top,bottom:pos.bottom,maxHeight:pos.maxHeight}}>
-          <div style={{padding:"8px",position:"sticky",top:0,background:"var(--card)",zIndex:1}}><input autoFocus aria-label="Buscar campo para insertar" className="inp" type="search" value={busqueda} onChange={function(e){setBusqueda(e.target.value);}} placeholder="Buscar campo…" style={{width:"100%",boxSizing:"border-box",fontSize:13}}/></div>
-          {gruposVisibles.length===0&&<div role="status" style={{padding:12,fontSize:12,color:"var(--muted)"}}>No hay campos que coincidan.</div>}
-          {gruposVisibles.map(function(g){
-            return(
-              <div key={g.group}>
-                <div className="var-picker-group">{g.group}</div>
-                {g.fields.map(function(f){
-                  return <button key={f.key} type="button" className="var-picker-item" onClick={function(){insert(f.key);}}>{f.label}</button>;
-                })}
-              </div>
-            );
-          })}
+        <div className="var-picker-menu" style={{position:"fixed",width:"min(300px, calc(100vw - 16px))",boxSizing:"border-box",left:pos.left,top:pos.top,bottom:pos.bottom,maxHeight:pos.maxHeight,overflowY:"auto"}}>
+          <div style={{padding:"9px 10px 6px",fontSize:12,fontWeight:750,color:"var(--text)"}}>Campos sugeridos</div>
+          {favoritos.map(function(f){return <button key={f.key} type="button" className="var-picker-item" onClick={function(){insert(f.key);}}>{f.label}</button>;})}
+          {camposDisponibles.length===0&&<div role="status" style={{padding:10,fontSize:12,color:"var(--green)"}}>Ya insertaste todos los campos.</div>}
+          {camposDisponibles.length>favoritos.length&&<button type="button" aria-expanded={verTodos} onClick={function(){setVerTodos(!verTodos);setBusqueda("");}} className="var-picker-item" style={{fontWeight:750,color:"var(--text)",borderTop:"1px solid var(--border)"}}>{verTodos?"− Ocultar campos":"＋ Ver todos los campos"} ({camposDisponibles.length})</button>}
+          {verTodos&&<div>
+            <div style={{padding:"8px",position:"sticky",top:0,background:"var(--card)",zIndex:1}}><input aria-label="Buscar campo para insertar" className="inp" type="search" value={busqueda} onChange={function(e){setBusqueda(e.target.value);}} placeholder="Buscar campo…" style={{width:"100%",minWidth:0,boxSizing:"border-box",fontSize:13}}/></div>
+            {gruposVisibles.length===0&&<div role="status" style={{padding:12,fontSize:12,color:"var(--muted)"}}>{consulta?"No se encontraron campos.":"No hay otros campos disponibles."}</div>}
+            {gruposVisibles.map(function(g){return <div key={g.group}><div className="var-picker-group">{g.group}</div>{g.fields.map(function(f){return <button key={f.key} type="button" className="var-picker-item" onClick={function(){insert(f.key);}}>{f.label}</button>;})}</div>;})}
+          </div>}
         </div>
       )}
     </div>
@@ -6380,7 +6383,7 @@ function ClausulaFormBody({form,setForm,onCancel,onSubmit,editId,guardando,habil
           <label className="field-label" style={{margin:0}}>Texto</label>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <VozATextoButton onText={function(t){setForm(function(f){return Object.assign({},f,{contenido:(f.contenido?f.contenido+" ":"")+t});});}} title="Dictar cláusula por voz"/>
-            <VariablePicker taRef={taRef} value={form.contenido} onChange={function(v){setForm(function(f){return Object.assign({},f,{contenido:v});});}}/>
+            <VariablePicker taRef={taRef} value={form.contenido} tipo={tiposSeguros.find(function(t){return t!=="todos";})||"reserva"} onChange={function(v){setForm(function(f){return Object.assign({},f,{contenido:v});});}}/>
           </div>
         </div>
         <textarea id="dw-clausula-texto" ref={taRef} className="inp" rows={4} value={form.contenido} onChange={function(e){setForm(function(f){return Object.assign({},f,{contenido:e.target.value});});}} placeholder="Redactá el texto. Usá «Vincular dato» para insertar campos como el nombre del titular, DNI, dirección, etc."/>
