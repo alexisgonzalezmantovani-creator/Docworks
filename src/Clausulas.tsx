@@ -393,7 +393,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var opcionalesDocumento=catalogoBiblioteca.filter(function(c){return clausulaAplicaTipo(c,tipoDocSel);});
   var configAdicionalesDocumento=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas);
   var cantidadAdicionalesDisponibles=opcionalesDocumento.filter(function(c){return c.obligatoria!==true&&(configAdicionalesDocumento.clausulas_ids||[]).includes(c.id)&&!(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
-  var cantidadAdicionalesEditables=opcionalesDocumento.filter(function(c){return c.obligatoria!==true;}).length;
+  var cantidadAdicionalesEditables=opcionalesDocumento.filter(function(c){return c.obligatoria!==true&&!(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
   var cantidadAdicionalesDeshabilitadas=opcionalesDocumento.filter(function(c){return c.obligatoria!==true&&!(configAdicionalesDocumento.clausulas_ids||[]).includes(c.id)&&!(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
   var cantidadAdicionalesHeredadas=opcionalesDocumento.filter(function(c){return c.obligatoria===true||(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
   var hayClausulasAdicionalesConfigurables=cantidadAdicionalesEditables>0;
