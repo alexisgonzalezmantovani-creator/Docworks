@@ -6246,17 +6246,17 @@ function clavesCamposSugeridosDocWorks(tipo,titulo){
   var esAlquiler=tipo==="alquiler"||tipo==="reserva_alquiler";
   var nombres=esAlquiler?["locador_nombre","locatario_nombre"]:tipo==="comodato"?[]:["comprador_nombre","vendedor_nombre"];
   if(/ocupantes|expensas|impuestos|servicios|posesion|entrega/.test(tema))
-    return esAlquiler?["inmueble_direccion","alquiler_inicio"]:["inmueble_direccion","fecha_posesion"];
+    return tipo==="reserva_alquiler"?["inmueble_direccion","res_alq_inicio_estimado"]:esAlquiler?["inmueble_direccion","alquiler_inicio"]:["inmueble_direccion","fecha_posesion"];
   if(/honorarios|comision|intermediacion/.test(tema))
-    return esAlquiler?["alquiler_comision_locador_texto","alquiler_comision_locatario_texto","locador_nombre","locatario_nombre"]:
+    return tipo==="reserva_alquiler"?["reserva_alquiler_comision_locador_texto","reserva_alquiler_comision_locatario_texto","locador_nombre","locatario_nombre"]:esAlquiler?["alquiler_comision_locador_texto","alquiler_comision_locatario_texto","locador_nombre","locatario_nombre"]:
       ["comision_vendedor_texto","comision_comprador_texto","comision_vendedor","comision_comprador","vendedor_nombre"];
   if(/precio|forma de pago|saldo|anticipo|sen[ae]|valor de la reserva|monto/.test(tema))
-    return esAlquiler?["alquiler_monto_inicial","res_alq_monto_reserva","res_alq_monto_mensual","locatario_nombre"]:
+    return tipo==="reserva_alquiler"?["res_alq_monto_reserva","res_alq_monto_mensual","locatario_nombre"]:esAlquiler?["alquiler_monto_inicial","locatario_nombre"]:
       ["precio","precio_letras","moneda_txt","anticipo","anticipo_letras","saldo","saldo_letras"];
   if(/plazo|vigencia|vencimiento|fecha de inicio|duracion/.test(tema))
     return tipo==="comodato"?["comodato_plazo","inmueble_direccion"]:
       tipo==="exclusividad"?["exclusividad_vigencia","inmueble_direccion"]:
-      esAlquiler?["alquiler_inicio","alquiler_fin","inmueble_direccion"]:
+      tipo==="reserva_alquiler"?["res_alq_inicio_estimado","inmueble_direccion"]:esAlquiler?["alquiler_inicio","alquiler_fin","inmueble_direccion"]:
       ["fecha_posesion","inmueble_direccion"];
   if(/garantia|garante|deposito/.test(tema))
     return esAlquiler?["alquiler_garantia_detalle","alquiler_deposito","locatario_nombre","locador_nombre"]:["comprador_nombre","vendedor_nombre"];
@@ -6343,17 +6343,17 @@ function VariablePicker({taRef,value,onChange,label="",tipo="reserva",titulo=""}
   var consulta=busqueda.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
   var camposDisponibles=VAR_GROUPS.flatMap(function(g){return g.fields;}).filter(function(f){return tokensUsados.indexOf(f.key)===-1;});
   var favoritos=clavesCamposSugeridosDocWorks(tipo,titulo).map(function(k){return camposDisponibles.find(function(f){return f.key===k;});}).filter(Boolean).slice(0,5);
-  var gruposVisibles=VAR_GROUPS.map(function(g){return {group:g.group,fields:g.fields.filter(function(f){return tokensUsados.indexOf(f.key)===-1&&(consulta?(f.label+" "+f.key+" "+g.group).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(consulta):!favoritos.some(function(x){return x.key===f.key;}));})};}).filter(function(g){return g.fields.length>0;});
+  var gruposVisibles=VAR_GROUPS.map(function(g){return {group:g.group,fields:g.fields.filter(function(f){return tokensUsados.indexOf(f.key)===-1&&(consulta?(f.label+" "+f.key+" "+g.group).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(consulta):true);})};}).filter(function(g){return g.fields.length>0;});
   return(
     <div style={{position:"relative",display:"inline-block"}} ref={wrapRef}>
       <span ref={btnRef} style={{display:"inline-block"}}>
         <Btn v="ghost" s="sm" type="button" onClick={function(){setBusqueda("");setVerTodos(false);setOpen(function(o){return !o;});}}>🔗 {label||"Vincular dato"}</Btn>
       </span>
       {open&&pos&&(
-        <div className="var-picker-menu" style={{position:"fixed",width:"min(300px, calc(100vw - 16px))",boxSizing:"border-box",left:pos.left,top:pos.top,bottom:pos.bottom,maxHeight:pos.maxHeight,overflowY:"auto"}}>
+        <div className="var-picker-menu" onKeyDown={function(e){if(e.key==="Escape"){e.stopPropagation();setOpen(false);setBusqueda("");btnRef.current&&btnRef.current.focus();}}} style={{position:"fixed",width:"min(300px, calc(100vw - 16px))",boxSizing:"border-box",left:pos.left,top:pos.top,bottom:pos.bottom,maxHeight:pos.maxHeight,overflowY:"auto"}}>
           <div style={{padding:"9px 10px 6px",fontSize:12,fontWeight:750,color:"var(--text)"}}>Campos sugeridos</div>
           {favoritos.length===0&&camposDisponibles.length>0&&<div style={{padding:"6px 10px",fontSize:12,color:"var(--dim)"}}>Buscá el dato que necesites en todos los campos.</div>}
-          {!consulta&&favoritos.map(function(f){return <button key={f.key} type="button" className="var-picker-item" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insert(f.key);}}>{f.label}</button>;})}
+          {!verTodos&&!consulta&&favoritos.map(function(f){return <button key={f.key} type="button" className="var-picker-item" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insert(f.key);}}>{f.label}</button>;})}
           {camposDisponibles.length===0&&<div role="status" style={{padding:10,fontSize:12,color:"var(--green)"}}>Ya insertaste todos los campos.</div>}
           {camposDisponibles.length>favoritos.length&&<button type="button" aria-expanded={verTodos} onClick={function(){setVerTodos(!verTodos);setBusqueda("");}} className="var-picker-item" style={{fontWeight:750,color:"var(--text)",borderTop:"1px solid var(--border)"}}>{verTodos?"− Ocultar campos":"＋ Ver todos los campos"} ({camposDisponibles.length})</button>}
           {verTodos&&<div>
@@ -6590,7 +6590,7 @@ function SelectorCamposClausula({tokens,tipo,titulo,contenido,onInsert}){
   var disponibles=tokens.filter(function(t){return usados.indexOf(t[0])===-1;});
   var recomendados=clavesCamposSugeridosDocWorks(tipo,titulo).map(function(k){return disponibles.find(function(t){return t[0]===k;});}).filter(Boolean).slice(0,5);
   var consulta=busqueda.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-  var adicionales=disponibles.filter(function(t){return consulta||!recomendados.some(function(x){return x[0]===t[0];});}).filter(function(t){return !consulta||(t[1]+" "+t[0]).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(consulta);});
+  var adicionales=disponibles.filter(function(t){return !consulta||(t[1]+" "+t[0]).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(consulta);});
   function categoria(k){
     if(/^(comprador|vendedor|locador|locatario)_/.test(k))return "Personas";
     if(/^inmueble_/.test(k))return "Inmueble";
@@ -6603,12 +6603,12 @@ function SelectorCamposClausula({tokens,tipo,titulo,contenido,onInsert}){
   return <div style={{padding:10,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2, rgba(127,127,127,.035))",minWidth:0}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:7}}><div style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Campos sugeridos</div><span style={{fontSize:11,color:"var(--dim)"}}>{disponibles.length} disponibles</span></div>
     <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.45,marginBottom:8}}>Insertá un campo donde esté el cursor. Los campos que ya están en el texto no se repiten.</div>
-    {recomendados.length>0&&(!todosAbiertos||!consulta)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",minWidth:0}}>{recomendados.map(chip)}</div>}
+    {recomendados.length>0&&!todosAbiertos&&<div style={{display:"flex",gap:6,flexWrap:"wrap",minWidth:0}}>{recomendados.map(chip)}</div>}
     {recomendados.length===0&&disponibles.length>0&&<div style={{fontSize:11.5,color:"var(--dim)"}}>No hay sugerencias relevantes pendientes. Podés buscar en todos los campos.</div>}
     {disponibles.length===0&&<div role="status" style={{fontSize:12,color:"var(--green)"}}>Ya están incluidos todos los campos disponibles.</div>}
     {disponibles.length>recomendados.length&&<div style={{marginTop:9}}>
       <button type="button" aria-expanded={todosAbiertos} onClick={function(){setTodosAbiertos(!todosAbiertos);setBusqueda("");}} className="btn btn-secondary btn-sm" style={{maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}}>{todosAbiertos?"− Ocultar campos":"＋ Ver todos los campos"} ({disponibles.length})</button>
-      {todosAbiertos&&<div style={{marginTop:9,padding:9,border:"1px solid var(--border)",borderRadius:9,minWidth:0}}>
+      {todosAbiertos&&<div onKeyDown={function(e){if(e.key==="Escape"){e.stopPropagation();setTodosAbiertos(false);setBusqueda("");}}} style={{marginTop:9,padding:9,border:"1px solid var(--border)",borderRadius:9,minWidth:0}}>
         <input type="search" className="inp" aria-label="Buscar entre todos los campos de la cláusula" placeholder="Buscar campo por nombre…" value={busqueda} onChange={function(e){setBusqueda(e.target.value);}} style={{boxSizing:"border-box",width:"100%",minWidth:0,marginBottom:8,fontSize:13}}/>
         <div style={{maxHeight:245,overflowY:"auto",overscrollBehavior:"contain"}}>
           {grupos.length===0&&<div role="status" style={{fontSize:12,color:"var(--dim)",padding:6}}>{consulta?"No se encontraron campos.":"Los demás campos ya están incluidos."}</div>}
@@ -6742,7 +6742,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     ["res_alq_monto_reserva","Reserva alquiler · importe numérico"],["res_alq_monto_mensual","Alquiler mensual · importe numérico"],["res_alq_inicio_estimado","Inicio estimado"],["devolucion_motivo","Motivo devolución · texto cargado"],["comodato_plazo","Plazo comodato"],["comodato_uso","Destino comodato"],
     ["escribania_clausula","Escribanía"],["exclusividad_vigencia","Vigencia"],["exclusividad_modalidad_texto","Modalidad"],["alquiler_canon_clause","Canon y actualización"],["alquiler_deposito_desc","Depósito"],["alquiler_garantia_detalle","Garantía"],["alquiler_plazo_texto","Plazo"],["devolucion_motivo_texto","Motivo devolución · con texto de respaldo"],["refuerzo_trayectoria","Antecedentes"],["reserva_alquiler_reserva","Reserva alquiler · importe en letras"],["reserva_alquiler_canon","Alquiler mensual · importe en letras"]
   ];
-  var tokens=tokensBase.filter(function(t,i,arr){return arr.findIndex(function(x){return x[0]===t[0];})===i;});
+  var tokens=tokensBase.concat(VAR_GROUPS.flatMap(function(g){return g.fields.map(function(f){return [f.key,f.label];});})).filter(function(t,i,arr){return arr.findIndex(function(x){return x[0]===t[0];})===i;});
   function insertToken(token){
     if(editId==null)return;
     var actual=draft.find(function(b){return b.id===editId;});
