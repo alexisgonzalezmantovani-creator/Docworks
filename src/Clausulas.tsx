@@ -405,9 +405,9 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
  const panel={padding:14,border:"1px solid var(--border)",borderRadius:11,background:"var(--card)"};
  return <section style={{display:"flex",flexDirection:"column",gap:12,minWidth:0}} aria-label="Laboratorio de modelos">
   <div style={panel}><div style={{color:"var(--gold)",fontWeight:800,fontSize:11}}>LABORATORIO · NO PUBLICADO</div>
-   <h2 style={{margin:"5px 0",fontSize:21}}>Crear o personalizar modelo</h2>
-   <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:5}}>1. Elegí cómo empezar &nbsp; · &nbsp; 2. Editá las cláusulas &nbsp; · &nbsp; 3. Revisá el documento</div>
-   <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:8}}>Prueba con Reserva de compra: se guarda solo en este navegador y no modifica los modelos reales. No cargues datos personales.</div></div>
+   <h2 style={{margin:"5px 0",fontSize:21}}>{!modo?"¿Cómo querés empezar?":vista?"Revisá cómo quedó":"Cambiá solo lo que necesites"}</h2>
+   <div style={{fontSize:12,fontWeight:700,marginTop:6}}>{!modo?"Paso 1 de 3 · Elegí un punto de partida":vista?"Paso 3 de 3 · Mirá el documento":"Paso 2 de 3 · Editá el texto"}</div>
+   <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:7}}>Versión de prueba · Se guarda solo en este navegador, sin cambiar documentos reales. No cargues datos personales.</div></div>
   {!modo&&!!registro.borrador&&<div style={panel}>
    <div style={{fontSize:13,fontWeight:750,marginBottom:8}}>Tenés un modelo guardado</div>
    <div style={{fontSize:12,color:"var(--dim)",marginBottom:10}}>{registro.borrador.titulo||"Modelo"} · {registro.versiones.length} versión(es) locales</div>
@@ -418,15 +418,15 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
   </div>}
   {!modo&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,205px),1fr))",gap:10}}>
    {[
-    ["usar","Usar modelo DocWorks","Explorá la reserva que ya tenemos."],
-    ["adaptar","Adaptar modelo DocWorks","Cambiá solamente las cláusulas necesarias."],
-    ["propio","Crear mi propio modelo","Pegá tu texto y dividilo en apartados."]
-   ].map(function(o){return <button key={o[0]} type="button" style={{...panel,textAlign:"left",minHeight:115,color:"var(--text)",cursor:"pointer"}} onClick={function(){iniciar(o[0]);}}><strong style={{display:"block",marginBottom:9}}>{o[1]}</strong><span style={{fontSize:12,color:"var(--dim)"}}>{o[2]}</span></button>;})}
+    ["usar","Ver modelo DocWorks","Quiero conocer el ejemplo ya preparado."],
+    ["adaptar","Cambiar un modelo DocWorks","Quiero usar el ejemplo y modificar algunas partes."],
+    ["propio","Usar mi propio documento","Ya tengo mi texto y quiero copiarlo acá."]
+   ].map(function(o){return <button key={o[0]} type="button" style={{...panel,textAlign:"left",minHeight:122,color:"var(--text)",cursor:"pointer",border:"1px solid var(--border2)"}} onClick={function(){iniciar(o[0]);}}><strong style={{display:"block",marginBottom:9}}>{o[1]}</strong><span style={{fontSize:12,color:"var(--dim)"}}>{o[2]}</span></button>;})}
   </div>}
   {!!modo&&<div style={panel}>
    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
-    <strong>{vista?"Vista previa":"Cláusulas del modelo"}</strong>
-    <button className="btn btn-secondary btn-sm" type="button" onClick={function(){if(dirty)setConfirmarSalir(true);else descartarYSalir();}}>← Cambiar opción</button>
+    <strong>{vista?"Así queda tu documento":"Partes de tu documento"}</strong>
+    <button className="btn btn-secondary btn-sm" type="button" onClick={function(){if(dirty)setConfirmarSalir(true);else descartarYSalir();}}>← Empezar de nuevo</button>
     {confirmarSalir&&<div role="alert" style={{flexBasis:"100%",fontSize:12,padding:8,border:"1px solid var(--border)",borderRadius:8}}>
       Hay cambios sin guardar. ¿Descartarlos?
       <div style={{display:"flex",gap:8,marginTop:8}}>
@@ -436,7 +436,8 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
     </div>}
    </div>
    {!vista&&<>
-    <label style={{display:"block",fontSize:12,fontWeight:700,marginBottom:12}}>Título del documento
+    <div style={{fontSize:12,color:"var(--dim)",marginBottom:12}}>No necesitás cambiar todo: tocá solamente la parte que quieras modificar.</div>
+    <label style={{display:"block",fontSize:12,fontWeight:700,marginBottom:12}}>Nombre del documento
       <input className="inp" disabled={lectura} value={titulo} onChange={function(e){setTitulo(e.target.value);setDirty(true);}} style={{width:"100%",boxSizing:"border-box",marginTop:5}}/>
     </label>
     <fieldset style={{border:"1px solid var(--border)",borderRadius:10,padding:11,margin:"0 0 12px"}}>
@@ -489,7 +490,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
       <div style={{display:"flex",gap:7,flexWrap:"wrap",justifyContent:"flex-end"}}>
        {!lectura&&<button className="btn btn-secondary btn-sm" type="button" disabled={!clave} onClick={function(){guardarPrueba(false);}}>Guardar borrador</button>}
        {!lectura&&<button className="btn btn-secondary btn-sm" type="button" disabled={!clave} onClick={function(){guardarPrueba(true);}}>Publicar (laboratorio)</button>}
-       <button className="btn btn-primary btn-sm" type="button" disabled={!titulo.trim()} onClick={function(){setVista(true);setDocumentoActivo("reserva");}}>Ver documento →</button>
+       <button className="btn btn-primary" type="button" disabled={!titulo.trim()} style={{minHeight:44}} onClick={function(){setVista(true);setDocumentoActivo("reserva");}}>Ver cómo queda →</button>
       </div>
     </div>
    </>}
@@ -512,7 +513,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
      </>}
     </div>
     <p style={{fontSize:11.5,color:"var(--dim)"}}>Vista conceptual del laboratorio. No genera PDF/DOCX ni publica para otros usuarios. Los textos jurídicos requieren revisión antes de la publicación real.</p>
-    <button className="btn btn-secondary btn-sm" type="button" onClick={function(){setVista(false);}}>← Volver a las cláusulas</button>
+    <button className="btn btn-secondary btn-sm" type="button" style={{minHeight:40}} onClick={function(){setVista(false);}}>← Volver a editar</button>
    </>}
   </div>}
  </section>;
@@ -617,15 +618,15 @@ function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clau
       <button type="button" aria-pressed={seccion==="adicionales"||seccion==="papelera"} className={seccion==="adicionales"||seccion==="papelera"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
       <button type="button" aria-pressed={seccion==="modelos"||seccion==="creador"} className={seccion==="modelos"||seccion==="creador"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
     </nav>}
-    {puedeEditar&&(seccion==="modelos"||seccion==="creador")&&<div className="card" style={{padding:12,display:"flex",gap:12,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap"}}>
-      <div style={{minWidth:0,flex:"1 1 180px"}}>
-        <div style={{fontSize:13,fontWeight:750}}>Tus modelos de documentos</div>
-        <div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>Consultá los existentes o prepará uno personalizado.</div>
+    {puedeEditar&&seccion==="modelos"&&<div className="card" style={{padding:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap"}}>
+      <div style={{flex:"1 1 220px",minWidth:0}}>
+        <div style={{fontSize:15,fontWeight:800}}>Tus documentos</div>
+        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:3}}>Elegí uno de los modelos de abajo para verlo o cambiarlo.</div>
       </div>
-      <nav aria-label="Opciones de documentos" style={{display:"flex",gap:7,flexWrap:"wrap",flex:"1 1 260px",justifyContent:"flex-end"}}>
-        <button type="button" aria-current={seccion==="modelos"?"page":undefined} className={seccion==="modelos"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setSeccion("modelos");}}>Modelos actuales</button>
-        <button type="button" aria-current={seccion==="creador"?"page":undefined} className={seccion==="creador"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setSeccion("creador");}}>Crear o adaptar <span style={{fontSize:10,opacity:.8,marginLeft:3}}>· En prueba</span></button>
-      </nav>
+      <button type="button" className="btn btn-primary" style={{minHeight:44,minWidth:160,whiteSpace:"nowrap"}} onClick={function(){setSeccion("creador");}}>＋ Crear modelo <span style={{fontSize:10,opacity:.75}}>· Prueba</span></button>
+    </div>}
+    {seccion==="creador"&&puedeEditar&&<div style={{display:"flex",justifyContent:"flex-start"}}>
+      <button type="button" className="btn btn-secondary btn-sm" style={{minHeight:40}} onClick={function(){setSeccion("modelos");}}>← Volver a mis documentos</button>
     </div>}
     {seccion==="creador"&&puedeEditar&&<CreadorModelosPreview perfil={perfil} bloquesReserva={bloquesReserva} onDirty={setLaboratorioDirty} inmobiliariaId={inmobiliariaId} usuarioActual={usuarioActual}/>}
     {seccion==="adicionales"&&<div className="card" style={{padding:14}}>
