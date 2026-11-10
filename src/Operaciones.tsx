@@ -1409,6 +1409,19 @@ html.dw-modal-open .content,html.dw-modal-open .app-wrap{overflow:hidden!importa
   .op-card .op-card-side .op-side-label{display:none;}
   .op-card .op-card-side .op-actions{margin-top:0;flex:0 0 auto;flex-wrap:nowrap;}
 }
+/* Acciones de Operaciones: evitar superposición entre Documento, Abrir, Editar y menú. */
+@media (min-width:1101px){
+ .dw-dashboard-root .op-card-premium .op-card-side{min-width:290px;max-width:338px;width:31%;box-sizing:border-box}
+ .dw-dashboard-root .op-card-premium .op-card-side .op-actions{width:100%;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+ .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{flex:0 1 auto;white-space:nowrap}
+ .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.op-add-doc-action{min-width:110px}
+}
+@media (min-width:761px) and (max-width:1100px){
+ .dw-dashboard-root .op-card-premium .op-card-side{min-width:208px!important;max-width:240px!important;width:34%}
+ .dw-dashboard-root .op-card-premium .op-card-side .op-actions{display:flex!important;flex-wrap:wrap!important;gap:6px!important;justify-content:flex-end}
+ .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{flex:1 1 89px;max-width:100%;white-space:nowrap}
+ .dw-dashboard-root .op-card-premium .op-card-side .op-actions .op-add-doc-action{min-width:108px}
+}
 /* DOCWORKS 5.16 — refinamiento visual del listado de operaciones, sin cambios de lógica. */
 .op-card-premium{border:1px solid var(--border);box-shadow:0 2px 12px rgba(10,20,40,.045);transition:box-shadow .18s ease,border-color .18s ease,transform .18s ease;}
 @media (hover:hover){.op-card-premium:hover{border-color:rgba(212,168,83,.32);box-shadow:0 9px 25px rgba(10,20,40,.085);transform:translateY(-1px);}}
@@ -4264,7 +4277,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     var removiendo = !!removingIds[op.id];
 
     const acciones=(
-      <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
+      <div className="op-actions" style={{display:"flex",alignItems:"center",gap:8,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end",maxWidth:"100%"}}>
         {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={13}/> <span>{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span></Btn>}
         <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
         {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}

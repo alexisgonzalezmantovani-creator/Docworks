@@ -1,0 +1,10 @@
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const code=fs.readFileSync(path.join(__dirname,"../src/Operaciones.tsx"),"utf8");
+assert.match(code,/className="op-actions" style=\{\{[^\n]*flexWrap:"wrap"/);
+assert.match(code,/min-width:1101px/);
+assert.match(code,/op-card-premium \.op-card-side\{min-width:290px/);
+assert.match(code,/min-width:761px\) and \(max-width:1100px/);
+assert.match(code,/op-card-premium \.op-card-side\{min-width:208px!important/);
+console.log("Acciones de operaciones: reglas responsive encontradas.");
