@@ -313,6 +313,8 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
  const [partes,setPartes]=useState([]);
  const [abierto,setAbierto]=useState(null);
  const [vista,setVista]=useState(false);
+ const [conformidadSeparada,setConformidadSeparada]=useState(false);
+ const [documentoActivo,setDocumentoActivo]=useState("reserva");
  const [alerta,setAlerta]=useState("");
  const area=useRef(null);
  const lectura=modo==="usar";
@@ -321,7 +323,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
   Array.isArray(bloquesReserva)&&bloquesReserva.length?bloquesReserva:DEFAULT_BLOQUES_RESERVA;
  useEffect(function(){onDirty(!!modo&&!lectura);},[modo,lectura,onDirty]);
  function iniciar(op){
-  setModo(op);setTitulo("Reserva de compra");setVista(false);setAlerta("");
+  setModo(op);setTitulo("Reserva de compra");setVista(false);setConformidadSeparada(false);setDocumentoActivo("reserva");setAlerta("");
   var lista=op==="propio"?[{id:"propio",titulo:"Mi primer apartado",contenido:"",activo:true}]:
    base.map(function(b,i){return {id:b.id||"base"+i,titulo:b.titulo||"Apartado "+(i+1),contenido:b.contenido||"",activo:b.activo!==false};});
   setPartes(lista);setAbierto(op==="propio"?"propio":null);
@@ -373,6 +375,12 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
     <label style={{display:"block",fontSize:12,fontWeight:700,marginBottom:12}}>Título del documento
       <input className="inp" disabled={lectura} value={titulo} onChange={function(e){setTitulo(e.target.value);}} style={{width:"100%",boxSizing:"border-box",marginTop:5}}/>
     </label>
+    <fieldset style={{border:"1px solid var(--border)",borderRadius:10,padding:11,margin:"0 0 12px"}}>
+     <legend style={{fontSize:12,fontWeight:750,padding:"0 5px"}}>Conformidad del vendedor</legend>
+     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,marginBottom:9,cursor:"pointer"}}><input type="radio" name="conformidad-demo" checked={!conformidadSeparada} onChange={function(){setConformidadSeparada(false);setDocumentoActivo("reserva");}}/> En el mismo documento</label>
+     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,cursor:"pointer"}}><input type="radio" name="conformidad-demo" checked={conformidadSeparada} onChange={function(){setConformidadSeparada(true);setDocumentoActivo("reserva");}}/> En un acta independiente</label>
+     <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:8}}>Esta prueba solo muestra los dos formatos. No modifica el modelo legal ni la exportación actual.</div>
+    </fieldset>
     {partes.map(function(p,i){return <div key={p.id} style={{border:"1px solid var(--border)",borderRadius:9,padding:9,marginBottom:8}}>
      <div style={{display:"flex",alignItems:"center",gap:8}}>
       <span style={{fontSize:12,color:"var(--dim)"}}>{i+1}.</span>
@@ -393,15 +401,28 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
     {!!alerta&&<div role="status" style={{fontSize:12,color:"var(--gold)",marginBottom:8}}>{alerta}</div>}
     <div style={{display:"flex",gap:8,justifyContent:"space-between",flexWrap:"wrap"}}>
       {!lectura?<button className="btn btn-secondary btn-sm" type="button" onClick={agregar}>＋ Agregar cláusula</button>:<span/>}
-      <button className="btn btn-primary btn-sm" type="button" disabled={!titulo.trim()} onClick={function(){setVista(true);}}>Ver documento →</button>
+      <button className="btn btn-primary btn-sm" type="button" disabled={!titulo.trim()} onClick={function(){setVista(true);setDocumentoActivo("reserva");}}>Ver documento →</button>
     </div>
    </>}
    {vista&&<>
-    <div style={{background:"#fff",color:"#253048",maxWidth:790,width:"100%",boxSizing:"border-box",margin:"0 auto",padding:"clamp(16px,4vw,36px)",borderRadius:7,overflowWrap:"anywhere"}}>
-     <h3 style={{textAlign:"center",fontSize:19,margin:"0 0 22px"}}>{titulo}</h3>
-     {partes.filter(function(p){return p.activo!==false;}).map(function(p,i){return <div key={p.id} style={{marginBottom:17}}><strong style={{fontSize:12}}>{i+1}. {p.titulo}</strong><p style={{fontSize:12.5,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{ejemplo(p.contenido)||"［Sin texto］"}</p></div>;})}
+    {conformidadSeparada&&<div role="tablist" aria-label="Documentos separados" style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+     <button type="button" role="tab" aria-selected={documentoActivo==="reserva"} className={documentoActivo==="reserva"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setDocumentoActivo("reserva");}}>1 · Reserva</button>
+     <button type="button" role="tab" aria-selected={documentoActivo==="acta"} className={documentoActivo==="acta"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setDocumentoActivo("acta");}}>2 · Acta de conformidad</button>
+    </div>}
+    <div role="tabpanel" style={{background:"#fff",color:"#253048",maxWidth:790,width:"100%",boxSizing:"border-box",margin:"0 auto",padding:"clamp(16px,4vw,36px)",borderRadius:7,overflowWrap:"anywhere"}}>
+     {conformidadSeparada&&documentoActivo==="acta"?<>
+      <h3 style={{textAlign:"center",fontSize:19,margin:"0 0 22px"}}>ACTA DE CONFORMIDAD DEL VENDEDOR</h3>
+      <p style={{fontSize:12.5,lineHeight:1.7}}>Lugar y fecha: ____________________________</p>
+      <p style={{fontSize:12.5,lineHeight:1.7}}>El/la vendedor/a {ejemplo("{{vendedor_nombre}}")}, respecto de la oferta de compra presentada por {ejemplo("{{comprador_nombre}}")} sobre el inmueble ubicado en {ejemplo("{{inmueble_direccion}}")}, declara haber tomado conocimiento de sus términos y presta conformidad únicamente con las condiciones expresamente identificadas en la reserva a la que se refiere esta acta.</p>
+      <p style={{fontSize:12.5,lineHeight:1.7}}>Identificación de la reserva y observaciones: _________________________________</p>
+      <p style={{fontSize:12.5,lineHeight:1.7}}>Esta acta requiere firma y fecha para documentar la manifestación de conformidad.</p>
+      <div style={{borderTop:"1px solid #aaa",marginTop:38,paddingTop:7,fontSize:12}}>Firma y aclaración del vendedor: ____________________________</div>
+     </>:<>
+      <h3 style={{textAlign:"center",fontSize:19,margin:"0 0 22px"}}>{titulo}</h3>
+      {partes.filter(function(p){return p.activo!==false;}).map(function(p,i){return <div key={p.id} style={{marginBottom:17}}><strong style={{fontSize:12}}>{i+1}. {p.titulo}</strong><p style={{fontSize:12.5,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{ejemplo(p.contenido)||"［Sin texto］"}</p></div>;})}
+     </>}
     </div>
-    <p style={{fontSize:11.5,color:"var(--dim)"}}>Vista conceptual, no un PDF. Los marcadores no son datos reales. Los textos legales requieren revisión antes de publicar.</p>
+    <p style={{fontSize:11.5,color:"var(--dim)"}}>Previsualización conceptual: no genera dos archivos reales todavía. El texto definitivo, la distribución de firmas y las cláusulas de aceptación deben revisarse jurídica y técnicamente antes de publicar.</p>
     <button className="btn btn-secondary btn-sm" type="button" onClick={function(){setVista(false);}}>← Volver a las cláusulas</button>
    </>}
   </div>}
