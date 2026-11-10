@@ -6243,6 +6243,7 @@ function BotIAActivo({onClose,onAddClausula}){
 // Inserta en la posición del cursor del textarea referenciado por taRef.
 function VariablePicker({taRef,value,onChange,label=""}){
   const [open,setOpen]=useState(false);
+  const [busqueda,setBusqueda]=useState("");
   const [pos,setPos]=useState(null);
   const wrapRef=useRef<HTMLDivElement>(null);
   const btnRef=useRef<HTMLButtonElement>(null);
@@ -6299,18 +6300,22 @@ function VariablePicker({taRef,value,onChange,label=""}){
       if(el){el.focus();var pos2=start+token.length;el.setSelectionRange(pos2,pos2);}
     },0);
   }
+  var consulta=busqueda.trim().toLocaleLowerCase("es");
+  var gruposVisibles=VAR_GROUPS.map(function(g){return {group:g.group,fields:g.fields.filter(function(f){return tokensUsados.indexOf(f.key)===-1&&(!consulta||(f.label+" "+f.key+" "+g.group).toLocaleLowerCase("es").includes(consulta));})};}).filter(function(g){return g.fields.length>0;});
   return(
     <div style={{position:"relative",display:"inline-block"}} ref={wrapRef}>
       <span ref={btnRef} style={{display:"inline-block"}}>
-        <Btn v="ghost" s="sm" type="button" onClick={function(){setOpen(function(o){return !o;});}}>🔗 {label||"Vincular dato"}</Btn>
+        <Btn v="ghost" s="sm" type="button" onClick={function(){setBusqueda("");setOpen(function(o){return !o;});}}>🔗 {label||"Vincular dato"}</Btn>
       </span>
       {open&&pos&&(
         <div className="var-picker-menu" style={{position:"fixed",left:pos.left,top:pos.top,bottom:pos.bottom,maxHeight:pos.maxHeight}}>
-          {VAR_GROUPS.map(function(g){
+          <div style={{padding:"8px",position:"sticky",top:0,background:"var(--card)",zIndex:1}}><input autoFocus aria-label="Buscar campo para insertar" className="inp" type="search" value={busqueda} onChange={function(e){setBusqueda(e.target.value);}} placeholder="Buscar campo…" style={{width:"100%",boxSizing:"border-box",fontSize:13}}/></div>
+          {gruposVisibles.length===0&&<div role="status" style={{padding:12,fontSize:12,color:"var(--muted)"}}>No hay campos que coincidan.</div>}
+          {gruposVisibles.map(function(g){
             return(
               <div key={g.group}>
                 <div className="var-picker-group">{g.group}</div>
-                {g.fields.filter(function(f){return tokensUsados.indexOf(f.key)===-1;}).map(function(f){
+                {g.fields.map(function(f){
                   return <button key={f.key} type="button" className="var-picker-item" onClick={function(){insert(f.key);}}>{f.label}</button>;
                 })}
               </div>
