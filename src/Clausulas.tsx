@@ -405,8 +405,9 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
  const panel={padding:14,border:"1px solid var(--border)",borderRadius:11,background:"var(--card)"};
  return <section style={{display:"flex",flexDirection:"column",gap:12,minWidth:0}} aria-label="Laboratorio de modelos">
   <div style={panel}><div style={{color:"var(--gold)",fontWeight:800,fontSize:11}}>LABORATORIO · NO PUBLICADO</div>
-   <h2 style={{margin:"5px 0",fontSize:21}}>Crear un modelo</h2>
-   <div style={{fontSize:12,color:"var(--dim)"}}>Probá con Reserva de compra. Los borradores y versiones quedan solo en este navegador. No llegan a los asesores ni modifican los documentos reales. Evitá cargar datos personales reales en esta prueba.</div></div>
+   <h2 style={{margin:"5px 0",fontSize:21}}>Crear o personalizar modelo</h2>
+   <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:5}}>1. Elegí cómo empezar &nbsp; · &nbsp; 2. Editá las cláusulas &nbsp; · &nbsp; 3. Revisá el documento</div>
+   <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:8}}>Prueba con Reserva de compra: se guarda solo en este navegador y no modifica los modelos reales. No cargues datos personales.</div></div>
   {!modo&&!!registro.borrador&&<div style={panel}>
    <div style={{fontSize:13,fontWeight:750,marginBottom:8}}>Tenés un modelo guardado</div>
    <div style={{fontSize:12,color:"var(--dim)",marginBottom:10}}>{registro.borrador.titulo||"Modelo"} · {registro.versiones.length} versión(es) locales</div>
@@ -611,13 +612,21 @@ function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clau
   var cantidadAdicionalesHeredadas=opcionalesDocumento.filter(function(c){return c.obligatoria===true||(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
   var hayClausulasAdicionalesConfigurables=cantidadAdicionalesEditables>0;
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":seccion==="creador"?"Prueba local: borradores, versiones y publicación simulada.":"Elegí un documento y editá su contenido."}</div></div></div>
-    {puedeEditar&&<nav aria-label="Cláusulas y documentos" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-      <button type="button" aria-pressed={seccion==="modelos"} className={seccion==="modelos"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
-      <button type="button" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
-      <button type="button" aria-pressed={seccion==="creador"} className={seccion==="creador"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("creador");}}>Prueba de modelos</button>
-      
+    <div className="section-header"><div><div className="section-title">{puedeEditar?"Documentos y cláusulas":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá cláusulas reutilizables para tus documentos.":seccion==="creador"?"Creá o adaptá modelos sin cambiar los documentos actuales.":"Administrá los modelos de tu inmobiliaria."}</div></div></div>
+    {puedeEditar&&<nav aria-label="Áreas de documentos y cláusulas" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+      <button type="button" aria-pressed={seccion==="modelos"||seccion==="creador"} className={seccion==="modelos"||seccion==="creador"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
+      <button type="button" aria-pressed={seccion==="adicionales"||seccion==="papelera"} className={seccion==="adicionales"||seccion==="papelera"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
     </nav>}
+    {puedeEditar&&(seccion==="modelos"||seccion==="creador")&&<div className="card" style={{padding:12,display:"flex",gap:12,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap"}}>
+      <div style={{minWidth:0,flex:"1 1 180px"}}>
+        <div style={{fontSize:13,fontWeight:750}}>Tus modelos de documentos</div>
+        <div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>Consultá los existentes o prepará uno personalizado.</div>
+      </div>
+      <nav aria-label="Opciones de documentos" style={{display:"flex",gap:7,flexWrap:"wrap",flex:"1 1 260px",justifyContent:"flex-end"}}>
+        <button type="button" aria-current={seccion==="modelos"?"page":undefined} className={seccion==="modelos"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setSeccion("modelos");}}>Modelos actuales</button>
+        <button type="button" aria-current={seccion==="creador"?"page":undefined} className={seccion==="creador"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setSeccion("creador");}}>Crear o adaptar <span style={{fontSize:10,opacity:.8,marginLeft:3}}>· En prueba</span></button>
+      </nav>
+    </div>}
     {seccion==="creador"&&puedeEditar&&<CreadorModelosPreview perfil={perfil} bloquesReserva={bloquesReserva} onDirty={setLaboratorioDirty} inmobiliariaId={inmobiliariaId} usuarioActual={usuarioActual}/>}
     {seccion==="adicionales"&&<div className="card" style={{padding:14}}>
       <h2 style={{fontSize:23,fontWeight:750,fontFamily:"DM Serif Display,serif",color:"var(--text)",margin:"0 0 6px"}}>Biblioteca de cláusulas</h2>
