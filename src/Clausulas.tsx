@@ -366,6 +366,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   }
   async function cambiarEstadoClausulaBiblioteca(clausula,estado){
     if(!puedeEditar||!clausula)return;
+    if(clausula.obligatoria===true){setEstadoClausulaError("Esta cláusula es obligatoria en el modelo anterior y no se puede cambiar desde las adicionales.");return;}
     if(estadoClausulaGuardandoRef.current)return;
     setEstadoClausulaError("");
     if(estado!=="asesor"&&estado!=="apagada"){setEstadoClausulaError("Elegí si esta cláusula adicional estará disponible para el asesor.");return;}
@@ -420,7 +421,8 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       {<details key={"biblioteca-"+tipoDocSel} id="dw-model-extra-clauses" className="card" style={{padding:14,scrollMarginTop:90}} data-step="clausulas">
         <summary style={{fontSize:14,fontWeight:700,color:"var(--text)",cursor:"pointer",minHeight:44,padding:"10px 0",boxSizing:"border-box"}}>Cláusulas adicionales disponibles para el asesor</summary>
         <div style={{fontSize:13,color:"var(--dim)",lineHeight:1.55,marginTop:5}}>Elegí qué cláusulas de la biblioteca estarán disponibles para {TIPOS[tipoDocSel]||tipoDocSel}. El asesor podrá incorporarlas cuando correspondan a la operación.</div>
-        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Estas cláusulas no forman parte del modelo fijo: se agregan únicamente si el asesor las selecciona. Su disponibilidad se configura para cada tipo de documento.</div>
+        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Las cláusulas disponibles se agregan únicamente si el asesor las selecciona. Las que figuran como «Siempre (modelo anterior)» conservan su configuración original.</div>
+        {estadoClausulaGuardando!==null&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>Guardando disponibilidad de la cláusula…</div>}
         {estadoClausulaError&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginBottom:10}}>{estadoClausulaError}</div>}
         {clausulasLoading&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>Cargando biblioteca…</div>}
         {clausulasError&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginBottom:10}}>{clausulasError} <button type="button" className="btn btn-secondary btn-sm" onClick={onRetryClausulas}>Reintentar</button></div>}
