@@ -4727,7 +4727,7 @@ function CierreEconomicoEditor({operacion,perfil,onGuardar,onCerrar,guardando}){
   }
   return <Modal open={true} onClose={function(){if(!guardando)onCerrar();}} title={previo?"Actualizar cierre económico":"Confirmar cierre económico"} closeOnBackdrop={!guardando}>
     <div style={{display:"flex",flexDirection:"column",gap:13}}>
-      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.6}}>El documento firmado no cambia. Estos datos sirven únicamente para registrar el resultado real y los cobros.</div>
+      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.6}}>El documento firmado no cambia. Estos datos registran el resultado real y los cobros. Atención: esta versión de prueba puede guardar cambios en la misma base de operaciones que la aplicación principal.</div>
       <label style={{fontSize:12,fontWeight:750}}>¿Se concretó la operación?
         <select className="inp" value={resultado} disabled={guardando} onChange={function(e){setResultado(e.target.value);setError("");}} style={{display:"block",width:"100%",marginTop:6}}>
           <option value="">Seleccionar resultado</option>
@@ -8897,7 +8897,15 @@ function DocWorksApp(){
     if(!visible.length){dwNotify("warning","No hay operaciones en el período seleccionado.");return;}
     var splitDefault=Math.max(0,Math.min(100,parseFloat((perfil&&perfil.broker_split_pct)!=null?perfil.broker_split_pct:50)||0));
     var splitMode=(perfil&&perfil.broker_split_mode)==="individual"?"individual":"uniforme",splitMap=(perfil&&perfil.broker_splits&&typeof perfil.broker_splits==="object")?perfil.broker_splits:{};
-    var filas=visible.map(function(o){var items=getComisionComponents(o)||[],split=splitMode==="individual"&&o.broker_id&&splitMap[o.broker_id]!=null?Math.max(0,Math.min(100,parseFloat(splitMap[o.broker_id])||0)):splitDefault;var usd=items.filter(function(i){return i.moneda==="USD";}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0),ars=items.filter(function(i){return i.moneda!=="USD";}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0);return {fecha:(o.created_at||"").slice(0,10),tipo:TIPOS[o.tipo]||o.tipo||"",estado:ESTADOS[o.estado]||o.estado||"",direccion:o.inmueble_direccion||"",comprador:o.comprador_nombre||o.locatario_nombre||"",vendedor:o.vendedor_nombre||o.locador_nombre||"",precio:o.precio||o.alquiler_monto_inicial||o.res_alq_monto_mensual||"",moneda:o.moneda||o.alquiler_moneda||o.res_alq_moneda||"",agente:o.broker_nombre||o.broker||"",comision_usd:usd,comision_ars:ars,participacion_agente_pct:split,agente_usd:o.broker_id?usd*split/100:0,agente_ars:o.broker_id?ars*split/100:0};});
+    var filas=visible.map(function(o){var items=getComisionComponents(o)||[],split=splitMode==="individual"&&o.broker_id&&splitMap[o.broker_id]!=null?Math.max(0,Math.min(100,parseFloat(splitMap[o.broker_id])||0)):splitDefault;var usd=items.filter(function(i){return i.moneda==="USD";}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0),ars=items.filter(function(i){return i.moneda!=="USD";}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0);return {fecha:(o.created_at||"").slice(0,10),tipo:TIPOS[o.tipo]||o.tipo||"",estado:ESTADOS[o.estado]||o.estado||"",direccion:o.inmueble_direccion||"",comprador:o.comprador_nombre||o.locatario_nombre||"",vendedor:o.vendedor_nombre||o.locador_nombre||"",precio:o.precio||o.alquiler_monto_inicial||o.res_alq_monto_mensual||"",moneda:o.moneda||o.alquiler_moneda||o.res_alq_moneda||"",agente:o.broker_nombre||o.broker||"",comision_usd:usd,comision_ars:ars,participacion_agente_pct:split,agente_usd:o.broker_id?usd*split/100:0,agente_ars:o.broker_id?ars*split/100:0,
+      cierre_resultado:o.cierre_economico&&o.cierre_economico.resultado||"sin_confirmar",
+      cierre_fecha:o.cierre_economico&&o.cierre_economico.fecha_cierre||"",
+      monto_final:o.cierre_economico&&o.cierre_economico.resultado==="concretada"?o.cierre_economico.monto_final:"",
+      monto_final_moneda:o.cierre_economico&&o.cierre_economico.moneda_final||"",
+      honorarios_cobrados_usd:o.cierre_economico&&Array.isArray(o.cierre_economico.honorarios)?o.cierre_economico.honorarios.filter(function(x){return x.moneda==="USD";}).reduce(function(a,x){return a+(Number(x.cobrado)||0);},0):"",
+      honorarios_cobrados_ars:o.cierre_economico&&Array.isArray(o.cierre_economico.honorarios)?o.cierre_economico.honorarios.filter(function(x){return x.moneda==="ARS";}).reduce(function(a,x){return a+(Number(x.cobrado)||0);},0):"",
+      broker_pagado_usd:o.cierre_economico&&Array.isArray(o.cierre_economico.honorarios)?o.cierre_economico.honorarios.filter(function(x){return x.moneda==="USD";}).reduce(function(a,x){return a+(Number(x.broker_pagado)||0);},0):"",
+      broker_pagado_ars:o.cierre_economico&&Array.isArray(o.cierre_economico.honorarios)?o.cierre_economico.honorarios.filter(function(x){return x.moneda==="ARS";}).reduce(function(a,x){return a+(Number(x.broker_pagado)||0);},0):""};});
     var etiqueta=periodo==="1"?"anio-"+fechaCorte.getFullYear():periodo==="2"?"ultimos-3-meses":periodo==="3"?"ultimos-6-meses":periodo==="4"?"ultimos-12-meses":"historial-completo";
     descargarCSV(filas,"docworks-operaciones-comisiones-"+etiqueta+"-"+new Date().toISOString().slice(0,10)+".csv");
   }
@@ -9170,7 +9178,7 @@ function DocWorksApp(){
   function changeEstado(id,estado){
     var previo=operaciones.find(function(o){return o.id===id;});
     if(!previo)return;
-    if(estado==="cerrado"){setCierreOp(previo);return;}
+    if(estado==="cerrado"&&!previo.parent_id&&["reserva","boleto","alquiler","reserva_alquiler"].includes(previo.tipo)){setCierreOp(previo);return;}
     persistirOperacionConRollback(Object.assign({},previo,{estado:estado}));
   }
   async function confirmarCierreEconomico(cierre){
