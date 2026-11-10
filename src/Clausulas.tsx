@@ -392,7 +392,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var adicionalesVisibles=catalogoBiblioteca.filter(function(c){return filtroAdicional==="todas"||clausulaAplicaTipo(c,filtroAdicional);});
   var opcionalesDocumento=catalogoBiblioteca.filter(function(c){return clausulaAplicaTipo(c,tipoDocSel);});
   var configAdicionalesDocumento=obtenerPlantillaConfig(perfil,tipoDocSel,clausulas);
-  var cantidadAdicionalesDisponibles=opcionalesDocumento.filter(function(c){return c.obligatoria===true||(configAdicionalesDocumento.clausulas_ids||[]).includes(c.id)||(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
+  var cantidadAdicionalesDisponibles=opcionalesDocumento.filter(function(c){return c.obligatoria!==true&&(configAdicionalesDocumento.clausulas_ids||[]).includes(c.id)&&!(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
   var cantidadAdicionalesEditables=opcionalesDocumento.filter(function(c){return c.obligatoria!==true;}).length;
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":"Elegí un documento y editá su contenido."}</div></div></div>
@@ -424,7 +424,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
           </div>
         </div>
       {<details key={"biblioteca-"+tipoDocSel} id="dw-model-extra-clauses" className="card" style={{padding:14,scrollMarginTop:90}} data-step="clausulas">
-        <summary style={{fontSize:14,fontWeight:700,color:"var(--text)",cursor:"pointer",minHeight:44,padding:"10px 0",boxSizing:"border-box"}}>Cláusulas adicionales para el asesor ({cantidadAdicionalesDisponibles} disponibles)</summary>
+        <summary style={{fontSize:14,fontWeight:700,color:"var(--text)",cursor:"pointer",minHeight:44,padding:"10px 0",boxSizing:"border-box"}}>Cláusulas adicionales para el asesor ({cantidadAdicionalesDisponibles} habilitadas)</summary>
         <div style={{fontSize:13,color:"var(--dim)",lineHeight:1.55,marginTop:5}}>Elegí qué cláusulas de la biblioteca estarán disponibles para {TIPOS[tipoDocSel]||tipoDocSel}. El asesor podrá incorporarlas cuando correspondan a la operación.</div>
         <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Las cláusulas disponibles se agregan únicamente si el asesor las selecciona. Las que figuran como «Siempre (modelo anterior)» conservan su configuración original.</div>
         {estadoClausulaGuardando!==null&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>Guardando disponibilidad de la cláusula…</div>}
