@@ -375,6 +375,8 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
     var opcionales=obtenerPlantillaConfig(perfilVigente,tipoDocSel,clausulas).clausulas_ids.slice();
     var tipoAlGuardar=tipoDocSel;
     var obligatorias=Array.isArray(cfg.obligatorias_ids)?cfg.obligatorias_ids.slice():[];
+    var yaDisponible=opcionales.includes(clausula.id)||obligatorias.includes(clausula.id);
+    if((estado==="asesor"&&yaDisponible&&!obligatorias.includes(clausula.id))||(estado==="apagada"&&!yaDisponible))return;
     if(estado==="apagada"){opcionales=opcionales.filter(function(id){return id!==clausula.id;});obligatorias=obligatorias.filter(function(id){return id!==clausula.id;});}
     else {obligatorias=obligatorias.filter(function(id){return id!==clausula.id;});if(opcionales.indexOf(clausula.id)<0)opcionales.push(clausula.id);}
     cfg.clausulas_ids=opcionales;cfg.obligatorias_ids=obligatorias;
