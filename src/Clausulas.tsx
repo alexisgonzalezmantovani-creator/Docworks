@@ -614,8 +614,8 @@ function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clau
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div className="section-header"><div><div className="section-title">{puedeEditar?"Documentos y cláusulas":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá cláusulas reutilizables para tus documentos.":seccion==="creador"?"Creá o adaptá modelos sin cambiar los documentos actuales.":"Administrá los modelos de tu inmobiliaria."}</div></div></div>
     {puedeEditar&&<nav aria-label="Áreas de documentos y cláusulas" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
-      <button type="button" aria-pressed={seccion==="modelos"||seccion==="creador"} className={seccion==="modelos"||seccion==="creador"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
       <button type="button" aria-pressed={seccion==="adicionales"||seccion==="papelera"} className={seccion==="adicionales"||seccion==="papelera"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
+      <button type="button" aria-pressed={seccion==="modelos"||seccion==="creador"} className={seccion==="modelos"||seccion==="creador"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
     </nav>}
     {puedeEditar&&(seccion==="modelos"||seccion==="creador")&&<div className="card" style={{padding:12,display:"flex",gap:12,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap"}}>
       <div style={{minWidth:0,flex:"1 1 180px"}}>
