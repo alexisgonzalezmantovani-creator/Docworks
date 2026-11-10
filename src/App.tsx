@@ -4651,6 +4651,160 @@ function useBodyScrollLock(active){
   },[active]);
 }
 
+
+// Los importes del cierre son datos internos. Nunca reemplazan las cifras del documento firmado.
+function filasEconomicasDocWorks(op,perfil){
+  var grupos:Record<string,any>={};
+  (getComisionComponents(op)||[]).forEach(function(c){
+    var moneda=String(c.moneda||op.moneda||"USD").toUpperCase();
+    if(!grupos[moneda])grupos[moneda]={moneda:moneda,acordado:0};
+    var n=Number(c.monto);
+    if(isFinite(n)&&n>0)grupos[moneda].acordado+=n;
+  });
+  var monedaDef=String(op.moneda||op.alquiler_moneda||op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"USD").toUpperCase();
+  if(!Object.keys(grupos).length)grupos[monedaDef]={moneda:monedaDef,acordado:0};
+  var personalizado=perfil&&perfil.broker_split_mode==="individual"&&op.broker_id&&perfil.broker_splits&&perfil.broker_splits[op.broker_id]!=null;
+  var split=Number(personalizado?perfil.broker_splits[op.broker_id]:(perfil&&perfil.broker_split_pct)!=null?perfil.broker_split_pct:50);
+  split=isFinite(split)?Math.max(0,Math.min(100,split)):50;
+  var anteriores=op.cierre_economico&&Array.isArray(op.cierre_economico.honorarios)?op.cierre_economico.honorarios:[];
+  return Object.keys(grupos).map(function(moneda){
+    var g=grupos[moneda],anterior=anteriores.find(function(x){return x.moneda===moneda;});
+    var acuerdo=Math.round(g.acordado*100)/100;
+    return {moneda:moneda,acordado:acuerdo,
+      final:anterior?String(anterior.final):String(acuerdo),
+      cobrado:anterior?String(anterior.cobrado):"0",
+      broker_final:anterior?String(anterior.broker_final):String(Math.round(acuerdo*split)/100),
+      broker_pagado:anterior?String(anterior.broker_pagado):"0"};
+  });
+}
+function montoFinalInicialDocWorks(op){
+  return String(op.tipo==="alquiler"?op.alquiler_monto_inicial||"":op.tipo==="reserva_alquiler"?op.res_alq_monto_mensual||"":op.precio||"");
+}
+function CierreEconomicoEditor({operacion,perfil,onGuardar,onCerrar,guardando}){
+  const previo=operacion.cierre_economico||null;
+  const [resultado,setResultado]=useState(previo?previo.resultado:operacion.proceso_estado==="rechazada"?"no_concretada":"");
+  const [montoFinal,setMontoFinal]=useState(previo&&previo.monto_final!=null?String(previo.monto_final):montoFinalInicialDocWorks(operacion));
+  const [honorarios,setHonorarios]=useState<any[]>(function(){return filasEconomicasDocWorks(operacion,perfil);});
+  const [error,setError]=useState("");
+  var monedaImporte=operacion.tipo==="alquiler"?operacion.alquiler_moneda:operacion.tipo==="reserva_alquiler"?(operacion.res_alq_monto_mensual_moneda||operacion.res_alq_moneda):operacion.moneda;
+  var moneda=monedaImporte||"USD";
+  var etiquetaImporte=operacion.tipo==="alquiler"||operacion.tipo==="reserva_alquiler"?"Canon mensual finalmente acordado":"Precio final de la operación";
+  function actualizarFila(idx,k,v){
+    setHonorarios(function(prev){return prev.map(function(x,i){
+      if(i!==idx)return x;
+      var nueva=Object.assign({},x,{[k]:v});
+      if(k==="final"){
+        var anterior=parseMontoAR(x.final),m=parseMontoAR(v),coef=anterior>0?parseMontoAR(x.broker_final)/anterior:0;
+        if(isFinite(m)&&m>=0&&isFinite(coef))nueva.broker_final=String(Math.round(m*coef*100)/100);
+      }
+      return nueva;
+    });});
+  }
+  function guardar(){
+    setError("");
+    if(resultado!=="concretada"&&resultado!=="no_concretada"){setError("Indicá si la operación se concretó.");return;}
+    var precio=resultado==="concretada"?parseMontoAR(montoFinal):0;
+    if(resultado==="concretada"&&(!isFinite(precio)||precio<0)){setError("Ingresá un importe final válido. Usá 0 solo si corresponde.");return;}
+    var filas:any[]=[];
+    if(resultado==="concretada"){
+      for(var i=0;i<honorarios.length;i++){
+        var f=honorarios[i],n=[f.final,f.cobrado,f.broker_final,f.broker_pagado].map(parseMontoAR);
+        if(n.some(function(x){return !isFinite(x)||x<0;})){setError("Todos los importes deben ser números válidos mayores o iguales a cero.");return;}
+        if(n[1]>n[0]+0.01||n[2]>n[0]+0.01||n[3]>n[2]+0.01||n[3]>n[1]+0.01){setError("Lo cobrado no puede superar lo acordado, ni la parte del broker superar los honorarios.");return;}
+        filas.push({moneda:f.moneda,acordado:f.acordado,final:n[0],cobrado:n[1],broker_final:n[2],broker_pagado:n[3]});
+      }
+    }
+    var cobroCompleto=resultado==="concretada"&&filas.every(function(f){return f.cobrado+0.01>=f.final&&f.broker_pagado+0.01>=f.broker_final;});
+    var now=new Date().toISOString();
+    onGuardar({resultado:resultado,monto_final:precio,moneda_final:moneda,honorarios:filas,
+      cobro_estado:resultado!=="concretada"?"no_aplica":cobroCompleto?"completo":"pendiente",
+      fecha_cierre:previo&&previo.fecha_cierre||now,actualizado_en:now});
+  }
+  function numericField(row,i,k,label){
+    return <label key={k} style={{fontSize:12,display:"flex",flexDirection:"column",gap:5,minWidth:0}}>
+      <span>{label}</span><input className="inp" inputMode="decimal" aria-label={label+" en "+row.moneda} value={row[k]} onChange={function(e){actualizarFila(i,k,e.target.value);}} style={{width:"100%",boxSizing:"border-box"}}/>
+    </label>;
+  }
+  return <Modal open={true} onClose={function(){if(!guardando)onCerrar();}} title={previo?"Actualizar cierre económico":"Confirmar cierre económico"} closeOnBackdrop={!guardando}>
+    <div style={{display:"flex",flexDirection:"column",gap:13}}>
+      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.6}}>El documento firmado no cambia. Estos datos sirven únicamente para registrar el resultado real y los cobros.</div>
+      <label style={{fontSize:12,fontWeight:750}}>¿Se concretó la operación?
+        <select className="inp" value={resultado} disabled={guardando} onChange={function(e){setResultado(e.target.value);setError("");}} style={{display:"block",width:"100%",marginTop:6}}>
+          <option value="">Seleccionar resultado</option>
+          <option value="concretada">Sí, se concretó</option>
+          <option value="no_concretada">No, se cerró sin concretarse</option>
+        </select>
+      </label>
+      {resultado==="concretada"&&<>
+        <label style={{fontSize:12,fontWeight:700}}>{etiquetaImporte} ({moneda})
+          <input className="inp" inputMode="decimal" value={montoFinal} disabled={guardando} onChange={function(e){setMontoFinal(e.target.value);}} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:6}}/>
+        </label>
+        {honorarios.map(function(f,i){return <div key={f.moneda} style={{border:"1px solid var(--border)",borderRadius:10,padding:11}}>
+          <div style={{fontSize:13,fontWeight:750,marginBottom:9}}>Honorarios · {f.moneda}</div>
+          <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Previstos en el documento: {fmt$(f.acordado,f.moneda)}</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+            {numericField(f,i,"final","Honorarios finales")}
+            {numericField(f,i,"cobrado","Total efectivamente cobrado")}
+            {numericField(f,i,"broker_final","Participación final del broker")}
+            {numericField(f,i,"broker_pagado","Pagado al broker")}
+          </div>
+        </div>;})}
+        <div style={{fontSize:11.5,color:"var(--dim)"}}>Los valores cobrados empiezan en 0 para evitar dar por recibido dinero que todavía no fue confirmado. Podés actualizar el cierre después.</div>
+      </>}
+      {resultado==="no_concretada"&&<div style={{fontSize:12,color:"var(--dim)"}}>Se registrará como cierre sin operación concretada, sin sumar importes a las estadísticas de cobros.</div>}
+      {!!error&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{error}</div>}
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,flexWrap:"wrap"}}>
+        <button type="button" disabled={guardando} className="btn btn-secondary" onClick={onCerrar}>Cancelar</button>
+        <button type="button" disabled={guardando||!resultado} className="btn btn-primary" onClick={guardar}>{guardando?"Guardando…":"Guardar cierre"}</button>
+      </div>
+    </div>
+  </Modal>;
+}
+function CierresEconomicosPanel({operaciones,perfil,usuario,onEditar}){
+  const [abierto,setAbierto]=useState(false);
+  const esBroker=usuario&&usuario.rol_base==="broker";
+  var ids=new Set((operaciones||[]).map(function(o){return o.id;}));
+  var raices=(operaciones||[]).filter(function(o){return (!o.parent_id||!ids.has(o.parent_id))&&(!esBroker||o.broker_id===usuario.id);});
+  var cerradas=raices.filter(function(o){return o.estado==="cerrado";});
+  var concretadas=cerradas.filter(function(o){return o.cierre_economico&&o.cierre_economico.resultado==="concretada";});
+  var pendientes=cerradas.filter(function(o){return !o.cierre_economico;});
+  var sinCobrar=concretadas.filter(function(o){return o.cierre_economico.cobro_estado!=="completo";});
+  var porMoneda:Record<string,any>={};
+  concretadas.forEach(function(o){(o.cierre_economico.honorarios||[]).forEach(function(f){
+    var m=f.moneda||"USD";if(!porMoneda[m])porMoneda[m]={cobrado:0,broker:0};
+    porMoneda[m].cobrado+=Number(f.cobrado)||0;porMoneda[m].broker+=Number(f.broker_pagado)||0;
+  });});
+  return <section className="card" style={{padding:15,marginBottom:14}}>
+    <div style={{display:"flex",justifyContent:"space-between",gap:9,alignItems:"center",flexWrap:"wrap"}}>
+      <div><strong style={{fontSize:15}}>Cierres y cobros confirmados</strong><div style={{fontSize:12,color:"var(--dim)",marginTop:4}}>Datos reales de operaciones cerradas, separados de las comisiones pactadas.</div></div>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setAbierto(!abierto);}} aria-expanded={abierto}>{abierto?"Ocultar":"Revisar cierres"} ({pendientes.length} sin revisar)</button>
+    </div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
+      <span className="badge">{concretadas.length} concretadas</span>
+      <span className="badge">{sinCobrar.length} con cobros pendientes</span>
+      <span className="badge">{pendientes.length} sin confirmar</span>
+    </div>
+    <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:10}}>
+      {Object.keys(porMoneda).map(function(moneda){return <div key={moneda} style={{fontSize:12,lineHeight:1.7}}>
+        <strong>{moneda}</strong> · Cobrado: {fmt$(porMoneda[moneda].cobrado,moneda)}
+        {esBroker&&<span> · Recibido por broker: {fmt$(porMoneda[moneda].broker,moneda)}</span>}
+      </div>;})}
+      {!Object.keys(porMoneda).length&&<span style={{fontSize:12,color:"var(--dim)"}}>Todavía no hay cobros confirmados.</span>}
+    </div>
+    {abierto&&<div style={{marginTop:12,borderTop:"1px solid var(--border)",paddingTop:10}}>
+      {cerradas.length===0&&<div style={{fontSize:12,color:"var(--dim)"}}>No hay operaciones cerradas.</div>}
+      {cerradas.slice().sort(function(a,b){return String(b.cierre_economico&&b.cierre_economico.actualizado_en||b.created_at||"").localeCompare(String(a.cierre_economico&&a.cierre_economico.actualizado_en||a.created_at||""));}).slice(0,30).map(function(op){
+        var status=op.cierre_economico?op.cierre_economico.resultado==="no_concretada"?"No concretada":op.cierre_economico.cobro_estado==="completo"?"Cobro completo":"Cobros pendientes":"Sin confirmar";
+        return <div key={op.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 0",borderBottom:"1px solid var(--border)",flexWrap:"wrap"}}>
+          <div style={{minWidth:0,flex:1,fontSize:12}}><strong style={{display:"block"}}>{op.inmueble_direccion||TIPOS[op.tipo]||"Operación"}</strong><span style={{color:"var(--dim)"}}>{status}</span></div>
+          {permisosOperacion(usuario,op).editar&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){onEditar(op);}}>{op.cierre_economico?"Editar cierre":"Confirmar cierre"}</button>}
+        </div>;
+      })}
+      {cerradas.length>30&&<div style={{fontSize:11,color:"var(--dim)",marginTop:7}}>Se muestran las últimas 30 operaciones cerradas.</div>}
+    </div>}
+  </section>;
+}
+
 function Modal({open,onClose,title,children=undefined,wide=undefined,formTipo=undefined,headerExtra=undefined,headerRight=undefined,viewerMode=undefined,soft=undefined,operationForm=false,closeOnBackdrop=true}){
   useBodyScrollLock(!!open);
   if(!open)return null;
@@ -8165,6 +8319,8 @@ function DocWorksApp(){
   useOperationPageScroll(showForm);
   function setShowForm(visible){if(visible)setFormContexto(claveContextoOperaciones(docworksAuth.contexto));setShowFormEstado(visible);}
   const [editOp,setEditOp]=useState(null);
+  const [cierreOp,setCierreOp]=useState<any>(null);
+  const [cierreGuardando,setCierreGuardando]=useState(false);
   const [formInitialOverride,setFormInitialOverride]=useState(null); // prefill de un borrador recuperado (operación nueva, sin guardar aún)
   const [draftPrompt,setDraftPrompt]=useState(null); // borrador pendiente detectado al abrir la app
   const [confirmCloseForm,setConfirmCloseForm]=useState(false);
@@ -8979,6 +9135,7 @@ function DocWorksApp(){
     var previo=operaciones.find(function(o){return o.id===next.id;});
     if(previo){
       var cambios=[];
+      if(JSON.stringify(previo.cierre_economico||null)!==JSON.stringify(next.cierre_economico||null))cambios.push("Cierre económico: resultado y cobros actualizados");
       ["estado","precio","moneda","inmueble_direccion","comprador_nombre","vendedor_nombre","locador_nombre","locatario_nombre"].forEach(function(k){
         var a=previo[k]==null?"":String(previo[k]), b=next[k]==null?"":String(next[k]);
         if(a!==b) cambios.push(k+": "+(a||"—")+" → "+(b||"—"));
@@ -9012,8 +9169,24 @@ function DocWorksApp(){
   }
   function changeEstado(id,estado){
     var previo=operaciones.find(function(o){return o.id===id;});
-    if(!previo) return;
+    if(!previo)return;
+    if(estado==="cerrado"){setCierreOp(previo);return;}
     persistirOperacionConRollback(Object.assign({},previo,{estado:estado}));
+  }
+  async function confirmarCierreEconomico(cierre){
+    var previo=cierreOp&&operaciones.find(function(o){return o.id===cierreOp.id;});
+    var actor=docworksAuth.contexto&&docworksAuth.contexto.usuario;
+    if(!previo||!permisosOperacion(actor,previo).editar){dwNotify("error","No tenés permiso para confirmar este cierre.");return;}
+    if(cierreGuardando)return;
+    setCierreGuardando(true);
+    try{
+      var nuevo=Object.assign({},previo,{estado:"cerrado",cierre_economico:Object.assign({},cierre,{actualizado_por:actor&&actor.id||null})});
+      var res=await persistirOperacionConRollback(nuevo);
+      if(res&&res.error){dwNotify("error","No se pudo guardar el cierre económico.");return;}
+      if(res&&res.contextoObsoleto)return;
+      setCierreOp(null);dwNotify("success","Cierre económico guardado. El documento original no se modificó.");
+    }catch(e){dwNotify("error","No se pudo confirmar el cierre económico.");}
+    finally{setCierreGuardando(false);}
   }
   // Centro de tareas: togglea una tarea del checklist operativo. Actualiza
   // tanto la lista de operaciones como el viewDoc abierto (que es una copia
@@ -9346,7 +9519,8 @@ function DocWorksApp(){
               {view==="dashboard"&&<DashboardView key={claveContextoOperaciones(docworksAuth.contexto)} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario} operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={abrirNuevaOperacion} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
               {view==="calendario"&&<CalendarioView operaciones={operaciones} onViewOp={function(op){abrirDoc(op);}}/>}
               {view==="clausulas"&&<ClausulasWorkspace key={perfilNube.contexto} perfil={perfil} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario?docworksAuth.contexto.usuario:null} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(res.error.message||"Error de comunicación con Supabase."));}return res;}).catch(function(err){setPerfil(anterior);dwNotify("error","No se pudo guardar el modelo del documento. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase."));return {error:err};});}} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} papeleraClausulas={papeleraClausulas} papeleraClausulasLoading={papeleraClausulasLoading} papeleraClausulasError={papeleraClausulasError} onRecargarPapeleraClausulas={recargarPapeleraClausulas} onRestaurarClausula={restaurarClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} clausulasLoading={clausulasLoading} onRetryClausulas={recargarClausulas}/>}
-              {view==="estadisticas"&&<EstadisticasView onExportarCSV={exportarOperacionesCSV} operaciones={operaciones} equipo={equipo} perfil={perfil} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol}/>}
+              {view==="estadisticas"&&<><CierresEconomicosPanel operaciones={operaciones} perfil={perfil} usuario={docworksAuth.contexto&&docworksAuth.contexto.usuario} onEditar={function(op){setCierreOp(op);}}/><EstadisticasView onExportarCSV={exportarOperacionesCSV} operaciones={operaciones} equipo={equipo} perfil={perfil} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol}/></>}
+              {cierreOp&&<CierreEconomicoEditor key={cierreOp.id} operacion={cierreOp} perfil={perfil} guardando={cierreGuardando} onCerrar={function(){if(!cierreGuardando)setCierreOp(null);}} onGuardar={confirmarCierreEconomico}/>}
               {view==="configuracion"&&<ConfiguracionView requestedTab={configDestino} onHelpNavigate={irAyuda} onOpenBot={function(){setShowBot(true);}} perfil={perfil} onChange={function(p){ var anterior=perfil; setPerfil(p); return perfilNube.guardarAhora(p).then(function(res){ if(res&&res.error&&!res.contextoObsoleto){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(res.error.message||"Error de comunicación con Supabase.")); } return res; }).catch(function(err){ setPerfil(anterior); dwNotify("error","No se pudo guardar el perfil de la inmobiliaria. "+traducirError(err&&err.message?err.message:"Error de comunicación con Supabase.")); return {error:err}; }); }} currentUserId={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.id : null} currentUserRole={docworksAuth.contexto && docworksAuth.contexto.usuario ? docworksAuth.contexto.usuario.rol_base : perfil.rol} darkMode={darkMode} onToggleDark={toggleDark} equipo={equipo} equipoSupabase={equipoSupabase} operaciones={operaciones} clausulas={clausulas} onAddClausula={addClausula} onEditClausula={editClausula} onDeleteClausula={deleteClausula} onMoveClausula={moveClausula} onDuplicateClausula={duplicateClausula} bloquesReserva={bloquesReserva} onUpdateBloqueReserva={updateBloqueReserva} onMoveBloqueReserva={moveBloqueReserva} bloquesError={bloquesSupabase.error} bloquesLoading={bloquesSupabase.loading} onRetryBloques={bloquesSupabase.recargar} clausulasError={clausulasError} onRetryClausulas={recargarClausulas} papelera={papelera} auditLog={auditLog} auditoriaSupabase={auditoriaSupabase} onExportarRespaldo={exportarRespaldo} onImportarRespaldo={importarRespaldo} onVaciarAuditoria={function(){setAuditLog([]);}} puedeInstalar={!!deferredInstallPrompt} onInstalar={instalarApp} onStartTour={abrirOnboarding} ctx={ctx}/>}
               </>)}
             </div>
