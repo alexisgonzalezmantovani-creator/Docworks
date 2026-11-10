@@ -371,7 +371,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
     setEstadoClausulaError("");
     if(estado!=="asesor"&&estado!=="apagada"){setEstadoClausulaError("Elegí si esta cláusula adicional estará disponible para el asesor.");return;}
     var perfilVigente=perfilActualRef.current;
-    var mapa=Object.assign({},perfilVigente&&perfilVigente.plantillas||{}),cfg=Object.assign({},mapa[tipoDocSel]||{});
+    var cfg=Object.assign({},perfilVigente&&perfilVigente.plantillas&&perfilVigente.plantillas[tipoDocSel]||{});
     var opcionales=obtenerPlantillaConfig(perfilVigente,tipoDocSel,clausulas).clausulas_ids.slice();
     var tipoAlGuardar=tipoDocSel;
     var obligatorias=Array.isArray(cfg.obligatorias_ids)?cfg.obligatorias_ids.slice():[];
