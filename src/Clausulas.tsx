@@ -315,6 +315,8 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
  const [vista,setVista]=useState(false);
  const [conformidadSeparada,setConformidadSeparada]=useState(false);
  const [documentoActivo,setDocumentoActivo]=useState("reserva");
+ const [tituloActa,setTituloActa]=useState("Acta de conformidad de reserva");
+ const [textoActa,setTextoActa]=useState("El/la vendedor/a {{vendedor_nombre}} manifiesta su conformidad con la oferta de compra presentada por {{comprador_nombre}} sobre el inmueble {{inmueble_direccion}}, conforme a los términos expresamente individualizados en la reserva a la que se vincula esta acta.");
  const [alerta,setAlerta]=useState("");
  const area=useRef(null);
  const lectura=modo==="usar";
@@ -323,7 +325,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
   Array.isArray(bloquesReserva)&&bloquesReserva.length?bloquesReserva:DEFAULT_BLOQUES_RESERVA;
  useEffect(function(){onDirty(!!modo&&!lectura);},[modo,lectura,onDirty]);
  function iniciar(op){
-  setModo(op);setTitulo("Reserva de compra");setVista(false);setConformidadSeparada(false);setDocumentoActivo("reserva");setAlerta("");
+  setModo(op);setTitulo("Reserva de compra");setVista(false);setConformidadSeparada(false);setDocumentoActivo("reserva");setTituloActa("Acta de conformidad de reserva");setTextoActa("El/la vendedor/a {{vendedor_nombre}} manifiesta su conformidad con la oferta de compra presentada por {{comprador_nombre}} sobre el inmueble {{inmueble_direccion}}, conforme a los términos expresamente individualizados en la reserva a la que se vincula esta acta.");setAlerta("");
   var lista=op==="propio"?[{id:"propio",titulo:"Mi primer apartado",contenido:"",activo:true}]:
    base.map(function(b,i){return {id:b.id||"base"+i,titulo:b.titulo||"Apartado "+(i+1),contenido:b.contenido||"",activo:b.activo!==false};});
   setPartes(lista);setAbierto(op==="propio"?"propio":null);
@@ -377,11 +379,21 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
     </label>
     <fieldset style={{border:"1px solid var(--border)",borderRadius:10,padding:11,margin:"0 0 12px"}}>
      <legend style={{fontSize:12,fontWeight:750,padding:"0 5px"}}>Conformidad del vendedor</legend>
-     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,marginBottom:9,cursor:"pointer"}}><input type="radio" name="conformidad-demo" checked={!conformidadSeparada} onChange={function(){setConformidadSeparada(false);setDocumentoActivo("reserva");}}/> En el mismo documento</label>
-     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,cursor:"pointer"}}><input type="radio" name="conformidad-demo" checked={conformidadSeparada} onChange={function(){setConformidadSeparada(true);setDocumentoActivo("reserva");}}/> En un acta independiente</label>
+     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,marginBottom:9,cursor:"pointer"}}><input type="radio" name="conformidad-demo" disabled={lectura} checked={!conformidadSeparada} onChange={function(){setConformidadSeparada(false);setDocumentoActivo("reserva");}}/> En el mismo documento</label>
+     <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,cursor:"pointer"}}><input type="radio" name="conformidad-demo" disabled={lectura} checked={conformidadSeparada} onChange={function(){setConformidadSeparada(true);setDocumentoActivo("reserva");}}/> En un acta independiente</label>
      <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:8}}>Esta prueba solo muestra los dos formatos. No modifica el modelo legal ni la exportación actual.</div>
     </fieldset>
-    {partes.map(function(p,i){return <div key={p.id} style={{border:"1px solid var(--border)",borderRadius:9,padding:9,marginBottom:8}}>
+    {conformidadSeparada&&<div role="tablist" aria-label="Editar documentos independientes" style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+      <button type="button" role="tab" aria-selected={documentoActivo==="reserva"} className={documentoActivo==="reserva"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setDocumentoActivo("reserva");setAbierto(null);}}>1 · Reserva</button>
+      <button type="button" role="tab" aria-selected={documentoActivo==="acta"} className={documentoActivo==="acta"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setDocumentoActivo("acta");setAbierto(null);}}>2 · Acta</button>
+    </div>}
+    {conformidadSeparada&&documentoActivo==="acta"&&<div style={{display:"flex",flexDirection:"column",gap:10,padding:12,border:"1px solid var(--border)",borderRadius:10,marginBottom:12}}>
+      <label style={{fontSize:12,fontWeight:750}}>Título del acta<input className="inp" style={{display:"block",marginTop:5,width:"100%",boxSizing:"border-box"}} value={tituloActa} onChange={function(e){setTituloActa(e.target.value);}}/></label>
+      <label style={{fontSize:12,fontWeight:750}}>Texto de conformidad<textarea className="inp" rows={7} style={{display:"block",marginTop:5,width:"100%",boxSizing:"border-box",resize:"vertical"}} value={textoActa} onChange={function(e){setTextoActa(e.target.value);}}/></label>
+      <label style={{fontSize:12}}>Vincular dato <select className="inp" defaultValue="" onChange={function(e){if(e.target.value)setTextoActa(function(v){return v+" {{"+e.target.value+"}}";});e.target.value="";}} style={{display:"block",marginTop:5,maxWidth:"100%"}}><option value="">＋ Seleccionar campo…</option>{campos.map(function(c){return <option key={c[0]} value={c[0]}>{c[1]}</option>;})}</select></label>
+      <div style={{fontSize:11.5,color:"var(--dim)"}}>Es un segundo documento editable, vinculado a la misma reserva. Revisá que la reserva principal no reproduzca la conformidad que querés dejar exclusivamente en el acta.</div>
+    </div>}
+    {(!conformidadSeparada||documentoActivo==="reserva")&&partes.map(function(p,i){return <div key={p.id} style={{border:"1px solid var(--border)",borderRadius:9,padding:9,marginBottom:8}}>
      <div style={{display:"flex",alignItems:"center",gap:8}}>
       <span style={{fontSize:12,color:"var(--dim)"}}>{i+1}.</span>
       <button type="button" aria-expanded={abierto===p.id} style={{flex:1,minWidth:0,border:0,textAlign:"left",background:"transparent",color:"var(--text)",fontWeight:700,fontSize:13,cursor:"pointer"}} onClick={function(){setAbierto(abierto===p.id?null:p.id);setAlerta("");}}>{p.titulo||"Sin título"} {abierto===p.id?"−":"+"}</button>
@@ -400,7 +412,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
     </div>;})}
     {!!alerta&&<div role="status" style={{fontSize:12,color:"var(--gold)",marginBottom:8}}>{alerta}</div>}
     <div style={{display:"flex",gap:8,justifyContent:"space-between",flexWrap:"wrap"}}>
-      {!lectura?<button className="btn btn-secondary btn-sm" type="button" onClick={agregar}>＋ Agregar cláusula</button>:<span/>}
+      {!lectura&&(!conformidadSeparada||documentoActivo==="reserva")?<button className="btn btn-secondary btn-sm" type="button" onClick={agregar}>＋ Agregar cláusula</button>:<span/>}
       <button className="btn btn-primary btn-sm" type="button" disabled={!titulo.trim()} onClick={function(){setVista(true);setDocumentoActivo("reserva");}}>Ver documento →</button>
     </div>
    </>}
@@ -411,9 +423,9 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
     </div>}
     <div role="tabpanel" style={{background:"#fff",color:"#253048",maxWidth:790,width:"100%",boxSizing:"border-box",margin:"0 auto",padding:"clamp(16px,4vw,36px)",borderRadius:7,overflowWrap:"anywhere"}}>
      {conformidadSeparada&&documentoActivo==="acta"?<>
-      <h3 style={{textAlign:"center",fontSize:19,margin:"0 0 22px"}}>ACTA DE CONFORMIDAD DEL VENDEDOR</h3>
+      <h3 style={{textAlign:"center",fontSize:19,margin:"0 0 22px"}}>{tituloActa}</h3>
       <p style={{fontSize:12.5,lineHeight:1.7}}>Lugar y fecha: ____________________________</p>
-      <p style={{fontSize:12.5,lineHeight:1.7}}>El/la vendedor/a {ejemplo("{{vendedor_nombre}}")}, respecto de la oferta de compra presentada por {ejemplo("{{comprador_nombre}}")} sobre el inmueble ubicado en {ejemplo("{{inmueble_direccion}}")}, declara haber tomado conocimiento de sus términos y presta conformidad únicamente con las condiciones expresamente identificadas en la reserva a la que se refiere esta acta.</p>
+      <p style={{fontSize:12.5,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{ejemplo(textoActa)}</p>
       <p style={{fontSize:12.5,lineHeight:1.7}}>Identificación de la reserva y observaciones: _________________________________</p>
       <p style={{fontSize:12.5,lineHeight:1.7}}>Esta acta requiere firma y fecha para documentar la manifestación de conformidad.</p>
       <div style={{borderTop:"1px solid #aaa",marginTop:38,paddingTop:7,fontSize:12}}>Firma y aclaración del vendedor: ____________________________</div>

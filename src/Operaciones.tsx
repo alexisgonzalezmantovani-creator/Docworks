@@ -4644,7 +4644,7 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
 
       <div className="card" style={{padding:18,marginBottom:20,borderRadius:16,borderColor:"rgba(212,168,83,.20)",background:"linear-gradient(135deg,rgba(212,168,83,.06),transparent)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap",marginBottom:14}}>
-          <div><div style={{fontSize:14,fontWeight:800,color:"var(--text)"}}>💰 {esBroker?"Mis comisiones":"Comisiones y participación"}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>{esBroker?"Este mes · únicamente las operaciones asignadas a vos.":"Este mes · resumen de honorarios y distribución."}</div></div>
+          <div><div style={{fontSize:14,fontWeight:800,color:"var(--text)"}}>💰 {esBroker?"Mis comisiones estimadas":"Comisiones estimadas y participación"}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>{esBroker?"Este mes · importes proyectados, no necesariamente cobrados.":"Este mes · importes proyectados, no necesariamente cobrados."}</div></div>
           <div style={{fontSize:12,color:"var(--gold)",fontWeight:700,padding:"6px 9px",borderRadius:20,background:"rgba(212,168,83,.10)"}}>{esBroker?"Mi participación "+splitBrokerPersonal+"%":"Asesor "+splitBroker+"% · Inmobiliaria "+(100-splitBroker)+"%"}</div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>

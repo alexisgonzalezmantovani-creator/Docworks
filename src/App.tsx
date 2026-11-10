@@ -4714,10 +4714,12 @@ function CierreEconomicoEditor({operacion,perfil,onGuardar,onCerrar,guardando}){
         filas.push({moneda:f.moneda,acordado:f.acordado,final:n[0],cobrado:n[1],broker_final:n[2],broker_pagado:n[3]});
       }
     }
-    var cobroCompleto=resultado==="concretada"&&filas.every(function(f){return f.cobrado+0.01>=f.final&&f.broker_pagado+0.01>=f.broker_final;});
+    var cobroCompleto=resultado==="concretada"&&filas.every(function(f){return f.cobrado+0.01>=f.final;});
+    var liquidacionCompleta=resultado==="concretada"&&filas.every(function(f){return f.broker_pagado+0.01>=f.broker_final;});
     var now=new Date().toISOString();
     onGuardar({resultado:resultado,monto_final:precio,moneda_final:moneda,honorarios:filas,
       cobro_estado:resultado!=="concretada"?"no_aplica":cobroCompleto?"completo":"pendiente",
+      liquidacion_broker_estado:resultado!=="concretada"?"no_aplica":liquidacionCompleta?"completo":"pendiente",
       fecha_cierre:previo&&previo.fecha_cierre||now,actualizado_en:now});
   }
   function numericField(row,i,k,label){
@@ -4769,6 +4771,7 @@ function CierresEconomicosPanel({operaciones,perfil,usuario,onEditar}){
   var concretadas=cerradas.filter(function(o){return o.cierre_economico&&o.cierre_economico.resultado==="concretada";});
   var pendientes=cerradas.filter(function(o){return !o.cierre_economico;});
   var sinCobrar=concretadas.filter(function(o){return o.cierre_economico.cobro_estado!=="completo";});
+  var brokerSinLiquidar=concretadas.filter(function(o){return o.cierre_economico.liquidacion_broker_estado!=="completo";});
   var porMoneda:Record<string,any>={};
   concretadas.forEach(function(o){(o.cierre_economico.honorarios||[]).forEach(function(f){
     var m=f.moneda||"USD";if(!porMoneda[m])porMoneda[m]={cobrado:0,broker:0};
@@ -4782,12 +4785,13 @@ function CierresEconomicosPanel({operaciones,perfil,usuario,onEditar}){
     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
       <span className="badge">{concretadas.length} concretadas</span>
       <span className="badge">{sinCobrar.length} con cobros pendientes</span>
+      <span className="badge">{brokerSinLiquidar.length} con liquidación al broker pendiente</span>
       <span className="badge">{pendientes.length} sin confirmar</span>
     </div>
     <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:10}}>
       {Object.keys(porMoneda).map(function(moneda){return <div key={moneda} style={{fontSize:12,lineHeight:1.7}}>
-        <strong>{moneda}</strong> · Cobrado: {fmt$(porMoneda[moneda].cobrado,moneda)}
-        {esBroker&&<span> · Recibido por broker: {fmt$(porMoneda[moneda].broker,moneda)}</span>}
+        <strong>{moneda}</strong>{!esBroker&&<span> · Cobrado: {fmt$(porMoneda[moneda].cobrado,moneda)}</span>}
+        {esBroker&&<span> · Percibido por broker: {fmt$(porMoneda[moneda].broker,moneda)}</span>}
       </div>;})}
       {!Object.keys(porMoneda).length&&<span style={{fontSize:12,color:"var(--dim)"}}>Todavía no hay cobros confirmados.</span>}
     </div>
@@ -8900,6 +8904,7 @@ function DocWorksApp(){
     var filas=visible.map(function(o){var items=getComisionComponents(o)||[],split=splitMode==="individual"&&o.broker_id&&splitMap[o.broker_id]!=null?Math.max(0,Math.min(100,parseFloat(splitMap[o.broker_id])||0)):splitDefault;var usd=items.filter(function(i){return i.moneda==="USD";}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0),ars=items.filter(function(i){return i.moneda!=="USD";}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0);return {fecha:(o.created_at||"").slice(0,10),tipo:TIPOS[o.tipo]||o.tipo||"",estado:ESTADOS[o.estado]||o.estado||"",direccion:o.inmueble_direccion||"",comprador:o.comprador_nombre||o.locatario_nombre||"",vendedor:o.vendedor_nombre||o.locador_nombre||"",precio:o.precio||o.alquiler_monto_inicial||o.res_alq_monto_mensual||"",moneda:o.moneda||o.alquiler_moneda||o.res_alq_moneda||"",agente:o.broker_nombre||o.broker||"",comision_usd:usd,comision_ars:ars,participacion_agente_pct:split,agente_usd:o.broker_id?usd*split/100:0,agente_ars:o.broker_id?ars*split/100:0,
       cierre_resultado:o.cierre_economico&&o.cierre_economico.resultado||"sin_confirmar",
       cierre_fecha:o.cierre_economico&&o.cierre_economico.fecha_cierre||"",
+      liquidacion_broker_estado:o.cierre_economico&&o.cierre_economico.liquidacion_broker_estado||"",
       monto_final:o.cierre_economico&&o.cierre_economico.resultado==="concretada"?o.cierre_economico.monto_final:"",
       monto_final_moneda:o.cierre_economico&&o.cierre_economico.moneda_final||"",
       honorarios_cobrados_usd:o.cierre_economico&&Array.isArray(o.cierre_economico.honorarios)?o.cierre_economico.honorarios.filter(function(x){return x.moneda==="USD";}).reduce(function(a,x){return a+(Number(x.cobrado)||0);},0):"",
