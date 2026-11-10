@@ -306,15 +306,119 @@ export function crearClausulasWorkspace(deps){
  const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, TIPO_ICON={}, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState} = deps;
 
 
+
+function CreadorModelosPreview({perfil,bloquesReserva,onDirty}){
+ const [modo,setModo]=useState("");
+ const [titulo,setTitulo]=useState("Reserva de compra");
+ const [partes,setPartes]=useState([]);
+ const [abierto,setAbierto]=useState(null);
+ const [vista,setVista]=useState(false);
+ const [alerta,setAlerta]=useState("");
+ const area=useRef(null);
+ const lectura=modo==="usar";
+ const config=perfil&&perfil.plantillas&&perfil.plantillas.reserva;
+ const base=config&&Array.isArray(config.body_blocks)&&config.body_blocks.length?config.body_blocks:
+  Array.isArray(bloquesReserva)&&bloquesReserva.length?bloquesReserva:DEFAULT_BLOQUES_RESERVA;
+ useEffect(function(){onDirty(!!modo&&!lectura);},[modo,lectura,onDirty]);
+ function iniciar(op){
+  setModo(op);setTitulo("Reserva de compra");setVista(false);setAlerta("");
+  var lista=op==="propio"?[{id:"propio",titulo:"Mi primer apartado",contenido:"",activo:true}]:
+   base.map(function(b,i){return {id:b.id||"base"+i,titulo:b.titulo||"Apartado "+(i+1),contenido:b.contenido||"",activo:b.activo!==false};});
+  setPartes(lista);setAbierto(op==="propio"?"propio":null);
+ }
+ function edit(id,campo,valor){setPartes(function(xs){return xs.map(function(x){return x.id===id?Object.assign({},x,{[campo]:valor}):x;});});}
+ function agregar(){
+  var id="extra-"+Date.now()+"-"+partes.length;
+  setPartes(function(xs){return xs.concat([{id:id,titulo:"Nueva cláusula",contenido:"",activo:true}]);});setAbierto(id);
+ }
+ function mover(i,d){
+  var j=i+d;if(j<0||j>=partes.length)return;
+  var xs=partes.slice(),x=xs[i];xs[i]=xs[j];xs[j]=x;setPartes(xs);
+ }
+ function separar(id){
+  var p=partes.find(function(x){return x.id===id;});
+  var n=area.current&&area.current.selectionStart;
+  if(!p||typeof n!=="number"||!p.contenido.slice(0,n).trim()||!p.contenido.slice(n).trim()){setAlerta("Ubicá el cursor entre dos párrafos antes de dividir.");return;}
+  var nuevo="separado-"+Date.now();
+  setPartes(function(xs){var i=xs.findIndex(function(x){return x.id===id;});return xs.slice(0,i).concat([Object.assign({},p,{contenido:p.contenido.slice(0,n)}),{id:nuevo,titulo:"Nuevo apartado",contenido:p.contenido.slice(n),activo:true}],xs.slice(i+1));});
+  setAbierto(nuevo);setAlerta("");
+ }
+ var campos=[["comprador_nombre","Comprador"],["vendedor_nombre","Vendedor"],["comprador_dni","DNI del comprador"],["vendedor_dni","DNI del vendedor"],["inmueble_direccion","Dirección"],["precio_letras","Precio en letras"],["anticipo_letras","Monto de reserva"],["fecha_posesion","Posesión"]];
+ function vincular(id,campo){
+  if(!campo)return;
+  var p=partes.find(function(x){return x.id===id;});if(!p)return;
+  var t=String(p.contenido||""),el=area.current;
+  var i=el&&el.selectionStart!=null?el.selectionStart:t.length,j=el&&el.selectionEnd!=null?el.selectionEnd:i;
+  edit(id,"contenido",t.slice(0,i)+"{{"+campo+"}}"+t.slice(j));
+ }
+ function ejemplo(t){return String(t||"").replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,function(_,k){return "［"+(campos.find(function(c){return c[0]===k;})||[k,k])[1]+" · dato automático］";});}
+ const panel={padding:14,border:"1px solid var(--border)",borderRadius:11,background:"var(--card)"};
+ return <section style={{display:"flex",flexDirection:"column",gap:12,minWidth:0}} aria-label="Laboratorio de modelos">
+  <div style={panel}><div style={{color:"var(--gold)",fontWeight:800,fontSize:11}}>LABORATORIO · NO PUBLICADO</div>
+   <h2 style={{margin:"5px 0",fontSize:21}}>Crear un modelo</h2>
+   <div style={{fontSize:12,color:"var(--dim)"}}>Probá con Reserva de compra. El original no se modifica. Nada se guarda ni se publica.</div></div>
+  {!modo&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,205px),1fr))",gap:10}}>
+   {[
+    ["usar","Usar modelo DocWorks","Explorá la reserva que ya tenemos."],
+    ["adaptar","Adaptar modelo DocWorks","Cambiá solamente las cláusulas necesarias."],
+    ["propio","Crear mi propio modelo","Pegá tu texto y dividilo en apartados."]
+   ].map(function(o){return <button key={o[0]} type="button" style={{...panel,textAlign:"left",minHeight:115,color:"var(--text)",cursor:"pointer"}} onClick={function(){iniciar(o[0]);}}><strong style={{display:"block",marginBottom:9}}>{o[1]}</strong><span style={{fontSize:12,color:"var(--dim)"}}>{o[2]}</span></button>;})}
+  </div>}
+  {!!modo&&<div style={panel}>
+   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
+    <strong>{vista?"Vista previa":"Cláusulas del modelo"}</strong>
+    <button className="btn btn-secondary btn-sm" type="button" onClick={function(){setModo("");setVista(false);setAbierto(null);}}>← Cambiar opción</button>
+   </div>
+   {!vista&&<>
+    <label style={{display:"block",fontSize:12,fontWeight:700,marginBottom:12}}>Título del documento
+      <input className="inp" disabled={lectura} value={titulo} onChange={function(e){setTitulo(e.target.value);}} style={{width:"100%",boxSizing:"border-box",marginTop:5}}/>
+    </label>
+    {partes.map(function(p,i){return <div key={p.id} style={{border:"1px solid var(--border)",borderRadius:9,padding:9,marginBottom:8}}>
+     <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <span style={{fontSize:12,color:"var(--dim)"}}>{i+1}.</span>
+      <button type="button" aria-expanded={abierto===p.id} style={{flex:1,minWidth:0,border:0,textAlign:"left",background:"transparent",color:"var(--text)",fontWeight:700,fontSize:13,cursor:"pointer"}} onClick={function(){setAbierto(abierto===p.id?null:p.id);setAlerta("");}}>{p.titulo||"Sin título"} {abierto===p.id?"−":"+"}</button>
+      {!lectura&&<button type="button" className="btn btn-secondary btn-sm" disabled={i===0} aria-label="Subir cláusula" onClick={function(){mover(i,-1);}}>↑</button>}
+      {!lectura&&<button type="button" className="btn btn-secondary btn-sm" disabled={i===partes.length-1} aria-label="Bajar cláusula" onClick={function(){mover(i,1);}}>↓</button>}
+     </div>
+     {abierto===p.id&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+      <input aria-label="Título de la cláusula" className="inp" disabled={lectura} value={p.titulo} onChange={function(e){edit(p.id,"titulo",e.target.value);}}/>
+      <textarea ref={area} aria-label="Texto de la cláusula" className="inp" rows={6} disabled={lectura} value={p.contenido} onChange={function(e){edit(p.id,"contenido",e.target.value);}} style={{boxSizing:"border-box",width:"100%",resize:"vertical"}}/>
+      {!lectura&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+       <select className="inp" aria-label="Insertar dato automático" defaultValue="" onChange={function(e){vincular(p.id,e.target.value);e.target.value="";}} style={{maxWidth:"100%",width:"auto"}}><option value="">＋ Vincular dato…</option>{campos.map(function(c){return <option key={c[0]} value={c[0]}>{c[1]}</option>;})}</select>
+       <button className="btn btn-secondary btn-sm" type="button" onClick={function(){separar(p.id);}}>Dividir aquí</button>
+       {modo==="propio"&&partes.length>1&&<button className="btn btn-secondary btn-sm" type="button" onClick={function(){setPartes(function(xs){return xs.filter(function(x){return x.id!==p.id;});});setAbierto(null);}}>Quitar</button>}
+      </div>}
+     </div>}
+    </div>;})}
+    {!!alerta&&<div role="status" style={{fontSize:12,color:"var(--gold)",marginBottom:8}}>{alerta}</div>}
+    <div style={{display:"flex",gap:8,justifyContent:"space-between",flexWrap:"wrap"}}>
+      {!lectura?<button className="btn btn-secondary btn-sm" type="button" onClick={agregar}>＋ Agregar cláusula</button>:<span/>}
+      <button className="btn btn-primary btn-sm" type="button" disabled={!titulo.trim()} onClick={function(){setVista(true);}}>Ver documento →</button>
+    </div>
+   </>}
+   {vista&&<>
+    <div style={{background:"#fff",color:"#253048",maxWidth:790,width:"100%",boxSizing:"border-box",margin:"0 auto",padding:"clamp(16px,4vw,36px)",borderRadius:7,overflowWrap:"anywhere"}}>
+     <h3 style={{textAlign:"center",fontSize:19,margin:"0 0 22px"}}>{titulo}</h3>
+     {partes.filter(function(p){return p.activo!==false;}).map(function(p,i){return <div key={p.id} style={{marginBottom:17}}><strong style={{fontSize:12}}>{i+1}. {p.titulo}</strong><p style={{fontSize:12.5,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{ejemplo(p.contenido)||"［Sin texto］"}</p></div>;})}
+    </div>
+    <p style={{fontSize:11.5,color:"var(--dim)"}}>Vista conceptual, no un PDF. Los marcadores no son datos reales. Los textos legales requieren revisión antes de publicar.</p>
+    <button className="btn btn-secondary btn-sm" type="button" onClick={function(){setVista(false);}}>← Volver a las cláusulas</button>
+   </>}
+  </div>}
+ </section>;
+}
+
 /* Componente legado de cláusulas personales eliminado: ya no forma parte del producto. */
 
 function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClausula,onEditClausula,onDeleteClausula,papeleraClausulas,papeleraClausulasLoading,papeleraClausulasError,onRecargarPapeleraClausulas,onRestaurarClausula,bloquesReserva,onUpdateBloqueReserva,onMoveBloqueReserva,bloquesError,bloquesLoading,onRetryBloques,clausulasError,clausulasLoading,onRetryClausulas,usuarioActual}) {
   const [restaurandoClausula,setRestaurandoClausula]=useState(null);
   const [errorPapeleraClausulas,setErrorPapeleraClausulas]=useState("");
+  const [laboratorioDirty,setLaboratorioDirty]=useState(false);
   const [seccion,setSeccionDirecto]=useState(perfil&&(perfil.rol==="dueno"||perfil.rol==="admin")?"modelos":"adicionales");
   function setSeccion(next){
     if(next===seccion)return;
     function cambiar(){setModeloEditando(false);setIntroduccionEditando(false);setSeccionDirecto(next);if(next==="papelera"){setErrorPapeleraClausulas("");if(onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}}
+    if(seccion==="creador"&&laboratorioDirty){requestDwConfirm("La prueba no se guarda. ¿Salir y descartar los cambios?",cambiar);return;}
     if(seccion==="adicionales"){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando&&next!==seccion)requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",cambiar);else cambiar();
   }
@@ -398,12 +502,14 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var cantidadAdicionalesHeredadas=opcionalesDocumento.filter(function(c){return c.obligatoria===true||(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
   var hayClausulasAdicionalesConfigurables=cantidadAdicionalesEditables>0;
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":"Elegí un documento y editá su contenido."}</div></div></div>
+    <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":seccion==="creador"?"Laboratorio de modelos sin guardado ni publicación.":"Elegí un documento y editá su contenido."}</div></div></div>
     {puedeEditar&&<nav aria-label="Cláusulas y documentos" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       <button type="button" aria-pressed={seccion==="modelos"} className={seccion==="modelos"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
       <button type="button" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
+      <button type="button" aria-pressed={seccion==="creador"} className={seccion==="creador"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("creador");}}>Prueba de modelos</button>
       
     </nav>}
+    {seccion==="creador"&&puedeEditar&&<CreadorModelosPreview perfil={perfil} bloquesReserva={bloquesReserva} onDirty={setLaboratorioDirty}/>}
     {seccion==="adicionales"&&<div className="card" style={{padding:14}}>
       <h2 style={{fontSize:23,fontWeight:750,fontFamily:"DM Serif Display,serif",color:"var(--text)",margin:"0 0 6px"}}>Biblioteca de cláusulas</h2>
 
