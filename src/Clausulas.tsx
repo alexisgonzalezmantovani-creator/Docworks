@@ -1,7 +1,8 @@
 import { IA_HABILITADA, MENSAJE_IA_PAUSADA } from './PrivacidadIA';
 import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
 import { SelectorDocumento } from './SelectorDocumento';
-import { claveModeloLab, leerModeloLab, escribirModeloLab, guardarRevisionModeloLab, recuperarVersionModeloLab } from './ModelosLaboratorio';
+import { claveModeloLab, leerModeloLab, escribirModeloLab, guardarRevisionModeloLab, recuperarVersionModeloLab, modeloLabVacio } from './ModelosLaboratorio';
+import { cargarModeloLabNube, guardarModeloLabNube, cargarModeloPublicadoNube } from './ModelosLaboratorioNube';
 // Módulo extraído sin modificar las declaraciones originales.
 export const CLAUSULAS_DEFAULT = [
   { id:"especial.credito_hipotecario", titulo:"Operación supeditada a crédito hipotecario", categoria:"financiación", tipos:["reserva","boleto"], obligatoria:false, contenido:"La presente operación queda supeditada a la aprobación del crédito hipotecario solicitado por la parte compradora." },
@@ -304,18 +305,24 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
 }
 
 export function crearClausulasWorkspace(deps){
- const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, getBodyBlocksConfig, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, TIPO_ICON={}, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState} = deps;
+ const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, getBodyBlocksConfig, loadSupabaseJs, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, TIPO_ICON={}, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState} = deps;
 
 
 
 function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usuarioActual}){
  const [tipoModelo,setTipoModelo]=useState("reserva");
+ const nubeHabilitada=import.meta.env.VITE_DOCWORKS_MODELOS_NUBE_QA==="true";
  const clave=claveModeloLab(inmobiliariaId,usuarioActual&&usuarioActual.id,tipoModelo);
  function almacenamientoModelo(){try{return typeof window==="undefined"?null:window.localStorage;}catch(_e){return null;}}
  const [registro,setRegistro]=useState(function(){
-  return leerModeloLab(almacenamientoModelo(),clave);
+  return nubeHabilitada?modeloLabVacio():leerModeloLab(almacenamientoModelo(),clave);
  });
  const [dirty,setDirty]=useState(false);
+ const [revisionNube,setRevisionNube]=useState(0);
+ const [cargandoNube,setCargandoNube]=useState(nubeHabilitada);
+ const [guardandoNube,setGuardandoNube]=useState(false);
+ const [errorNube,setErrorNube]=useState("");
+ const [reintentosNube,setReintentosNube]=useState(0);
  const [errorGuardar,setErrorGuardar]=useState("");
  const [confirmarSalir,setConfirmarSalir]=useState(false);
  const [verVersiones,setVerVersiones]=useState(false);
@@ -336,9 +343,25 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
  const base=getBodyBlocksConfig(perfil,tipoModelo,bloquesReserva);
  useEffect(function(){onDirty(!!dirty);},[dirty,onDirty]);
  useEffect(function(){
-  setRegistro(leerModeloLab(almacenamientoModelo(),clave));
-  setDirty(false);setModo("");
- },[clave]);
+  let activo=true;
+  setDirty(false);setModo("");setErrorNube("");setErrorGuardar("");setAlerta("");
+  if(!nubeHabilitada){
+   setRegistro(leerModeloLab(almacenamientoModelo(),clave));
+   setRevisionNube(0);setCargandoNube(false);return;
+  }
+  setRegistro(modeloLabVacio());setCargandoNube(true);
+  Promise.resolve().then(function(){return loadSupabaseJs();}).then(function(sb){
+   if(!sb)throw Error("No hay conexión disponible.");
+   return cargarModeloLabNube(sb,tipoModelo);
+  }).then(function(res){
+   if(!activo)return;
+   if(res.error)throw Error(res.error.message||"No se pudo leer el modelo compartido.");
+   const nube=res.estado?leerModeloLab({getItem:function(){return JSON.stringify(res.estado);}},"nube"):modeloLabVacio();
+   setRegistro(nube);setRevisionNube(res.revision||0);
+  }).catch(function(err){if(activo)setErrorNube(err.message||"No se pudo cargar el modelo compartido.");})
+    .finally(function(){if(activo)setCargandoNube(false);});
+  return function(){activo=false;};
+ },[clave,nubeHabilitada,reintentosNube]);
  function snapshotActual(){
   return {tipo:tipoModelo,modo:modo==="publicado"||modo==="usar"?"adaptar":modo,titulo:titulo,
    partes:partes.map(function(p){return Object.assign({},p);}),
@@ -356,17 +379,32 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
   setDocumentoActivo("reserva");setVista(false);setAbierto(null);
   setErrorGuardar("");setDirty(false);setConfirmarSalir(false);setMostrarConformidad(false);setConfirmarPublicacion(false);
  }
- function guardarPrueba(publicar){
+ async function guardarPrueba(publicar){
+  if(guardandoNube||cargandoNube)return;
   setErrorGuardar("");setAlerta("");
   if(!clave){setErrorGuardar("No se pudo identificar tu cuenta. No guardamos nada.");return;}
   if(modo==="publicado"){setErrorGuardar("Esta versión publicada es de solo lectura.");return;}
+  if(nubeHabilitada&&errorNube){setErrorGuardar("No se puede guardar hasta recuperar la conexión compartida.");return;}
   const resultado=guardarRevisionModeloLab(registro,snapshotActual(),!!publicar,new Date().toISOString());
   if(!resultado.ok){setErrorGuardar(resultado.errores.join(" "));return;}
-  if(!escribirModeloLab(almacenamientoModelo(),clave,resultado.estado)){
+  if(nubeHabilitada){
+   setGuardandoNube(true);
+   try{
+    const sb=await loadSupabaseJs();
+    if(!sb)throw Error("No se pudo conectar con el servidor.");
+    const res=await guardarModeloLabNube(sb,tipoModelo,resultado.estado,revisionNube,publicar);
+    if(res.error)throw Error(res.error.message||"No se pudo guardar el modelo compartido.");
+    if(!Number.isSafeInteger(res.revision)||res.revision<=revisionNube)throw Error("No se recibió confirmación del servidor.");
+    setRevisionNube(res.revision);
+   }catch(err){
+    setErrorGuardar((err.message||"No se pudo guardar.")+" No se sobrescribió el modelo existente.");return;
+   }finally{setGuardandoNube(false);}
+  }else if(!escribirModeloLab(almacenamientoModelo(),clave,resultado.estado)){
    setErrorGuardar("No se pudo guardar en este dispositivo. Revisá el espacio disponible o el modo privado.");return;
   }
   setRegistro(resultado.estado);setDirty(false);
-  setAlerta(publicar?"Listo: versión "+resultado.version+" publicada en esta prueba. Todavía no llega a los asesores.":"Listo: guardaste la versión "+resultado.version+" en este dispositivo.");setConfirmarPublicacion(false);
+  setAlerta(publicar?(nubeHabilitada?"Modelo compartido publicado para tu inmobiliaria.":"Publicado solo en este navegador de prueba."):(nubeHabilitada?"Modelo guardado para tu inmobiliaria.":"Modelo guardado en este dispositivo."));
+  setConfirmarPublicacion(false);
  }
  function descartarYSalir(){
   setModo("");setVista(false);setAbierto(null);setDirty(false);
@@ -409,13 +447,16 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
   <div style={panel}><div style={{color:"var(--gold)",fontWeight:800,fontSize:11}}>CREADOR DE DOCUMENTOS <span style={{fontSize:10,opacity:.7,marginLeft:5}}>· VERSIÓN DE PRUEBA</span></div>
    <h2 style={{margin:"5px 0",fontSize:21}}>{!modo?"¿Cómo querés empezar?":vista?"Revisá cómo quedó":"Cambiá solo lo que necesites"}</h2>
    <div style={{fontSize:12,fontWeight:700,marginTop:6}}>{!modo?"Paso 1 de 3 · Elegí un punto de partida":vista?"Paso 3 de 3 · Mirá el documento":"Paso 2 de 3 · Editá el texto"}</div>
-   <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:7}}>Tus cambios se guardan en este dispositivo. Esta prueba no modifica los documentos que usa hoy tu inmobiliaria.</div></div>
+   <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:7}}>{nubeHabilitada?"Prueba de guardado compartido. Aún no modifica los documentos de las operaciones.":"Tus cambios se guardan en este dispositivo. Esta prueba no modifica los documentos que usa hoy tu inmobiliaria."}</div>
+   {nubeHabilitada&&cargandoNube&&<div role="status" style={{fontSize:12,marginTop:9}}>Cargando modelo compartido…</div>}
+   {nubeHabilitada&&errorNube&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginTop:9}}>No se pudo cargar el modelo compartido: {errorNube}. Los cambios no se guardarán en la nube. <button className="btn btn-secondary btn-sm" type="button" onClick={function(){setReintentosNube(function(n){return n+1;});}}>Reintentar</button></div>}
+  </div>
   {!modo&&<div style={panel}>
    <label style={{fontSize:12.5,fontWeight:750,display:"block"}}>¿Qué documento querés preparar?
     <select className="inp" aria-label="Tipo de documento a crear" value={tipoModelo} onChange={function(e){
        const siguiente=e.target.value;
        setTipoModelo(siguiente);
-       setRegistro(leerModeloLab(almacenamientoModelo(),claveModeloLab(inmobiliariaId,usuarioActual&&usuarioActual.id,siguiente)));
+       if(!nubeHabilitada)setRegistro(leerModeloLab(almacenamientoModelo(),claveModeloLab(inmobiliariaId,usuarioActual&&usuarioActual.id,siguiente)));
        setDirty(false);setErrorGuardar("");setAlerta("");
       }} style={{display:"block",width:"100%",maxWidth:460,minHeight:44,boxSizing:"border-box",marginTop:8}}>
       {PLANTILLA_TIPOS.map(function(tipo){return <option key={tipo} value={tipo}>{TIPOS[tipo]||tipo}</option>;})}
@@ -435,7 +476,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
     ["usar","Usar uno listo","Quiero empezar con el modelo DocWorks."],
     ["adaptar","Modificar un modelo","Quiero cambiar algunas cláusulas del modelo DocWorks."],
     ["propio","Traer mi propio documento","Ya tengo un texto y quiero pegarlo acá."]
-   ].map(function(o){return <button key={o[0]} type="button" style={{...panel,textAlign:"left",minHeight:122,color:"var(--text)",cursor:"pointer",border:"1px solid var(--border2)"}} onClick={function(){iniciar(o[0]);}}><strong style={{display:"block",marginBottom:9}}>{o[1]}</strong><span style={{fontSize:12,color:"var(--dim)"}}>{o[2]}</span></button>;})}
+   ].map(function(o){return <button key={o[0]} type="button" disabled={nubeHabilitada&&(cargandoNube||!!errorNube)} style={{...panel,textAlign:"left",minHeight:122,color:"var(--text)",cursor:"pointer",border:"1px solid var(--border2)",opacity:nubeHabilitada&&(cargandoNube||!!errorNube)?.55:1}} onClick={function(){iniciar(o[0]);}}><strong style={{display:"block",marginBottom:9}}>{o[1]}</strong><span style={{fontSize:12,color:"var(--dim)"}}>{o[2]}</span></button>;})}
   </div>}
   {!!modo&&<div style={panel}>
    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
@@ -512,7 +553,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
     <div style={{display:"flex",gap:8,justifyContent:"space-between",flexWrap:"wrap"}}>
       {!lectura&&(!conformidadSeparada||documentoActivo==="reserva")?<button className="btn btn-secondary btn-sm" type="button" onClick={agregar}>＋ Agregar cláusula</button>:<span/>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
-       {!lectura&&<button className="btn btn-secondary btn-sm" type="button" disabled={!clave} onClick={function(){guardarPrueba(false);}}>Guardar borrador</button>}
+       {!lectura&&<button className="btn btn-secondary btn-sm" type="button" disabled={!clave||guardandoNube||cargandoNube||!!errorNube} onClick={function(){guardarPrueba(false);}}>Guardar borrador</button>}
        <button className="btn btn-primary" type="button" disabled={!titulo.trim()} style={{minHeight:44}} onClick={function(){setVista(true);setDocumentoActivo("reserva");}}>Siguiente · Revisar →</button>
       </div>
     </div>
@@ -547,14 +588,14 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
      <p style={{margin:"7px 0",lineHeight:1.5,color:"var(--dim)"}}>Solo se verá en este dispositivo. Los asesores todavía no recibirán el modelo.</p>
      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setConfirmarPublicacion(false);}}>Cancelar</button>
-      <button type="button" className="btn btn-primary btn-sm" onClick={function(){guardarPrueba(true);}}>Sí, publicar en prueba</button>
+      <button type="button" className="btn btn-primary btn-sm" disabled={guardandoNube||cargandoNube} onClick={function(){guardarPrueba(true);}}>{guardandoNube?"Guardando…":"Sí, publicar en prueba"}</button>
      </div>
     </div>}
     <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"space-between",alignItems:"center",marginTop:12}}>
      <button className="btn btn-secondary btn-sm" type="button" style={{minHeight:40}} onClick={function(){setVista(false);setConfirmarPublicacion(false);}}>← Volver a editar</button>
      <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
-      {modo!=="publicado"&&<button type="button" className="btn btn-secondary" disabled={!clave} onClick={function(){setConfirmarPublicacion(true);}}>Publicar · Prueba</button>}
-      {modo!=="publicado"&&<button type="button" className="btn btn-primary" disabled={!clave} onClick={function(){guardarPrueba(false);}}>Guardar mi modelo</button>}
+      {modo!=="publicado"&&<button type="button" className="btn btn-secondary" disabled={!clave||guardandoNube||cargandoNube||!!errorNube} onClick={function(){setConfirmarPublicacion(true);}}>Publicar · Prueba</button>}
+      {modo!=="publicado"&&<button type="button" className="btn btn-primary" disabled={!clave||guardandoNube||cargandoNube||!!errorNube} onClick={function(){guardarPrueba(false);}}>Guardar mi modelo</button>}
      </div>
     </div>
    </>}
@@ -563,6 +604,51 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
 }
 
 /* Componente legado de cláusulas personales eliminado: ya no forma parte del producto. */
+
+function ModelosPublicadosAsesor(){
+ const [tipo,setTipo]=useState("reserva");
+ const [publicado,setPublicado]=useState(null);
+ const [cargando,setCargando]=useState(false);
+ const [error,setError]=useState("");
+ useEffect(function(){
+  let vivo=true;
+  setCargando(true);setError("");setPublicado(null);
+  Promise.resolve().then(function(){return loadSupabaseJs();}).then(function(sb){
+   if(!sb)throw Error("No se pudo conectar.");
+   return cargarModeloPublicadoNube(sb,tipo);
+  }).then(function(res){
+   if(!vivo)return;
+   if(res.error)throw Error(res.error.message||"No se pudo cargar la publicación.");
+   setPublicado(res.snapshot?{version:res.version,snapshot:res.snapshot}:null);
+  }).catch(function(err){if(vivo)setError(err.message||"No se pudo cargar el documento.");})
+  .finally(function(){if(vivo)setCargando(false);});
+  return function(){vivo=false;};
+ },[tipo]);
+ const texto=function(t){return String(t||"").replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,function(_m,k){return "«"+k.replace(/_/g," ")+"»";});};
+ return <section className="card" style={{padding:15,minWidth:0}}>
+  <h2 style={{fontSize:21,margin:"0 0 6px"}}>Documentos de la inmobiliaria</h2>
+  <p style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:12}}>Estos son los modelos publicados por el administrador. Podés verlos, pero no cambiar su texto. Esta vista de prueba todavía no genera operaciones.</p>
+  <label style={{fontSize:12,fontWeight:750}}>Elegí un documento
+   <select className="inp" value={tipo} onChange={function(e){setTipo(e.target.value);}} style={{display:"block",width:"100%",maxWidth:460,minHeight:44,marginTop:6,boxSizing:"border-box"}}>
+    {PLANTILLA_TIPOS.map(function(t){return <option key={t} value={t}>{TIPOS[t]||t}</option>;})}
+   </select>
+  </label>
+  {cargando&&<p role="status" style={{fontSize:12,marginTop:12}}>Cargando documento…</p>}
+  {error&&<p role="alert" style={{color:"var(--red)",fontSize:12,marginTop:12}}>{error}</p>}
+  {!cargando&&!error&&!publicado&&<p style={{fontSize:12,color:"var(--dim)",marginTop:12}}>Todavía no hay un modelo publicado para este documento.</p>}
+  {!cargando&&!error&&publicado&&<div style={{marginTop:14}}>
+   <p style={{fontSize:12,color:"var(--dim)",marginBottom:10}}>Versión {publicado.version} · Solo lectura</p>
+   <div style={{background:"#fff",color:"#253048",padding:"clamp(16px,4vw,30px)",borderRadius:8,overflowWrap:"anywhere",whiteSpace:"pre-wrap"}}>
+    <h3 style={{fontSize:19,textAlign:"center",margin:"0 0 20px"}}>{publicado.snapshot.titulo||TIPOS[tipo]||tipo}</h3>
+    {(Array.isArray(publicado.snapshot.partes)?publicado.snapshot.partes:[]).filter(function(b){return b&&b.activo!==false;}).map(function(b,i){return <section key={b.id||i} style={{marginBottom:16}}>
+     <h4 style={{fontSize:12.5,marginBottom:7}}>{i+1}. {b.titulo}</h4>
+     <div style={{fontSize:12,lineHeight:1.7}}>{texto(b.contenido)}</div>
+    </section>;})}
+   </div>
+   {publicado.snapshot.conformidadSeparada&&<p style={{fontSize:12,color:"var(--dim)",marginTop:10}}>Este modelo incluye un acta de conformidad independiente, disponible en el circuito documental cuando se habilite.</p>}
+  </div>}
+ </section>;
+}
 
 function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clausulas,onAddClausula,onEditClausula,onDeleteClausula,papeleraClausulas,papeleraClausulasLoading,papeleraClausulasError,onRecargarPapeleraClausulas,onRestaurarClausula,bloquesReserva,onUpdateBloqueReserva,onMoveBloqueReserva,bloquesError,bloquesLoading,onRetryBloques,clausulasError,clausulasLoading,onRetryClausulas,usuarioActual}) {
   const [restaurandoClausula,setRestaurandoClausula]=useState(null);
@@ -615,7 +701,8 @@ function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clau
 
   const puedeEditar=!!perfil&&(perfil.rol==="dueno"||perfil.rol==="admin");
   // La navegación de Biblioteca y Modelos es independiente: no forzar el cambio de pestaña.
-  useEffect(function(){if(!puedeEditar&&seccion!=="adicionales")setSeccion("adicionales");},[puedeEditar]);
+  const modelosNubeQA=import.meta.env.VITE_DOCWORKS_MODELOS_NUBE_QA==="true";
+  useEffect(function(){if(!puedeEditar&&seccion!=="adicionales"&&!(modelosNubeQA&&seccion==="publicados"))setSeccion("adicionales");},[puedeEditar,modelosNubeQA,seccion]);
   const rolLabel=(ROLES_DEF[perfil&&perfil.rol]&&ROLES_DEF[perfil.rol].label)||(perfil&&perfil.rol)||"usuario";
   function guardarPerfil(next){return onSavePerfil(next);}
   const perfilActualRef=useRef(perfil);perfilActualRef.current=perfil;
@@ -658,6 +745,11 @@ function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clau
   var hayClausulasAdicionalesConfigurables=cantidadAdicionalesEditables>0;
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div className="section-header"><div><div className="section-title">{puedeEditar?"Documentos y cláusulas":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá cláusulas reutilizables para tus documentos.":seccion==="creador"?"Creá o adaptá modelos sin cambiar los documentos actuales.":"Administrá los modelos de tu inmobiliaria."}</div></div></div>
+    {!puedeEditar&&modelosNubeQA&&<nav aria-label="Biblioteca y documentos publicados" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+      <button type="button" className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
+      <button type="button" className={seccion==="publicados"?"btn btn-primary":"btn btn-secondary"} onClick={function(){setSeccion("publicados");}}>Documentos</button>
+    </nav>}
+    {!puedeEditar&&modelosNubeQA&&seccion==="publicados"&&<ModelosPublicadosAsesor/>}
     {puedeEditar&&<nav aria-label="Áreas de documentos y cláusulas" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
       <button type="button" aria-pressed={seccion==="adicionales"||seccion==="papelera"} className={seccion==="adicionales"||seccion==="papelera"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
       <button type="button" aria-pressed={seccion==="modelos"||seccion==="creador"} className={seccion==="modelos"||seccion==="creador"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0}} onClick={function(){setSeccion("modelos");}}>Documentos</button>

@@ -37,40 +37,33 @@ grant select,insert,update on public.dw_modelos_laboratorio_publicados to authen
 create policy dw_modelo_lab_admin_lectura on public.dw_modelos_laboratorio
   for select to authenticated
   using (inmobiliaria_id = (select public.fn_mi_inmobiliaria())
-    and exists (select 1 from public.usuarios u where u.id=(select auth.uid())
-      and u.inmobiliaria_id=(select public.fn_mi_inmobiliaria()) and u.activo and u.rol_base in ('dueno','admin')));
+    and (select public.fn_es_admin((select auth.uid()))));
 create policy dw_modelo_lab_admin_alta on public.dw_modelos_laboratorio
   for insert to authenticated
   with check (inmobiliaria_id = (select public.fn_mi_inmobiliaria())
-    and exists (select 1 from public.usuarios u where u.id=(select auth.uid())
-      and u.inmobiliaria_id=(select public.fn_mi_inmobiliaria()) and u.activo and u.rol_base in ('dueno','admin')));
+    and (select public.fn_es_admin((select auth.uid()))));
 create policy dw_modelo_lab_admin_edicion on public.dw_modelos_laboratorio
   for update to authenticated
   using (inmobiliaria_id = (select public.fn_mi_inmobiliaria())
-    and exists (select 1 from public.usuarios u where u.id=(select auth.uid())
-      and u.inmobiliaria_id=(select public.fn_mi_inmobiliaria()) and u.activo and u.rol_base in ('dueno','admin')))
+    and (select public.fn_es_admin((select auth.uid()))))
   with check (inmobiliaria_id = (select public.fn_mi_inmobiliaria())
-    and exists (select 1 from public.usuarios u where u.id=(select auth.uid())
-      and u.inmobiliaria_id=(select public.fn_mi_inmobiliaria()) and u.activo and u.rol_base in ('dueno','admin')));
+    and (select public.fn_es_admin((select auth.uid()))));
 
 -- Asesores activos ven exclusivamente la publicación, nunca el borrador.
 create policy dw_modelo_lab_publicado_lectura on public.dw_modelos_laboratorio_publicados
   for select to authenticated
   using (inmobiliaria_id=(select public.fn_mi_inmobiliaria())
-    and exists (select 1 from public.usuarios u where u.id=(select auth.uid()) and u.inmobiliaria_id=(select public.fn_mi_inmobiliaria()) and u.activo));
+    and (select public.fn_mi_inmobiliaria()) is not null);
 create policy dw_modelo_lab_publicado_alta on public.dw_modelos_laboratorio_publicados
   for insert to authenticated
   with check (inmobiliaria_id=(select public.fn_mi_inmobiliaria()) and publicado_por=(select auth.uid())
-    and exists (select 1 from public.usuarios u where u.id=(select auth.uid())
-      and u.inmobiliaria_id=(select public.fn_mi_inmobiliaria()) and u.activo and u.rol_base in ('dueno','admin')));
+    and (select public.fn_es_admin((select auth.uid()))));
 create policy dw_modelo_lab_publicado_edicion on public.dw_modelos_laboratorio_publicados
   for update to authenticated
   using (inmobiliaria_id=(select public.fn_mi_inmobiliaria())
-    and exists (select 1 from public.usuarios u where u.id=(select auth.uid())
-      and u.inmobiliaria_id=(select public.fn_mi_inmobiliaria()) and u.activo and u.rol_base in ('dueno','admin')))
+    and (select public.fn_es_admin((select auth.uid()))))
   with check (inmobiliaria_id=(select public.fn_mi_inmobiliaria())
-    and exists (select 1 from public.usuarios u where u.id=(select auth.uid())
-      and u.inmobiliaria_id=(select public.fn_mi_inmobiliaria()) and u.activo and u.rol_base in ('dueno','admin')));
+    and (select public.fn_es_admin((select auth.uid()))));
 
 -- Escritura atómica: una revisión CAS y una publicación que jamás expone borradores.
 create or replace function public.fn_dw_modelo_lab_guardar(
@@ -87,8 +80,7 @@ declare
   v_snapshot jsonb;
 begin
   if v_inmo is null or v_usuario is null
-    or not exists(select 1 from public.usuarios u where u.id=v_usuario and u.inmobiliaria_id=v_inmo
-      and u.activo and u.rol_base in ('dueno','admin')) then
+    or not public.fn_es_admin(v_usuario) then
     raise exception 'Sin permiso para editar modelos' using errcode='42501';
   end if;
   if p_tipo not in ('reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva')
@@ -98,6 +90,15 @@ begin
     or jsonb_array_length(p_estado->'versiones')>25
     or octet_length(p_estado::text)>250000 then
     raise exception 'Modelo inválido' using errcode='22023';
+  end if;
+  if p_estado->'borrador' is not null and p_estado->'borrador'<>'null'::jsonb
+    and coalesce(p_estado->'borrador'->>'tipo','reserva') is distinct from p_tipo then
+    raise exception 'El borrador pertenece a otro documento' using errcode='22023';
+  end if;
+  if exists(select 1 from jsonb_array_elements(p_estado->'versiones') v
+    where jsonb_typeof(v->'snapshot')<>'object'
+       or coalesce(v->'snapshot'->>'tipo','reserva') is distinct from p_tipo) then
+    raise exception 'Las versiones pertenecen a otro documento' using errcode='22023';
   end if;
   insert into public.dw_modelos_laboratorio(inmobiliaria_id,tipo_documento)
     values(v_inmo,p_tipo) on conflict do nothing;
@@ -115,6 +116,12 @@ begin
     select x->'snapshot' into v_snapshot from jsonb_array_elements(p_estado->'versiones') x
       where (x->>'version')::integer=v_publicada limit 1;
     if v_snapshot is null then raise exception 'La versión publicada no existe' using errcode='22023'; end if;
+    if coalesce(v_snapshot->>'tipo','reserva') is distinct from p_tipo
+       or coalesce(v_snapshot->>'modo','') not in ('adaptar','propio')
+       or nullif(trim(v_snapshot->>'titulo'),'') is null
+       or jsonb_typeof(v_snapshot->'partes') <> 'array' then
+      raise exception 'No corresponde el tipo o formato del modelo publicado' using errcode='22023';
+    end if;
     insert into public.dw_modelos_laboratorio_publicados
       (inmobiliaria_id,tipo_documento,version,snapshot,publicado_por,publicado_en)
       values(v_inmo,p_tipo,v_publicada,v_snapshot,v_usuario,now())
