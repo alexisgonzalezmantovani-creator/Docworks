@@ -64,6 +64,23 @@ delete global.document;
    assert.deepEqual(snapComodato.body_blocks,[]);
    assert.deepEqual(snapComodato.clausulas,[]);
  });
+ const perfilPropioNuevo={...perfilPropio,plantillas:{...perfilPropio.plantillas,comodato:{
+   ...perfilPropio.plantillas.comodato,
+   version:5,
+   documento_propio:contratoComodato.replace('CONTRATO DE COMODATO','COMODATO ACTUALIZADO')
+ }}};
+ const snapComodatoNuevo=app.crearSnapshotPlantillaOperacion(opComodato,perfilPropioNuevo,[],app.getDefaultBodyBlocks('comodato'));
+ check('cambiar un modelo no altera el contrato histórico de la operación',()=>{
+   assert.equal(snapComodato.version,4);
+   assert.equal(snapComodatoNuevo.version,5);
+   assert.ok(snapComodato.documento_propio.startsWith('CONTRATO DE COMODATO'));
+   assert.ok(snapComodatoNuevo.documento_propio.startsWith('COMODATO ACTUALIZADO'));
+   const viejo=app.docToPlainText(app.buildDocSections({...opComodato,plantilla_snapshot:snapComodato},[],'comodato'));
+   const nuevo=app.docToPlainText(app.buildDocSections({...opComodato,plantilla_snapshot:snapComodatoNuevo},[],'comodato'));
+   assert.ok(viejo.startsWith('CONTRATO DE COMODATO'));
+   assert.ok(nuevo.startsWith('COMODATO ACTUALIZADO'));
+   assert.ok(!viejo.includes('COMODATO ACTUALIZADO'));
+ });
  const opComodatoPropio={...opComodato,plantilla_snapshot:snapComodato};
  const docComodatoPropio=app.aplicarEncabezadoPersonalizado(app.buildDocSections(opComodatoPropio,[],'comodato'),opComodatoPropio,'comodato',perfilPropio);
  const textoComodatoPropio=app.docToPlainText(docComodatoPropio);

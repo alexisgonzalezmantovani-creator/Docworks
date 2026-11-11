@@ -37,7 +37,13 @@ export default function DocumentoPropioEditor({
   const [revisar,setRevisar]=useState(false);
   const [mostrarVista,setMostrarVista]=useState(false);
   const inputRef=useRef<HTMLTextAreaElement|null>(null);
-  const dirty=texto!==textoActual;
+  // Recordar la selección del texto antes de que el selector de chips tome el foco (iPhone/Safari).
+  const seleccionRef=useRef({inicio:textoActual.length,fin:textoActual.length});
+  const guardandoRef=useRef(false);
+  const [textoGuardadoLocal,setTextoGuardadoLocal]=useState<string|null>(null);
+  const baseGuardada=textoGuardadoLocal===null?textoActual:textoGuardadoLocal;
+  const dirty=texto!==baseGuardada;
+  const necesitaGuardar=dirty||config.modo_documento!=="propio";
   const grupo=tipo==="alquiler"||tipo==="reserva_alquiler"?"locacion":tipo==="comodato"?"comodato":tipo==="exclusividad"?"exclusividad":"compra";
   const rolesPorGrupo:Record<string,string[]>={
     locacion:["locador","locatario"], comodato:["comodante","comodatario"],
@@ -84,30 +90,55 @@ export default function DocumentoPropioEditor({
     };
   },[dirty,estado,confirmar]);
   function cambiarTexto(v:string){setTexto(v);setRevisar(false);setMostrarVista(false);setError("");setEstado("idle");}
+  function recordarSeleccion(el:HTMLTextAreaElement){
+    seleccionRef.current={inicio:el.selectionStart,fin:el.selectionEnd};
+  }
   function insertar(key:string){
     if(!permitidos.has(key))return;
-    const el=inputRef.current;
-    const from=el&&typeof el.selectionStart==="number"?el.selectionStart:texto.length;
-    const to=el&&typeof el.selectionEnd==="number"?el.selectionEnd:from;
+    // El select nativo suele mover la selección a 0 o al final; usamos la última del textarea.
+    const from=Math.min(seleccionRef.current.inicio,texto.length);
+    const to=Math.min(seleccionRef.current.fin,texto.length);
     const chip="{{"+key+"}}";
     cambiarTexto(texto.slice(0,from)+chip+texto.slice(to));
+    seleccionRef.current={inicio:from+chip.length,fin:from+chip.length};
     setTimeout(()=>{if(inputRef.current){inputRef.current.focus();inputRef.current.setSelectionRange(from+chip.length,from+chip.length);}},0);
   }
   async function guardar(){
+    if(guardandoRef.current||!necesitaGuardar)return;
     setRevisar(true);setError("");
     if(!valido){setError("Antes de guardar, corregí los campos señalados en Revisar.");return;}
+    guardandoRef.current=true;
     setEstado("saving");
     const perfilPrev=perfil;
     const mapa={...(perfilPrev.plantillas||{})};
     const anterior={...(mapa[tipo]||{})};
-    mapa[tipo]={...anterior,modo_documento:"propio",documento_propio:texto.replace(/\r\n?/g,"\n"),
-      documento_propio_anterior:anterior.modo_documento==="propio"?String(anterior.documento_propio||""):null,
-      version:Math.max(1,parseInt(String(anterior.version||1),10)||1)+1,version_updated_at:new Date().toISOString()};
+    const textoFinal=texto.replace(/\r\n?/g,"\n");
+    const anteriorTexto=String(anterior.documento_propio||"");
+    const esEdicionPrevista=anterior.modo_documento==="propio"&&anteriorTexto!==textoFinal;
+    const historialAnterior=Array.isArray(anterior.historial_documento_propio)?anterior.historial_documento_propio:[];
+    const historialNuevo=esEdicionPrevista&&anteriorTexto.trim()
+      ?[{version:Math.max(1,parseInt(String(anterior.version||1),10)||1),texto:anteriorTexto,fecha:anterior.version_updated_at||null},...historialAnterior].slice(0,5)
+      :historialAnterior;
+    mapa[tipo]={...anterior,modo_documento:"propio",documento_propio:textoFinal,
+      documento_propio_anterior:esEdicionPrevista?anteriorTexto:(anterior.documento_propio_anterior||null),
+      historial_documento_propio:historialNuevo,
+      version:Math.max(1,parseInt(String(anterior.version||1),10)||1)+1,
+      version_updated_at:new Date().toISOString()};
     try{
       const res=await onSavePerfil({...perfilPrev,plantillas:mapa});
       if(res&&res.error)throw res.error;
+      setTextoGuardadoLocal(textoFinal);
       setEstado("saved");
     }catch(err:any){setEstado("error");setError(err?.message||"No se pudo guardar. El contrato sigue en pantalla.");}
+    finally{guardandoRef.current=false;}
+  }
+  function recuperarVersionAnterior(){
+    const textoAnterior=String(config.documento_propio_anterior||"");
+    if(!textoAnterior.trim())return;
+    confirmar("¿Recuperar el texto anterior? Se abrirá como borrador para que lo revises antes de guardarlo.",()=>{
+      cambiarTexto(textoAnterior);
+      seleccionRef.current={inicio:textoAnterior.length,fin:textoAnterior.length};
+    });
   }
   return <section className="card" aria-label="Editor de contrato propio" style={{padding:14,display:"flex",flexDirection:"column",gap:12}}>
     <div style={{fontSize:17,fontWeight:750,color:"var(--text)"}}>Tu contrato completo</div>
@@ -116,7 +147,10 @@ export default function DocumentoPropioEditor({
     </div>
     <textarea ref={inputRef} className="inp" aria-label="Texto del contrato propio" value={texto} disabled={estado==="saving"}
       style={{width:"100%",minHeight:360,resize:"vertical",boxSizing:"border-box",fontSize:14,lineHeight:1.65,whiteSpace:"pre-wrap"}}
-      placeholder="Pegá acá todo tu contrato…" onChange={ev=>cambiarTexto(ev.target.value)} />
+      placeholder="Pegá acá todo tu contrato…" onChange={ev=>{cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
+      onSelect={ev=>recordarSeleccion(ev.currentTarget)}
+      onClick={ev=>recordarSeleccion(ev.currentTarget)}
+      onKeyUp={ev=>recordarSeleccion(ev.currentTarget)} />
     <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",alignItems:"center"}}>
       <label style={{fontSize:12,fontWeight:650,color:"var(--text)"}}>Insertar dato automático
         <select className="inp" style={{display:"block",width:"min(100%,320px)",marginTop:5}} defaultValue=""
@@ -140,7 +174,7 @@ export default function DocumentoPropioEditor({
     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       <button type="button" className="btn btn-secondary" onClick={()=>{setRevisar(true);setMostrarVista(false);}}>Revisar</button>
       <button type="button" className="btn btn-secondary" onClick={()=>setMostrarVista(v=>!v)}>{mostrarVista?"Cerrar vista previa":"Vista previa"}</button>
-      <button type="button" className="btn btn-primary" disabled={estado==="saving"} onClick={guardar}>{estado==="saving"?"Guardando…":"Guardar cambios"}</button>
+      <button type="button" className="btn btn-primary" disabled={estado==="saving"||!necesitaGuardar} onClick={guardar}>{estado==="saving"?"Guardando…":"Guardar cambios"}</button>
       {estado==="saved"&&<span role="status" style={{fontSize:12,color:"var(--green)",alignSelf:"center"}}>✓ Guardado para próximas operaciones</span>}
     </div>
     {mostrarVista&&<div style={{background:"#fff",color:"#243447",border:"1px solid #d1d5db",borderRadius:8,padding:"clamp(18px,4vw,36px)",lineHeight:1.65,fontSize:13,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>
@@ -149,6 +183,8 @@ export default function DocumentoPropioEditor({
         ? <span key={i} style={{background:"#e0f2fe",color:"#075985",borderRadius:4}}>{CHIPS.find(([key])=>key===trozo.slice(2,-2))?.[1]||trozo}</span>
         : <span key={i}>{trozo}</span>)}
     </div>}
+    {config.modo_documento==="propio"&&String(config.documento_propio_anterior||"").trim()&&
+      <button type="button" className="btn btn-ghost btn-sm" style={{alignSelf:"flex-start"}} disabled={estado==="saving"} onClick={recuperarVersionAnterior}>↶ Recuperar texto anterior</button>}
     <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>
       Este modelo no modifica operaciones anteriores. El contrato propio debe ser revisado por la inmobiliaria; DocWorks no verifica automáticamente su validez jurídica.
     </div>

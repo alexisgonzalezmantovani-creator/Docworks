@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.47";
+var DOCWORKS_VERSION = "6.48";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -5516,8 +5516,9 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   </div>;
 }
 
-function StepBar({current,tipo,pasosFaltantes,onGoTo}){
-  const steps=getSteps(tipo);
+function StepBar({current,tipo,pasosFaltantes,onGoTo,ultimoPaso}){
+  // Los contratos pegados ya incluyen sus cláusulas: no mostrar un paso vacío.
+  const steps=getSteps(tipo).filter(function(s){return ultimoPaso==null||s.id<=ultimoPaso;});
   const barRef=useRef(null);
   // En pantallas angostas la barra se desplaza: dejamos siempre centrado el paso activo.
   useEffect(function(){

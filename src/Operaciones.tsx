@@ -5358,7 +5358,15 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const esComodato=data.tipo==="comodato",esExclusividad=data.tipo==="exclusividad";
   const esRefuerzo=data.tipo==="refuerzo_reserva",esDevolucion=data.tipo==="devolucion_reserva";
   const esDocSimple=esComodato||esExclusividad||esRefuerzo||esDevolucion;
-  const total=esAlq?7:esResAlq?6:esDocSimple?5:6;
+  // La última pantalla de cláusulas extra no corresponde a contratos propios:
+  // el broker ya completa todos los datos en los pasos anteriores.
+  const snapshotModeloActual=data&&data.plantilla_snapshot;
+  const snapshotCongelado=snapshotModeloActual&&snapshotModeloActual.tipo===data.tipo&&Object.prototype.hasOwnProperty.call(snapshotModeloActual,"documento_propio");
+  const esContratoPropioOp=snapshotCongelado
+    ? typeof snapshotModeloActual.documento_propio==="string"
+    : !!(perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio");
+  const totalNormal=esAlq?7:esResAlq?6:esDocSimple?5:6;
+  const total=totalNormal-(esContratoPropioOp?1:0);
   const faltantesDetalle = getCamposFaltantesDetalle(data,perfil);
   const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
   const resumenPendientesPaso = faltantesPasoActual.slice(0,3).map(function(f){return f.label;}).join(", ")+(faltantesPasoActual.length>3?" y "+(faltantesPasoActual.length-3)+" más":"");
@@ -5583,7 +5591,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesAlquiler data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
       if(step===6)return <StepGarantia data={data} onChange={set} faltantes={camposFaltantes}/>;
-      if(step===7)return (perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio") ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
+      if(step===7)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     }
     if(esResAlq){
       if(step===1)return <StepTipo data={data} onChange={set} grupo="alquiler"/>;
@@ -5591,7 +5599,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesReservaAlq data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
-      if(step===6)return (perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio") ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
+      if(step===6)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     }
     if(esDocSimple){
       var grupoReal=grupo||"otros";
@@ -5599,7 +5607,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===2)return data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes}/>;
       if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes}/>;
       if(step===4)return <StepDocSimple data={data} onChange={set}/>;
-      if(step===5)return (perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio") ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
+      if(step===5)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
       return null;
     }
     // Compra normal (reserva / boleto)
@@ -5608,7 +5616,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo="Vendedor" faltantes={camposFaltantes}/>;
     if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
     if(step===5)return <StepEconomicoCompra data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
-    if(step===6)return (perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio") ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
+    if(step===6)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     return null;
   }
   // El porcentaje representa datos realmente completados, nunca pantallas visitadas.
@@ -5645,7 +5653,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
         </div>
       )}
       {step>total&&<div role="status" aria-live="polite" style={{marginBottom:12,fontSize:13,color:"var(--text)"}}>{documentoListo?"Todo listo para generar el documento.":"Datos por completar: "+faltantesDetalle.length+". Podés revisarlos o guardar el borrador."}</div>}
-      <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
+      <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Progreso</span>
