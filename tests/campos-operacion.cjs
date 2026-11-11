@@ -11,7 +11,7 @@ async function fill(el,v){assert.ok(el);await a.act(async()=>{Object.getOwnPrope
 async function click(el){assert.ok(el);await a.act(async()=>el.click());}
 (async()=>{
  let state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler'};
- function render(Component,extra={}){root.render(a.createElement(Component,{data:state,onChange:(k,v)=>{state={...state,[k]:v};render(Component,extra)},equipo:[],faltantes:[],...extra}));}
+ function render(Component,extra={}){root.render(a.createElement(Component,{data:state,onChange:(k,v)=>{if(Object.is(state[k],v))return;state={...state,[k]:v};render(Component,extra)},equipo:[],faltantes:[],...extra}));}
  for(const [tipo,Component,fields] of [
   ['reserva',a.StepEconomicoCompra,['precio','anticipo']],['boleto',a.StepEconomicoCompra,['precio','anticipo']],
   ['exclusividad',a.StepDocSimple,['precio']],['refuerzo_reserva',a.StepDocSimple,['precio']],['devolucion_reserva',a.StepDocSimple,['precio']],
@@ -58,14 +58,14 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
   console.log('INICIO prueba escribanía '+tipo);
   state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo,escribania:''};await a.act(async()=>render(a.StepEconomicoCompra));
   console.log('RENDER escribanía '+tipo);check(tipo+' no pide escribanía en creación',()=>assert.equal(!!document.getElementById('dw-field-escribania'),false));
-  state={...state,id:'guardada-qa'};console.log('ANTES render guardada '+tipo);await a.act(async()=>render(a.StepEconomicoCompra));console.log('DESPUÉS render guardada '+tipo);const panel=[...document.querySelectorAll('details')].find(x=>x.querySelector('#dw-field-escribania'));assert.ok(panel);await click(panel.querySelector('summary'));await fill(document.getElementById('dw-field-escribania'),'');check(tipo+' permite reemplazar escribanía sin cerrar el panel',()=>assert.equal(panel.open,true));await fill(document.getElementById('dw-field-escribania'),'Escribanía asignada después');check(tipo+' permite cargar escribanía más adelante',()=>{assert.equal(state.escribania,'Escribanía asignada después');assert.ok(!a.getCamposFaltantesDetalle(state).some(f=>f.campo==='escribania'));});
+  state={...state,id:'guardada-qa'};console.log('ANTES render guardada '+tipo);await a.act(async()=>render(a.StepEconomicoCompra,{mostrarEscribania:true}));console.log('DESPUÉS render guardada '+tipo);const panel=[...document.querySelectorAll('details')].find(x=>x.querySelector('#dw-field-escribania'));assert.ok(panel);await click(panel.querySelector('summary'));await fill(document.getElementById('dw-field-escribania'),'');check(tipo+' permite reemplazar escribanía sin cerrar el panel',()=>assert.equal(panel.open,true));await fill(document.getElementById('dw-field-escribania'),'Escribanía asignada después');check(tipo+' permite cargar escribanía más adelante',()=>{assert.equal(state.escribania,'Escribanía asignada después');assert.ok(!a.getCamposFaltantesDetalle(state).some(f=>f.campo==='escribania'));});
  }
  state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',comprador_telefono:'1122223333',comprador_email:'contacto@example.test',comprador_telefono_en_doc:false,comprador_email_en_doc:false};await a.act(async()=>render(a.StepPersona,{prefix:'comprador',titulo:'Comprador'}));
  check('contactos no tienen bloque separado de switches',()=>assert.equal(document.querySelector('.dw-doc-toggles'),null));
  await click(document.querySelector('[aria-label="Mostrar teléfono en el documento"]'));check('switch de teléfono cambia solo teléfono',()=>{assert.equal(state.comprador_telefono_en_doc,true);assert.equal(state.comprador_email_en_doc,false);});
  await click(document.querySelector('[aria-label="Mostrar correo electrónico en el documento"]'));check('switch de email conserva check del teléfono',()=>{assert.equal(state.comprador_email_en_doc,true);assert.equal(state.comprador_telefono_en_doc,true);});
  check('los controles son parte de sus propios campos',()=>{for(const el of document.querySelectorAll('.dw-contact-field')){assert.ok(el.querySelector('input'));assert.ok(el.querySelector('[role="switch"]'));}});
- await click([...document.querySelectorAll('button')].find(x=>x.textContent.includes('Agregar otro titular')));
+ await click([...document.querySelectorAll('button')].find(x=>x.textContent.includes('Agregar otro comprador')));
  const flags=document.querySelectorAll('[aria-label="Mostrar correo electrónico en el documento"]');await click(flags[1]);check('cotitular cambia su switch sin modificar al principal',()=>{assert.equal(state.comprador_email_en_doc,true);assert.equal(state.comprador_cotitulares[0].email_en_doc,false);});
  for(const [modo,campo,valor] of [
   ['horas','reserva_aceptacion_horas','0'],

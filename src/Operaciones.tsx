@@ -5615,7 +5615,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     if(step===2)return <StepPersona data={data} onChange={set} prefix="comprador" titulo="Comprador" faltantes={camposFaltantes}/>;
     if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo="Vendedor" faltantes={camposFaltantes}/>;
     if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
-    if(step===5)return <StepEconomicoCompra data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
+    if(step===5)return <StepEconomicoCompra data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes} mostrarEscribania={modoEdicion}/>;
     if(step===6)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     return null;
   }

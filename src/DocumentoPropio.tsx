@@ -75,6 +75,10 @@ export default function DocumentoPropioEditor({
     :["comprador_nombre","vendedor_nombre"];
   const faltantes=[...nombres,"inmueble_direccion"].filter(t=>!capturados.includes(t));
   const valido=texto.trim().length>40&&texto.length<=80000&&!invalidos.length&&!llavesMal&&!faltantes.length;
+  const chipsImportesRecomendados=tipo==="reserva_alquiler"?["reserva_alquiler_reserva","reserva_alquiler_canon"]
+    :tipo==="alquiler"?["alquiler_monto_letras"]
+    :(tipo==="reserva"||tipo==="boleto"||tipo==="refuerzo_reserva"||tipo==="devolucion_reserva")?["precio_letras"]:[];
+  const importesSinChip=chipsImportesRecomendados.filter(k=>!capturados.includes(k));
   // Estas advertencias NO incorporan cláusulas ni impiden guardar: solo ayudan a revisar el Word.
   const advertenciasContenido=[
     !/(firma|firmantes|suscriben|rúbrica|rubrica)/i.test(texto)?"No encontramos una referencia clara a las firmas":null,
@@ -187,6 +191,10 @@ export default function DocumentoPropioEditor({
           {advertenciasContenido.map((mensaje,i)=><li key={i}>{mensaje}</li>)}
         </ul>
         <span>No se agregó ningún texto y estas sugerencias no impiden guardar.</span>
+      </div>}
+    {revisar&&valido&&importesSinChip.length>0&&
+      <div role="note" style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:"var(--muted)"}}>
+        <strong style={{color:"var(--text)"}}>Revisá los importes del Word:</strong> no encontramos {importesSinChip.map(k=>CHIPS.find(([key])=>key===k)?.[1]||k).join(" ni ")} como dato automático. Si copiaste un importe fijo de otro contrato, reemplazalo por el chip correspondiente. No se modifica ni agrega ninguna cláusula.
       </div>}
     {error&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{error}</div>}
     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
