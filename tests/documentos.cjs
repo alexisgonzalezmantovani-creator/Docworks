@@ -153,6 +153,39 @@ delete global.document;
    assert.deepEqual(docExclusividad.firmas,[]);
    assert.deepEqual(app.getTokensSinReemplazar(docExclusividad),[]);
  });
+ const opReservaBoleto={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva',compra_instrumento:'boleto',precio:'150000',anticipo:'15000',saldo:'135000'};
+ const docReservaBoleto=app.buildDocSections(app.opParaDocumento(opReservaBoleto),[],'reserva',app.getDefaultBodyBlocks('reserva'));
+ check('reserva por boleto incluye la instrumentación elegida y cambia pago',()=>{
+   const txt=app.docToPlainText(docReservaBoleto);
+   assert.ok(txt.includes('Instrumentación prevista: Boleto de Compraventa.'));
+   assert.ok(txt.includes('al momento de firmar el Boleto de Compraventa'));
+   assert.deepEqual(app.getTokensSinReemplazar(docReservaBoleto),[]);
+ });
+ const boletoPosesion={...opReservaBoleto,tipo:'boleto',fecha_posesion:'2026-12-01'};
+ const docBoleto=app.buildDocSections(app.opParaDocumento(boletoPosesion),[],'boleto',app.getDefaultBodyBlocks('boleto'));
+ check('boleto respeta fecha de posesión distinta de escritura',()=>{
+   const txt=app.docToPlainText(docBoleto);
+   assert.ok(txt.includes('sin presumir simultaneidad con la posesión'));
+   assert.ok(!txt.includes('fecha en la que asimismo deberá suscribirse la Escritura'));
+   assert.deepEqual(app.getTokensSinReemplazar(docBoleto),[]);
+ });
+ const opCesion={...opReservaBoleto,compra_instrumento:'cesion_boleto',compra_boleto_origen:''};
+ check('cesión exige identificar boleto original',()=>assert.ok(app.getCamposFaltantesDetalle(opCesion).some(x=>x.campo==='compra_boleto_origen')));
+ const cesionConOrigen={...opCesion,compra_boleto_origen:'Boleto original 10/10/2025 entre partes identificadas'};
+ const cesionGenerica=app.buildDocSections(app.opParaDocumento(cesionConOrigen),[],'reserva',app.getDefaultBodyBlocks('reserva'));
+ check('cesión no se exporta con modelo estándar de compraventa',()=>{
+   const v=app.validarDocumentoParaExport(cesionConOrigen,cesionGenerica,{});
+   assert.ok(v.errores.some(e=>e.includes('contrato específico')));
+ });
+ const cesionPropia={...cesionGenerica,documentoPropio:true,encabezado:'Contrato de cesión entre CEDENTE y CESIONARIO, según boleto antecedente 10/10/2025.',secciones:[],clausulas:[],firmas:[]};
+ check('cesión con modelo propio no se bloquea por instrumentación',()=>{
+   const v=app.validarDocumentoParaExport(cesionConOrigen,cesionPropia,{});
+   assert.ok(!v.errores.some(e=>e.includes('contrato específico')));
+ });
+ const pdfBoleto=await app.generarPDF(docBoleto,null,{}),wordBoleto=await app.generarDOCX(docBoleto,{});
+ check('boleto con instrumentación elegida exporta PDF/DOCX',()=>{
+   assert.ok(pdfBoleto?.blob?.size>1000&&wordBoleto?.blob?.size>1000);
+ });
  const opUbicacion={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva'};
  const docUbicacion=app.buildDocSections(app.opParaDocumento(opUbicacion),[],'reserva');docUbicacion.secciones=[];docUbicacion.firmas=[];docUbicacion.conformidad=null;
  for(const [nombre,config,esperado] of [

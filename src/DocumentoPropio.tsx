@@ -22,6 +22,8 @@ const CHIPS = [
   ["reserva_pago_acordado","Condiciones de pago de reserva"],
   ["boleto_pago_acordado","Condiciones de pago de boleto"],
   ["compra_condiciones_pago","Detalle de pago"],
+  ["compra_instrumento_nombre","Instrumentación prevista"],
+  ["compra_boleto_origen","Datos del boleto antecedente"],
   ["alquiler_inicio","Fecha de inicio del alquiler"],["alquiler_fin","Fecha de finalización"],
   ["exclusividad_vigencia","Vigencia de la autorización"]
 ] as const;
@@ -57,7 +59,7 @@ export default function DocumentoPropioEditor({
     if(rol)return rolesPorGrupo[grupo].includes(rol[1]);
     if(k==="reserva_pago_acordado")return tipo==="reserva";
     if(k==="boleto_pago_acordado")return tipo==="boleto";
-    if(k==="compra_condiciones_pago")return tipo==="reserva"||tipo==="boleto";
+    if(k==="compra_condiciones_pago"||k==="compra_instrumento_nombre"||k==="compra_boleto_origen")return tipo==="reserva"||tipo==="boleto";
     if(k==="exclusividad_vigencia")return tipo==="exclusividad";
     if(k==="alquiler_inicio"||k==="alquiler_fin"||k==="alquiler_monto_letras")return tipo==="alquiler";
     if(k==="reserva_alquiler_reserva"||k==="reserva_alquiler_canon")return tipo==="reserva_alquiler";

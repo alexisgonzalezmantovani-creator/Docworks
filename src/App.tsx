@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.50";
+var DOCWORKS_VERSION = "6.51";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -819,6 +819,9 @@ function derivedTokensGenerales(op) {
     reserva_alquiler_comision_locatario: (op.res_alq_comision_locatario!==undefined && op.res_alq_comision_locatario!==null && String(op.res_alq_comision_locatario)!=="") ? op.res_alq_comision_locatario : ((op.res_alq_comision!==undefined && op.res_alq_comision!==null && String(op.res_alq_comision)!=="") ? op.res_alq_comision : "___"),
     reserva_alquiler_comision_locador_texto: textoComision(op,"res_alq_comision_locador","LOCADOR","canon mensual",parseMontoAR(op.res_alq_monto_mensual||0),op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS","res_alq_comision_locador",valorComisionPredeterminado(op.res_alq_comision,"1")),
     reserva_alquiler_comision_locatario_texto: textoComision(op,"res_alq_comision_locatario","LOCATARIO","canon mensual",parseMontoAR(op.res_alq_monto_mensual||0),op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS","res_alq_comision_locatario",valorComisionPredeterminado(op.res_alq_comision,"1")),
+    compra_instrumento_nombre:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).nombre,
+    compra_boleto_origen:String(op.compra_boleto_origen||"").trim(),
+    compra_posesion_texto:textoPosesionBoletoCompra(op),
     exclusividad_modalidad_texto: exclModalidad,
     refuerzo_trayectoria: antecedentesRefuerzo(op),
     devolucion_motivo_texto: op.devolucion_motivo || "Por mutuo acuerdo entre las partes, y ante la no concreción de la operación, se procede a la devolución íntegra del monto de reserva oportunamente entregado.-"
@@ -1875,6 +1878,7 @@ function esMontoMayorACero(valor){ var n=parseMontoAR(valor); return isFinite(n)
 // 4.29: el paso depende del tipo de documento (en Reserva de alquiler el locatario va primero; en documentos simples todo lo demás está en el paso 4).
 function getPasoDeCampo(campo,tipo){
   if(tipo==="alquiler"&&(campo==="alquiler_seguro_dias"||campo==="alquiler_incluye_seguro"))return 7;
+  if(campo==="compra_instrumento"||campo==="compra_boleto_origen")return ["refuerzo_reserva","devolucion_reserva"].includes(tipo)?4:5;
   if(campo==="entrega_aires_detalle"||campo==="entrega_muebles_detalle"||campo==="alquiler_inventario"){var pasos=getSteps(tipo);return pasos[pasos.length-1].id;}
   var simple=["comodato","exclusividad","refuerzo_reserva","devolucion_reserva"].indexOf(tipo)>=0;
   var m=String(campo||"").match(/^(comprador|vendedor|locador|locatario)_/);
@@ -1974,6 +1978,7 @@ function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
   if(inmuebleEnBarrioComplejo(op))lista.push(["inmueble_barrio","Nombre del barrio o complejo"]);
   if(op.tipo==="alquiler"&&op.alquiler_amoblado)lista.push(["alquiler_inventario","Inventario de bienes muebles"]);
   if(op.inmueble_tipo==="otro")lista.push(["inmueble_tipo_otro","Tipo de inmueble (otro)"]);
+  if((op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto")lista.push(["compra_boleto_origen","Boleto antecedente de la cesión"]);
   if(op.tipo==="alquiler"){
     if(op.alquiler_deposito==="otro")lista.push(["alquiler_deposito_otro_monto","Monto personalizado del depósito"]);
     if(op.alquiler_actualizacion==="otro")lista.push(["alquiler_actualizacion_otro","Índice de actualización acordado"]);
@@ -2133,6 +2138,15 @@ function validarDocumentoParaExport(op, doc, perfil){
   op=op||{}; doc=doc||{}; perfil=perfil||null;
   var errores=[],avisos=[];
   if(doc.documentoPropio&&!String(doc.encabezado||"").trim())errores.push("El contrato propio está vacío. Revisá el modelo en Documentos.");
+  if(op.tipo==="reserva"||op.tipo==="boleto"){
+    if(op.compra_instrumento&&!instrumentoCompraConfig(op))errores.push("Elegí una instrumentación válida: escritura, boleto o cesión de boleto.");
+    if(op.compra_instrumento==="cesion_boleto"){
+      if(!String(op.compra_boleto_origen||"").trim())errores.push("Identificá el boleto de compraventa que se pretende ceder.");
+      if(!doc.documentoPropio)errores.push("La cesión necesita un contrato específico: en Documentos > Pegar mi contrato, cargá un modelo de cesión revisado por un profesional. La reserva o boleto estándar no sustituyen una cesión.");
+      else if(!/cedente/i.test(String(doc.encabezado||""))||!/cesionario/i.test(String(doc.encabezado||"")))avisos.push("Revisá que el contrato de cesión identifique al cedente y al cesionario.");
+    }
+    if(op.tipo==="boleto"&&op.compra_instrumento==="boleto"&&/fecha en la que asimismo deberá suscribirse la Escritura Traslativa de Dominio/i.test(String(doc.encabezado||"")+" "+(doc.secciones||[]).map(function(sec){return (sec.items||[]).join(" ");}).join(" ")))errores.push("El modelo presupone escritura simultánea, pero seleccionaste boleto. Revisá la cláusula Posesión y escrituración antes de exportar.");
+  }
   var opValid=op;
   if(op.tipo==="exclusividad"&&doc){
     var p2=doc.partes&&doc.partes[1]||{};
@@ -3638,7 +3652,7 @@ var BODY_TEMPLATE_PRESETS = {
     {id:"boleto.objeto",titulo:"OBJETO",contenido:"El VENDEDOR {{vendedor_nombre}} vende, cede y transfiere al COMPRADOR {{comprador_nombre}}, quien compra y acepta, el inmueble ubicado en {{inmueble_direccion}}, {{inmueble_partido}}, Provincia de {{inmueble_provincia}}{{nomenclatura_catastral_texto}}, en adelante el Inmueble.-"},
     {id:"boleto.precio",titulo:"PRECIO",contenido:"El precio total y definitivo de la presente compraventa se fija en {{precio_letras}}, que las partes declaran justo y conveniente a sus intereses.-"},
     {id:"boleto.forma_pago",titulo:"FORMA DE PAGO",contenido:"{{boleto_pago_acordado}}"},
-    {id:"boleto.posesion",titulo:"POSESIÓN Y ESCRITURACIÓN",contenido:"La posesión del inmueble se otorgará el {{fecha_posesion}}, fecha en la que asimismo deberá suscribirse la Escritura Traslativa de Dominio{{escribania_boleto}}.-"},
+    {id:"boleto.posesion",titulo:"POSESIÓN Y ESCRITURACIÓN",contenido:"{{compra_posesion_texto}}"},
     {id:"boleto.honorarios_vendedor",titulo:"HONORARIOS DEL VENDEDOR",contenido:"{{comision_vendedor_texto}}"},
     {id:"boleto.honorarios_comprador",titulo:"HONORARIOS DEL COMPRADOR",contenido:"{{comision_comprador_texto}}"},
     {id:"boleto.incumplimiento",titulo:"INCUMPLIMIENTO",contenido:"Ante el incumplimiento de las obligaciones asumidas por cualquiera de las partes, se aplicarán las consecuencias expresamente pactadas en este instrumento y las disposiciones legales pertinentes. La existencia, cuantía y destino de cualquier seña o penalidad dependerán de las entregas efectivamente realizadas y de lo convenido por las partes; no se presumirá la entrega de sumas no percibidas.-"},
@@ -3808,6 +3822,22 @@ function descripcionCronogramaCompra(op){
     return "Cuota "+(i+1)+": "+fmt$L(parseMontoAR(c.importe||0),op.moneda||"USD")+", vencimiento "+fmtD(c.fecha)+", mediante "+medio;
   }).join("; ");
 }
+// Forma de instrumentar la compra, distinta del medio de pago o crédito.
+const INSTRUMENTOS_COMPRA={
+ escritura:{nombre:"Escritura Traslativa de Dominio",firma:"la Escritura Traslativa de Dominio"},
+ boleto:{nombre:"Boleto de Compraventa",firma:"el Boleto de Compraventa"},
+ cesion_boleto:{nombre:"Cesión de Derechos Emergentes de Boleto de Compraventa",firma:"la Cesión de Derechos Emergentes de Boleto de Compraventa"}
+};
+function instrumentoCompraConfig(op){
+ return INSTRUMENTOS_COMPRA[String(op&&op.compra_instrumento||"escritura")]||null;
+}
+function textoPosesionBoletoCompra(op){
+ var fecha=fmtD(op.fecha_posesion);
+ if(op.compra_instrumento==="boleto")return "La posesión del inmueble se otorgará el "+fecha+", conforme a lo pactado. La escritura pública traslativa de dominio se otorgará en la fecha y condiciones que las partes acuerden, sin presumir simultaneidad con la posesión.-";
+ if(op.compra_instrumento==="cesion_boleto")return "La entrega de la tenencia o posesión, si correspondiera, se pacta para el "+fecha+". La cesión deberá identificar el boleto antecedente y los derechos y obligaciones cedidos; no transfiere por sí sola el dominio.-";
+ return "La posesión del inmueble se otorgará el "+fecha+", fecha en la que asimismo deberá suscribirse la Escritura Traslativa de Dominio"+(op.escribania?" ante "+op.escribania:"")+".-";
+}
+
 function tokensPagoCompra(op){
   if(!op || (op.tipo!=="reserva" && op.tipo!=="boleto")) return {};
   // Redacción orientativa, sin afirmar que una entrega ya fue efectuada.
@@ -3839,9 +3869,11 @@ function tokensPagoCompra(op){
   // Solo los modelos nuevos que incorporan el token boleto_pago_acordado
   // reciben esta redacción. Los modelos publicados y snapshots permanecen intactos.
   // Evitar afirmar una entrega de dinero no acreditada por el formulario.
-  var boletoHabitual="El precio convenido es de "+fmt$L(precio,moneda)+". "+(anticipo>0?"Se prevé una entrega inicial de "+fmt$L(anticipo,moneda)+" y un saldo de "+fmt$L(saldo,moneda)+" al momento de la firma de la Escritura Traslativa de Dominio":"Se prevé el pago del precio al momento de la firma de la Escritura Traslativa de Dominio")+", conforme a lo acordado por las partes.";
+  var instrumento=instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura;
+  var firmaElegida=op.compra_instrumento&&op.compra_instrumento!=="escritura"?instrumento.firma:"la Escritura Traslativa de Dominio";
+  var boletoHabitual="El precio convenido es de "+fmt$L(precio,moneda)+". "+(anticipo>0?"Se prevé una entrega inicial de "+fmt$L(anticipo,moneda)+" y un saldo de "+fmt$L(saldo,moneda)+" al momento de la firma de "+firmaElegida:"Se prevé el pago del precio al momento de la firma de "+firmaElegida)+", conforme a lo acordado por las partes.";
   var boletoPago=modalidad!=="habitual" ? texto : boletoHabitual;
-  var reservaHabitual="El Oferente ofrece abonar el saldo de "+fmt$L(saldo,moneda)+" al momento de firmar la Escritura Traslativa de Dominio y/o el Boleto de Compraventa, lo que ocurra primero, conforme a las condiciones de esta oferta.";
+  var reservaHabitual="El Oferente ofrece abonar el saldo de "+fmt$L(saldo,moneda)+" "+(op.compra_instrumento&&op.compra_instrumento!=="escritura"?"al momento de firmar "+instrumento.firma:"al momento de firmar la Escritura Traslativa de Dominio y/o el Boleto de Compraventa, lo que ocurra primero")+", conforme a las condiciones de esta oferta.";
   var reservaPago=modalidad!=="habitual" ? texto : reservaHabitual;
   return {compra_condiciones_pago:detalle,compra_pago_redaccion:texto,boleto_pago_acordado:boletoPago,reserva_pago_acordado:reservaPago};
 }
@@ -4006,7 +4038,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
         {titulo:"1. OBJETO", items:["El VENDEDOR "+(op.vendedor_nombre||"___")+" vende, cede y transfiere al COMPRADOR "+(op.comprador_nombre||"___")+", quien compra y acepta, el inmueble ubicado en "+(op.inmueble_direccion||"___")+", "+(op.inmueble_partido||"___")+", Provincia de "+(op.inmueble_provincia||"___")+(op.nomenclatura_catastral?", Nomenclatura Catastral "+op.nomenclatura_catastral:"")+".-"]},
         {titulo:"2. PRECIO", items:["El precio total y definitivo de la presente compraventa se fija en "+fmt$L(op.precio,op.moneda)+", que las partes declaran justo y conveniente a sus intereses.-"]},
         {titulo:"3. FORMA DE PAGO", items:[tokensPagoCompra(op).boleto_pago_acordado || "Acuerdo de pago pendiente de completar y verificar."]},
-        {titulo:"4. POSESIÓN Y ESCRITURACIÓN", items:["La posesión del inmueble se otorgará el "+fmtD(op.fecha_posesion)+", fecha en la que asimismo deberá suscribirse la Escritura Traslativa de Dominio"+(op.escribania?" ante "+op.escribania:"")+".-"]},
+        {titulo:"4. POSESIÓN Y ESCRITURACIÓN", items:[textoPosesionBoletoCompra(op)]},
         {titulo:"5. HONORARIOS DEL VENDEDOR", items:[textoComision(op,"comision_vendedor","VENDEDOR","Precio total",parseMontoAR(op.precio||0),op.moneda||"USD","comision_vendedor","")]},
         {titulo:"6. HONORARIOS DEL COMPRADOR", items:[textoComision(op,"comision_comprador","COMPRADOR","Precio total",parseMontoAR(op.precio||0),op.moneda||"USD","comision_comprador","")]},
         {titulo:"7. INCUMPLIMIENTO", items:["Ante el incumplimiento de las obligaciones asumidas por cualquiera de las partes, se aplicarán las consecuencias expresamente pactadas en este instrumento y las disposiciones legales pertinentes. La existencia, cuantía y destino de cualquier seña o penalidad dependerán de las entregas efectivamente realizadas y de lo convenido por las partes; no se presumirá la entrega de sumas no percibidas.-"]},
@@ -4257,6 +4289,15 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
     ? buildDocSectionsFromEditableBody(op,clausulasLib||[],tipo,bloquesPlantilla)
     : buildDocSectionsStandard(op,clausulasLib||[],tipo);
   doc.secciones=(doc.secciones||[]).filter(function(sec){return !bloqueComisionOculto(sec,op)&&!((tipo||op.tipo)==="alquiler"&&op.alquiler_incluye_seguro===false&&(/^[0-9]+\.\s*SEGURO$/.test(sec.titulo)||sec._bloqueId==="alquiler.seguro"));});
+  if((tipo||op.tipo)==="reserva"&&op.compra_instrumento&&op.compra_instrumento!=="escritura"&&instrumentoCompraConfig(op)&&doc.secciones&&doc.secciones.length){
+    var seccionesInstrumento=doc.secciones.slice(),primera=seccionesInstrumento[0];
+    var nota="Instrumentación prevista: "+instrumentoCompraConfig(op).nombre+".";
+    if(op.compra_instrumento==="cesion_boleto"&&String(op.compra_boleto_origen||"").trim())nota+=" Boleto antecedente: "+String(op.compra_boleto_origen).trim()+".";
+    if(!(primera.items||[]).some(function(item){return String(item).includes("Instrumentación prevista:");})){
+      seccionesInstrumento[0]=Object.assign({},primera,{items:(primera.items||[]).concat([nota])});
+      doc=Object.assign({},doc,{secciones:seccionesInstrumento});
+    }
+  }
   if((tipo||op.tipo)==="reserva_alquiler"&&op.res_alq_dia_pago){
     var pago="El pago mensual se efectuará "+periodoPagoMensualTexto(op,"res_alq_dia_pago")+" de cada mes.-";
     var condiciones=doc.secciones.find(function(c){return /CONDICIONES ESTIMADAS DE LOCACI[ÓO]N/i.test(c.titulo);});
@@ -5038,6 +5079,16 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
         <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
         <Inp id="dw-field-anticipo" label="Seña / Anticipo" value={data.anticipo||""} onChange={function(e){onChange("anticipo",e.target.value);}} placeholder="10.000" money {...estiloCampoFaltante(faltantes,"anticipo")}/>
         <Field label="Saldo restante"><div className="val-box" aria-live="polite">{fmt$(Math.max(0,precio-anticipo),data.moneda)}</div>{anticipo>precio&&precio>0&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginTop:6}}>La seña o anticipo supera el precio total. Revisá los importes.</div>}</Field>
+        <Slt id="dw-field-compra_instrumento" label="Instrumentación de la operación" className="col2" value={data.compra_instrumento||"escritura"} onChange={function(e){onChange("compra_instrumento",e.target.value);}}>
+          <option value="escritura">Escritura traslativa de dominio</option>
+          <option value="boleto">Boleto de compraventa</option>
+          <option value="cesion_boleto">Cesión de boleto de compraventa</option>
+        </Slt>
+        <div className="col2" style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:-5}}>Esta elección es independiente del crédito, las cuotas y el medio de pago. No implica por sí sola una transmisión de dominio.</div>
+        {data.compra_instrumento==="cesion_boleto"&&<div className="col2">
+          <Txa id="dw-field-compra_boleto_origen" label="Identificación del boleto que se cede" value={data.compra_boleto_origen||""} onChange={function(e){onChange("compra_boleto_origen",e.target.value);}} rows={3} placeholder="Fecha del boleto original, partes y referencia del inmueble" {...estiloCampoFaltante(faltantes,"compra_boleto_origen")}/>
+          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:5}}>Para emitir una cesión, cargá un contrato específico en Documentos → Pegar mi contrato. El modelo estándar no se convierte automáticamente en cesión.</div>
+        </div>
         {data.tipo==="reserva"&&<div className="col2 dw-economic-refuerzo-toggle">
           <label className="dw-economic-refuerzo-label">
             <input id="dw-field-reserva_incluye_refuerzo" type="checkbox" checked={!!data.reserva_incluye_refuerzo} onChange={function(e){onChange("reserva_incluye_refuerzo",e.target.checked);}}/>
@@ -5355,6 +5406,11 @@ function StepDocSimple({data,onChange}){
           <div className="col2"><ComisionEditor data={data} onChange={onChange} prefix="comision_vendedor" legacyKey="comision_vendedor" label="Comisión del vendedor" base={parseMontoAR(data.precio)||0} monedaBase={data.moneda||"USD"} defaultPct="3"/>
         </div>
         </>}
+        {(tipo==="refuerzo_reserva"||tipo==="devolucion_reserva")&&<Slt id="dw-field-compra_instrumento" className="col2" label="Instrumentación de la compra vinculada" value={data.compra_instrumento||"escritura"} onChange={function(e){onChange("compra_instrumento",e.target.value);}}>
+          <option value="escritura">Escritura traslativa de dominio</option>
+          <option value="boleto">Boleto de compraventa</option>
+          <option value="cesion_boleto">Cesión de boleto de compraventa</option>
+        </Slt>}
         {tipo==="refuerzo_reserva"&&<>
           <Inp id="dw-field-precio" label="Monto del refuerzo" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="10.000" money/>
           <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
@@ -5870,7 +5926,7 @@ function FichaOperacionPanel({op,operaciones,onClose,embedded,summaryContent=und
         <div style={{display:"flex",alignItems:"center",gap:9,marginTop:7}}><span style={{fontSize:18,color:proximo.tone}}>{proximo.icon}</span><div style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>{proximo.texto}</div></div>
       </div>
       <div className="grid2">
-        <div className="card" style={{padding:14}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,letterSpacing:".08em",marginBottom:8}}>Operación</div><div style={{fontSize:12,lineHeight:1.8,color:"var(--text)"}}><div><span style={{color:"var(--dim)"}}>Documento:</span> <b>{TIPOS[op.tipo]||op.tipo}</b></div><div><span style={{color:"var(--dim)"}}>Estado:</span> <b>{ESTADOS[op.estado]||op.estado}</b></div><div><span style={{color:"var(--dim)"}}>Proceso:</span> <b style={{color:"var(--gold)"}}>{String(op.proceso_estado||"pendiente_aceptacion").replace(/_/g," ")}</b></div><div><span style={{color:"var(--dim)"}}>Monto:</span> <b>{getResumenMonto(op)||"—"}</b></div></div></div>
+        <div className="card" style={{padding:14}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,letterSpacing:".08em",marginBottom:8}}>Operación</div><div style={{fontSize:12,lineHeight:1.8,color:"var(--text)"}}><div><span style={{color:"var(--dim)"}}>Documento:</span> <b>{TIPOS[op.tipo]||op.tipo}</b></div><div><span style={{color:"var(--dim)"}}>Estado:</span> <b>{ESTADOS[op.estado]||op.estado}</b></div><div><span style={{color:"var(--dim)"}}>Proceso:</span> <b style={{color:"var(--gold)"}}>{String(op.proceso_estado||"pendiente_aceptacion").replace(/_/g," ")}</b></div><div><span style={{color:"var(--dim)"}}>Monto:</span> <b>{getResumenMonto(op)||"—"}</b></div>{["reserva","boleto","refuerzo_reserva","devolucion_reserva"].includes(op.tipo)&&<div><span style={{color:"var(--dim)"}}>Instrumentación:</span> <b>{(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).nombre}</b></div>}</div></div>
         <div className="card" style={{padding:14}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,letterSpacing:".08em",marginBottom:8}}>Inmueble</div><div style={{fontSize:12,lineHeight:1.7,color:"var(--text)"}}>{tipoInmuebleLabel(op.inmueble_tipo,op.inmueble_tipo_otro)}<div style={{marginTop:4}}>{op.inmueble_direccion||"Sin dirección"}</div><div style={{color:"var(--dim)",marginTop:2}}>{[op.inmueble_partido,op.inmueble_provincia].filter(Boolean).join(" — ")}</div></div></div>
       </div>
       {venc&&<div className="card" style={{padding:14}}><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,textTransform:"uppercase",letterSpacing:".08em"}}>Vencimiento de aceptación</div><div style={{marginTop:5,fontSize:14,fontWeight:800,color:proximo.tone}}>{fmtD(venc)}</div></div>}

@@ -15,7 +15,7 @@ export const EMPTY_OP = {
   comprador_cotitulares:[], vendedor_cotitulares:[], locador_cotitulares:[], locatario_cotitulares:[],
   inmueble_direccion:"", inmueble_partido:"", inmueble_provincia:"Buenos Aires", nomenclatura_catastral:"", descripcion_inmueble:"",
   exclusividad_vigencia:"90",
-  precio:"", moneda:"USD", anticipo:"", saldo:"", fecha_posesion:"", comision_porcentaje:"", escribania:"", escribania_observaciones:"",
+  precio:"", moneda:"USD", anticipo:"", saldo:"", fecha_posesion:"", compra_instrumento:"escritura", compra_boleto_origen:"", comision_porcentaje:"", escribania:"", escribania_observaciones:"",
   res_alq_monto_reserva:"", res_alq_moneda:"ARS", res_alq_monto_mensual:"", res_alq_monto_mensual_moneda:"ARS", res_alq_plazo_meses:"24",
   res_alq_inicio_estimado:"", res_alq_destino:"vivienda", res_alq_comision:"1", res_alq_vigencia_dias:"10", res_alq_observaciones:"",
   alquiler_monto_inicial:"", alquiler_moneda:"ARS", alquiler_plazo_meses:"24", alquiler_inicio:"", alquiler_fin:"",
@@ -5540,6 +5540,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // no volver a tipear todos los datos de las partes y el inmueble.
   function elegirReservaParaDevolucion(op){
     setBulk({...datosCompraCompartidos(op),
+      compra_instrumento:op.compra_instrumento||"escritura",
+      compra_boleto_origen:op.compra_boleto_origen||"",
       parent_id: op.id,
       comprador_nombre:op.comprador_nombre||"", comprador_dni:op.comprador_dni||"", comprador_domicilio:op.comprador_domicilio||"",
       vendedor_nombre:op.vendedor_nombre||"", vendedor_dni:op.vendedor_dni||"", vendedor_domicilio:op.vendedor_domicilio||"",
@@ -5552,6 +5554,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }
   function elegirReservaParaRefuerzo(op){
     setBulk({...datosCompraCompartidos(op),
+      compra_instrumento:op.compra_instrumento||"escritura",
+      compra_boleto_origen:op.compra_boleto_origen||"",
       parent_id: op.id,
       comprador_nombre:op.comprador_nombre||"", comprador_dni:op.comprador_dni||"",
       comprador_domicilio:op.comprador_domicilio||"", comprador_email:op.comprador_email||"", comprador_telefono:op.comprador_telefono||"",
