@@ -1013,6 +1013,10 @@ function crearPlantillasIniciales(catalogo=CLAUSULAS_DEFAULT){
 function obtenerPlantillaConfig(perfil, tipo, clausulas){
   var mapa = perfil && perfil.plantillas ? perfil.plantillas : {};
   var actual = mapa && mapa[tipo];
+  if(actual && actual.modo_documento==="propio"){
+    var v=parseInt(String(actual.version||1),10);
+    return {clausulas_ids:[],obligatorias_ids:[],frecuentes_ids:[],locked:false,version:isFinite(v)&&v>0?v:1};
+  }
   if(actual && (Array.isArray(actual.clausulas_ids)||Array.isArray(actual.frecuentes_ids)||Array.isArray(actual.obligatorias_ids))){
     var av=parseInt(actual.version,10);
     var idsActuales=Array.isArray(actual.clausulas_ids)?actual.clausulas_ids.slice():[];
@@ -1058,7 +1062,7 @@ function crearSnapshotPlantillaOperacion(op,perfil,clausulas,bloquesReserva){
   var idsSnapshot=ids.concat(obligatoriasIds).filter(function(id,i,a){return a.indexOf(id)===i;});
   var intro=(perfil&&perfil.encabezados_custom&&perfil.encabezados_custom[tipo])||DEFAULT_ENCABEZADOS[tipo]||"";
   var body=getBodyBlocksConfig(perfil,tipo,bloquesReserva);
-  return {tipo:tipo,version:obtenerVersionPlantilla(perfil,tipo),capturado_en:new Date().toISOString(),introduccion:intro,clausulas_ids:ids,obligatorias_ids:obligatoriasIds,clausulas:(clausulas||[]).filter(function(c){return idsSnapshot.indexOf(c.id)!==-1;}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria,orden:c.orden,aplica_a:c.aplica_a};}),body_blocks:JSON.parse(JSON.stringify(body)),mostrar_introduccion:!(perfil&&perfil.mostrar_introduccion===false)};
+  return {tipo:tipo,version:obtenerVersionPlantilla(perfil,tipo),capturado_en:new Date().toISOString(),introduccion:intro,clausulas_ids:ids,obligatorias_ids:obligatoriasIds,clausulas:(clausulas||[]).filter(function(c){return idsSnapshot.indexOf(c.id)!==-1;}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria,orden:c.orden,aplica_a:c.aplica_a};}),body_blocks:JSON.parse(JSON.stringify(body)),mostrar_introduccion:!(perfil&&perfil.mostrar_introduccion===false),documento_propio:cfg.modo_documento==="propio"?String(cfg.documento_propio||""):null};
 }
 function sellarVersionPlantillaOperacion(op,perfil,forzar,clausulas,bloquesReserva){
   if(!op)return op;
@@ -2127,6 +2131,7 @@ function detectarProblemasEditorialesDocumento(doc,tipoOperacion){
 function validarDocumentoParaExport(op, doc, perfil){
   op=op||{}; doc=doc||{}; perfil=perfil||null;
   var errores=[],avisos=[];
+  if(doc.documentoPropio&&!String(doc.encabezado||"").trim())errores.push("El contrato propio está vacío. Revisá el modelo en Documentos.");
   var opValid=op;
   if(op.tipo==="exclusividad"&&doc){
     var p2=doc.partes&&doc.partes[1]||{};
@@ -2464,6 +2469,7 @@ function totalComisionEnMoneda(entry,moneda,campo){
 // mandarlo como contexto a la IA o para copiarlo/exportarlo. Misma lógica que
 // usa el preview interno del visor de documentos.
 function docToPlainText(doc) {
+  if(doc&&doc.documentoPropio)return String(doc.encabezado||"").replace(/\n\n/g,"\n");
   var lines = [doc.titulo || ""];
   if (doc.nroRecibo) lines.push("N° " + doc.nroRecibo);
   lines.push("Lugar: " + (doc.ciudad || "") + "  |  Fecha: " + (doc.fecha || ""), "");
@@ -3354,6 +3360,7 @@ function labelTokenEncabezado(k, tipo) {
 }
 
 function aplicarEncabezadoPersonalizado(doc, op, tipo, perfil) {
+  if(doc&&doc.documentoPropio)return doc;
   var snapshot=op&&op.plantilla_snapshot&&op.plantilla_snapshot.tipo===tipo?op.plantilla_snapshot:null;
   if ((snapshot&&snapshot.mostrar_introduccion===false)||(!snapshot&&perfil && perfil.mostrar_introduccion === false)) {
     return Object.assign({}, doc, { encabezado: "" });
@@ -4218,6 +4225,15 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   // Las operaciones nuevas renderizan desde su snapshot; las históricas sin snapshot
   // conservan exactamente el comportamiento anterior.
   var snap=op&&op.plantilla_snapshot&&op.plantilla_snapshot.tipo===(tipo||op.tipo)?op.plantilla_snapshot:null;
+  if(snap && typeof snap.documento_propio==="string"){
+    var textoPropio=String(snap.documento_propio||"").replace(/\r\n?/g,"\n");
+    var extrasPropios=Object.assign({},derivedTokensGenerales(op),tipo==="reserva"?derivedTokensReserva(op):{},tokensPagoCompra(op));
+    var datosInmob={nombre:op.inmobiliaria_nombre||"",matricula:op.inmobiliaria_matricula||""};
+    var cuerpoPropio=resolveVars(sustituirTokens(textoPropio,op,datosInmob,tipo||op.tipo),op,extrasPropios);
+    return {documentoPropio:true,tipo:tipo||op.tipo,titulo:"",subtitulo:"",ciudad:"",fecha:"",
+      encabezado:cuerpoPropio.replace(/\n/g,"\n\n"),partes:[],firmas:[],secciones:[],clausulas:[],
+      contactosIndividuales:[],contactos:[],conformidad:null,ocultarPartesEnCuerpo:true};
+  }
   if(snap){
     var actuales=Array.isArray(clausulasLib)?clausulasLib.slice():[];
     (snap.clausulas||[]).forEach(function(sc){var guardada=Object.assign({},sc,{obligatoria:sc.obligatoria===true||(snap.obligatorias_ids||[]).indexOf(sc.id)!==-1});var i=actuales.findIndex(function(c){return c&&c.id===sc.id;});if(i>=0)actuales[i]=Object.assign({},actuales[i],guardada);else actuales.push(guardada);});

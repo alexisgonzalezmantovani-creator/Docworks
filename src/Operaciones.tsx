@@ -5081,12 +5081,14 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   function previewBlocks(){
     var doc=getDoc();
     var b=[];
-    b.push({t:doc.titulo,bold:true,size:13.5,center:true});
-    if(doc.subtitulo) b.push({t:doc.subtitulo,dim:true,size:10.5,center:true});
-    if(doc.nroRecibo) b.push({t:"N° "+doc.nroRecibo,bold:true,center:true});
-    b.push({blank:true});
-    b.push({t:"Lugar: "+(doc.ciudad||"")+"  |  Fecha: "+(doc.fecha||""),dim:true});
-    b.push({sep:true});
+    if(!doc.documentoPropio){
+      b.push({t:doc.titulo,bold:true,size:13.5,center:true});
+      if(doc.subtitulo) b.push({t:doc.subtitulo,dim:true,size:10.5,center:true});
+      if(doc.nroRecibo) b.push({t:"N° "+doc.nroRecibo,bold:true,center:true});
+      b.push({blank:true});
+      b.push({t:"Lugar: "+(doc.ciudad||"")+"  |  Fecha: "+(doc.fecha||""),dim:true});
+      b.push({sep:true});
+    }
     if(doc.encabezado){ doc.encabezado.split("\n\n").forEach(function(p){ if(String(p||"").trim()){ b.push({t:p,justify:true}); b.push({blank:true}); } }); }
     if(!doc.ocultarPartesEnCuerpo && doc.partes && doc.partes.length){
       b.push({t:"PARTES INTERVINIENTES",bold:true,label:true});
@@ -5213,7 +5215,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         message={pendingWarnings&&<span>
           {pendingWarnings.errors&&pendingWarnings.errors.length>0&&<><div style={{fontSize:12.5,color:"var(--red)",marginBottom:4,fontWeight:700}}>Al documento le faltan estos datos:</div><div style={{fontSize:12,color:"var(--dim)",marginBottom:8}}>Podés completarlos ahora o continuar igual: en ese caso el documento puede salir con campos vacíos o información legal incompleta.</div><ul style={{margin:0,paddingLeft:18,display:"flex",flexDirection:"column",gap:5}}>{pendingWarnings.errors.map(function(w,i){return <li key={i} style={{fontSize:13}}>{w}</li>;})}</ul></>}
           {pendingWarnings.avisos&&pendingWarnings.avisos.length>0&&<><div style={{fontSize:12.5,color:"var(--gold)",margin:"12px 0 8px",fontWeight:700}}>Avisos:</div><ul style={{margin:0,paddingLeft:18,display:"flex",flexDirection:"column",gap:5}}>{pendingWarnings.avisos.map(function(w,i){return <li key={i} style={{fontSize:13}}>{w}</li>;})}</ul></>}
-          {pendingWarnings.datosFaltantes&&pendingWarnings.datosFaltantes.length>0&&<div style={{marginTop:12}}>
+          {pendingWarnings.datosFaltantes&&pendingWarnings.datosFaltantes.length>0&&!(op&&op.plantilla_snapshot&&typeof op.plantilla_snapshot.documento_propio==="string")&&<div style={{marginTop:12}}>
             <button type="button" className="btn btn-primary" onClick={function(){
               var pw=pendingWarnings, tipo=op.tipo, faltantes=pw.datosFaltantes||[], presets=BODY_TEMPLATE_PRESETS[tipo]||[], aliases=ALIASES_TOKEN_OBLIGATORIO||{};
               if(tipo==="reserva"){
@@ -5581,7 +5583,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesAlquiler data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
       if(step===6)return <StepGarantia data={data} onChange={set} faltantes={camposFaltantes}/>;
-      if(step===7)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
+      if(step===7)return (perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio") ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     }
     if(esResAlq){
       if(step===1)return <StepTipo data={data} onChange={set} grupo="alquiler"/>;
@@ -5589,7 +5591,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesReservaAlq data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
-      if(step===6)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
+      if(step===6)return (perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio") ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     }
     if(esDocSimple){
       var grupoReal=grupo||"otros";
@@ -5597,7 +5599,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===2)return data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes}/>;
       if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes}/>;
       if(step===4)return <StepDocSimple data={data} onChange={set}/>;
-      if(step===5)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
+      if(step===5)return (perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio") ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
       return null;
     }
     // Compra normal (reserva / boleto)
@@ -5606,7 +5608,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo="Vendedor" faltantes={camposFaltantes}/>;
     if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
     if(step===5)return <StepEconomicoCompra data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
-    if(step===6)return <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
+    if(step===6)return (perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio") ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     return null;
   }
   // El porcentaje representa datos realmente completados, nunca pantallas visitadas.

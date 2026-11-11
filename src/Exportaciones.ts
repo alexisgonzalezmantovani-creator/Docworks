@@ -233,6 +233,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       var w=mw(txt,size,bold);
       return Math.max(ML,(W-w)/2);
     }
+    if(!doc.documentoPropio){
     hline(y,esClasico?0.3:null,esClasico?null:accentColor,esClasico?0.75:1); y-=26;
     var tituloTxt=String(doc.titulo||"").toUpperCase();
     text(centeredX(tituloTxt,15,true),y,tituloTxt,15,true); y-=22;
@@ -248,6 +249,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
     text(ML,y,"Lugar: "+(doc.ciudad||"")+"   |   Fecha: "+(doc.fecha||""),DOC_EXPORT_LAYOUT.subtitleSize,false); y-=18;
     hline(y); y-=22;
     if(esClasico){ hline(y+3,0.3,null,0.75); y-=4; } // doble filete clásico bajo la línea de lugar/fecha
+    }
 
     // Dibuja un párrafo justificado con ajuste real de ancho (Helvetica),
     // con salto de línea con sangría francesa para los renglones siguientes.
@@ -431,7 +433,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
         y-=firmaLabels;
       }
     }
-    if(!huboInmobEnFirmas){
+    if(!doc.documentoPropio&&!huboInmobEnFirmas){
       ensureSpace(firmaBlank + 28);
       y -= Math.min(firmaBlank, 40);
       textCentered(ML+(W-ML-MR)/2,y,"________________________",9,false);
@@ -606,12 +608,14 @@ export async function generarDOCXModulo(doc, perfil, deps) {
     }
 
     // Título
+    if(!doc.documentoPropio){
     body += px(String(doc.titulo||"").toUpperCase(), {bold:true, size:DOC_EXPORT_LAYOUT.titleSize, center:true, spacing:{before:160,after:60}});
     if (doc.subtitulo) body += px(doc.subtitulo, {size:DOC_EXPORT_LAYOUT.subtitleSize, center:true, color:"555555", spacing:{before:0,after:60}});
     if (doc.nroRecibo) body += px("N° "+doc.nroRecibo, {bold:true, size:12, center:true, spacing:{before:40,after:80}});
     body += px("", {border:true, spacing:{before:60,after:60}});
     body += px("Lugar: "+(doc.ciudad||"")+"  —  Fecha: "+(doc.fecha||""), {size:DOC_EXPORT_LAYOUT.subtitleSize, spacing:{before:80,after:80}});
     body += px("", {border:true, spacing:{before:60,after:120}});
+    }
 
     // Introducción / preámbulo (todos los tipos). Toggle: perfil.mostrar_introduccion
     if (doc.encabezado) {
@@ -677,8 +681,9 @@ export async function generarDOCXModulo(doc, perfil, deps) {
       });
     }
 
-    // Firmas: grilla horizontal de tres columnas, como en el PDF.
-    // Cada fila se mantiene junta para evitar firmas partidas entre páginas.
+    // Firmas: grilla horizontal solo para modelos DocWorks.
+    // El contrato propio ya incluye las firmas que escribió la inmobiliaria.
+    if(!doc.documentoPropio){
     body += px("", {border:true, spacing:{before:140,after:100}});
     body += px("FIRMAS", {keepNext:true,bold:true, size:DOC_EXPORT_LAYOUT.signatureSize+3, center:true, spacing:{before:100,after:90}});
     var firmantesPpalesDocx = (doc.firmas && doc.firmas.length) ? doc.firmas.slice() : (doc.partes||[]).slice();
@@ -706,6 +711,7 @@ export async function generarDOCXModulo(doc, perfil, deps) {
     }
     body += '</w:tbl>';
 
+    }
     // Presta Conformidad (reserva): aceptación posterior del propietario, numeración propia
     if (doc.conformidad && doc.conformidad.items && doc.conformidad.items.length) {
       body += px("", {border:true, spacing:{before:140,after:100}});

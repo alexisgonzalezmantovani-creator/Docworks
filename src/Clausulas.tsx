@@ -1,6 +1,7 @@
 import { IA_HABILITADA, MENSAJE_IA_PAUSADA } from './PrivacidadIA';
 import { RECOMENDACION_ASESORAMIENTO } from './AvisoModelos';
 import { SelectorDocumento } from './SelectorDocumento';
+import DocumentoPropioEditor from './DocumentoPropio';
 // Módulo extraído sin modificar las declaraciones originales.
 export const CLAUSULAS_DEFAULT = [
   { id:"especial.credito_hipotecario", titulo:"Operación supeditada a crédito hipotecario", categoria:"financiación", tipos:["reserva","boleto"], obligatoria:false, contenido:"La presente operación queda supeditada a la aprobación del crédito hipotecario solicitado por la parte compradora." },
@@ -314,17 +315,23 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   const [seccion,setSeccionDirecto]=useState(perfil&&(perfil.rol==="dueno"||perfil.rol==="admin")?"modelos":"adicionales");
   function setSeccion(next){
     if(next===seccion)return;
-    function cambiar(){setModeloEditando(false);setIntroduccionEditando(false);setSeccionDirecto(next);if(next==="papelera"){setErrorPapeleraClausulas("");if(onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}}
-    if(seccion==="adicionales"){navegarConProteccionModelo(cambiar);return;}
+    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setSeccionDirecto(next);if(next==="papelera"){setErrorPapeleraClausulas("");if(onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}}
+    if(seccion==="adicionales"||verEditorPropio){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando&&next!==seccion)requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",cambiar);else cambiar();
   }
   const [tipoDocSel,setTipoDocSel]=useState("reserva");
+  const [pegarMiContrato,setPegarMiContrato]=useState(false);
+  const [errorModeloPropio,setErrorModeloPropio]=useState("");
+  var cfgModeloActual=perfil&&perfil.plantillas&&perfil.plantillas[tipoDocSel]||{};
+  var modeloPropioActivo=cfgModeloActual.modo_documento==="propio";
+  var verEditorPropio=modeloPropioActivo||pegarMiContrato;
   const [clausulaEditando,setModeloEditando]=useState(false);
   const [introduccionEditando,setIntroduccionEditando]=useState(false);
   const modeloEditando=clausulaEditando||introduccionEditando;
   function cambiarDocumento(tipo){
     if(tipo===tipoDocSel)return;
-    function cambiar(){setModeloEditando(false);setIntroduccionEditando(false);setTipoDocSel(tipo);}
+    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setTipoDocSel(tipo);}
+    if(verEditorPropio){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de cambiar de documento?",cambiar);else cambiar();
   }
   const [filtroAdicional,setFiltroAdicional]=useState("todas");
@@ -387,6 +394,20 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
     finally{estadoClausulaGuardandoRef.current=false;setEstadoClausulaGuardando(null);}
   }
   function contarModelo(tipo){return contarBloquesCuerpo(perfil,tipo,bloquesReserva);}
+  function volverModeloEstandar(){
+    if(!modeloPropioActivo){navegarConProteccionModelo(function(){setPegarMiContrato(false);});return;}
+    requestDwConfirm("¿Volver al modelo DocWorks? Se descartarán los cambios sin guardar. Tu contrato pegado seguirá guardado y los documentos anteriores no cambiarán.",async function(){
+      var original=perfilActualRef.current||perfil,mapa=Object.assign({},original.plantillas||{});
+      var previo=Object.assign({},mapa[tipoDocSel]||{});
+      var cfg=Object.assign({},previo,{modo_documento:"docworks",version:Math.max(1,parseInt(String(previo.version||1),10)||1)+1,version_updated_at:new Date().toISOString()});
+      setErrorModeloPropio("");
+      try{
+        var res=await guardarPerfil(Object.assign({},original,{plantillas:Object.assign({},mapa,{[tipoDocSel]:cfg})}));
+        if(res&&res.error)throw res.error;
+        setPegarMiContrato(false);
+      }catch(err){setErrorModeloPropio(err&&err.message?err.message:"No se pudo volver al modelo DocWorks.");}
+    });
+  }
   var protegidas=obtenerIdsProtegidosDePlantillas(perfil);
   var catalogoBiblioteca=filtrarCatalogoClausulas(clausulas,{idsProtegidos:protegidas,esTextoBase:clausulaYaEnTextoBase,aplicaTipo:clausulaAplicaTipo});
   var adicionalesVisibles=catalogoBiblioteca.filter(function(c){return filtroAdicional==="todas"||clausulaAplicaTipo(c,filtroAdicional);});
@@ -415,9 +436,20 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       <style>{".dw-model-type-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.dw-model-type-chip{min-width:0;text-align:left}@media(max-width:640px){.dw-model-type-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dw-model-type-chip{width:100%;min-width:0;max-width:none}}@media(max-width:380px){.dw-model-type-grid{grid-template-columns:minmax(0,1fr)}}"}</style>
       {<div id="dw-config-tipo" className="card" style={{padding:12,scrollMarginTop:90}}>
         <SelectorDocumento id="dw-modelo-documento" tipos={PLANTILLA_TIPOS} nombres={TIPOS} iconos={TIPO_ICON} value={tipoDocSel} onChange={cambiarDocumento}/>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginTop:8}}><span style={{fontSize:11,color:"var(--dim)"}}>{contarModelo(tipoDocSel)} cláusulas en el modelo</span>{onAbrirAspecto&&<button type="button" className="btn btn-secondary btn-sm" style={{minHeight:40}} onClick={function(){if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Aspecto del documento</button>}</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginTop:8}}><span style={{fontSize:11,color:"var(--dim)"}}>{contarModelo(tipoDocSel)} cláusulas en el modelo</span>{onAbrirAspecto&&<button type="button" className="btn btn-secondary btn-sm" style={{minHeight:40}} onClick={function(){if(verEditorPropio)navegarConProteccionModelo(onAbrirAspecto);else if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Aspecto del documento</button>}</div>
       </div>}
-      <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
+      <div className="card" style={{padding:13,display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{fontSize:13,fontWeight:750,color:"var(--text)"}}>Elegí cómo preparar este documento</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+          <button type="button" className={!verEditorPropio?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0,whiteSpace:"normal"}} onClick={volverModeloEstandar}>Modelo DocWorks</button>
+          <button type="button" className={verEditorPropio?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,minWidth:0,whiteSpace:"normal"}} onClick={function(){setErrorModeloPropio("");setPegarMiContrato(true);}}>Pegar mi contrato</button>
+        </div>
+        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5}}>{verEditorPropio?"DocWorks conserva tu texto completo y solo completa los datos automáticos. No agrega cláusulas.":"Introducción, cláusulas editables y firmas automáticas, como lo venís usando."}</div>
+        {errorModeloPropio&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorModeloPropio}</div>}
+      </div>
+      {verEditorPropio
+        ? <DocumentoPropioEditor key={"contrato-propio-"+tipoDocSel} tipo={tipoDocSel} perfil={perfil} onSavePerfil={guardarPerfil} confirmar={requestDwConfirm} onCancelar={function(){setPegarMiContrato(false);}}/>
+        : <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
         <div className="card" style={{padding:14}}>
           <div style={{fontSize:14,fontWeight:750,color:"var(--text)",marginBottom:5}}>Cláusulas</div><div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:10}}>Abrí la cláusula que quieras modificar. Las condiciones esenciales se mantienen protegidas.</div>
           <div id="dw-model-preview-area">
@@ -426,6 +458,10 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
             {<CuerpoPlantillaPanel perfil={perfil} tipo={tipoDocSel} bloquesReserva={bloquesReserva} onEditingChange={setModeloEditando} puedeEditar={puedeEditar} puedeVerHistorial={puedeEditar} usuarioActual={usuarioActual} onChange={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}/>}
           </div>
         </div>
+      <details className="card" style={{padding:14}}>
+        <summary style={{fontSize:14,fontWeight:700,color:"var(--text)",cursor:"pointer",padding:"9px 0",minHeight:40}}>Firmas</summary>
+        <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>DocWorks coloca automáticamente las firmas según los datos cargados en la operación. En el contrato propio se utilizan las firmas del texto pegado.</div>
+      </details>
       {<details key={"biblioteca-"+tipoDocSel} id="dw-model-extra-clauses" className="card" style={{padding:14,scrollMarginTop:90}} data-step="clausulas">
         <summary style={{fontSize:14,fontWeight:700,color:"var(--text)",cursor:"pointer",minHeight:44,padding:"10px 0",boxSizing:"border-box"}}>Cláusulas que puede agregar el asesor ({cantidadAdicionalesDisponibles})</summary>
         <div style={{fontSize:13,color:"var(--dim)",lineHeight:1.55,marginTop:5}}>Elegí qué cláusulas de la biblioteca estarán disponibles para {TIPOS[tipoDocSel]||tipoDocSel}. El asesor podrá incorporarlas cuando correspondan a la operación.</div>
@@ -450,7 +486,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setSeccion("adicionales");}}>Ir a Biblioteca de cláusulas</button></div>
 
       </details>}
-      </EncabezadoFijadoPanel>
+      </EncabezadoFijadoPanel>}
     </div>}
     {seccion==="modelos"&&!puedeEditar&&<div className="notice" style={{fontSize:12}}>Los modelos de los documentos están disponibles únicamente para Dueño y Administrador.</div>}
   </div>;
