@@ -183,7 +183,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   const perfilGuardado=JSON.parse(await page.getByTestId('perfil').textContent());
   assert.ok(perfilGuardado.plantillas.reserva.clausulas_ids.includes('catalogo-1'));checks++;
   assert.ok(!perfilGuardado.plantillas.alquiler?.clausulas_ids?.includes('catalogo-1'));checks++;
-  assert.ok(await page.getByText('Texto ficticio para comprobar la biblioteca.',{exact:true}).isVisible());checks++;
+  assert.ok(await page.getByText('Texto reutilizable de ejemplo',{exact:true}).first().isVisible(),'La cláusula reutilizable sigue visible en la biblioteca');checks++;
   await page.getByRole('button',{name:'＋ Crear cláusula para biblioteca',exact:true}).click();
   await page.locator('fieldset input.inp').fill('Crédito hipotecario sin plazo');
   await page.locator('#dw-clausula-texto').fill('Condición de crédito sin plazo determinado.');

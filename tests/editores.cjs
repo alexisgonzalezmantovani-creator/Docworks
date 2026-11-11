@@ -34,6 +34,8 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
    await click(button('+Reserva alquiler · importe numérico'));
    await click(button('+Reserva alquiler · importe en letras'));
    check('chips distinguen monto y redacción legal',()=>{const texto=document.querySelector('textarea').value;assert.ok(texto.includes('{{res_alq_monto_reserva}}'));assert.ok(texto.includes('{{reserva_alquiler_reserva}}'));assert.ok(!buttons().some(b=>b.textContent.trim()==='+Reserva alquiler · importe en letras'));});
+   // El buscador del catálogo conserva el filtro anterior: limpiarlo antes de buscar otro chip.
+   await fill(busqueda,'');
   }
 
   await fill(document.querySelector('textarea'),'Texto de prueba con redacción propia.');
