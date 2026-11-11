@@ -1,12 +1,15 @@
 // Laboratorio aislado: estas funciones solo utilizan el almacenamiento que recibe el llamador.
 // Ninguna escribe en Supabase ni en los modelos reales.
 export const MODELOS_LAB_SCHEMA=1;
+export const TIPOS_MODELO_LAB=["reserva","boleto","reserva_alquiler","alquiler","comodato","exclusividad","refuerzo_reserva","devolucion_reserva"];
 export function modeloLabVacio(){
  return {schema:MODELOS_LAB_SCHEMA,borrador:null,versiones:[],publicada:null};
 }
-export function claveModeloLab(inmobiliariaId,usuarioId){
- if(!inmobiliariaId||!usuarioId)return null;
- return "docworks:lab-modelos:v1:"+String(inmobiliariaId)+":"+String(usuarioId);
+export function claveModeloLab(inmobiliariaId,usuarioId,tipo="reserva"){
+ if(!inmobiliariaId||!usuarioId||!TIPOS_MODELO_LAB.includes(tipo))return null;
+ const original="docworks:lab-modelos:v1:"+String(inmobiliariaId)+":"+String(usuarioId);
+ // La reserva conserva la clave original para no perder borradores anteriores.
+ return tipo==="reserva"?original:original+":"+tipo;
 }
 export function leerModeloLab(almacenamiento,clave){
  if(!almacenamiento||!clave)return modeloLabVacio();
@@ -28,6 +31,8 @@ export function leerModeloLab(almacenamiento,clave){
 export function validarModeloLab(snapshot){
  const errores=[];
  if(!snapshot||!["adaptar","propio"].includes(snapshot.modo))errores.push("Elegí Adaptar modelo o Modelo propio.");
+ if(snapshot&&snapshot.tipo!=null&&!TIPOS_MODELO_LAB.includes(snapshot.tipo))errores.push("Tipo de documento inválido.");
+ if(snapshot&&snapshot.tipo&&snapshot.tipo!=="reserva"&&snapshot.conformidadSeparada)errores.push("El acta de conformidad del vendedor corresponde a Reserva de compra.");
  if(!snapshot||!String(snapshot.titulo||"").trim())errores.push("Falta el título del documento.");
  else if(String(snapshot.titulo).length>160)errores.push("El título es demasiado largo.");
  const bloques=snapshot&&Array.isArray(snapshot.partes)?snapshot.partes:[];

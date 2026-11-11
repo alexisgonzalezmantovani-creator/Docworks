@@ -304,12 +304,13 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
 }
 
 export function crearClausulasWorkspace(deps){
- const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, TIPO_ICON={}, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState} = deps;
+ const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, getBodyBlocksConfig, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, TIPO_ICON={}, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState} = deps;
 
 
 
 function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usuarioActual}){
- const clave=claveModeloLab(inmobiliariaId,usuarioActual&&usuarioActual.id);
+ const [tipoModelo,setTipoModelo]=useState("reserva");
+ const clave=claveModeloLab(inmobiliariaId,usuarioActual&&usuarioActual.id,tipoModelo);
  function almacenamientoModelo(){try{return typeof window==="undefined"?null:window.localStorage;}catch(_e){return null;}}
  const [registro,setRegistro]=useState(function(){
   return leerModeloLab(almacenamientoModelo(),clave);
@@ -332,21 +333,20 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
  const [alerta,setAlerta]=useState("");
  const area=useRef(null);
  const lectura=modo==="usar"||modo==="publicado";
- const config=perfil&&perfil.plantillas&&perfil.plantillas.reserva;
- const base=config&&Array.isArray(config.body_blocks)&&config.body_blocks.length?config.body_blocks:
-  Array.isArray(bloquesReserva)&&bloquesReserva.length?bloquesReserva:DEFAULT_BLOQUES_RESERVA;
+ const base=getBodyBlocksConfig(perfil,tipoModelo,bloquesReserva);
  useEffect(function(){onDirty(!!dirty);},[dirty,onDirty]);
  useEffect(function(){
   setRegistro(leerModeloLab(almacenamientoModelo(),clave));
   setDirty(false);setModo("");
  },[clave]);
  function snapshotActual(){
-  return {modo:modo==="publicado"||modo==="usar"?"adaptar":modo,titulo:titulo,
+  return {tipo:tipoModelo,modo:modo==="publicado"||modo==="usar"?"adaptar":modo,titulo:titulo,
    partes:partes.map(function(p){return Object.assign({},p);}),
-   conformidadSeparada:!!conformidadSeparada,tituloActa:tituloActa,textoActa:textoActa};
+   conformidadSeparada:tipoModelo==="reserva"&&!!conformidadSeparada,tituloActa:tituloActa,textoActa:textoActa};
  }
  function recuperar(snapshot,publicado){
   if(!snapshot||!Array.isArray(snapshot.partes))return;
+  if((snapshot.tipo||"reserva")!==tipoModelo){setErrorGuardar("Ese modelo corresponde a otro tipo de documento.");return;}
   setModo(publicado?"publicado":snapshot.modo==="propio"?"propio":"adaptar");
   setTitulo(snapshot.titulo||"Reserva de compra");
   setPartes(JSON.parse(JSON.stringify(snapshot.partes)));
@@ -373,7 +373,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
   setConfirmarSalir(false);setErrorGuardar("");setConfirmarPublicacion(false);
  }
  function iniciar(op){
-  setModo(op);setTitulo("Reserva de compra");setVista(false);setConformidadSeparada(false);setDocumentoActivo("reserva");setTituloActa("Acta de conformidad de reserva");setTextoActa("El/la vendedor/a {{vendedor_nombre}} manifiesta su conformidad con la oferta de compra presentada por {{comprador_nombre}} sobre el inmueble {{inmueble_direccion}}, conforme a los términos expresamente individualizados en la reserva a la que se vincula esta acta.");setAlerta("");setErrorGuardar("");setConfirmarSalir(false);setDirty(false);setMostrarConformidad(false);setConfirmarPublicacion(false);
+  setModo(op);setTitulo(TIPOS[tipoModelo]||"Documento");setVista(false);setConformidadSeparada(false);setDocumentoActivo("reserva");setTituloActa("Acta de conformidad de reserva");setTextoActa("El/la vendedor/a {{vendedor_nombre}} manifiesta su conformidad con la oferta de compra presentada por {{comprador_nombre}} sobre el inmueble {{inmueble_direccion}}, conforme a los términos expresamente individualizados en la reserva a la que se vincula esta acta.");setAlerta("");setErrorGuardar("");setConfirmarSalir(false);setDirty(false);setMostrarConformidad(false);setConfirmarPublicacion(false);
   var lista=op==="propio"?[{id:"propio",titulo:"Mi primer apartado",contenido:"",activo:true}]:
    base.map(function(b,i){return {id:b.id||"base"+i,titulo:b.titulo||"Apartado "+(i+1),contenido:b.contenido||"",activo:b.activo!==false};});
   setPartes(lista);setAbierto(op==="propio"?"propio":null);
@@ -410,9 +410,21 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
    <h2 style={{margin:"5px 0",fontSize:21}}>{!modo?"¿Cómo querés empezar?":vista?"Revisá cómo quedó":"Cambiá solo lo que necesites"}</h2>
    <div style={{fontSize:12,fontWeight:700,marginTop:6}}>{!modo?"Paso 1 de 3 · Elegí un punto de partida":vista?"Paso 3 de 3 · Mirá el documento":"Paso 2 de 3 · Editá el texto"}</div>
    <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:7}}>Tus cambios se guardan en este dispositivo. Esta prueba no modifica los documentos que usa hoy tu inmobiliaria.</div></div>
+  {!modo&&<div style={panel}>
+   <label style={{fontSize:12.5,fontWeight:750,display:"block"}}>¿Qué documento querés preparar?
+    <select className="inp" aria-label="Tipo de documento a crear" value={tipoModelo} onChange={function(e){
+       const siguiente=e.target.value;
+       setTipoModelo(siguiente);
+       setRegistro(leerModeloLab(almacenamientoModelo(),claveModeloLab(inmobiliariaId,usuarioActual&&usuarioActual.id,siguiente)));
+       setDirty(false);setErrorGuardar("");setAlerta("");
+      }} style={{display:"block",width:"100%",maxWidth:460,minHeight:44,boxSizing:"border-box",marginTop:8}}>
+      {PLANTILLA_TIPOS.map(function(tipo){return <option key={tipo} value={tipo}>{TIPOS[tipo]||tipo}</option>;})}
+    </select>
+   </label>
+  </div>}
   {!modo&&!!registro.borrador&&<div style={panel}>
    <div style={{fontSize:13,fontWeight:750,marginBottom:8}}>Tenés un modelo guardado</div>
-   <div style={{fontSize:12,color:"var(--dim)",marginBottom:10}}>{registro.borrador.titulo||"Modelo"} · {registro.versiones.length} versión(es) locales</div>
+   <div style={{fontSize:12,color:"var(--dim)",marginBottom:10}}>{registro.borrador.titulo||"Modelo"} · {registro.versiones.length} versión(es) de {TIPOS[tipoModelo]||tipoModelo}</div>
    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
     <button type="button" className="btn btn-primary btn-sm" onClick={function(){recuperar(registro.borrador,false);}}>Recuperar y continuar</button>
     {registro.publicada!=null&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){var v=recuperarVersionModeloLab(registro,registro.publicada);if(v)recuperar(v,true);}}>Vista asesor (simulada)</button>}
@@ -442,7 +454,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
     <label style={{display:"block",fontSize:12,fontWeight:700,marginBottom:12}}>Nombre del documento
       <input className="inp" disabled={lectura} value={titulo} onChange={function(e){setTitulo(e.target.value);setDirty(true);}} style={{width:"100%",boxSizing:"border-box",marginTop:5}}/>
     </label>
-    <div style={{margin:"0 0 12px",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+    {tipoModelo==="reserva"&&<div style={{margin:"0 0 12px",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
      <button type="button" aria-expanded={mostrarConformidad} style={{width:"100%",minHeight:44,border:0,background:"var(--surface2)",color:"var(--text)",fontSize:12.5,fontWeight:750,textAlign:"left",padding:"10px 12px",cursor:"pointer"}} onClick={function(){setMostrarConformidad(!mostrarConformidad);}}>
        Conformidad del vendedor · {conformidadSeparada?"Acta separada":"Incluida en la reserva"} <span style={{float:"right"}}>{mostrarConformidad?"−":"+"}</span>
      </button>
@@ -452,7 +464,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
      <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,cursor:"pointer"}}><input type="radio" name="conformidad-demo" disabled={lectura} checked={conformidadSeparada} onChange={function(){setConformidadSeparada(true);setDocumentoActivo("reserva");setDirty(true);}}/> En un acta independiente</label>
      <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:8}}>Si elegís acta independiente, vas a poder revisar los dos textos por separado.</div>
     </fieldset>}
-    </div>
+    </div>}
     {conformidadSeparada&&<div role="tablist" aria-label="Editar documentos independientes" style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
       <button type="button" role="tab" aria-selected={documentoActivo==="reserva"} className={documentoActivo==="reserva"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setDocumentoActivo("reserva");setAbierto(null);}}>1 · Reserva</button>
       <button type="button" role="tab" aria-selected={documentoActivo==="acta"} className={documentoActivo==="acta"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setDocumentoActivo("acta");setAbierto(null);}}>2 · Acta</button>
@@ -463,7 +475,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
       <label style={{fontSize:12}}>Vincular dato <select className="inp" disabled={lectura} defaultValue="" onChange={function(e){if(e.target.value){setTextoActa(function(v){return v+" {{"+e.target.value+"}}";});setDirty(true);}e.target.value="";}} style={{display:"block",marginTop:5,maxWidth:"100%"}}><option value="">＋ Seleccionar campo…</option>{campos.map(function(c){return <option key={c[0]} value={c[0]}>{c[1]}</option>;})}</select></label>
       <div style={{fontSize:11.5,color:"var(--dim)"}}>Es un segundo documento editable, vinculado a la misma reserva. Revisá que la reserva principal no reproduzca la conformidad que querés dejar exclusivamente en el acta.</div>
     </div>}
-    {(!conformidadSeparada||documentoActivo==="reserva")&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:8}}>{partes.length} apartados · Tocá uno para verlo</div>}
+    {(!conformidadSeparada||documentoActivo==="reserva")&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:8}}>{partes.length} apartados de {TIPOS[tipoModelo]||"este documento"} · Tocá uno para verlo</div>}
     {(!conformidadSeparada||documentoActivo==="reserva")&&partes.map(function(p,i){return <div key={p.id} style={{border:"1px solid var(--border)",borderRadius:9,padding:9,marginBottom:8}}>
      <div style={{display:"flex",alignItems:"center",gap:8}}>
       <span style={{fontSize:12,color:"var(--dim)"}}>{i+1}.</span>

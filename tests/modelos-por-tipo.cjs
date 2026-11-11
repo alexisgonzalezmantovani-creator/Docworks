@@ -1,0 +1,36 @@
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const {transformSync}=require("esbuild");
+const logic=fs.readFileSync(path.join(__dirname,"../src/ModelosLaboratorio.ts"),"utf8");
+const ui=fs.readFileSync(path.join(__dirname,"../src/Clausulas.tsx"),"utf8");
+const app=fs.readFileSync(path.join(__dirname,"../src/App.tsx"),"utf8");
+const mod={exports:{}};
+new Function("module","exports",transformSync(logic,{loader:"ts",format:"cjs",target:"es2020"}).code)(mod,mod.exports);
+const api=mod.exports;
+const tipos=["reserva","boleto","reserva_alquiler","alquiler","comodato","exclusividad","refuerzo_reserva","devolucion_reserva"];
+assert.deepEqual(api.TIPOS_MODELO_LAB,tipos);
+const keys=tipos.map(tipo=>api.claveModeloLab("inmobiliaria-1","admin-1",tipo));
+assert.equal(new Set(keys).size,tipos.length,"Cada documento debe conservar su propio borrador");
+assert.equal(keys[0],api.claveModeloLab("inmobiliaria-1","admin-1"),"Reserva debe recuperar su almacenamiento anterior");
+assert.equal(api.claveModeloLab("inmobiliaria-1","admin-1","otro"),null);
+const storage=new Map(),adapter={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};
+for(let i=0;i<tipos.length;i++){
+ const tipo=tipos[i];
+ const snapshot={tipo,modo:"adaptar",titulo:"Modelo "+tipo,conformidadSeparada:false,partes:[{id:tipo+".1",titulo:"Condición",contenido:"Texto original",activo:true}]};
+ assert.deepEqual(api.validarModeloLab(snapshot),[]);
+ const saved=api.guardarRevisionModeloLab(api.modeloLabVacio(),snapshot,false,"2026-11-10T20:00:00.000Z");
+ assert.equal(saved.ok,true);
+ assert.equal(api.escribirModeloLab(adapter,keys[i],saved.estado),true);
+ const restored=api.leerModeloLab(adapter,keys[i]);
+ assert.equal(restored.borrador.tipo,tipo);
+ assert.equal(restored.versiones[0].snapshot.partes[0].contenido,"Texto original");
+}
+assert.equal(api.validarModeloLab({tipo:"boleto",modo:"adaptar",titulo:"Boleto",conformidadSeparada:true,partes:[{titulo:"Precio",contenido:"Texto",activo:true}]}).length>0,true,"Acta solo para reserva");
+assert.match(ui,/getBodyBlocksConfig\(perfil,tipoModelo,bloquesReserva\)/);
+assert.match(ui,/claveModeloLab\(inmobiliariaId,usuarioActual&&usuarioActual\.id,tipoModelo\)/);
+assert.match(ui,/Tipo de documento a crear/);
+assert.match(ui,/PLANTILLA_TIPOS\.map\(function\(tipo\)/);
+assert.match(ui,/tipoModelo==="reserva"&&<div/);
+assert.match(app,/crearClausulasWorkspace\(\{TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, getBodyBlocksConfig,/);
+console.log("Modelos por documento: 8 tipos aislados y funciones reutilizadas OK.");
