@@ -3870,8 +3870,8 @@ function tokensPagoCompra(op){
   // reciben esta redacción. Los modelos publicados y snapshots permanecen intactos.
   // Evitar afirmar una entrega de dinero no acreditada por el formulario.
   var instrumento=instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura;
-  var firmaElegida=op.compra_instrumento&&op.compra_instrumento!=="escritura"?instrumento.firma:"la Escritura Traslativa de Dominio";
-  var boletoHabitual="El precio convenido es de "+fmt$L(precio,moneda)+". "+(anticipo>0?"Se prevé una entrega inicial de "+fmt$L(anticipo,moneda)+" y un saldo de "+fmt$L(saldo,moneda)+" al momento de la firma de "+firmaElegida:"Se prevé el pago del precio al momento de la firma de "+firmaElegida)+", conforme a lo acordado por las partes.";
+  var firmaElegida=op.compra_instrumento==="boleto"?"del Boleto de Compraventa":op.compra_instrumento==="cesion_boleto"?"de la Cesión de Derechos Emergentes de Boleto de Compraventa":"de la Escritura Traslativa de Dominio";
+  var boletoHabitual="El precio convenido es de "+fmt$L(precio,moneda)+". "+(anticipo>0?"Se prevé una entrega inicial de "+fmt$L(anticipo,moneda)+" y un saldo de "+fmt$L(saldo,moneda)+" al momento de la firma "+firmaElegida:"Se prevé el pago del precio al momento de la firma "+firmaElegida)+", conforme a lo acordado por las partes.";
   var boletoPago=modalidad!=="habitual" ? texto : boletoHabitual;
   var reservaHabitual="El Oferente ofrece abonar el saldo de "+fmt$L(saldo,moneda)+" "+(op.compra_instrumento&&op.compra_instrumento!=="escritura"?"al momento de firmar "+instrumento.firma:"al momento de firmar la Escritura Traslativa de Dominio y/o el Boleto de Compraventa, lo que ocurra primero")+", conforme a las condiciones de esta oferta.";
   var reservaPago=modalidad!=="habitual" ? texto : reservaHabitual;
