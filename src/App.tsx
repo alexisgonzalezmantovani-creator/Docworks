@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.48";
+var DOCWORKS_VERSION = "6.49";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -5094,7 +5094,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes}){
           )}
           </div>
         </DetallesFormulario>}
-        {<details className="col2 dw-economic-advanced">
+        {!!data.id&&<details className="col2 dw-economic-advanced">
           <summary><span className="dw-economic-advanced-title">Escribanía (opcional)</span><span className="dw-economic-advanced-caption">{data.escribania||"Completar cuando esté asignada"}</span><span className="dw-economic-advanced-symbol" aria-hidden="true"/></summary>
           <div className="dw-economic-advanced-content"><Inp id="dw-field-escribania" label="Escribanía" value={data.escribania||""} onChange={function(e){onChange("escribania",e.target.value);}} placeholder="Nombre de la escribanía"/></div>
         </details>}

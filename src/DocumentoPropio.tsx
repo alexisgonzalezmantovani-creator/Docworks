@@ -14,7 +14,10 @@ const CHIPS = [
   ["inmueble_direccion","Dirección del inmueble"],["inmueble_partido","Partido / municipio"],
   ["inmueble_provincia","Provincia"],["precio_letras","Precio en letras"],
   ["anticipo_letras","Reserva / anticipo en letras"],["saldo_letras","Saldo en letras"],
-  ["alquiler_monto_letras","Alquiler en letras"],["fecha_operacion_larga","Fecha"],
+  ["alquiler_monto_letras","Alquiler en letras"],
+  ["reserva_alquiler_reserva","Importe de la reserva de alquiler en letras"],
+  ["reserva_alquiler_canon","Alquiler mensual estimado en letras"],
+  ["fecha_operacion_larga","Fecha"],
   ["inmobiliaria_nombre","Inmobiliaria"],["inmobiliaria_matricula","Matrícula"],
   ["reserva_pago_acordado","Condiciones de pago de reserva"],
   ["boleto_pago_acordado","Condiciones de pago de boleto"],
@@ -57,6 +60,7 @@ export default function DocumentoPropioEditor({
     if(k==="compra_condiciones_pago")return tipo==="reserva"||tipo==="boleto";
     if(k==="exclusividad_vigencia")return tipo==="exclusividad";
     if(k==="alquiler_inicio"||k==="alquiler_fin"||k==="alquiler_monto_letras")return tipo==="alquiler";
+    if(k==="reserva_alquiler_reserva"||k==="reserva_alquiler_canon")return tipo==="reserva_alquiler";
     if(k==="precio_letras")return grupo==="compra"||grupo==="exclusividad";
     if(k==="anticipo_letras"||k==="saldo_letras")return tipo==="reserva"||tipo==="boleto";
     return true;
@@ -71,6 +75,12 @@ export default function DocumentoPropioEditor({
     :["comprador_nombre","vendedor_nombre"];
   const faltantes=[...nombres,"inmueble_direccion"].filter(t=>!capturados.includes(t));
   const valido=texto.trim().length>40&&texto.length<=80000&&!invalidos.length&&!llavesMal&&!faltantes.length;
+  // Estas advertencias NO incorporan cláusulas ni impiden guardar: solo ayudan a revisar el Word.
+  const advertenciasContenido=[
+    !/(firma|firmantes|suscriben|rúbrica|rubrica)/i.test(texto)?"No encontramos una referencia clara a las firmas":null,
+    !/(honorarios|comisi[oó]n|intermediaci[oó]n|retribuci[oó]n)/i.test(texto)?"Revisá si el texto contempla los honorarios":null,
+    !/(jurisdicci[oó]n|tribunales|juzgados|competencia judicial)/i.test(texto)?"Revisá si corresponde especificar la jurisdicción":null
+  ].filter(Boolean);
   useEffect(()=>{
     if(!dirty||estado==="saving")return;
     function beforeUnload(ev:BeforeUnloadEvent){ev.preventDefault();ev.returnValue="";}
@@ -170,6 +180,14 @@ export default function DocumentoPropioEditor({
         llavesMal?"Hay chips con llaves incompletas":null
       ].filter(Boolean).join(". ")}
     </div>}
+    {revisar&&texto.trim().length>40&&advertenciasContenido.length>0&&
+      <div style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:"var(--muted)"}}>
+        <strong style={{color:"var(--text)"}}>Para revisar en tu contrato (orientativo)</strong>
+        <ul style={{margin:"6px 0 0",paddingLeft:19}}>
+          {advertenciasContenido.map((mensaje,i)=><li key={i}>{mensaje}</li>)}
+        </ul>
+        <span>No se agregó ningún texto y estas sugerencias no impiden guardar.</span>
+      </div>}
     {error&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{error}</div>}
     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       <button type="button" className="btn btn-secondary" onClick={()=>{setRevisar(true);setMostrarVista(false);}}>Revisar</button>
