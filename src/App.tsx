@@ -5088,7 +5088,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
         {data.compra_instrumento==="cesion_boleto"&&<div className="col2">
           <Txa id="dw-field-compra_boleto_origen" label="Identificación del boleto que se cede" value={data.compra_boleto_origen||""} onChange={function(e){onChange("compra_boleto_origen",e.target.value);}} rows={3} placeholder="Fecha del boleto original, partes y referencia del inmueble" {...estiloCampoFaltante(faltantes,"compra_boleto_origen")}/>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:5}}>Para emitir una cesión, cargá un contrato específico en Documentos → Pegar mi contrato. El modelo estándar no se convierte automáticamente en cesión.</div>
-        </div>
+        </div>}
         {data.tipo==="reserva"&&<div className="col2 dw-economic-refuerzo-toggle">
           <label className="dw-economic-refuerzo-label">
             <input id="dw-field-reserva_incluye_refuerzo" type="checkbox" checked={!!data.reserva_incluye_refuerzo} onChange={function(e){onChange("reserva_incluye_refuerzo",e.target.checked);}}/>
