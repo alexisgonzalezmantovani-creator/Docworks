@@ -308,7 +308,7 @@ export function crearClausulasWorkspace(deps){
 
 /* Componente legado de cláusulas personales eliminado: ya no forma parte del producto. */
 
-function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClausula,onEditClausula,onDeleteClausula,papeleraClausulas,papeleraClausulasLoading,papeleraClausulasError,onRecargarPapeleraClausulas,onRestaurarClausula,bloquesReserva,onUpdateBloqueReserva,onMoveBloqueReserva,bloquesError,bloquesLoading,onRetryBloques,clausulasError,clausulasLoading,onRetryClausulas,usuarioActual}) {
+function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClausula,onEditClausula,onDeleteClausula,papeleraClausulas,papeleraClausulasLoading,papeleraClausulasError,onRecargarPapeleraClausulas,onRestaurarClausula,bloquesReserva,onUpdateBloqueReserva,onMoveBloqueReserva,bloquesError,bloquesLoading,onRetryBloques,clausulasError,clausulasLoading,onRetryClausulas,usuarioActual,onAbrirAspecto}) {
   const [restaurandoClausula,setRestaurandoClausula]=useState(null);
   const [errorPapeleraClausulas,setErrorPapeleraClausulas]=useState("");
   const [seccion,setSeccionDirecto]=useState(perfil&&(perfil.rol==="dueno"||perfil.rol==="admin")?"modelos":"adicionales");
@@ -398,10 +398,10 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var cantidadAdicionalesHeredadas=opcionalesDocumento.filter(function(c){return c.obligatoria===true||(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
   var hayClausulasAdicionalesConfigurables=cantidadAdicionalesEditables>0;
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <div className="section-header"><div><div className="section-title">{puedeEditar?"Cláusulas y documentos":"Mi biblioteca"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":"Elegí un documento y editá su contenido."}</div></div></div>
+    <div className="section-header"><div><div className="section-title">{seccion==="modelos"?"Documentos":seccion==="papelera"?"Papelera de cláusulas":"Biblioteca de cláusulas"}</div><div className="section-sub">{seccion==="papelera"?"Consultá y recuperá las cláusulas eliminadas.":seccion==="adicionales"?"Guardá textos para reutilizarlos en tus documentos.":"Elegí un documento y editá su contenido."}</div></div></div>
     {puedeEditar&&<nav aria-label="Cláusulas y documentos" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-      <button type="button" aria-pressed={seccion==="modelos"} className={seccion==="modelos"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
       <button type="button" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("adicionales");}}>Biblioteca de cláusulas</button>
+      <button type="button" aria-pressed={seccion==="modelos"} className={seccion==="modelos"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:44,flex:"1 1 180px"}} onClick={function(){setSeccion("modelos");}}>Documentos</button>
       
     </nav>}
     {seccion==="adicionales"&&<div className="card" style={{padding:14}}>
@@ -415,11 +415,11 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       <style>{".dw-model-type-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.dw-model-type-chip{min-width:0;text-align:left}@media(max-width:640px){.dw-model-type-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dw-model-type-chip{width:100%;min-width:0;max-width:none}}@media(max-width:380px){.dw-model-type-grid{grid-template-columns:minmax(0,1fr)}}"}</style>
       {<div id="dw-config-tipo" className="card" style={{padding:12,scrollMarginTop:90}}>
         <SelectorDocumento id="dw-modelo-documento" tipos={PLANTILLA_TIPOS} nombres={TIPOS} iconos={TIPO_ICON} value={tipoDocSel} onChange={cambiarDocumento}/>
-        <div style={{fontSize:11,color:"var(--dim)",marginTop:7}}>{contarModelo(tipoDocSel)} cláusulas en el modelo</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginTop:8}}><span style={{fontSize:11,color:"var(--dim)"}}>{contarModelo(tipoDocSel)} cláusulas en el modelo</span>{onAbrirAspecto&&<button type="button" className="btn btn-secondary btn-sm" style={{minHeight:40}} onClick={function(){if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Aspecto del documento</button>}</div>
       </div>}
       <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
         <div className="card" style={{padding:14}}>
-          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:10}}>Tocá una cláusula para leerla y después elegí Editar. Las esenciales están protegidas.</div>
+          <div style={{fontSize:14,fontWeight:750,color:"var(--text)",marginBottom:5}}>Cláusulas</div><div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:10}}>Abrí la cláusula que quieras modificar. Las condiciones esenciales se mantienen protegidas.</div>
           <div id="dw-model-preview-area">
             {bloquesError&&tipoDocSel==="reserva"&&<div className="notice notice-amber" style={{fontSize:12,marginBottom:10}}>{bloquesError} {onRetryBloques&&<button type="button" onClick={onRetryBloques} className="btn btn-secondary btn-sm">Reintentar</button>}</div>}
             {bloquesLoading&&tipoDocSel==="reserva"&&(!bloquesReserva||bloquesReserva.length===0)&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Cargando las cláusulas del modelo de Reserva…</div>}
@@ -427,7 +427,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
           </div>
         </div>
       {<details key={"biblioteca-"+tipoDocSel} id="dw-model-extra-clauses" className="card" style={{padding:14,scrollMarginTop:90}} data-step="clausulas">
-        <summary style={{fontSize:14,fontWeight:700,color:"var(--text)",cursor:"pointer",minHeight:44,padding:"10px 0",boxSizing:"border-box"}}>Cláusulas adicionales para el asesor ({cantidadAdicionalesDisponibles} habilitadas · {cantidadAdicionalesDeshabilitadas} no disponibles{cantidadAdicionalesHeredadas>0?" · "+cantidadAdicionalesHeredadas+" heredadas":""})</summary>
+        <summary style={{fontSize:14,fontWeight:700,color:"var(--text)",cursor:"pointer",minHeight:44,padding:"10px 0",boxSizing:"border-box"}}>Cláusulas que puede agregar el asesor ({cantidadAdicionalesDisponibles})</summary>
         <div style={{fontSize:13,color:"var(--dim)",lineHeight:1.55,marginTop:5}}>Elegí qué cláusulas de la biblioteca estarán disponibles para {TIPOS[tipoDocSel]||tipoDocSel}. El asesor podrá incorporarlas cuando correspondan a la operación.</div>
         <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Las cláusulas disponibles se agregan únicamente si el asesor las selecciona. Las que figuran como «Siempre (modelo anterior)» conservan su configuración original.</div>
         {estadoClausulaGuardando!==null&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>Guardando disponibilidad de la cláusula…</div>}

@@ -2820,8 +2820,8 @@ return SuperAdminDashboard;
 
 export function crearConfiguracionView(deps){
  const {FacturacionMercadoPago, parseMontoAR, generarVistaPreviaAspecto, Btn, CLAUSULAS_DEFAULT, ClausulaFormBody, ClausulaIAComposer, ConfirmModal, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, DEFAULT_ENCABEZADOS, DWIcon, ESTADOS, EncabezadoEditor, Field, Inp, Modal, NIVEL_LABELS, PERMS_LABELS, PLANTILLA_ESTILOS, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, SAMPLE_OP_PREVIEW, Slt, TIPOS, TIPO_ICON, TIPO_ICON_DEFAULT, Txa, clausulaAplicaTipo, contarBloquesCuerpo, docworksMercadoPago, dwIrPasoModelo, dwNotify, loadSupabaseJs, SABadge, formatearNombreUsuarioVisible, genId, getEncabezadoTemplate, obtenerPlantillaConfig, obtenerVersionPlantilla, sustituirTokens, traducirError, useEffect, useRef, useState} = deps;
-function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, onChange, currentUserId, currentUserRole, darkMode, onToggleDark, equipo, equipoSupabase, operaciones, clausulas, onAddClausula, onEditClausula, onDeleteClausula, onMoveClausula, onDuplicateClausula, bloquesReserva, onUpdateBloqueReserva, onMoveBloqueReserva, bloquesError, bloquesLoading, onRetryBloques, clausulasError, onRetryClausulas, papelera, auditLog, auditoriaSupabase, onExportarRespaldo, onImportarRespaldo, onVaciarAuditoria, puedeInstalar, onInstalar, onStartTour, ctx }) {
-  const [tab, setTab] = useState(requestedTab?.tab||"cuenta");
+function ConfiguracionView({ requestedTab, modoAspectoDesdeDocumentos=false, onVolverDocumentos, onHelpNavigate, onOpenBot, perfil, onChange, currentUserId, currentUserRole, darkMode, onToggleDark, equipo, equipoSupabase, operaciones, clausulas, onAddClausula, onEditClausula, onDeleteClausula, onMoveClausula, onDuplicateClausula, bloquesReserva, onUpdateBloqueReserva, onMoveBloqueReserva, bloquesError, bloquesLoading, onRetryBloques, clausulasError, onRetryClausulas, papelera, auditLog, auditoriaSupabase, onExportarRespaldo, onImportarRespaldo, onVaciarAuditoria, puedeInstalar, onInstalar, onStartTour, ctx }) {
+  const [tab, setTab] = useState(modoAspectoDesdeDocumentos?"plantillas":requestedTab?.tab||"cuenta");
   useEffect(function(){if(requestedTab?.tab)pedirCambioTab(requestedTab.tab);},[requestedTab?.request]);
   const [showInvite, setShowInvite] = useState(false);
   const [editM, setEditM] = useState(null);
@@ -2858,6 +2858,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
   const [configUnsavedTarget,setConfigUnsavedTarget] = useState(null);
   const [configUnsavedView,setConfigUnsavedView] = useState(null);
   const [showConfigUnsaved,setShowConfigUnsaved] = useState(false);
+  const salidaAspectoPendienteRef=useRef(null);
   const [showSupport,setShowSupport] = useState(false);
   const [supportSubject,setSupportSubject] = useState("Consulta / problema en DocWorks");
   const [supportMessage,setSupportMessage] = useState("");
@@ -2993,22 +2994,28 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
     setEncabezadoDraft("");
     setEncabezadoEditing(false);
   }
+  function continuarTrasCambios(nextTab,nextView){
+    if(nextTab==="__documentos__"){if(onVolverDocumentos)onVolverDocumentos();return;}
+    if(nextTab==="__salida__"){var continuar=salidaAspectoPendienteRef.current;salidaAspectoPendienteRef.current=null;if(typeof continuar==="function")continuar();return;}
+    if(nextTab)setTab(nextTab);
+    if(nextView)setPlantillaVista(nextView);
+  }
   function descartarCambiosAspecto(){
+    var nextTab=configUnsavedTarget,nextView=configUnsavedView;
     setLocalPerfil(perfil);
     cancelarEdicionEncabezado();
     setConfigUnsavedTarget(null);
     setConfigUnsavedView(null);
     setShowConfigUnsaved(false);
     setPerfilSaveStatus(null);
+    continuarTrasCambios(nextTab,nextView);
   }
   function continuarConfiguracionSinCambios(){
-    var nextTab=configUnsavedTarget;
-    var nextView=configUnsavedView;
+    var nextTab=configUnsavedTarget,nextView=configUnsavedView;
     setConfigUnsavedTarget(null);
     setConfigUnsavedView(null);
     setShowConfigUnsaved(false);
-    if(nextTab){ setTab(nextTab); }
-    if(nextView){ setPlantillaVista(nextView); }
+    continuarTrasCambios(nextTab,nextView);
   }
   function guardarCambiosYContinuar(){
     savePerfil().then(function(res){
@@ -3016,6 +3023,21 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
       continuarConfiguracionSinCambios();
     });
   }
+  useEffect(function(){
+    if(!modoAspectoDesdeDocumentos||!aspectoTieneCambios())return;
+    function impedirRecarga(e){e.preventDefault();e.returnValue="";}
+    function protegerNavegacion(e){
+      if(e.defaultPrevented)return;
+      e.preventDefault();
+      salidaAspectoPendienteRef.current=e.detail&&e.detail.continuar;
+      setConfigUnsavedTarget("__salida__");
+      setConfigUnsavedView(null);
+      setShowConfigUnsaved(true);
+    }
+    window.addEventListener("beforeunload",impedirRecarga);
+    window.addEventListener("dw:model-navigation",protegerNavegacion);
+    return function(){window.removeEventListener("beforeunload",impedirRecarga);window.removeEventListener("dw:model-navigation",protegerNavegacion);};
+  },[modoAspectoDesdeDocumentos,localPerfil,perfil]);
   function pedirCambioTab(nextTab){
     if(nextTab===tab) return;
     if(plantillaVista==="aspecto" && aspectoTieneCambios()){
@@ -3087,7 +3109,6 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
     {id:"cuenta",    label:"Mi cuenta",           icon:"👤"},
     {id:"equipo",    label:"Equipo",               icon:"👥"},
     {id:"historial", label:"Historial del equipo", icon:"📊"},
-    {id:"aspecto",  label:"Aspecto del documento", icon:"✦"},
     {id:"auditoria", label:"Auditoría",            icon:"🕵️"},
     ...(puedeVerFacturacion ? [{id:"facturacion", label:"Facturación", icon:"💳"}] : []),
     {id:"backup",    label:"Respaldo",             icon:"☁️"},
@@ -3131,12 +3152,15 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
 
   return (
     <div>
-      <div className="section-header">
+      {modoAspectoDesdeDocumentos?<div className="section-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+        <div><div className="section-title">Aspecto del documento</div><div className="section-sub">Estos ajustes se aplican a los documentos de tu inmobiliaria.</div></div>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={function(){if(aspectoTieneCambios()){setConfigUnsavedTarget("__documentos__");setConfigUnsavedView(null);setShowConfigUnsaved(true);}else if(onVolverDocumentos)onVolverDocumentos();}}>← Volver a Documentos</button>
+      </div>:<div className="section-header">
         <div><div className="section-title">Configuración</div><div className="section-sub">Preferencias, perfil y equipo de trabajo</div></div>
-      </div>
+      </div>}
 
       {/* Tab bar */}
-      <div className="settings-tabs" style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0,overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",flexWrap:"nowrap",minWidth:0,touchAction:"pan-x"}}>
+      {!modoAspectoDesdeDocumentos&&<div className="settings-tabs" style={{display:"flex",gap:6,marginBottom:24,borderBottom:"1px solid var(--border)",paddingBottom:0,overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",flexWrap:"nowrap",minWidth:0,touchAction:"pan-x"}}>
         {TABS_CFG.map(function(t){
           var active=t.id==="aspecto" ? tab==="plantillas" : tab===t.id;
           return(
@@ -3148,7 +3172,7 @@ function ConfiguracionView({ requestedTab, onHelpNavigate, onOpenBot, perfil, on
             }}>{t.icon} {t.label}</button>
           );
         })}
-      </div>
+      </div>}
 
       {/* Mi cuenta: separar perfil y contraseña en vistas independientes. */}
       {tab==="cuenta"&&<div className="dw-account-nav" role="tablist" aria-label="Secciones de Mi cuenta">
