@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.46";
+var DOCWORKS_VERSION = "6.47";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -1057,12 +1057,13 @@ function obtenerIdsObligatoriosDePlantilla(perfil,tipo){
 function crearSnapshotPlantillaOperacion(op,perfil,clausulas,bloquesReserva){
   var tipo=op&&op.tipo;
   var cfg=perfil&&perfil.plantillas&&perfil.plantillas[tipo]?perfil.plantillas[tipo]:{};
-  var ids=Array.isArray(cfg.clausulas_ids)?cfg.clausulas_ids.slice():[];
-  var obligatoriasIds=Array.isArray(cfg.obligatorias_ids)?cfg.obligatorias_ids.slice():[];
+  var esPropio=cfg.modo_documento==="propio";
+  var ids=!esPropio&&Array.isArray(cfg.clausulas_ids)?cfg.clausulas_ids.slice():[];
+  var obligatoriasIds=!esPropio&&Array.isArray(cfg.obligatorias_ids)?cfg.obligatorias_ids.slice():[];
   var idsSnapshot=ids.concat(obligatoriasIds).filter(function(id,i,a){return a.indexOf(id)===i;});
   var intro=(perfil&&perfil.encabezados_custom&&perfil.encabezados_custom[tipo])||DEFAULT_ENCABEZADOS[tipo]||"";
-  var body=getBodyBlocksConfig(perfil,tipo,bloquesReserva);
-  return {tipo:tipo,version:obtenerVersionPlantilla(perfil,tipo),capturado_en:new Date().toISOString(),introduccion:intro,clausulas_ids:ids,obligatorias_ids:obligatoriasIds,clausulas:(clausulas||[]).filter(function(c){return idsSnapshot.indexOf(c.id)!==-1;}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria,orden:c.orden,aplica_a:c.aplica_a};}),body_blocks:JSON.parse(JSON.stringify(body)),mostrar_introduccion:!(perfil&&perfil.mostrar_introduccion===false),documento_propio:cfg.modo_documento==="propio"?String(cfg.documento_propio||""):null};
+  var body=esPropio?[]:getBodyBlocksConfig(perfil,tipo,bloquesReserva);
+  return {tipo:tipo,version:obtenerVersionPlantilla(perfil,tipo),capturado_en:new Date().toISOString(),introduccion:intro,clausulas_ids:ids,obligatorias_ids:obligatoriasIds,clausulas:(clausulas||[]).filter(function(c){return idsSnapshot.indexOf(c.id)!==-1;}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria,orden:c.orden,aplica_a:c.aplica_a};}),body_blocks:JSON.parse(JSON.stringify(body)),mostrar_introduccion:!(perfil&&perfil.mostrar_introduccion===false),documento_propio:esPropio?String(cfg.documento_propio||""):null,inmobiliaria_nombre:esPropio?String(perfil&&perfil.nombre||""):null,inmobiliaria_matricula:esPropio?String(perfil&&perfil.matricula||""):null};
 }
 function sellarVersionPlantillaOperacion(op,perfil,forzar,clausulas,bloquesReserva){
   if(!op)return op;
@@ -1983,7 +1984,7 @@ function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
     }
   }
   if(op.tipo==="exclusividad"&&perfil){
-    op=Object.assign({},op,{comprador_nombre:op.inmobiliaria_nombre||perfil.inmobiliaria_nombre||op.comprador_nombre,comprador_dni:op.inmobiliaria_matricula||perfil.matricula||op.comprador_dni});
+    op=Object.assign({},op,{comprador_nombre:op.inmobiliaria_nombre||perfil.inmobiliaria_nombre||perfil.nombre||op.comprador_nombre,comprador_dni:op.inmobiliaria_matricula||perfil.matricula||op.comprador_dni});
   }
   var campoPago=op.tipo==="reserva_alquiler"?"res_alq_dia_pago":"alquiler_dia_pago";
   if(["alquiler","reserva_alquiler"].includes(op.tipo)&&op[campoPago]==="otro")lista.push([campoPago+"_otro","Día de pago (1 al 31)"]);
@@ -4227,8 +4228,16 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   var snap=op&&op.plantilla_snapshot&&op.plantilla_snapshot.tipo===(tipo||op.tipo)?op.plantilla_snapshot:null;
   if(snap && typeof snap.documento_propio==="string"){
     var textoPropio=String(snap.documento_propio||"").replace(/\r\n?/g,"\n");
-    var extrasPropios=Object.assign({},derivedTokensGenerales(op),tipo==="reserva"?derivedTokensReserva(op):{},tokensPagoCompra(op));
-    var datosInmob={nombre:op.inmobiliaria_nombre||"",matricula:op.inmobiliaria_matricula||""};
+    var extrasPropios=Object.assign({},derivedTokensGenerales(op),(tipo||op.tipo)==="reserva"?derivedTokensReserva(op):{},tokensPagoCompra(op),{
+      // Comodato y autorización reutilizan internamente las partes de compraventa.
+      // La interfaz del contrato propio muestra los roles legales correctos.
+      comodante_nombre:op.vendedor_nombre||"___",comodante_dni:op.vendedor_dni||"___",comodante_domicilio:op.vendedor_domicilio||"___",
+      comodatario_nombre:op.comprador_nombre||"___",comodatario_dni:op.comprador_dni||"___",comodatario_domicilio:op.comprador_domicilio||"___",
+      autorizante_nombre:op.vendedor_nombre||"___",autorizante_dni:op.vendedor_dni||"___",autorizante_domicilio:op.vendedor_domicilio||"___",
+      inmobiliaria_nombre:op.inmobiliaria_nombre||snap.inmobiliaria_nombre||"",
+      inmobiliaria_matricula:op.inmobiliaria_matricula||snap.inmobiliaria_matricula||""
+    });
+    var datosInmob={nombre:extrasPropios.inmobiliaria_nombre,matricula:extrasPropios.inmobiliaria_matricula};
     var cuerpoPropio=resolveVars(sustituirTokens(textoPropio,op,datosInmob,tipo||op.tipo),op,extrasPropios);
     return {documentoPropio:true,tipo:tipo||op.tipo,titulo:"",subtitulo:"",ciudad:"",fecha:"",
       encabezado:cuerpoPropio.replace(/\n/g,"\n\n"),partes:[],firmas:[],secciones:[],clausulas:[],

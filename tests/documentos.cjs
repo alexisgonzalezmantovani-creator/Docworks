@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const esbuild=require('esbuild');
 const root=path.resolve(__dirname,'..');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-test-'));
-const exportsList=['PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport'];
+const exportsList=['PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion'];
 esbuild.buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+'\nexport { '+exportsList.join(',')+' };',resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs')});
 global.document={querySelector:()=>({}),title:''};
 const app=require(path.join(tmp,'app.cjs'));
@@ -51,6 +51,59 @@ delete global.document;
  check('cláusula propia sin título recibe nombre neutral',()=>{assert.equal(app.normalizarBodyBlock({id:'propia',titulo:'   ',contenido:'Acuerdo particular.'},0).titulo,'CONDICIÓN PARTICULAR');});
  check('Snapshot respeta obligatorias del modelo',()=>{const op={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'boleto',plantilla_snapshot:{tipo:'boleto',body_blocks:app.getDefaultBodyBlocks('boleto'),clausulas:[{id:'extra',titulo:'EXTRA PARTICULAR',contenido:'Texto adicional único',tipos:['boleto'],obligatoria:false}],obligatorias_ids:['extra']}};assert.ok(app.docToPlainText(app.buildDocSections(op,[],'boleto')).includes('Texto adicional único'));});
 
+ const contratoComodato="CONTRATO DE COMODATO\n\nEl COMODANTE {{comodante_nombre}}, DNI {{comodante_dni}}, entrega en uso gratuito a {{comodatario_nombre}}, DNI {{comodatario_dni}}, el inmueble {{inmueble_direccion}}.\n\nFirmas de las partes. Interviene {{inmobiliaria_nombre}}.";
+ const perfilPropio={nombre:'Inmobiliaria Prueba',matricula:'CMCPSI 0000',plantillas:{comodato:{
+   modo_documento:'propio',documento_propio:contratoComodato,clausulas_ids:['extra-no-debe-verse'],obligatorias_ids:['obligatoria-no-debe-verse'],version:4
+ }}};
+ const opComodato={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'comodato'};
+ const snapComodato=app.crearSnapshotPlantillaOperacion(opComodato,perfilPropio,[{id:'extra-no-debe-verse',titulo:'Extra',contenido:'TEXTO QUE NO DEBE APARECER'}],app.getDefaultBodyBlocks('comodato'));
+ check('contrato propio conserva versión y no incorpora cláusulas del modelo',()=>{
+   assert.equal(snapComodato.documento_propio,contratoComodato);
+   assert.equal(snapComodato.version,4);
+   assert.deepEqual(snapComodato.clausulas_ids,[]);
+   assert.deepEqual(snapComodato.body_blocks,[]);
+   assert.deepEqual(snapComodato.clausulas,[]);
+ });
+ const opComodatoPropio={...opComodato,plantilla_snapshot:snapComodato};
+ const docComodatoPropio=app.aplicarEncabezadoPersonalizado(app.buildDocSections(opComodatoPropio,[],'comodato'),opComodatoPropio,'comodato',perfilPropio);
+ const textoComodatoPropio=app.docToPlainText(docComodatoPropio);
+ check('chips de comodato y inmobiliaria se reemplazan sin texto agregado',()=>{
+   assert.equal(docComodatoPropio.documentoPropio,true);
+   assert.ok(textoComodatoPropio.includes('María López'));
+   assert.ok(textoComodatoPropio.includes('Juan Pérez'));
+   assert.ok(textoComodatoPropio.includes('Inmobiliaria Prueba'));
+   assert.ok(!textoComodatoPropio.includes('TEXTO QUE NO DEBE APARECER'));
+   assert.ok(!textoComodatoPropio.includes('OBLIGACIONES DEL COMODATARIO'));
+   assert.deepEqual(app.getTokensSinReemplazar(docComodatoPropio),[]);
+ });
+ const pdfPropio=await app.generarPDF(docComodatoPropio,null,perfilPropio);
+ const wordPropio=await app.generarDOCX(docComodatoPropio,perfilPropio);
+ const pdfBytesPropio=Buffer.from(await pdfPropio.blob.arrayBuffer());
+ const wordBytesPropio=Buffer.from(await wordPropio.blob.arrayBuffer());
+ check('contrato propio exporta PDF y DOCX completos',()=>{
+   assert.ok(pdfBytesPropio.length>1000&&wordBytesPropio.length>1000);
+   assert.equal(pdfBytesPropio.subarray(0,5).toString(),'%PDF-');
+   assert.equal(wordBytesPropio.subarray(0,2).toString(),'PK');
+   assert.ok(pdfPropio.filename.endsWith('.pdf')&&wordPropio.filename.endsWith('.docx'));
+   assert.ok(docComodatoPropio.encabezado.includes('Firmas de las partes.'));
+   assert.ok(docComodatoPropio.encabezado.includes('\n\n'));
+ });
+ const perfilExclusividad={nombre:'Inmobiliaria de prueba',plantillas:{exclusividad:{modo_documento:'propio',documento_propio:'AUTORIZACIÓN. El AUTORIZANTE {{autorizante_nombre}}, DNI {{autorizante_dni}}, autoriza a {{inmobiliaria_nombre}} sobre {{inmueble_direccion}}. Las firmas serán manuscritas.'}}};
+ const opExclusividad={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'exclusividad'};
+ const sinCompradorExclusividad={...opExclusividad,comprador_nombre:'',comprador_dni:'',inmobiliaria_nombre:'',inmobiliaria_matricula:''};
+ check('exclusividad usa nombre y matrícula del perfil sin exigir comprador inexistente',()=>{
+   const campos=app.getCamposFaltantesDetalle(sinCompradorExclusividad,{nombre:'Inmobiliaria de prueba',matricula:'CMCPSI 0000'}).map(f=>f.campo);
+   assert.ok(!campos.includes('comprador_nombre')&&!campos.includes('comprador_dni'));
+ });
+ const snapExclusividad=app.crearSnapshotPlantillaOperacion(opExclusividad,perfilExclusividad,[]);
+ const docExclusividad=app.buildDocSections({...opExclusividad,plantilla_snapshot:snapExclusividad},[],'exclusividad');
+ check('autorizante vinculado sin agregar cláusulas ni firmas automáticas',()=>{
+   assert.ok(app.docToPlainText(docExclusividad).includes('María López'));
+   assert.ok(app.docToPlainText(docExclusividad).includes('Inmobiliaria de prueba'));
+   assert.deepEqual(docExclusividad.secciones,[]);
+   assert.deepEqual(docExclusividad.firmas,[]);
+   assert.deepEqual(app.getTokensSinReemplazar(docExclusividad),[]);
+ });
  const opUbicacion={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva'};
  const docUbicacion=app.buildDocSections(app.opParaDocumento(opUbicacion),[],'reserva');docUbicacion.secciones=[];docUbicacion.firmas=[];docUbicacion.conformidad=null;
  for(const [nombre,config,esperado] of [

@@ -8,6 +8,9 @@ const CHIPS = [
   ["vendedor_dni","DNI del vendedor"],["vendedor_domicilio","Domicilio del vendedor"],
   ["locador_nombre","Nombre del locador"],["locador_dni","DNI del locador"],["locador_domicilio","Domicilio del locador"],
   ["locatario_nombre","Nombre del locatario"],["locatario_dni","DNI del locatario"],["locatario_domicilio","Domicilio del locatario"],
+  ["comodante_nombre","Nombre del comodante"],["comodante_dni","DNI del comodante"],["comodante_domicilio","Domicilio del comodante"],
+  ["comodatario_nombre","Nombre del comodatario"],["comodatario_dni","DNI del comodatario"],["comodatario_domicilio","Domicilio del comodatario"],
+  ["autorizante_nombre","Nombre del autorizante"],["autorizante_dni","DNI del autorizante"],["autorizante_domicilio","Domicilio del autorizante"],
   ["inmueble_direccion","Dirección del inmueble"],["inmueble_partido","Partido / municipio"],
   ["inmueble_provincia","Provincia"],["precio_letras","Precio en letras"],
   ["anticipo_letras","Reserva / anticipo en letras"],["saldo_letras","Saldo en letras"],
@@ -35,14 +38,31 @@ export default function DocumentoPropioEditor({
   const [mostrarVista,setMostrarVista]=useState(false);
   const inputRef=useRef<HTMLTextAreaElement|null>(null);
   const dirty=texto!==textoActual;
-  const todos=CHIPS.filter(([k])=> tipo==="alquiler"||tipo==="reserva_alquiler"
-    ? !k.startsWith("comprador_")&&!k.startsWith("vendedor_")&&!k.startsWith("boleto_")
-    : !k.startsWith("locador_")&&!k.startsWith("locatario_")&&!k.startsWith("alquiler_"));
+  const grupo=tipo==="alquiler"||tipo==="reserva_alquiler"?"locacion":tipo==="comodato"?"comodato":tipo==="exclusividad"?"exclusividad":"compra";
+  const rolesPorGrupo:Record<string,string[]>={
+    locacion:["locador","locatario"], comodato:["comodante","comodatario"],
+    exclusividad:["autorizante"], compra:["comprador","vendedor"]
+  };
+  const todos=CHIPS.filter(([k])=>{
+    const rol=k.match(/^(comprador|vendedor|locador|locatario|comodante|comodatario|autorizante)_/);
+    if(rol)return rolesPorGrupo[grupo].includes(rol[1]);
+    if(k==="reserva_pago_acordado")return tipo==="reserva";
+    if(k==="boleto_pago_acordado")return tipo==="boleto";
+    if(k==="compra_condiciones_pago")return tipo==="reserva"||tipo==="boleto";
+    if(k==="exclusividad_vigencia")return tipo==="exclusividad";
+    if(k==="alquiler_inicio"||k==="alquiler_fin"||k==="alquiler_monto_letras")return tipo==="alquiler";
+    if(k==="precio_letras")return grupo==="compra"||grupo==="exclusividad";
+    if(k==="anticipo_letras"||k==="saldo_letras")return tipo==="reserva"||tipo==="boleto";
+    return true;
+  });
   const permitidos=new Set<string>(todos.map(([key])=>key));
   const capturados=Array.from(new Set((texto.match(/\{\{[a-zA-Z0-9_]+\}\}/g)||[]).map(t=>t.slice(2,-2))));
   const invalidos=capturados.filter(t=>!permitidos.has(t));
   const llavesMal=/\{\{|\}\}/.test(texto.replace(/\{\{[a-zA-Z0-9_]+\}\}/g,""));
-  const nombres=tipo==="alquiler"||tipo==="reserva_alquiler"?["locador_nombre","locatario_nombre"]:tipo==="exclusividad"?["vendedor_nombre"]:["comprador_nombre","vendedor_nombre"];
+  const nombres=grupo==="locacion"?["locador_nombre","locatario_nombre"]
+    :grupo==="comodato"?["comodante_nombre","comodatario_nombre"]
+    :grupo==="exclusividad"?["autorizante_nombre","inmobiliaria_nombre"]
+    :["comprador_nombre","vendedor_nombre"];
   const faltantes=[...nombres,"inmueble_direccion"].filter(t=>!capturados.includes(t));
   const valido=texto.trim().length>40&&texto.length<=80000&&!invalidos.length&&!llavesMal&&!faltantes.length;
   useEffect(()=>{
