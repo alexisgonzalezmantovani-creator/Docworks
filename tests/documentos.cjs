@@ -105,6 +105,23 @@ delete global.document;
    assert.ok(docComodatoPropio.encabezado.includes('Firmas de las partes.'));
    assert.ok(docComodatoPropio.encabezado.includes('\n\n'));
  });
+ const propioConSaltos="DOCUMENTO DE PRUEBA\n\nCLÁUSULA PRIMERA\nTexto en renglón separado.\n\n\nFIRMAS:\nComprobante de las partes.";
+ const opSaltos={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'comodato',plantilla_snapshot:{
+   tipo:'comodato',version:9,documento_propio:propioConSaltos,clausulas_ids:[],body_blocks:[]
+ }};
+ const docSaltos=app.buildDocSections(opSaltos,[],'comodato');
+ check('contrato propio conserva renglones vacíos y saltos exactos',()=>{
+   assert.equal(docSaltos.textoOriginal,propioConSaltos);
+   assert.equal(app.docToPlainText(docSaltos),propioConSaltos);
+   assert.ok(docSaltos.documentoPropio);
+   assert.deepEqual(docSaltos.secciones,[]);
+   assert.deepEqual(docSaltos.firmas,[]);
+ });
+ const pdfSaltos=await app.generarPDF(docSaltos,null,{}),docxSaltos=await app.generarDOCX(docSaltos,{});
+ check('contrato con renglones separados genera ambos formatos',()=>{
+   assert.ok(pdfSaltos?.blob?.size>1000);
+   assert.ok(docxSaltos?.blob?.size>1000);
+ });
  const textoReservaAlquilerPropia='RESERVA DE ALQUILER. El LOCATARIO {{locatario_nombre}} entrega una reserva de {{reserva_alquiler_reserva}} para el inmueble {{inmueble_direccion}} ofrecido por {{locador_nombre}}. Alquiler estimado: {{reserva_alquiler_canon}}. Firmas de las partes.';
  const perfilReservaAlquilerPropia={nombre:'Inmobiliaria Prueba',plantillas:{reserva_alquiler:{modo_documento:'propio',documento_propio:textoReservaAlquilerPropia}}};
  const opReservaAlquilerPropia={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva_alquiler',res_alq_moneda:'USD',res_alq_monto_reserva:'350',res_alq_monto_mensual_moneda:'ARS',res_alq_monto_mensual:'650000'};

@@ -79,6 +79,10 @@ export default function DocumentoPropioEditor({
     :tipo==="alquiler"?["alquiler_monto_letras"]
     :(tipo==="reserva"||tipo==="boleto"||tipo==="refuerzo_reserva"||tipo==="devolucion_reserva")?["precio_letras"]:[];
   const importesSinChip=chipsImportesRecomendados.filter(k=>!capturados.includes(k));
+  // Un DNI fijo del Word original puede filtrar datos de otra operación.
+  // Es orientativo: nunca reemplazamos ni alteramos el texto del usuario.
+  const textoSinChips=texto.replace(/\{\{[a-zA-Z0-9_]+\}\}/g,"");
+  const dniFijo=/\b(?:DNI|D\.N\.I\.)\s*(?:N[°ºo.]?\s*)?\d[\d.\s-]{6,13}/i.test(textoSinChips);
   // Estas advertencias NO incorporan cláusulas ni impiden guardar: solo ayudan a revisar el Word.
   const advertenciasContenido=[
     !/(firma|firmantes|suscriben|rúbrica|rubrica)/i.test(texto)?"No encontramos una referencia clara a las firmas":null,
@@ -130,9 +134,18 @@ export default function DocumentoPropioEditor({
     const anteriorTexto=String(anterior.documento_propio||"");
     const esEdicionPrevista=anterior.modo_documento==="propio"&&anteriorTexto!==textoFinal;
     const historialAnterior=Array.isArray(anterior.historial_documento_propio)?anterior.historial_documento_propio:[];
-    const historialNuevo=esEdicionPrevista&&anteriorTexto.trim()
-      ?[{version:Math.max(1,parseInt(String(anterior.version||1),10)||1),texto:anteriorTexto,fecha:anterior.version_updated_at||null},...historialAnterior].slice(0,5)
+    const candidatosHistorial=esEdicionPrevista&&anteriorTexto.trim()
+      ?[{version:Math.max(1,parseInt(String(anterior.version||1),10)||1),texto:anteriorTexto,fecha:anterior.version_updated_at||null},...historialAnterior]
       :historialAnterior;
+    // Límite de memoria por inmobiliaria: hasta 5 versiones y 200.000 caracteres
+    // entre todas las copias. El último texto siempre se puede recuperar.
+    let acumulados=0;
+    const historialNuevo=candidatosHistorial.filter((item:any)=>{
+      const largo=String(item&&item.texto||"").length;
+      if(!largo||acumulados+largo>200000)return false;
+      acumulados+=largo;
+      return true;
+    }).slice(0,5);
     mapa[tipo]={...anterior,modo_documento:"propio",documento_propio:textoFinal,
       documento_propio_anterior:esEdicionPrevista?anteriorTexto:(anterior.documento_propio_anterior||null),
       historial_documento_propio:historialNuevo,
@@ -191,6 +204,10 @@ export default function DocumentoPropioEditor({
           {advertenciasContenido.map((mensaje,i)=><li key={i}>{mensaje}</li>)}
         </ul>
         <span>No se agregó ningún texto y estas sugerencias no impiden guardar.</span>
+      </div>}
+    {revisar&&texto.trim().length>40&&dniFijo&&
+      <div role="note" style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:"var(--muted)"}}>
+        <strong style={{color:"var(--text)"}}>Posible DNI fijo del Word:</strong> encontramos un número de documento escrito directamente. Verificá que no pertenezca a otra operación y, si corresponde, usá el chip de DNI. Esta advertencia no impide guardar.
       </div>}
     {revisar&&valido&&importesSinChip.length>0&&
       <div role="note" style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:"var(--muted)"}}>

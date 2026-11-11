@@ -343,8 +343,16 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       y-=(opts.spaceAfter!=null?opts.spaceAfter:11);
     }
 
-    // Encabezado narrativo (reserva y otros tipos que lo definan)
-    if(doc.encabezado){
+    // Contratos propios: el texto pegado incluye el documento entero. Cada renglón
+    // y cada renglón vacío se respeta sin añadir cláusulas, título ni firmas.
+    // La ruta estándar conserva su formato previo.
+    if(doc.documentoPropio&&typeof doc.textoOriginal==="string"){
+      doc.textoOriginal.split("\n").forEach(function(linea){
+        if(linea.trim())drawParagraph([],linea.trim(),{spaceAfter:0});
+        else {ensureSpace(12);y-=12;}
+      });
+      y-=8;
+    }else if(doc.encabezado){
       doc.encabezado.split("\n\n").forEach(function(par){
         if(par.trim()) drawParagraph([], par.trim());
       });
@@ -617,8 +625,13 @@ export async function generarDOCXModulo(doc, perfil, deps) {
     body += px("", {border:true, spacing:{before:60,after:120}});
     }
 
-    // Introducción / preámbulo (todos los tipos). Toggle: perfil.mostrar_introduccion
-    if (doc.encabezado) {
+    // Contratos propios usan el texto original línea por línea. No sumar párrafos
+    // de portada ni eliminar líneas vacías copiadas desde Word.
+    if(doc.documentoPropio&&typeof doc.textoOriginal==="string"){
+      doc.textoOriginal.split("\n").forEach(function(linea){
+        body += px(linea.trim()?linea: "", {size:10.5, spacing:{before:0,after:linea.trim()?0:120}, justify:true});
+      });
+    }else if (doc.encabezado) {
       doc.encabezado.split("\n\n").forEach(function(par) {
         if (par.trim()) body += px(par.trim(), {size:10.5, spacing:{before:80,after:80}, justify:true});
       });

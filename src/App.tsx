@@ -2470,7 +2470,7 @@ function totalComisionEnMoneda(entry,moneda,campo){
 // mandarlo como contexto a la IA o para copiarlo/exportarlo. Misma lógica que
 // usa el preview interno del visor de documentos.
 function docToPlainText(doc) {
-  if(doc&&doc.documentoPropio)return String(doc.encabezado||"").replace(/\n\n/g,"\n");
+  if(doc&&doc.documentoPropio)return typeof doc.textoOriginal==="string"?doc.textoOriginal:String(doc.encabezado||"").replace(/\n\n/g,"\n");
   var lines = [doc.titulo || ""];
   if (doc.nroRecibo) lines.push("N° " + doc.nroRecibo);
   lines.push("Lugar: " + (doc.ciudad || "") + "  |  Fecha: " + (doc.fecha || ""), "");
@@ -4240,7 +4240,7 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
     var datosInmob={nombre:extrasPropios.inmobiliaria_nombre,matricula:extrasPropios.inmobiliaria_matricula};
     var cuerpoPropio=resolveVars(sustituirTokens(textoPropio,op,datosInmob,tipo||op.tipo),op,extrasPropios);
     return {documentoPropio:true,tipo:tipo||op.tipo,titulo:"",subtitulo:"",ciudad:"",fecha:"",
-      encabezado:cuerpoPropio.replace(/\n/g,"\n\n"),partes:[],firmas:[],secciones:[],clausulas:[],
+      encabezado:cuerpoPropio.replace(/\n/g,"\n\n"),textoOriginal:cuerpoPropio,partes:[],firmas:[],secciones:[],clausulas:[],
       contactosIndividuales:[],contactos:[],conformidad:null,ocultarPartesEnCuerpo:true};
   }
   if(snap){
