@@ -318,6 +318,8 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
  const [errorGuardar,setErrorGuardar]=useState("");
  const [confirmarSalir,setConfirmarSalir]=useState(false);
  const [verVersiones,setVerVersiones]=useState(false);
+ const [mostrarConformidad,setMostrarConformidad]=useState(false);
+ const [confirmarPublicacion,setConfirmarPublicacion]=useState(false);
  const [modo,setModo]=useState("");
  const [titulo,setTitulo]=useState("Reserva de compra");
  const [partes,setPartes]=useState([]);
@@ -339,7 +341,7 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
   setDirty(false);setModo("");
  },[clave]);
  function snapshotActual(){
-  return {modo:modo==="publicado"?"adaptar":modo,titulo:titulo,
+  return {modo:modo==="publicado"||modo==="usar"?"adaptar":modo,titulo:titulo,
    partes:partes.map(function(p){return Object.assign({},p);}),
    conformidadSeparada:!!conformidadSeparada,tituloActa:tituloActa,textoActa:textoActa};
  }
@@ -352,26 +354,26 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
   setTituloActa(snapshot.tituloActa||"Acta de conformidad de reserva");
   setTextoActa(snapshot.textoActa||"");
   setDocumentoActivo("reserva");setVista(false);setAbierto(null);
-  setErrorGuardar("");setDirty(false);setConfirmarSalir(false);
+  setErrorGuardar("");setDirty(false);setConfirmarSalir(false);setMostrarConformidad(false);setConfirmarPublicacion(false);
  }
  function guardarPrueba(publicar){
   setErrorGuardar("");setAlerta("");
   if(!clave){setErrorGuardar("No se pudo identificar tu cuenta. No guardamos nada.");return;}
-  if(lectura){setErrorGuardar("Esta versión es de solo lectura.");return;}
+  if(modo==="publicado"){setErrorGuardar("Esta versión publicada es de solo lectura.");return;}
   const resultado=guardarRevisionModeloLab(registro,snapshotActual(),!!publicar,new Date().toISOString());
   if(!resultado.ok){setErrorGuardar(resultado.errores.join(" "));return;}
   if(!escribirModeloLab(almacenamientoModelo(),clave,resultado.estado)){
    setErrorGuardar("No se pudo guardar en este dispositivo. Revisá el espacio disponible o el modo privado.");return;
   }
   setRegistro(resultado.estado);setDirty(false);
-  setAlerta(publicar?"Versión "+resultado.version+" publicada solo en el laboratorio de este navegador.":"Borrador guardado como versión "+resultado.version+".");
+  setAlerta(publicar?"Listo: versión "+resultado.version+" publicada en esta prueba. Todavía no llega a los asesores.":"Listo: guardaste la versión "+resultado.version+" en este dispositivo.");setConfirmarPublicacion(false);
  }
  function descartarYSalir(){
   setModo("");setVista(false);setAbierto(null);setDirty(false);
-  setConfirmarSalir(false);setErrorGuardar("");
+  setConfirmarSalir(false);setErrorGuardar("");setConfirmarPublicacion(false);
  }
  function iniciar(op){
-  setModo(op);setTitulo("Reserva de compra");setVista(false);setConformidadSeparada(false);setDocumentoActivo("reserva");setTituloActa("Acta de conformidad de reserva");setTextoActa("El/la vendedor/a {{vendedor_nombre}} manifiesta su conformidad con la oferta de compra presentada por {{comprador_nombre}} sobre el inmueble {{inmueble_direccion}}, conforme a los términos expresamente individualizados en la reserva a la que se vincula esta acta.");setAlerta("");setErrorGuardar("");setConfirmarSalir(false);setDirty(false);
+  setModo(op);setTitulo("Reserva de compra");setVista(false);setConformidadSeparada(false);setDocumentoActivo("reserva");setTituloActa("Acta de conformidad de reserva");setTextoActa("El/la vendedor/a {{vendedor_nombre}} manifiesta su conformidad con la oferta de compra presentada por {{comprador_nombre}} sobre el inmueble {{inmueble_direccion}}, conforme a los términos expresamente individualizados en la reserva a la que se vincula esta acta.");setAlerta("");setErrorGuardar("");setConfirmarSalir(false);setDirty(false);setMostrarConformidad(false);setConfirmarPublicacion(false);
   var lista=op==="propio"?[{id:"propio",titulo:"Mi primer apartado",contenido:"",activo:true}]:
    base.map(function(b,i){return {id:b.id||"base"+i,titulo:b.titulo||"Apartado "+(i+1),contenido:b.contenido||"",activo:b.activo!==false};});
   setPartes(lista);setAbierto(op==="propio"?"propio":null);
@@ -401,13 +403,13 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
   var i=el&&el.selectionStart!=null?el.selectionStart:t.length,j=el&&el.selectionEnd!=null?el.selectionEnd:i;
   edit(id,"contenido",t.slice(0,i)+"{{"+campo+"}}"+t.slice(j));
  }
- function ejemplo(t){return String(t||"").replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,function(_,k){return "［"+(campos.find(function(c){return c[0]===k;})||[k,k])[1]+" · dato automático］";});}
+ function ejemplo(t){return String(t||"").replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,function(_,k){return "«"+(campos.find(function(c){return c[0]===k;})||[k,k.replace(/_/g," ")])[1]+"»";});}
  const panel={padding:14,border:"1px solid var(--border)",borderRadius:11,background:"var(--card)"};
  return <section style={{display:"flex",flexDirection:"column",gap:12,minWidth:0}} aria-label="Laboratorio de modelos">
-  <div style={panel}><div style={{color:"var(--gold)",fontWeight:800,fontSize:11}}>LABORATORIO · NO PUBLICADO</div>
+  <div style={panel}><div style={{color:"var(--gold)",fontWeight:800,fontSize:11}}>CREADOR DE DOCUMENTOS <span style={{fontSize:10,opacity:.7,marginLeft:5}}>· VERSIÓN DE PRUEBA</span></div>
    <h2 style={{margin:"5px 0",fontSize:21}}>{!modo?"¿Cómo querés empezar?":vista?"Revisá cómo quedó":"Cambiá solo lo que necesites"}</h2>
    <div style={{fontSize:12,fontWeight:700,marginTop:6}}>{!modo?"Paso 1 de 3 · Elegí un punto de partida":vista?"Paso 3 de 3 · Mirá el documento":"Paso 2 de 3 · Editá el texto"}</div>
-   <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:7}}>Versión de prueba · Se guarda solo en este navegador, sin cambiar documentos reales. No cargues datos personales.</div></div>
+   <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:7}}>Tus cambios se guardan en este dispositivo. Esta prueba no modifica los documentos que usa hoy tu inmobiliaria.</div></div>
   {!modo&&!!registro.borrador&&<div style={panel}>
    <div style={{fontSize:13,fontWeight:750,marginBottom:8}}>Tenés un modelo guardado</div>
    <div style={{fontSize:12,color:"var(--dim)",marginBottom:10}}>{registro.borrador.titulo||"Modelo"} · {registro.versiones.length} versión(es) locales</div>
@@ -418,9 +420,9 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
   </div>}
   {!modo&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,205px),1fr))",gap:10}}>
    {[
-    ["usar","Ver modelo DocWorks","Quiero conocer el ejemplo ya preparado."],
-    ["adaptar","Cambiar un modelo DocWorks","Quiero usar el ejemplo y modificar algunas partes."],
-    ["propio","Usar mi propio documento","Ya tengo mi texto y quiero copiarlo acá."]
+    ["usar","Usar uno listo","Quiero empezar con el modelo DocWorks."],
+    ["adaptar","Modificar un modelo","Quiero cambiar algunas cláusulas del modelo DocWorks."],
+    ["propio","Traer mi propio documento","Ya tengo un texto y quiero pegarlo acá."]
    ].map(function(o){return <button key={o[0]} type="button" style={{...panel,textAlign:"left",minHeight:122,color:"var(--text)",cursor:"pointer",border:"1px solid var(--border2)"}} onClick={function(){iniciar(o[0]);}}><strong style={{display:"block",marginBottom:9}}>{o[1]}</strong><span style={{fontSize:12,color:"var(--dim)"}}>{o[2]}</span></button>;})}
   </div>}
   {!!modo&&<div style={panel}>
@@ -436,16 +438,21 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
     </div>}
    </div>
    {!vista&&<>
-    <div style={{fontSize:12,color:"var(--dim)",marginBottom:12}}>No necesitás cambiar todo: tocá solamente la parte que quieras modificar.</div>
+    <div style={{fontSize:12,color:"var(--dim)",marginBottom:12}}>{lectura?"Este modelo ya está preparado. Podés revisarlo sin hacer cambios.":"Tocá una parte para leerla o cambiarla. Las otras quedan igual."}</div>
     <label style={{display:"block",fontSize:12,fontWeight:700,marginBottom:12}}>Nombre del documento
       <input className="inp" disabled={lectura} value={titulo} onChange={function(e){setTitulo(e.target.value);setDirty(true);}} style={{width:"100%",boxSizing:"border-box",marginTop:5}}/>
     </label>
-    <fieldset style={{border:"1px solid var(--border)",borderRadius:10,padding:11,margin:"0 0 12px"}}>
-     <legend style={{fontSize:12,fontWeight:750,padding:"0 5px"}}>Conformidad del vendedor</legend>
+    <div style={{margin:"0 0 12px",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+     <button type="button" aria-expanded={mostrarConformidad} style={{width:"100%",minHeight:44,border:0,background:"var(--surface2)",color:"var(--text)",fontSize:12.5,fontWeight:750,textAlign:"left",padding:"10px 12px",cursor:"pointer"}} onClick={function(){setMostrarConformidad(!mostrarConformidad);}}>
+       Conformidad del vendedor · {conformidadSeparada?"Acta separada":"Incluida en la reserva"} <span style={{float:"right"}}>{mostrarConformidad?"−":"+"}</span>
+     </button>
+     {mostrarConformidad&&<fieldset style={{border:0,padding:12,margin:0}}>
+     <legend style={{fontSize:11.5,padding:"0 4px",color:"var(--dim)"}}>Elegí cómo trabaja tu inmobiliaria</legend>
      <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,marginBottom:9,cursor:"pointer"}}><input type="radio" name="conformidad-demo" disabled={lectura} checked={!conformidadSeparada} onChange={function(){setConformidadSeparada(false);setDocumentoActivo("reserva");setDirty(true);}}/> En el mismo documento</label>
      <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,cursor:"pointer"}}><input type="radio" name="conformidad-demo" disabled={lectura} checked={conformidadSeparada} onChange={function(){setConformidadSeparada(true);setDocumentoActivo("reserva");setDirty(true);}}/> En un acta independiente</label>
-     <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:8}}>Esta prueba solo muestra los dos formatos. No modifica el modelo legal ni la exportación actual.</div>
-    </fieldset>
+     <div style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,marginTop:8}}>Si elegís acta independiente, vas a poder revisar los dos textos por separado.</div>
+    </fieldset>}
+    </div>
     {conformidadSeparada&&<div role="tablist" aria-label="Editar documentos independientes" style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
       <button type="button" role="tab" aria-selected={documentoActivo==="reserva"} className={documentoActivo==="reserva"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setDocumentoActivo("reserva");setAbierto(null);}}>1 · Reserva</button>
       <button type="button" role="tab" aria-selected={documentoActivo==="acta"} className={documentoActivo==="acta"?"btn btn-primary btn-sm":"btn btn-secondary btn-sm"} onClick={function(){setDocumentoActivo("acta");setAbierto(null);}}>2 · Acta</button>
@@ -456,27 +463,32 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
       <label style={{fontSize:12}}>Vincular dato <select className="inp" disabled={lectura} defaultValue="" onChange={function(e){if(e.target.value){setTextoActa(function(v){return v+" {{"+e.target.value+"}}";});setDirty(true);}e.target.value="";}} style={{display:"block",marginTop:5,maxWidth:"100%"}}><option value="">＋ Seleccionar campo…</option>{campos.map(function(c){return <option key={c[0]} value={c[0]}>{c[1]}</option>;})}</select></label>
       <div style={{fontSize:11.5,color:"var(--dim)"}}>Es un segundo documento editable, vinculado a la misma reserva. Revisá que la reserva principal no reproduzca la conformidad que querés dejar exclusivamente en el acta.</div>
     </div>}
+    {(!conformidadSeparada||documentoActivo==="reserva")&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:8}}>{partes.length} apartados · Tocá uno para verlo</div>}
     {(!conformidadSeparada||documentoActivo==="reserva")&&partes.map(function(p,i){return <div key={p.id} style={{border:"1px solid var(--border)",borderRadius:9,padding:9,marginBottom:8}}>
      <div style={{display:"flex",alignItems:"center",gap:8}}>
       <span style={{fontSize:12,color:"var(--dim)"}}>{i+1}.</span>
-      <button type="button" aria-expanded={abierto===p.id} style={{flex:1,minWidth:0,border:0,textAlign:"left",background:"transparent",color:"var(--text)",fontWeight:700,fontSize:13,cursor:"pointer"}} onClick={function(){setAbierto(abierto===p.id?null:p.id);setAlerta("");}}>{p.titulo||"Sin título"} {abierto===p.id?"−":"+"}</button>
-      {!lectura&&<button type="button" className="btn btn-secondary btn-sm" disabled={i===0} aria-label="Subir cláusula" onClick={function(){mover(i,-1);}}>↑</button>}
-      {!lectura&&<button type="button" className="btn btn-secondary btn-sm" disabled={i===partes.length-1} aria-label="Bajar cláusula" onClick={function(){mover(i,1);}}>↓</button>}
+      <button type="button" aria-expanded={abierto===p.id} style={{flex:1,minWidth:0,minHeight:40,border:0,textAlign:"left",background:"transparent",color:"var(--text)",fontWeight:700,fontSize:13,cursor:"pointer"}} onClick={function(){setAbierto(abierto===p.id?null:p.id);setAlerta("");}}>{p.titulo||"Sin título"}</button>
+      <span style={{fontSize:14,color:"var(--dim)"}}>{abierto===p.id?"⌃":"⌄"}</span>
      </div>
      {abierto===p.id&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
       <input aria-label="Título de la cláusula" className="inp" disabled={lectura} value={p.titulo} onChange={function(e){edit(p.id,"titulo",e.target.value);}}/>
       <textarea ref={area} aria-label="Texto de la cláusula" className="inp" rows={6} disabled={lectura} value={p.contenido} onChange={function(e){edit(p.id,"contenido",e.target.value);}} style={{boxSizing:"border-box",width:"100%",resize:"vertical"}}/>
-      {!lectura&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-       <select className="inp" aria-label="Insertar dato automático" defaultValue="" onChange={function(e){vincular(p.id,e.target.value);e.target.value="";}} style={{maxWidth:"100%",width:"auto"}}><option value="">＋ Vincular dato…</option>{campos.map(function(c){return <option key={c[0]} value={c[0]}>{c[1]}</option>;})}</select>
-       <button className="btn btn-secondary btn-sm" type="button" onClick={function(){separar(p.id);}}>Dividir aquí</button>
-       {modo==="propio"&&partes.length>1&&<button className="btn btn-secondary btn-sm" type="button" onClick={function(){setPartes(function(xs){return xs.filter(function(x){return x.id!==p.id;});});setAbierto(null);setDirty(true);}}>Quitar</button>}
-      </div>}
+      {!lectura&&<details style={{paddingTop:5}}>
+       <summary style={{cursor:"pointer",fontSize:12,color:"var(--dim)",fontWeight:650,minHeight:32,paddingTop:8}}>Más opciones de esta cláusula</summary>
+       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",paddingTop:8}}>
+        <select className="inp" aria-label="Insertar dato automático" defaultValue="" onChange={function(e){vincular(p.id,e.target.value);e.target.value="";}} style={{maxWidth:"100%",width:"auto"}}><option value="">＋ Insertar dato automático</option>{campos.map(function(c){return <option key={c[0]} value={c[0]}>{c[1]}</option>;})}</select>
+        <button className="btn btn-secondary btn-sm" type="button" disabled={i===0} onClick={function(){mover(i,-1);}}>Subir</button>
+        <button className="btn btn-secondary btn-sm" type="button" disabled={i===partes.length-1} onClick={function(){mover(i,1);}}>Bajar</button>
+        <button className="btn btn-secondary btn-sm" type="button" onClick={function(){separar(p.id);}}>Dividir en dos</button>
+        {modo==="propio"&&partes.length>1&&<button className="btn btn-secondary btn-sm" type="button" onClick={function(){setPartes(function(xs){return xs.filter(function(x){return x.id!==p.id;});});setAbierto(null);setDirty(true);}}>Quitar</button>}
+       </div>
+      </details>}
      </div>}
     </div>;})}
     {!!alerta&&<div role="status" style={{fontSize:12,color:"var(--gold)",marginBottom:8}}>{alerta}</div>}
     {!!errorGuardar&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginBottom:8}}>{errorGuardar}</div>}
     {registro.versiones.length>0&&<div style={{marginBottom:10}}>
-      <button type="button" className="btn btn-secondary btn-sm" aria-expanded={verVersiones} onClick={function(){setVerVersiones(!verVersiones);}}>{verVersiones?"− Ocultar versiones":"＋ Historial de versiones"} ({registro.versiones.length})</button>
+      <button type="button" className="btn btn-secondary btn-sm" aria-expanded={verVersiones} onClick={function(){setVerVersiones(!verVersiones);}}>{verVersiones?"− Ocultar versiones":"＋ Versiones anteriores"} ({registro.versiones.length})</button>
       {verVersiones&&<div style={{display:"flex",flexDirection:"column",gap:5,marginTop:8}}>
        {registro.versiones.slice().reverse().map(function(v){return <div key={v.version} style={{display:"flex",gap:8,justifyContent:"space-between",alignItems:"center",padding:8,border:"1px solid var(--border)",borderRadius:8}}>
         <span style={{fontSize:12}}>Versión {v.version}{registro.publicada===v.version?" · Publicada en laboratorio":""}
@@ -487,10 +499,9 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
     </div>}
     <div style={{display:"flex",gap:8,justifyContent:"space-between",flexWrap:"wrap"}}>
       {!lectura&&(!conformidadSeparada||documentoActivo==="reserva")?<button className="btn btn-secondary btn-sm" type="button" onClick={agregar}>＋ Agregar cláusula</button>:<span/>}
-      <div style={{display:"flex",gap:7,flexWrap:"wrap",justifyContent:"flex-end"}}>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
        {!lectura&&<button className="btn btn-secondary btn-sm" type="button" disabled={!clave} onClick={function(){guardarPrueba(false);}}>Guardar borrador</button>}
-       {!lectura&&<button className="btn btn-secondary btn-sm" type="button" disabled={!clave} onClick={function(){guardarPrueba(true);}}>Publicar (laboratorio)</button>}
-       <button className="btn btn-primary" type="button" disabled={!titulo.trim()} style={{minHeight:44}} onClick={function(){setVista(true);setDocumentoActivo("reserva");}}>Ver cómo queda →</button>
+       <button className="btn btn-primary" type="button" disabled={!titulo.trim()} style={{minHeight:44}} onClick={function(){setVista(true);setDocumentoActivo("reserva");}}>Siguiente · Revisar →</button>
       </div>
     </div>
    </>}
@@ -512,8 +523,28 @@ function CreadorModelosPreview({perfil,bloquesReserva,onDirty,inmobiliariaId,usu
       {partes.filter(function(p){return p.activo!==false;}).map(function(p,i){return <div key={p.id} style={{marginBottom:17}}><strong style={{fontSize:12}}>{i+1}. {p.titulo}</strong><p style={{fontSize:12.5,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{ejemplo(p.contenido)||"［Sin texto］"}</p></div>;})}
      </>}
     </div>
-    <p style={{fontSize:11.5,color:"var(--dim)"}}>Vista conceptual del laboratorio. No genera PDF/DOCX ni publica para otros usuarios. Los textos jurídicos requieren revisión antes de la publicación real.</p>
-    <button className="btn btn-secondary btn-sm" type="button" style={{minHeight:40}} onClick={function(){setVista(false);}}>← Volver a editar</button>
+    <p style={{fontSize:12,color:"var(--dim)",lineHeight:1.55}}>Así se verá el texto del modelo. Los nombres y montos entre « » se completarán desde la operación. Esta prueba todavía no genera PDF/DOCX ni envía modelos a otros usuarios.</p>
+    {!!alerta&&<div role="status" style={{fontSize:12,color:"var(--gold)",padding:"8px 0"}}>{alerta}</div>}
+    {registro.publicada!=null&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",padding:"11px 12px",border:"1px solid var(--border2)",borderRadius:10,marginTop:10}}>
+      <div style={{fontSize:12,color:"var(--dim)"}}><strong style={{color:"var(--text)"}}>Versión {registro.publicada} lista en la prueba</strong><div>Así se vería para un asesor cuando esté habilitada la publicación real.</div></div>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={function(){var v=recuperarVersionModeloLab(registro,registro.publicada);if(v){recuperar(v,true);setVista(true);}}}>Vista de asesor</button>
+    </div>}
+    {!!errorGuardar&&<div role="alert" style={{fontSize:12,color:"var(--red)",padding:"8px 0"}}>{errorGuardar}</div>}
+    {confirmarPublicacion&&<div role="alert" style={{padding:12,border:"1px solid var(--border2)",borderRadius:10,marginTop:10,fontSize:12}}>
+     <strong>¿Publicar esta versión en el laboratorio?</strong>
+     <p style={{margin:"7px 0",lineHeight:1.5,color:"var(--dim)"}}>Solo se verá en este dispositivo. Los asesores todavía no recibirán el modelo.</p>
+     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setConfirmarPublicacion(false);}}>Cancelar</button>
+      <button type="button" className="btn btn-primary btn-sm" onClick={function(){guardarPrueba(true);}}>Sí, publicar en prueba</button>
+     </div>
+    </div>}
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"space-between",alignItems:"center",marginTop:12}}>
+     <button className="btn btn-secondary btn-sm" type="button" style={{minHeight:40}} onClick={function(){setVista(false);setConfirmarPublicacion(false);}}>← Volver a editar</button>
+     <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+      {modo!=="publicado"&&<button type="button" className="btn btn-secondary" disabled={!clave} onClick={function(){setConfirmarPublicacion(true);}}>Publicar · Prueba</button>}
+      {modo!=="publicado"&&<button type="button" className="btn btn-primary" disabled={!clave} onClick={function(){guardarPrueba(false);}}>Guardar mi modelo</button>}
+     </div>
+    </div>
    </>}
   </div>}
  </section>;
@@ -534,12 +565,13 @@ function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clau
     if(modeloEditando&&next!==seccion)requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",cambiar);else cambiar();
   }
   const [tipoDocSel,setTipoDocSel]=useState("reserva");
+  const [verEditorActual,setVerEditorActual]=useState(false);
   const [clausulaEditando,setModeloEditando]=useState(false);
   const [introduccionEditando,setIntroduccionEditando]=useState(false);
   const modeloEditando=clausulaEditando||introduccionEditando;
   function cambiarDocumento(tipo){
     if(tipo===tipoDocSel)return;
-    function cambiar(){setModeloEditando(false);setIntroduccionEditando(false);setTipoDocSel(tipo);}
+    function cambiar(){setModeloEditando(false);setIntroduccionEditando(false);setTipoDocSel(tipo);setVerEditorActual(false);}
     if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de cambiar de documento?",cambiar);else cambiar();
   }
   const [filtroAdicional,setFiltroAdicional]=useState("todas");
@@ -640,9 +672,12 @@ function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clau
       <style>{".dw-model-type-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.dw-model-type-chip{min-width:0;text-align:left}@media(max-width:640px){.dw-model-type-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dw-model-type-chip{width:100%;min-width:0;max-width:none}}@media(max-width:380px){.dw-model-type-grid{grid-template-columns:minmax(0,1fr)}}"}</style>
       {<div id="dw-config-tipo" className="card" style={{padding:12,scrollMarginTop:90}}>
         <SelectorDocumento id="dw-modelo-documento" tipos={PLANTILLA_TIPOS} nombres={TIPOS} iconos={TIPO_ICON} value={tipoDocSel} onChange={cambiarDocumento}/>
-        <div style={{fontSize:11,color:"var(--dim)",marginTop:7}}>{contarModelo(tipoDocSel)} cláusulas en el modelo</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10,marginTop:12}}>
+          <div style={{fontSize:12,color:"var(--dim)"}}>{contarModelo(tipoDocSel)} partes · Modelo disponible</div>
+          <button type="button" className={verEditorActual?"btn btn-secondary":"btn btn-primary"} style={{minHeight:44}} onClick={function(){if(verEditorActual&&modeloEditando){requestDwConfirm("¿Salir del editor sin guardar los cambios?",function(){setVerEditorActual(false);});}else setVerEditorActual(!verEditorActual);}}>{verEditorActual?"Cerrar edición":"Ver o editar este modelo"}</button>
+        </div>
       </div>}
-      <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
+      {verEditorActual&&<EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
         <div className="card" style={{padding:14}}>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:10}}>Tocá una cláusula para leerla y después elegí Editar. Las esenciales están protegidas.</div>
           <div id="dw-model-preview-area">
@@ -675,7 +710,7 @@ function ClausulasWorkspace({perfil,inmobiliariaId,onSavePerfil,operaciones,clau
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setSeccion("adicionales");}}>Ir a Biblioteca de cláusulas</button></div>
 
       </details>}
-      </EncabezadoFijadoPanel>
+      </EncabezadoFijadoPanel>}
     </div>}
     {seccion==="modelos"&&!puedeEditar&&<div className="notice" style={{fontSize:12}}>Los modelos de los documentos están disponibles únicamente para Dueño y Administrador.</div>}
   </div>;

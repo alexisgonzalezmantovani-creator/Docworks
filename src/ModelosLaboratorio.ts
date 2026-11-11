@@ -31,8 +31,9 @@ export function validarModeloLab(snapshot){
  if(!snapshot||!String(snapshot.titulo||"").trim())errores.push("Falta el título del documento.");
  else if(String(snapshot.titulo).length>160)errores.push("El título es demasiado largo.");
  const bloques=snapshot&&Array.isArray(snapshot.partes)?snapshot.partes:[];
- if(!bloques.length||bloques.length>40)errores.push("El modelo necesita entre 1 y 40 apartados.");
- if(bloques.some(b=>!b||!String(b.titulo||"").trim()||!String(b.contenido||"").trim()))errores.push("Completá el título y el texto de cada apartado.");
+ const activos=bloques.filter(b=>b&&b.activo!==false);
+ if(!activos.length||bloques.length>40)errores.push("El modelo necesita entre 1 y 40 apartados y al menos uno activo.");
+ if(activos.some(b=>!String(b.titulo||"").trim()||!String(b.contenido||"").trim()))errores.push("Completá el título y el texto de las partes incluidas.");
  if(bloques.some(b=>String(b.titulo||"").length>180||String(b.contenido||"").length>20000))errores.push("Un apartado supera el tamaño permitido.");
  if(snapshot&&snapshot.conformidadSeparada&&(!String(snapshot.tituloActa||"").trim()||!String(snapshot.textoActa||"").trim()))errores.push("Completá el título y el texto del acta independiente.");
  if(JSON.stringify(snapshot||{}).length>100000)errores.push("El modelo supera el tamaño disponible para esta prueba.");
