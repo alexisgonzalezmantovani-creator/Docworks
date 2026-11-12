@@ -97,7 +97,7 @@ export const GS = `
     --bg:#eef2f7;--surface:#ffffff;--card:#ffffff;--border:rgba(15,23,42,0.07);--border2:rgba(15,23,42,0.12);
     --gold:#d4a853;--gold2:#e8c06a;--gold-soft:rgba(212,168,83,0.10);--gold-line:rgba(212,168,83,0.22);
     --text:#0f172a;--muted:#3f4c5e;--dim:#64748b;
-    --teal:#2dd4bf;--red:#f87171;--green:#4ade80;--amber:#fbbf24;
+    --teal:#0f766e;--red:#b91c1c;--green:#15803d;--amber:#92400e;
     --mobile-nav-h:60px;
     /* Superficies neutras (inputs, secundarios, hovers) — se recalculan en applyTheme(). */
     --surface2:rgba(15,23,42,0.035);
@@ -1044,10 +1044,26 @@ export const GS = `
   .dw-overview-stat{appearance:none;text-align:left;min-width:0;display:flex;flex-direction:column;gap:13px;padding:17px 18px;border:1px solid var(--border2);border-radius:16px;background:var(--card);color:var(--text);cursor:pointer;box-shadow:0 3px 13px rgba(15,23,42,.035);transition:border-color .18s ease,box-shadow .18s ease;}
   .dw-overview-stat:hover,.dw-overview-stat.is-selected{border-color:var(--gold-line);box-shadow:0 5px 18px rgba(15,23,42,.07);}
   .dw-overview-stat.is-selected{background:linear-gradient(135deg,var(--card),var(--gold-soft));}
+  .dw-overview-stat{position:relative;}
+  .dw-overview-stat.is-selected::after{content:"";position:absolute;left:12px;right:12px;bottom:5px;height:3px;border-radius:3px;background:var(--gold);}
+  .dw-overview-stat:focus-visible{outline:3px solid var(--gold);outline-offset:2px;}
+  /* Tablet: acciones de cada operación visibles sin desbordar las tarjetas. */
+  @media(min-width:701px) and (max-width:1050px){
+    .dw-dashboard-root .op-card-premium,.dw-dashboard-root .op-card-premium .op-card-inner{min-width:0;max-width:100%;}
+    .dw-dashboard-root .op-card-premium .op-card-side{min-width:0;max-width:100%;}
+    .dw-dashboard-root .op-card-premium .op-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:100%;}
+    .dw-dashboard-root .op-card-premium .op-actions .btn{min-width:0;white-space:nowrap;}
+    .dw-dashboard-root .op-card-premium .op-actions .op-more{flex:0 0 auto;}
+  }
+
+  .dw-overview-trash .dw-overview-label svg{color:var(--muted);}
+  .dw-overview-trash.is-selected .dw-overview-label svg{color:var(--gold);}
+  @media(min-width:701px) and (max-width:1050px){.dw-overview-stat.is-selected::after{left:9px;right:9px;bottom:3px;}}
+
   .dw-overview-label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:600;line-height:1.35;}
   .dw-overview-label svg{flex-shrink:0;color:var(--gold);}
   .dw-overview-value{font-size:clamp(25px,2.8vw,34px);font-weight:650;line-height:1;letter-spacing:-.05em;font-variant-numeric:tabular-nums;}
-  @media(min-width:701px) and (max-width:1050px){.dw-dashboard-overview{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  @media(min-width:701px) and (max-width:1050px){.dw-dashboard-overview{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;}.dw-overview-stat{padding:12px 9px;gap:8px;min-height:78px;border-radius:12px;}.dw-overview-label{font-size:10px;gap:4px;overflow-wrap:anywhere;}.dw-overview-label svg{width:14px;height:14px;}.dw-overview-value{font-size:23px;}}
   @media(max-width:700px){
     .dw-dashboard-overview{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-bottom:14px;}
     .dw-overview-stat{padding:10px 9px;gap:7px;border-radius:11px;min-height:74px;box-shadow:0 2px 8px rgba(15,23,42,.025);}
@@ -1055,6 +1071,7 @@ export const GS = `
     .dw-overview-label svg{width:13px;height:13px;}
     .dw-overview-value{font-size:23px;font-weight:650;}
   }
+  @media(max-width:700px){.dw-overview-stat.is-selected::after{left:5px;right:5px;bottom:2px;height:2px;}}
   @media(max-width:360px){.dw-dashboard-overview{gap:5px;}.dw-overview-stat{padding:9px 7px;min-height:70px;}.dw-overview-label{font-size:9px;}.dw-overview-value{font-size:21px;}}
 
   /* Compact search and filter toolbar — dashboard only. */
@@ -1139,8 +1156,12 @@ export var MOBILE_STABILITY_CSS = `
   }
   @media (orientation:landscape) and (max-width:1100px){
     .content{padding-left:18px !important;padding-right:18px !important;}
-    .mobile-nav{display:none !important;}
-    .main{min-height:100dvh;}
+    /* Mantener navegación inferior al girar el iPhone: sin sidebar no debe desaparecer el menú. */
+    .mobile-nav{display:block !important;}
+    /* En PWA iOS, forzar 100dvh dentro del shell flex crea una segunda
+       superficie desplazable que puede tapar el encabezado al rebotar. */
+    .main{min-height:0;max-height:100%;overflow:hidden;}
+    .content{min-height:0;overscroll-behavior-y:contain;}
   }
 @media (max-width: 700px){
   html,body,#root{min-height:100%;width:100%;overflow-x:hidden;}
@@ -1208,6 +1229,10 @@ html,body{touch-action:manipulation;}
 @media(max-width:640px){
   .mobile-topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:500!important;background:#102653!important;background:linear-gradient(120deg,#091222 0%,#122a58 48%,#0c1c3d 100%)!important;}
   .app-wrap{padding-top:calc(56px + env(safe-area-inset-top,0px))!important;}
+  /* Evitar que el fondo del documento asome sobre la barra al rebotar en iOS. */
+  .mobile-topbar{isolation:isolate;transform:translateZ(0);-webkit-backface-visibility:hidden;}
+  .mobile-topbar::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:100px;background:#091222;pointer-events:none;}
+
   /* Calendario: tres indicadores compactos en una fila también en iPhone. */
   .calendar-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;}
   .calendar-summary-grid>.card{min-width:0!important;padding:10px 7px!important;}
@@ -1761,8 +1786,9 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .app-wrap .app-body{display:flex!important;flex-direction:column!important;min-width:0!important;}
   .app-wrap .main{width:100%!important;min-width:0!important;overflow:visible!important;}
   .app-wrap .mobile-topbar button{visibility:visible!important;opacity:1!important;flex-shrink:0!important;}
-  .app-wrap .mobile-nav{display:none!important;}
-  .app-wrap .content{padding-bottom:max(18px,env(safe-area-inset-bottom,0px))!important;}
+  .app-wrap .mobile-nav{display:block!important;position:fixed!important;left:0!important;right:0!important;bottom:0!important;z-index:520!important;}
+  .app-wrap .mobile-nav-inner{display:flex!important;max-width:100%!important;overflow-x:auto!important;overscroll-behavior-x:contain!important;}
+  .app-wrap .content{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))!important;}
 }
 /* El recorrido termina en las acciones: no reservar sitio para la navegación que se oculta. */
 .app-wrap .content.dw-operation-page-content{padding-bottom:max(12px,env(safe-area-inset-bottom,0px))!important}
@@ -1781,6 +1807,17 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .dw-contact-print .dw-ios-sw:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 @media(max-width:1279px){.dw-operation-page .dw-persona-fields .dw-contact-field{grid-column:1/-1}}
 @media(max-width:640px){.dw-contact-field{flex-direction:column;align-items:stretch;gap:6px}.dw-contact-print{justify-content:flex-start;align-self:flex-start;min-height:34px}}
+/* iPhone: teléfono y correo comparten una fila, con un switch accesible por campo.
+   Se prioriza ancho de escritura y se evita scroll lateral. */
+@media (min-width:350px) and (max-width:640px){
+  .dw-operation-page .dw-persona-fields{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8px;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field{grid-column:auto;min-width:0;padding:8px 7px;gap:6px;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field .dw-contact-input{width:100%;min-width:0;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field .inp{width:100%;min-width:0;padding-left:8px;padding-right:8px;font-size:16px;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field .dw-contact-print{width:100%;min-width:0;justify-content:space-between;gap:5px;padding:4px 5px;white-space:normal;line-height:1.2;font-size:10px;}
+  .dw-operation-page .dw-persona-fields>.dw-contact-field .dw-contact-print .dw-ios-sw{flex-shrink:0;}
+}
+
 
 /* Navegación del formulario más cómoda en computadora. */
 @media(min-width:761px){
@@ -4292,7 +4329,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     var removiendo = !!removingIds[op.id];
 
     const acciones=(
-      <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
+      <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,minWidth:0,maxWidth:"100%",flexWrap:"wrap",justifyContent:"flex-end"}}>
         {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={13}/> <span>{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span></Btn>}
         <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
         {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}
@@ -4721,8 +4758,8 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{top:0,right:0,left:-20,bottom:0}}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)"/>
-                    <XAxis dataKey="name" tick={{fill:"#94a3b8",fontSize:12}} axisLine={false} tickLine={false}/>
-                    <YAxis tick={{fill:"#94a3b8",fontSize:12}} axisLine={false} tickLine={false} allowDecimals={false}/>
+                    <XAxis dataKey="name" tick={{fill:"var(--muted)",fontSize:12}} axisLine={false} tickLine={false}/>
+                    <YAxis tick={{fill:"var(--muted)",fontSize:12}} axisLine={false} tickLine={false} allowDecimals={false}/>
                     <Tooltip contentStyle={{background:"var(--card)",border:"1px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:12}} itemStyle={{color:"var(--text)"}} labelStyle={{color:"var(--text)"}}/>
                     <Bar dataKey="ops" fill="var(--gold)" radius={[4,4,0,0]} name="Operaciones"/>
                   </BarChart>
@@ -4737,7 +4774,7 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
                     <Pie data={porTipo.length?porTipo:[{name:"Sin datos",v:1,color:"#1e293b"}]} dataKey="v" nameKey="name" cx="50%" cy="50%" outerRadius={65} innerRadius={30}>
                       {(porTipo.length?porTipo:[{color:"#1e293b"}]).map(function(e,i){return <Cell key={i} fill={e.color}/>;})}</Pie>
                     <Tooltip contentStyle={{background:"var(--card)",border:"1px solid var(--border2)",borderRadius:8,color:"var(--text)",fontSize:12}} itemStyle={{color:"var(--text)"}} labelStyle={{color:"var(--text)"}}/>
-                    <Legend iconType="circle" iconSize={7} wrapperStyle={{fontSize:12,color:"#94a3b8"}}/>
+                    <Legend iconType="circle" iconSize={7} wrapperStyle={{fontSize:12,color:"var(--muted)"}}/>
                   </PieChart>
                 </ResponsiveContainer>
               </div>

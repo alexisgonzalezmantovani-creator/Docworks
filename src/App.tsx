@@ -8720,6 +8720,10 @@ function DocWorksApp(){
       r.style.setProperty("--border","rgba(255,255,255,0.07)");
       r.style.setProperty("--border2","rgba(255,255,255,0.12)");
       r.style.setProperty("--text","#f1f5f9");
+      r.style.setProperty("--green","#4ade80");
+      r.style.setProperty("--teal","#2dd4bf");
+      r.style.setProperty("--amber","#fbbf24");
+      r.style.setProperty("--red","#f87171");
       r.style.setProperty("--muted","#aebbcc");
       r.style.setProperty("--dim","#8695a8");
       r.style.setProperty("--surface2","rgba(255,255,255,0.05)");
@@ -8739,6 +8743,10 @@ function DocWorksApp(){
       r.style.setProperty("--border","rgba(15,23,42,0.07)");
       r.style.setProperty("--border2","rgba(15,23,42,0.12)");
       r.style.setProperty("--text","#0f172a");
+      r.style.setProperty("--green","#15803d");
+      r.style.setProperty("--teal","#0f766e");
+      r.style.setProperty("--amber","#92400e");
+      r.style.setProperty("--red","#b91c1c");
       r.style.setProperty("--muted","#3f4c5e");
       r.style.setProperty("--dim","#64748b");
       r.style.setProperty("--surface2","rgba(15,23,42,0.035)");

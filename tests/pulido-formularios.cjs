@@ -3,6 +3,14 @@ const dir=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),
 for(const k of ['window','document','HTMLElement','HTMLInputElement','HTMLSelectElement','Event','Node','localStorage'])global[k]=dom.window[k];global.IS_REACT_ACT_ENVIRONMENT=true;global.MessageChannel=class{constructor(){this.port1={onmessage:null};this.port2={postMessage:()=>setTimeout(()=>this.port1.onmessage?.({}),0)}}};
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(dir+'/src/App.tsx','utf8')+'\nimport {act,createElement} from "react";import {createRoot} from "react-dom/client";export {act,createElement,createRoot,StepCondicionesAlquiler,SeguroOperacion,StepPersona,StepGarantia,EMPTY_OP,SAMPLE_OP_PREVIEW,getCamposFaltantesDetalle,validarDocumentoParaExport,buildDocSections};',resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
 const a=require(tmp+'/app.cjs'),root=a.createRoot(document.getElementById('root'));let state,checks=0;
+const opsSource=fs.readFileSync(dir+'/src/Operaciones.tsx','utf8');
+const appSource=fs.readFileSync(dir+'/src/App.tsx','utf8');
+assert.ok(opsSource.includes('<OperationSaveInline status={saveStatus}/>'));
+assert.ok(appSource.includes('["saving","error"].includes(status.state)'));
+assert.ok(opsSource.includes('.dw-persona-fields>.dw-contact-field{grid-column:auto'));
+assert.ok(opsSource.includes('.main{min-height:0;max-height:100%;overflow:hidden;}'));
+console.log('OK controles estáticos iPhone: guardado, contactos y scroll horizontal');
+
 const check=(name,fn)=>{fn();checks++;console.log('OK',name);};
 function render(Component,extra={}){root.render(a.createElement(Component,{data:state,equipo:[],faltantes:a.getCamposFaltantesDetalle(state).map(f=>f.campo),onChange:(k,v)=>{state={...state,[k]:v};render(Component,extra);},...extra}));}
 async function change(id,value){await a.act(async()=>{const el=document.getElementById('dw-field-'+id);Object.getOwnPropertyDescriptor(el.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));});}
