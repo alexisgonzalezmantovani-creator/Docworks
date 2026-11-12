@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.53";
+var DOCWORKS_VERSION = "6.54";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -7060,7 +7060,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
     var nueva=Object.assign({},anterior,{clausulas_ids:idsPlantilla.slice(),locked:false,version:versionAnterior+1,version_updated_at:ahora,version_publicada_en:ahora,historial_versiones:historial.slice(0,30)});
     var res=await persistir(Object.assign({},perfil,{plantillas:Object.assign({},mapa,{[tipoDocSel]:nueva}),clausulas_default_ids:idsPlantilla.slice(),clausulas_default_locked:false}));
     if(res&&res.error){dwNotify("error","No se pudo guardar el modelo. Revisá la conexión.");return;}
-    dwNotify("success","Modelo guardado. Se utilizará en las nuevas operaciones.");
+    dwNotify("success","Versión registrada. Los documentos anteriores se conservan.");
   }
   function guardarEncabezado(texto){
     var mapa=Object.assign({},customMap);mapa[tipoDocSel]=texto;
@@ -7074,7 +7074,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
     {!puedeEditar&&<div className="notice" style={{fontSize:12}}>Esta configuración es de solo lectura. Solo Dueño y Administrador pueden editar encabezados y cláusulas.</div>}
     {pasoModelo===3&&mostrarIntroduccion!==false&&<div id="dw-config-introduccion" className="card" style={{padding:14,scrollMarginTop:90}}>
       <button type="button" aria-label={introduccionAbierta?"Ocultar introducción":"Desplegar introducción"} aria-expanded={introduccionAbierta} disabled={saveStatus==="saving"} onClick={function(){if(introduccionAbierta)cerrarIntroduccion();else setIntroduccionAbierta(true);}} style={{width:"100%",minHeight:44,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,background:"none",border:0,color:"var(--text)",cursor:"pointer",fontFamily:"inherit",textAlign:"left",padding:"8px 0"}}>
-        <span style={{fontSize:14,fontWeight:700}}>Introducción</span><span aria-hidden="true" style={{fontSize:17,color:"var(--muted)",minWidth:20,textAlign:"center"}}>{introduccionAbierta?"−":"+"}</span>
+        <span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700}}>Introducción</span><span style={{fontSize:11.5,color:"var(--dim)",fontWeight:400}}>Presentación y datos de las partes</span></span><span aria-hidden="true" style={{fontSize:17,color:"var(--muted)",minWidth:20,textAlign:"center"}}>{introduccionAbierta?"−":"+"}</span>
       </button>
       {introduccionAbierta&&<>
       <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Los datos se completan desde la operación.</div>
@@ -7091,9 +7091,9 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
     {barraSuperior&&<div data-testid="dw-model-actions" style={{padding:"4px 0",display:"flex",flexDirection:"column",gap:7,alignItems:"flex-end"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
         <button type="button" data-testid="dw-open-fullpage-preview" className="btn btn-secondary" onClick={function(){if(typeof onPreviewChange==="function")onPreviewChange(true);}}>Vista previa</button>
-        {puedeEditar&&<button type="button" className="btn btn-primary" disabled={saveStatus==="saving"||encabezadoEditing||!!modeloEnEdicion} onClick={guardarModelo}>{saveStatus==="saving"?"Guardando…":"Guardar cambios"}</button>}
+        {puedeEditar&&<button type="button" className="btn btn-primary" disabled={saveStatus==="saving"||encabezadoEditing||!!modeloEnEdicion} onClick={guardarModelo}>{saveStatus==="saving"?"Registrando…":"Registrar nueva versión"}</button>}
       </div>
-      <div style={{fontSize:12,color:"var(--dim)",textAlign:"right"}}>{saveStatus==="saved"?"Modelo guardado correctamente.":saveStatus==="error"?"No se pudo guardar el modelo.":encabezadoEditing||modeloEnEdicion?"Terminá la edición antes de guardar.":"Los cambios se aplicarán a las nuevas operaciones."}</div>
+      <div style={{fontSize:12,color:"var(--dim)",textAlign:"right"}}>{saveStatus==="saved"?"Nueva versión registrada.":saveStatus==="error"?"No se pudo registrar la versión.":encabezadoEditing||modeloEnEdicion?"Terminá la edición antes de registrar la versión.":"Los cambios de cada sección se guardan al editarlos y pueden usarse en operaciones nuevas. Registrar versión conserva el historial; los documentos anteriores no se modifican."}</div>
     </div>}
   </div>;
 }

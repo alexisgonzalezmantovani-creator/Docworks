@@ -99,7 +99,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    const idsBiblioteca=await page.locator('[data-clausula-id]').evaluateAll(xs=>xs.map(x=>x.dataset.clausulaId));
    assert.deepEqual(idsDocumento,idsBiblioteca,name+' mismo catálogo '+label);checks++;
    assert.deepEqual(idsDocumento,['ejemplo-opcional'],name+' sin cláusulas viejas/eliminadas '+label);checks++;
-   await page.getByRole('navigation',{name:'Cláusulas y documentos'}).getByRole('button',{name:'Documentos',exact:true}).click();
+   await page.getByRole('navigation',{name:'Cláusulas y documentos'}).getByRole('button',{name:'Modelos de documentos',exact:true}).click();
 
   }
   await page.locator('#dw-modelo-documento').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
@@ -125,7 +125,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
   assert.equal(await page.locator('#dw-model-preview-area').count(),1);checks++;
   const acciones=page.getByTestId('dw-model-actions');
-  assert.equal(await acciones.getByRole('button',{name:'Guardar cambios',exact:true}).count(),1);checks++;
+  assert.equal(await acciones.getByRole('button',{name:'Registrar nueva versión',exact:true}).count(),1);checks++;
   assert.equal(await acciones.getByRole('button',{name:'Vista previa',exact:true}).count(),1);checks++;
   assert.equal(await page.getByRole('group',{name:'Elegir vista de cláusulas'}).count(),0);checks++;
   assert.ok(await page.locator('.dw-clause-compact').count()>0,name+' cláusulas compactas');checks++;
@@ -141,7 +141,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.getByTestId('dw-fullpage-preview').waitFor({state:'detached'});checks++;
   assert.equal(await page.getByRole('button',{name:'Publicar para asesores'}).count(),0);checks++;
   assert.ok(await page.evaluate(()=>{const a=document.querySelector('[data-testid="dw-model-actions"]');const b=document.querySelector('#dw-model-extra-clauses');return a&&b&&a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_PRECEDING;}),name+' acciones al final');checks++;
-  await acciones.getByRole('button',{name:'Guardar cambios',exact:true}).click();
+  await acciones.getByRole('button',{name:'Registrar nueva versión',exact:true}).click();
   await page.getByTestId('guardados').getByText('1').waitFor();checks++;
 
   assert.equal(await page.getByRole('tablist',{name:'Contenido del modelo'}).count(),0);checks++;
@@ -149,14 +149,14 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   assert.equal(await extras.getAttribute('open'),null);checks++;
   await extras.locator('summary').click();
   await page.getByLabel('Estado de Texto reutilizable de ejemplo',{exact:true}).selectOption('asesor');
-  assert.ok((await extras.locator('summary').textContent()).trim().startsWith('Cláusulas que puede agregar el asesor ('),'Cantidad visible de cláusulas para el asesor');checks++;
+  assert.ok((await extras.locator('summary').textContent()).trim().startsWith('Cláusulas adicionales ('),'Cantidad visible de cláusulas para el asesor');checks++;
   assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' workspace overflow');checks++;
   await page.screenshot({path:path.join(out,'documentos-'+name+'.png'),fullPage:true});
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
   await page.locator('#dw-biblioteca-documento').getByRole('button',{name:'Todos los documentos',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
-  await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  await nav.getByRole('button',{name:'Modelos de documentos',exact:true}).click();
   await page.locator('#dw-model-clauses > summary').click();
   await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
   await page.locator('textarea').fill('Borrador conservado al cambiar de sección.');
@@ -166,7 +166,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
   await page.getByRole('button',{name:'Confirmar',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
-  await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  await nav.getByRole('button',{name:'Modelos de documentos',exact:true}).click();
   await page.getByRole('button',{name:'Desplegar introducción'}).click();
   await page.getByRole('button',{name:'Editar introducción',exact:true}).click();
   await page.locator('[contenteditable="true"]').fill('Introducción sin guardar.');
@@ -182,7 +182,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.locator('#dw-clausula-texto').fill('Condición especial válida durante 90 días.');
   await page.locator('fieldset').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
   assert.ok(await page.getByText('Hay títulos parecidos en la biblioteca',{exact:true}).isVisible());checks++;
-  await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  await nav.getByRole('button',{name:'Modelos de documentos',exact:true}).click();
   await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
   assert.equal(await page.locator('#dw-clausula-texto').inputValue(),'Condición especial válida durante 90 días.');checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' editor biblioteca overflow');checks++;
@@ -201,7 +201,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.getByRole('button',{name:'Guardar y habilitar',exact:true}).click();
   await page.getByRole('button',{name:'Reintentar habilitación',exact:true}).waitFor();
   assert.equal(await page.getByTestId('altas').textContent(),'2');checks++;
-  await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  await nav.getByRole('button',{name:'Modelos de documentos',exact:true}).click();
   assert.ok(await page.getByText('La cláusula está guardada en la biblioteca, pero falta habilitarla para los asesores. ¿Salir y dejar la habilitación pendiente?',{exact:true}).isVisible());checks++;
   await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
   await page.getByRole('button',{name:'Restablecer guardado',exact:true}).click();
