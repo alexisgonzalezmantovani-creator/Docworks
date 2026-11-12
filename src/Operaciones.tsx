@@ -4943,7 +4943,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   var docTabs=getDocTabs(op);
   var TABS=docTabs.TABS, TAB_RESUMEN=docTabs.TAB_RESUMEN, TABS_ALL=docTabs.TABS_ALL;
 
-  function setTab(id){ if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();onChangeTab(id); }
+  function setTab(id){ if(id===tab)return true;if(!permitirDescartarAjuste())return false;cerrarEdicionAjuste();onChangeTab(id);return true; }
   const [busy,setBusy]=useState({pdf:false,docx:false,share:false});
   const [err,setErr]=useState("");
   const [lastAction,setLastAction]=useState(null); // "pdf" | "docx" | "share"
@@ -4986,8 +4986,16 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     return ajusteEditando!==null&&partesAjuste.map(function(p){return p.chip||p.texto||"";}).join("")!==ajusteOriginalRef.current;
   }
   function permitirDescartarAjuste(){
+    if(guardandoAjuste){dwNotify("info","Primero debe finalizar el guardado de la cláusula.");return false;}
     return !hayCambiosAjuste()||window.confirm("Hay cambios manuales sin guardar. ¿Descartarlos?");
   }
+  // Evitar perder cambios al recargar o cerrar la pestaña.
+  useEffect(function(){
+    if(!hayCambiosAjuste()&&!guardandoAjuste)return;
+    function advertirSalida(e){e.preventDefault();e.returnValue="";}
+    window.addEventListener("beforeunload",advertirSalida);
+    return function(){window.removeEventListener("beforeunload",advertirSalida);};
+  },[ajusteEditando,partesAjuste,guardandoAjuste]);
   // Una operación nueva nunca debe heredar el borrador visual de otra.
   useEffect(function(){cerrarEdicionAjuste();ajusteOriginalRef.current="";},[op&&op.id]);
   function abrirAjuste(b){
@@ -5008,13 +5016,19 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     var esperado=(String(b.contenido||"").match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(t){return t.replace(/\\s+/g,"");});
     var actual=(contenido.match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(t){return t.replace(/\\s+/g,"");});
     if(JSON.stringify(esperado)!==JSON.stringify(actual)){setErrorAjuste("Los chips originales deben mantenerse intactos.");return;}
+    var previo=op.ajustes_manuales&&op.ajustes_manuales[tab]&&op.ajustes_manuales[tab][b.id];
+    if(contenido===String(b.contenido||"")&&typeof previo!=="string"){cerrarEdicionAjuste();dwNotify("info","No hay cambios para guardar.");return;}
+    if(typeof previo==="string"&&contenido===previo){cerrarEdicionAjuste();dwNotify("info","Esta cláusula ya estaba guardada.");return;}
     setGuardandoAjuste(true);setErrorAjuste("");
     try{
       var mapa=Object.assign({},op.ajustes_manuales||{});
       var porDocumento=Object.assign({},mapa[tab]||{});
-      porDocumento[b.id]=contenido;
-      mapa[tab]=porDocumento;
+      if(contenido===String(b.contenido||""))delete porDocumento[b.id];
+      else porDocumento[b.id]=contenido;
+      if(Object.keys(porDocumento).length)mapa[tab]=porDocumento;
+      else delete mapa[tab];
       var res=await onUpdateOperation(Object.assign({},op,{ajustes_manuales:mapa}));
+      if(res&&res.contextoObsoleto)throw new Error("Tu sesión cambió durante el guardado. Reabrí la operación antes de continuar.");
       if(res&&res.error)throw res.error;
       setAjusteEditando(null);setPartesAjuste([]);
       dwNotify("success","Ajuste guardado para esta operación.");
@@ -5023,13 +5037,16 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   }
   async function restaurarAjuste(b){
     if(!onUpdateOperation||guardandoAjuste)return;
+    if(!window.confirm("¿Restaurar el texto original de esta cláusula? Se quitarán los ajustes manuales de esta operación."))return;
     setGuardandoAjuste(true);setErrorAjuste("");
     try{
       var mapa=Object.assign({},op.ajustes_manuales||{});
       var porDocumento=Object.assign({},mapa[tab]||{});
       delete porDocumento[b.id];
-      mapa[tab]=porDocumento;
+      if(Object.keys(porDocumento).length)mapa[tab]=porDocumento;
+      else delete mapa[tab];
       var res=await onUpdateOperation(Object.assign({},op,{ajustes_manuales:mapa}));
+      if(res&&res.contextoObsoleto)throw new Error("Tu sesión cambió durante el guardado. Reabrí la operación antes de continuar.");
       if(res&&res.error)throw res.error;
       setAjusteEditando(null);setPartesAjuste([]);
       dwNotify("success","Se restauró el texto original de esta cláusula.");
@@ -5039,7 +5056,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   const [aiReview,setAiReview]=useState(null); // {loading,text,error}
   const autoActionFiredRef=useRef(false);
 
-  function changeTab(id){ setTab(id); setLastPdf(null); setLastDocx(null); setErr(""); setAiReview(null); }
+  function changeTab(id){ if(setTab(id)===false)return;setLastPdf(null);setLastDocx(null);setErr("");setAiReview(null); }
 
   async function ejecutarRevisionIA(){
     if(aiReview&&aiReview.loading) return;
@@ -5160,7 +5177,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
 
   const descargaEnCursoRef=useRef({pdf:false,docx:false});
   async function handlePDF(docOverride=undefined){
-    if(hayCambiosAjuste()){setErr("Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
+    if(guardandoAjuste||hayCambiosAjuste()){setErr(guardandoAjuste?"La cláusula todavía se está guardando. Intentá de nuevo cuando termine.":"Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
     if(descargaEnCursoRef.current.pdf)return;
     descargaEnCursoRef.current.pdf=true;
     setBusy(function(b){return Object.assign({},b,{pdf:true});});setErr("");setLastAction("pdf");
@@ -5178,7 +5195,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   }
 
   async function handleDOCX(docOverride=undefined){
-    if(hayCambiosAjuste()){setErr("Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
+    if(guardandoAjuste||hayCambiosAjuste()){setErr(guardandoAjuste?"La cláusula todavía se está guardando. Intentá de nuevo cuando termine.":"Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
     if(descargaEnCursoRef.current.docx)return;
     descargaEnCursoRef.current.docx=true;
     setBusy(function(b){return Object.assign({},b,{docx:true});});setErr("");setLastAction("docx");
@@ -5196,7 +5213,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   }
 
   async function handleShareWhatsApp(docOverride=undefined){
-    if(hayCambiosAjuste()){setErr("Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
+    if(guardandoAjuste||hayCambiosAjuste()){setErr(guardandoAjuste?"La cláusula todavía se está guardando. Intentá de nuevo cuando termine.":"Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
     setErr("");setLastAction("share");
     setBusy(function(b){return Object.assign({},b,{share:true});});
     try{
@@ -5310,7 +5327,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         {onUpdateOperation&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
           <details className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
-              ✎ Hacer ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length} modificada(s)</span>}
+              ✎ Hacer ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
             </summary>
             <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"8px 0 12px"}}>
               Cambiá palabras o párrafos de esta operación sin alterar el modelo de la inmobiliaria. Los chips quedan bloqueados. Guardá cada cláusula para actualizar la vista previa, el PDF y el Word.
@@ -5329,7 +5346,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
                     {partesAjuste.map(function(p,i){return p.chip
                       ?<span key={i} title="Campo automático protegido" style={{borderRadius:6,padding:"6px 9px",fontSize:11,fontWeight:700,background:"rgba(89,199,243,.13)",color:"var(--text)",border:"1px solid var(--border)"}}>🔒 {p.chip.replace(/[{}]/g,"").replace(/_/g," ")}</span>
-                      :<textarea key={i} className="inp" aria-label={"Texto editable "+(i+1)} rows={Math.max(2,Math.min(7,String(p.texto||"").split("\n").length+1))} style={{flex:"1 1 230px",minWidth:0,maxWidth:"100%",resize:"vertical",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/>;})}
+                      :<textarea key={i} className="inp" aria-label={"Editar "+(b.titulo||"cláusula")+" · fragmento "+(i+1)} rows={Math.max(2,Math.min(7,String(p.texto||"").split("\n").length+1))} style={{flex:"1 1 230px",minWidth:0,maxWidth:"100%",resize:"vertical",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/>;})}
                   </div>
                   {errorAjuste&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorAjuste}</div>}
                   <div style={{display:"flex",gap:7,justifyContent:"flex-end",flexWrap:"wrap"}}>
