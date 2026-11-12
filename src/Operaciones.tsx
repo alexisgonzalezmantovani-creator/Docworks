@@ -897,7 +897,7 @@ export const GS = `
 
     /* Hide the "+ Nueva operación" button inside section-header on mobile
        (already in mobile topbar and FAB) */
-    .section-header .btn-nueva{display:none !important;}
+    .section-header .btn-nueva{display:inline-flex !important;align-items:center;justify-content:center;min-height:44px;white-space:nowrap;flex-shrink:0;}
 
     /* Grids */
     .grid2{grid-template-columns:1fr;}
@@ -1030,6 +1030,9 @@ export const GS = `
   .dw-dashboard-root button:focus-visible,.dw-dashboard-root a:focus-visible{outline:2px solid var(--gold);outline-offset:3px;}
   @media(max-width:640px){
     .dw-dashboard-root>.section-header{padding:2px 0 15px;margin-bottom:15px!important;align-items:flex-start;}
+    .dw-dashboard-root>.section-header{display:flex!important;flex-wrap:nowrap!important;align-items:flex-start!important;justify-content:space-between!important;gap:8px;}
+    .dw-dashboard-root>.section-header>div:first-child{min-width:0;flex:1 1 auto;}
+    .dw-dashboard-root>.section-header .btn-nueva{display:inline-flex!important;margin-left:auto;padding:9px 11px;font-size:12px;min-width:0;min-height:44px;max-width:46%;white-space:normal;text-align:center;line-height:1.2;}
     .dw-dashboard-root>.section-header .section-title{font-size:27px;}
     .dw-dashboard-root>.section-header .section-sub{font-size:12px;line-height:1.45;margin-top:5px;}
     .dw-dashboard-root .op-card-premium{border-radius:14px;transform:none!important;padding:12px 12px 11px 15px;box-shadow:0 2px 10px rgba(15,23,42,.04);}
@@ -1232,12 +1235,12 @@ html,body{touch-action:manipulation;}
 @media (max-width:640px){
   .fab{display:flex!important;bottom:calc(var(--mobile-nav-h) + 14px)!important;right:16px!important;width:56px!important;height:56px!important;}
   .ia-fab{bottom:calc(var(--mobile-nav-h) + 82px)!important;right:20px!important;width:46px!important;height:46px!important;}
-  .section-header .btn-nueva{display:none!important;}
+  .section-header .btn-nueva{display:inline-flex!important;align-items:center;justify-content:center;min-height:44px;flex-shrink:0;}
 }
 @media (orientation:landscape) and (max-height:500px) and (hover:none){
   .fab{display:flex!important;bottom:16px!important;right:16px!important;width:52px!important;height:52px!important;}
   .ia-fab{bottom:78px!important;right:20px!important;width:44px!important;height:44px!important;}
-  .section-header .btn-nueva{display:none!important;}
+  .section-header .btn-nueva{display:inline-flex!important;align-items:center;justify-content:center;min-height:44px;flex-shrink:0;}
 }
 /* Buscador y filtros: una sola fila prolija. */
 .filtros-btn{position:relative;gap:7px;min-height:40px;}
