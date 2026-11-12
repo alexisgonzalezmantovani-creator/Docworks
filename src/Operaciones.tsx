@@ -4911,6 +4911,63 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   },[op,tab,perfil&&perfil.logoDataUrl,perfil&&perfil.plantillaEstilo,perfil&&perfil.colorPrimario]);
   const [pendingWarnings,setPendingWarnings]=useState(null); // {errors, avisos, fn, doc} | null
   const [pendingFinalConfirm,setPendingFinalConfirm]=useState(null); // {fn,doc} | null
+
+  // Editor opcional de ajustes finales. Cada chip es una pieza de solo lectura.
+  const [ajusteEditando,setAjusteEditando]=useState(null);
+  const [partesAjuste,setPartesAjuste]=useState([]);
+  const [guardandoAjuste,setGuardandoAjuste]=useState(false);
+  const [errorAjuste,setErrorAjuste]=useState("");
+  function bloquesParaAjustes(){
+    var snap=op&&op.plantilla_snapshot;
+    var lista=snap&&snap.tipo===tab&&Array.isArray(snap.body_blocks)&&snap.body_blocks.length
+      ?snap.body_blocks:getBodyBlocksForDocument(perfil,tab,bloquesReserva);
+    return Array.isArray(lista)?lista.filter(function(b){return b&&b.id&&b.activo!==false&&String(b.contenido||"").trim();}):[];
+  }
+  function abrirAjuste(b){
+    var guardado=op&&op.ajustes_manuales&&op.ajustes_manuales[tab]&&op.ajustes_manuales[tab][b.id];
+    var contenido=typeof guardado==="string"?guardado:String(b.contenido||"");
+    setPartesAjuste(contenido.split(/(\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\})/g).map(function(p){
+      return /^\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}$/.test(p)?{chip:p}:{texto:p};
+    }));
+    setAjusteEditando(b.id);setErrorAjuste("");
+  }
+  async function guardarAjuste(b){
+    if(!onUpdateOperation||guardandoAjuste)return;
+    var contenido=partesAjuste.map(function(p){return p.chip||p.texto||"";}).join("");
+    if(!contenido.trim()||partesAjuste.some(function(p){return p.texto&&/\\{\\{|\\}\\}/.test(p.texto);})){
+      setErrorAjuste("Revisá el texto: no debe estar vacío ni contener chips escritos manualmente.");return;
+    }
+    var esperado=(String(b.contenido||"").match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(t){return t.replace(/\\s+/g,"");});
+    var actual=(contenido.match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(t){return t.replace(/\\s+/g,"");});
+    if(JSON.stringify(esperado)!==JSON.stringify(actual)){setErrorAjuste("Los chips originales deben mantenerse intactos.");return;}
+    setGuardandoAjuste(true);setErrorAjuste("");
+    try{
+      var mapa=Object.assign({},op.ajustes_manuales||{});
+      var porDocumento=Object.assign({},mapa[tab]||{});
+      porDocumento[b.id]=contenido;
+      mapa[tab]=porDocumento;
+      var res=await onUpdateOperation(Object.assign({},op,{ajustes_manuales:mapa}));
+      if(res&&res.error)throw res.error;
+      setAjusteEditando(null);setPartesAjuste([]);
+      dwNotify("success","Ajuste guardado para esta operación.");
+    }catch(e){setErrorAjuste(e&&e.message?e.message:"No se pudo guardar el ajuste.");}
+    finally{setGuardandoAjuste(false);}
+  }
+  async function restaurarAjuste(b){
+    if(!onUpdateOperation||guardandoAjuste)return;
+    setGuardandoAjuste(true);setErrorAjuste("");
+    try{
+      var mapa=Object.assign({},op.ajustes_manuales||{});
+      var porDocumento=Object.assign({},mapa[tab]||{});
+      delete porDocumento[b.id];
+      mapa[tab]=porDocumento;
+      var res=await onUpdateOperation(Object.assign({},op,{ajustes_manuales:mapa}));
+      if(res&&res.error)throw res.error;
+      setAjusteEditando(null);setPartesAjuste([]);
+      dwNotify("success","Se restauró el texto original de esta cláusula.");
+    }catch(e){setErrorAjuste(e&&e.message?e.message:"No se pudo restaurar la cláusula.");}
+    finally{setGuardandoAjuste(false);}
+  }
   const [aiReview,setAiReview]=useState(null); // {loading,text,error}
   const autoActionFiredRef=useRef(false);
 
@@ -5179,6 +5236,40 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           }} style={{flexShrink:0,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(248,113,113,0.35)",background:"rgba(248,113,113,0.12)",color:"var(--red)",fontSize:12,fontWeight:600,cursor:"pointer"}}>↻ Reintentar</button>}
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
+        {onUpdateOperation&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&
+          <details className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
+            <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
+              ✎ Hacer ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>
+            </summary>
+            <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"8px 0 12px"}}>
+              Cambiá palabras o párrafos de esta operación sin alterar el modelo de la inmobiliaria. Los chips quedan bloqueados. Guardá cada cláusula para actualizar la vista previa, el PDF y el Word.
+            </div>
+            {bloquesParaAjustes().map(function(b){
+              var vigente=op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.prototype.hasOwnProperty.call(op.ajustes_manuales[tab],b.id);
+              return <div key={b.id} style={{padding:"10px 0",borderTop:"1px solid var(--border)"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+                  <span style={{fontSize:13,fontWeight:650,color:"var(--text)"}}>{b.titulo||"Cláusula"}</span>
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    {vigente&&<span style={{fontSize:10,color:"var(--green)"}}>Personalizada</span>}
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(ajusteEditando===b.id){setAjusteEditando(null);setErrorAjuste("");}else abrirAjuste(b);}}>{ajusteEditando===b.id?"Cerrar":"Editar"}</button>
+                  </div>
+                </div>
+                {ajusteEditando===b.id&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+                    {partesAjuste.map(function(p,i){return p.chip
+                      ?<span key={i} title="Campo automático protegido" style={{borderRadius:6,padding:"6px 9px",fontSize:11,fontWeight:700,background:"rgba(89,199,243,.13)",color:"var(--text)",border:"1px solid var(--border)"}}>🔒 {p.chip.replace(/[{}]/g,"").replace(/_/g," ")}</span>
+                      :<textarea key={i} className="inp" aria-label={"Texto editable "+(i+1)} rows={Math.max(2,Math.min(7,String(p.texto||"").split("\n").length+1))} style={{flex:"1 1 230px",minWidth:0,maxWidth:"100%",resize:"vertical",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/;})}
+                  </div>
+                  {errorAjuste&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorAjuste}</div>}
+                  <div style={{display:"flex",gap:7,justifyContent:"flex-end",flexWrap:"wrap"}}>
+                    {vigente&&<button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){restaurarAjuste(b);}}>Restaurar original</button>}
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){setAjusteEditando(null);setErrorAjuste("");}}>Cancelar</button>
+                    <button type="button" className="btn btn-primary btn-sm" disabled={guardandoAjuste} onClick={function(){guardarAjuste(b);}}>{guardandoAjuste?"Guardando…":"Guardar ajuste"}</button>
+                  </div>
+                </div>}
+              </div>;
+            })}
+          </details>}
         <div className="doc-reading-scroll">
           <div className="pdf-preview" style={{marginBottom:14}}>
             <div className="pdf-chrome">
