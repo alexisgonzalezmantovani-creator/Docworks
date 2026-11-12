@@ -157,6 +157,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.locator('#dw-biblioteca-documento').getByRole('button',{name:'Todos los documentos',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
   await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  await page.locator('#dw-model-clauses > summary').click();
   await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
   await page.locator('textarea').fill('Borrador conservado al cambiar de sección.');
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
@@ -166,6 +167,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.getByRole('button',{name:'Confirmar',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
   await nav.getByRole('button',{name:'Documentos',exact:true}).click();
+  await page.getByRole('button',{name:'Desplegar introducción'}).click();
   await page.getByRole('button',{name:'Editar introducción',exact:true}).click();
   await page.locator('[contenteditable="true"]').fill('Introducción sin guardar.');
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
