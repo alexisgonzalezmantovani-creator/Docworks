@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const esbuild=require('esbuild');
 const root=path.resolve(__dirname,'..');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-test-'));
-const exportsList=['PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion'];
+const exportsList=['PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion','datosCompraCompartidos','getResumenPartes'];
 esbuild.buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+'\nexport { '+exportsList.join(',')+' };',resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs')});
 global.document={querySelector:()=>({}),title:''};
 const app=require(path.join(tmp,'app.cjs'));
@@ -170,17 +170,37 @@ delete global.document;
    assert.deepEqual(app.getTokensSinReemplazar(docBoleto),[]);
  });
  const opCesion={...opReservaBoleto,compra_instrumento:'cesion_boleto',compra_boleto_origen:''};
- check('cesión exige identificar boleto original',()=>assert.ok(app.getCamposFaltantesDetalle(opCesion).some(x=>x.campo==='compra_boleto_origen')));
+ check('cesión exige identificar boleto original y no inventa fecha de posesión',()=>{
+   const faltan=app.getCamposFaltantesDetalle({...opCesion,tipo:'boleto'}).map(x=>x.campo);
+   assert.ok(faltan.includes('compra_boleto_origen'));
+   assert.ok(!faltan.includes('fecha_posesion'));
+ });
+ check('la conversión reserva a boleto conserva la instrumentación elegida',()=>{
+   const heredados=app.datosCompraCompartidos({...opCesion,compra_boleto_origen:'Boleto del 10/10/2025'});
+   assert.equal(heredados.compra_instrumento,'cesion_boleto');
+   assert.equal(heredados.compra_boleto_origen,'Boleto del 10/10/2025');
+ });
+ check('el resumen muestra cedente y cesionario sin modificar datos guardados',()=>{
+   const partes=app.getResumenPartes(opCesion);
+   assert.equal(partes[0].label,'Cedente');
+   assert.equal(partes[1].label,'Cesionario');
+ });
  const cesionConOrigen={...opCesion,compra_boleto_origen:'Boleto original 10/10/2025 entre partes identificadas'};
  const cesionGenerica=app.buildDocSections(app.opParaDocumento(cesionConOrigen),[],'reserva',app.getDefaultBodyBlocks('reserva'));
  check('cesión no se exporta con modelo estándar de compraventa',()=>{
    const v=app.validarDocumentoParaExport(cesionConOrigen,cesionGenerica,{});
    assert.ok(v.errores.some(e=>e.includes('contrato específico')));
+   assert.equal(v.puedeExportar,false);
  });
  const cesionPropia={...cesionGenerica,documentoPropio:true,encabezado:'Contrato de cesión entre CEDENTE y CESIONARIO, según boleto antecedente 10/10/2025.',secciones:[],clausulas:[],firmas:[]};
  check('cesión con modelo propio no se bloquea por instrumentación',()=>{
    const v=app.validarDocumentoParaExport(cesionConOrigen,cesionPropia,{});
    assert.ok(!v.errores.some(e=>e.includes('contrato específico')));
+   assert.equal(v.puedeExportar,true);
+ });
+ check('compartir una reserva desde listado conserva su tipo y no genera un boleto',()=>{
+   const dashboardSrc=fs.readFileSync(path.join(root,'src/Operaciones.tsx'),'utf8');
+   assert.ok(/function defaultTabFor\(op\)\s*\{[\s\S]{0,300}?return op&&op\.tipo&&TIPOS\[op\.tipo\]\?op\.tipo:"reserva";/.test(dashboardSrc));
  });
  const pdfBoleto=await app.generarPDF(docBoleto,null,{}),wordBoleto=await app.generarDOCX(docBoleto,{});
  check('boleto con instrumentación elegida exporta PDF/DOCX',()=>{

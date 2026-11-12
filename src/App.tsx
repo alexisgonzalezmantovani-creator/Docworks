@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.51";
+var DOCWORKS_VERSION = "6.52";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -1788,7 +1788,12 @@ function variantesCoberturaObligatoria(token,valor,op){
   return Array.from(new Set(out.map(function(x){return normalizarTextoComparacion(x);}).filter(Boolean)));
 }
 function analizarDatosObligatorios(doc,tipo,op){
-  var obligatorios=DATOS_OBLIGATORIOS_POR_TIPO[tipo]||[], texto=normalizarTextoComparacion(docToPlainText(doc||{}));
+  // La cesión puede no entregar posesión en esta instancia: el contrato propio
+  // debe identificar los derechos cedidos, no inventar fecha de escrituración.
+  var obligatorios=DATOS_OBLIGATORIOS_POR_TIPO[tipo]||[];
+  if(tipo==="boleto"&&op&&op.compra_instrumento==="cesion_boleto")
+    obligatorios=obligatorios.filter(function(token){return token!=="fecha_posesion";});
+  var texto=normalizarTextoComparacion(docToPlainText(doc||{}));
   var faltaFormulario=[],faltaPlantilla=[],tokensNoResueltos=[],opResolver=op||{};
   // Usar la misma sanitización y unión de cotitulares que usa el generador real.
   try{if(typeof opParaDocumento==="function") opResolver=opParaDocumento(opResolver);}catch(_e){}
@@ -1971,6 +1976,8 @@ function getCamposFaltantes(op,perfil=null){
 }
 function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
   var lista=(CAMPOS_CRITICOS_POR_TIPO[op.tipo] || []).slice();
+  if(op.tipo==="boleto"&&op.compra_instrumento==="cesion_boleto")
+    lista=lista.filter(function(f){return f[0]!=="fecha_posesion";});
   if(["reserva","boleto","reserva_alquiler","alquiler"].indexOf(op.tipo)!==-1)Object.keys(DETALLES_CLAUSULAS).forEach(function(id){
     var cfg=DETALLES_CLAUSULAS[id];
     if((op.clausulas_ids||[]).indexOf(op[cfg.campo+"_id"]||id)!==-1&&!(cfg.campo==="entrega_muebles_detalle"&&op.tipo==="alquiler"&&op.alquiler_amoblado))lista.push([cfg.campo,cfg.label]);
@@ -2305,7 +2312,10 @@ function validarDocumentoParaExport(op, doc, perfil){
   });
   analisisObligatorios.faltaPlantilla.forEach(function(x){if(errores.indexOf(x.mensaje)<0) errores.push(x.mensaje);});
   analisisObligatorios.tokensNoResueltos.forEach(function(x){if(errores.indexOf(x.mensaje)<0) errores.push(x.mensaje);});
-  return {errores:errores,avisos:Array.from(new Set(avisos)),datosFaltantes:datosFaltantes,datosSinCargar:analisisObligatorios.faltaFormulario,datosFaltantesDetalle:analisisObligatorios.faltaFormulario.concat(analisisObligatorios.faltaPlantilla),tokensObligatoriosNoResueltos:analisisObligatorios.tokensNoResueltos,puedeExportar:true,borrador:errores.length>0};
+  // No permitir que la opción «Exportar borrador» termine compartiendo una
+  // compraventa estándar como si fuera una cesión de derechos del boleto.
+  var modeloIncompatible=op.compra_instrumento==="cesion_boleto"&&(op.tipo==="reserva"||op.tipo==="boleto")&&!doc.documentoPropio;
+  return {errores:errores,avisos:Array.from(new Set(avisos)),datosFaltantes:datosFaltantes,datosSinCargar:analisisObligatorios.faltaFormulario,datosFaltantesDetalle:analisisObligatorios.faltaFormulario.concat(analisisObligatorios.faltaPlantilla),tokensObligatoriosNoResueltos:analisisObligatorios.tokensNoResueltos,puedeExportar:!modeloIncompatible,borrador:errores.length>0};
 }
 // 4.16: a qué campo llevar al usuario cuando la exportación detecta errores. Antes solo se consideraban los
 // "campos críticos" y, si el error era otro (p. ej. el plazo de aceptación), el formulario abría en el paso 2 (Comprador).
@@ -4830,8 +4840,9 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
   function s(k){return function(e){onChange(prefix+"_"+k,e.target.value);};}
   function onBlurNombre(){ var v=f("nombre"); var cap=capitalizarNombrePropio(v); if(cap!==v) onChange(prefix+"_nombre",cap); }
   var cotitulares = data[prefix+"_cotitulares"]||[];
-  var rolAdicional=rolDePrefix(data.tipo,prefix);
-  var etiquetaParte=({LOCADOR:"propietario",LOCATARIO:"inquilino",VENDEDOR:"vendedor",COMPRADOR:"comprador",COMODANTE:"comodante",COMODATARIO:"comodatario",AUTORIZANTE:"autorizante",INMOBILIARIA:"representante de la inmobiliaria"})[rolAdicional]||"participante";
+  var esCesionCompra=(data.tipo==="reserva"||data.tipo==="boleto")&&data.compra_instrumento==="cesion_boleto";
+  var rolAdicional=esCesionCompra?(prefix==="vendedor"?"CEDENTE":"CESIONARIO"):rolDePrefix(data.tipo,prefix);
+  var etiquetaParte=({LOCADOR:"propietario",LOCATARIO:"inquilino",VENDEDOR:"vendedor",COMPRADOR:"comprador",CEDENTE:"cedente",CESIONARIO:"cesionario",COMODANTE:"comodante",COMODATARIO:"comodatario",AUTORIZANTE:"autorizante",INMOBILIARIA:"representante de la inmobiliaria"})[rolAdicional]||"participante";
   function setCotitulares(next){ onChange(prefix+"_cotitulares", next); }
   function agregarCotitular(){ setCotitulares(cotitulares.concat([{nombre:"",dni:"",domicilio:"",email:"",telefono:""}])); }
   function actualizarCotitular(i,k,v){ setCotitulares(cotitulares.map(function(p,idx){ return idx===i ? Object.assign({},p,{[k]:v}) : p; })); }
@@ -4839,7 +4850,7 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
   function onBlurNombreCotitular(i){ return function(){ var p=cotitulares[i]; if(!p) return; var cap=capitalizarNombrePropio(p.nombre); if(cap!==p.nombre) actualizarCotitular(i,"nombre",cap); }; }
   return(
     <div>
-      <div role="heading" aria-level={2} style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:12}}>{tituloRolForm(data.tipo,prefix)}</div>
+      <div role="heading" aria-level={2} style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:12}}>{esCesionCompra?(prefix==="vendedor"?"Cedente (cede sus derechos)":"Cesionario (recibe los derechos)"):tituloRolForm(data.tipo,prefix)}</div>
       <div className="dw-persona-fields">
         <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
         <div className="dw-persona-half dw-persona-identificacion"><IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="20-12345678-9" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/></div>
@@ -5149,7 +5160,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
           <summary><span className="dw-economic-advanced-title">Escribanía (opcional)</span><span className="dw-economic-advanced-caption">{data.escribania||"Completar cuando esté asignada"}</span><span className="dw-economic-advanced-symbol" aria-hidden="true"/></summary>
           <div className="dw-economic-advanced-content"><Inp id="dw-field-escribania" label="Escribanía" value={data.escribania||""} onChange={function(e){onChange("escribania",e.target.value);}} placeholder="Nombre de la escribanía"/></div>
         </details>}
-        {data.tipo!=="reserva"&&<Inp id="dw-field-fecha_posesion" label="Fecha de posesión" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2" {...estiloCampoFaltante(faltantes,"fecha_posesion")}/>}
+        {data.tipo!=="reserva"&&<Inp id="dw-field-fecha_posesion" label={data.compra_instrumento==="cesion_boleto"?"Fecha de entrega / posesión (si corresponde)":"Fecha de posesión"} value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2" {...estiloCampoFaltante(faltantes,"fecha_posesion")}/>}
         <details className="col2 dw-economic-advanced" open={!!(data.compra_modalidad_pago&&data.compra_modalidad_pago!=="habitual"||data.compra_medio_pago&&data.compra_medio_pago!=="sin_definir"||data.compra_condiciones_pago)}>
           <summary><span className="dw-economic-advanced-title">Opciones avanzadas</span><span className="dw-economic-advanced-caption">Financiación, cuotas y condiciones especiales de pago</span><span className="dw-economic-advanced-symbol" aria-hidden="true"></span></summary>
           <div className="grid2 dw-economic-advanced-content">
@@ -5739,11 +5750,11 @@ function StepGrupo({onSelect}){
 // ── RESUMEN DE OPERACIÓN (panel previo a leer el documento) ─────────────────
 function getResumenPartes(op){
   var prefixes=(op.tipo==="alquiler"||op.tipo==="reserva_alquiler")?["locador","locatario"]:["vendedor","comprador"];
-  var roles=rolesPorTipo(op.tipo);
+  var roles=(op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto"?["CEDENTE","CESIONARIO"]:rolesPorTipo(op.tipo);
   return prefixes.map(function(prefix,i){return {label:capRol(roles[i]||roles[0]),nombre:op[prefix+"_nombre"]||"",dni:op[prefix+"_dni"]||""};});
 }
 function datosCompraCompartidos(op){
-  var datos={clausulas_custom:op.clausulas_custom||"",comision_vendedor_valor_editado:op.comision_vendedor_valor_editado,comision_comprador_valor_editado:op.comision_comprador_valor_editado,inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
+  var datos={compra_instrumento:op.compra_instrumento||"escritura",compra_boleto_origen:op.compra_boleto_origen||"",clausulas_custom:op.clausulas_custom||"",comision_vendedor_valor_editado:op.comision_vendedor_valor_editado,comision_comprador_valor_editado:op.comision_comprador_valor_editado,inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
   ["comprador","vendedor"].forEach(function(prefix){
     datos[prefix+"_telefono"]=op[prefix+"_telefono"]||"";
     datos[prefix+"_email"]=op[prefix+"_email"]||"";
@@ -5796,11 +5807,13 @@ function getProximoPasoOperacion(op, operaciones){
   if(op.proceso_estado==="en_negociacion") return {icon:"↔",texto:"Continuar negociación",tone:"var(--gold)"};
   return {icon:"→",texto:"Continuar documentación / cierre",tone:"var(--teal)"};
 }
-function PasoResumenFinal({data,clausulas,onVolver,onFinalizarAccion}){
+function PasoResumenFinal({data,clausulas,onVolver,onFinalizarAccion,esContratoPropioOp=false}){
   var partes=getResumenPartes(data);
   var monto=getResumenMonto(data);
   var faltantes=getCamposFaltantesDetalle(data);
   var clausulasSel=(data.clausulas_ids||[]).map(function(id){return clausulas.find(function(c){return c.id===id;});}).filter(Boolean);
+  var esCesionCompra=(data.tipo==="reserva"||data.tipo==="boleto")&&data.compra_instrumento==="cesion_boleto";
+  var requiereContratoCesion=esCesionCompra&&!esContratoPropioOp;
   var [showMenu,setShowMenu]=useState(false);
   var [menuPaso,setMenuPaso]=useState("estado");
   var [estadoFinal,setEstadoFinal]=useState(data.estado&&ESTADOS[data.estado]?data.estado:"activo");
@@ -5837,6 +5850,8 @@ function PasoResumenFinal({data,clausulas,onVolver,onFinalizarAccion}){
       </Tarjeta>
       <Tarjeta t="Condiciones económicas">
         <Fila k="Monto" v={monto}/>
+        {["reserva","boleto","refuerzo_reserva","devolucion_reserva"].includes(data.tipo)&&<Fila k="Instrumentación prevista" v={(instrumentoCompraConfig(data)||INSTRUMENTOS_COMPRA.escritura).nombre}/>}
+        {esCesionCompra&&<Fila k="Boleto antecedente" v={data.compra_boleto_origen||"Sin identificar"}/>}
         {data.tipo!=="reserva"&&data.fecha_posesion&&<Fila k="Fecha de posesión" v={fmtD(data.fecha_posesion)}/>}
         {(data.tipo==="alquiler")&&<Fila k="Inicio / Fin" v={[fmtD(data.alquiler_inicio),fmtD(finAlquilerISO(data))].filter(Boolean).join(" → ")}/>}
         {(data.tipo==="reserva"||data.tipo==="boleto"||data.tipo==="exclusividad")&&<Fila k="Comisión" v={[data.comision_vendedor?resumenComision(data,"comision_vendedor",data.tipo==="exclusividad"?"Autorizante":"Vendedor","Precio total",parseMontoAR(data.precio||0),data.moneda||"USD","comision_vendedor","3"):null,data.comision_comprador?resumenComision(data,"comision_comprador","Comprador","Precio total",parseMontoAR(data.precio||0),data.moneda||"USD","comision_comprador",""):null].filter(Boolean).join(" · ")}/>}
@@ -5847,6 +5862,7 @@ function PasoResumenFinal({data,clausulas,onVolver,onFinalizarAccion}){
         {clausulasSel.map(function(c){return <Fila key={c.id} k={c.titulo} v="✓"/>;})}
         {data.clausulas_custom&&<Fila k={data.clausulas_custom_titulo||"Cláusula adicional"} v="✓"/>}
       </Tarjeta>
+      {requiereContratoCesion&&<div role="alert" style={{padding:"11px 13px",margin:"12px 0",border:"1px solid var(--gold)",borderRadius:10,fontSize:12.5,color:"var(--text)",lineHeight:1.55}}>La cesión de boleto necesita un contrato propio revisado. Podés guardar esta operación, pero no generar ni compartir como cesión el modelo estándar de compraventa. Configurá el contrato en Documentos y revisá su alcance antes de emitir.</div>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:6}}>
         <Btn v="ghost" className="dw-operation-back" onClick={onVolver}>← Volver a editar</Btn>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
@@ -5868,8 +5884,8 @@ function PasoResumenFinal({data,clausulas,onVolver,onFinalizarAccion}){
             <button type="button" onClick={function(){setMenuPaso("estado");}} style={{border:"none",background:"transparent",color:"var(--gold)",cursor:"pointer",fontSize:12,fontWeight:700}}>Cambiar</button>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:9}}>
-            <Btn onClick={function(){setShowMenu(false);onFinalizarAccion("pdf",estadoFinal);}} className="w-full">📄 Guardar y abrir PDF / Word</Btn>
-            <Btn v="secondary" onClick={function(){setShowMenu(false);onFinalizarAccion("whatsapp",estadoFinal);}} className="w-full">💬 Guardar y enviar por WhatsApp</Btn>
+            <Btn disabled={requiereContratoCesion} onClick={function(){setShowMenu(false);onFinalizarAccion("pdf",estadoFinal);}} className="w-full">📄 Guardar y abrir PDF / Word</Btn>
+            <Btn disabled={requiereContratoCesion} v="secondary" onClick={function(){setShowMenu(false);onFinalizarAccion("whatsapp",estadoFinal);}} className="w-full">💬 Guardar y enviar por WhatsApp</Btn>
             <Btn v="secondary" onClick={function(){setShowMenu(false);onFinalizarAccion("guardar",estadoFinal);}} className="w-full">💾 Guardar y terminar</Btn>
           </div>
           <div style={{fontSize:12,color:"var(--dim)",marginTop:10,lineHeight:1.5}}>La elección Borrador / Activo / Cerrado queda registrada en la operación. El contenido del documento no se modifica.</div>
@@ -5882,6 +5898,8 @@ function FichaOperacionPanel({op,operaciones,onClose,embedded,summaryContent=und
   var esAlq=op.tipo==="alquiler"||op.tipo==="reserva_alquiler";
   var roles=esAlq?[
     {prefix:"locatario",label:"Inquilino"},{prefix:"locador",label:"Autorizante"}
+  ]:op.compra_instrumento==="cesion_boleto"&&(op.tipo==="reserva"||op.tipo==="boleto")?[
+    {prefix:"comprador",label:"Cesionario"},{prefix:"vendedor",label:"Cedente"}
   ]:[
     {prefix:"comprador",label:"Comprador"},{prefix:"vendedor",label:"Vendedor"}
   ];

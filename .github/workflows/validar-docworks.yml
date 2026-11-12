@@ -11,7 +11,7 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,7 +22,7 @@ jobs:
       - name: Instalar dependencias
         run: npm ci --no-audit --no-fund
       - name: Instalar verificador de PDF
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
+        run: sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y -o Acquire::Retries=3 poppler-utils python3 python-is-python3
       - name: Verificar tipos y compilación
         run: |
           npm run typecheck
@@ -41,7 +41,7 @@ jobs:
 
   pruebas_aplicacion:
     name: Pruebas de aplicación (grupo ${{ matrix.grupo }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -57,13 +57,13 @@ jobs:
       - name: Instalar dependencias
         run: npm ci --no-audit --no-fund
       - name: Instalar herramientas de documentos
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
+        run: sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y -o Acquire::Retries=3 poppler-utils python3 python-is-python3
       - name: Ejecutar pruebas del grupo
         run: node scripts/test-shard.cjs ${{ matrix.grupo }}
 
   browsers:
     name: Editores en ${{ matrix.browser }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -82,7 +82,7 @@ jobs:
       - name: Instalar navegador y bibliotecas
         run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Instalar herramientas de documentos
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils python3 python-is-python3
+        run: sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y -o Acquire::Retries=3 poppler-utils python3 python-is-python3
       - name: Preparar visor PDF local
         run: npm run prebuild
       - name: Capturar componentes para la web pública

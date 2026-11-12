@@ -4230,14 +4230,18 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   }
 
   function defaultTabFor(op){
-    if(op.tipo==="alquiler")return "alquiler";
-    if(op.tipo==="reserva_alquiler")return "reserva_alquiler";
-    return "boleto";
+    // El botón Compartir del listado debe construir el documento de ESA
+    // operación, no un boleto genérico para reservas, refuerzos u otros tipos.
+    return op&&op.tipo&&TIPOS[op.tipo]?op.tipo:"reserva";
   }
 
   async function shareWhatsApp(op,forzar=false){
     var docValid=aplicarEncabezadoPersonalizado(buildDocSections(opParaDocumento(Object.assign({},op,{inmobiliaria_nombre:perfil&&perfil.nombre,inmobiliaria_matricula:perfil&&perfil.matricula,inmobiliaria_domicilio:perfil&&perfil.direccion,inmobiliaria_email:perfil&&perfil.email,inmobiliaria_telefono:perfil&&perfil.telefono})), clausulas, defaultTabFor(op), bloquesReserva), op, defaultTabFor(op), perfil);
     var validacion=validarDocumentoParaExport(op,docValid,perfil);
+    if(validacion.puedeExportar===false){
+      dwNotify("warning","La cesión de boleto requiere un contrato propio específico. No se puede compartir el modelo estándar como cesión.");
+      return;
+    }
     if(forzar&&validacion.errores.length&&typeof onAuditExport==="function"){
       var auditEntry={accion:"exportar_con_faltantes",operacion_id:op&&op.id||null,tipo:op&&op.tipo||null,formato:"WhatsApp",origen:"listado_operaciones",datos_faltantes:Array.from(new Set((validacion.errores||[]).concat((validacion.datosFaltantesDetalle||[]).map(function(x){return x.mensaje||x.label||x.token||String(x);})))),errores:(validacion.errores||[]).slice()};
       try{Promise.resolve(onAuditExport(auditEntry)).catch(function(err){console.warn("DocWorks: falló la auditoría al compartir",err);});}catch(_auditErr){console.warn("DocWorks: no se pudo iniciar la auditoría al compartir",_auditErr);}
@@ -5017,6 +5021,10 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   }
   function formatoDeFuncion(fn){if(fn===handleDOCX)return "Word";if(fn===handleShareWhatsApp)return "WhatsApp";if(fn===handlePDF)return "PDF";return "TXT";}
   function conValidacion(fn){var doc=getDoc(),validacion=validarDocumentoParaExport(op,doc,perfil);
+    if(validacion.puedeExportar===false){
+      setErr("La cesión de boleto requiere un contrato propio específico. No se puede exportar como cesión el documento estándar.");
+      return;
+    }
     if(validacion.errores.length){setPendingWarnings({errors:validacion.errores,avisos:validacion.avisos,datosFaltantes:validacion.datosFaltantes||[],datosSinCargar:validacion.datosSinCargar||[],datosFaltantesDetalle:validacion.datosFaltantesDetalle||[],tokensObligatoriosNoResueltos:validacion.tokensObligatoriosNoResueltos||[],fn:fn,doc:doc,action:fn===handleShareWhatsApp?"share":"export",formato:formatoDeFuncion(fn)});return;}
     if(validacion.avisos.length){setPendingWarnings({errors:[],avisos:validacion.avisos,fn:fn,doc:doc,action:fn===handleShareWhatsApp?"share":"export",formato:formatoDeFuncion(fn)});return;}
     setPendingFinalConfirm({fn:fn,doc:doc});}
@@ -5667,7 +5675,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           <div style={{height:"100%",width:pct+"%",background:pct===100?"linear-gradient(90deg,#22c55e,#4ade80)":"linear-gradient(90deg,#c9962a,var(--gold),var(--gold2))",borderRadius:10,transition:"width 0.4s cubic-bezier(0.4,0,0.2,1)"}}/>
         </div>
       </div>
-      <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
+      <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} esContratoPropioOp={esContratoPropioOp} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
       {step<=total&&<div className="dw-operation-form-footer">
         <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Volver a opciones":"← Anterior"}</Btn>
         <div className="dw-operation-form-actions">
