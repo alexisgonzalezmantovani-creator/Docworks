@@ -1235,7 +1235,7 @@ var TOKEN_LABELS_DOCWORKS = {
   comprador_nombre:"Nombre del comprador / oferente", comprador_dni:"DNI / CUIT del comprador", comprador_domicilio:"Domicilio del comprador", comprador_email:"Correo electrónico del comprador", comprador_telefono:"Teléfono del comprador",
   vendedor_nombre:"Nombre del vendedor / titular", vendedor_dni:"DNI / CUIT del vendedor", vendedor_domicilio:"Domicilio del vendedor", vendedor_email:"Correo electrónico del vendedor", vendedor_telefono:"Teléfono del vendedor",
   locador_nombre:"Nombre del locador", locador_dni:"DNI / CUIT del locador", locador_domicilio:"Domicilio del locador", locatario_nombre:"Nombre del locatario", locatario_dni:"DNI / CUIT del locatario", locatario_domicilio:"Domicilio del locatario",
-  inmueble_barrio:"Barrio / complejo", inmueble_unidad_funcional:"Unidad funcional / lote", inmueble_direccion:"Dirección del inmueble", inmueble_partido:"Partido / Municipio", inmueble_provincia:"Provincia", nomenclatura_catastral:"Nomenclatura catastral", descripcion_inmueble:"Detalles adicionales del inmueble",
+  inmueble_barrio:"Barrio / complejo", inmueble_unidad_funcional:"Unidad funcional / lote", inmueble_direccion:"Dirección del inmueble", inmueble_partido:"Partido / Municipio", inmueble_provincia:"Provincia", nomenclatura_catastral:"Nomenclatura catastral", descripcion_inmueble:"Detalles adicionales del inmueble", compra_instrumento_nombre:"Instrumentación prevista (escritura, boleto o cesión)", compra_boleto_origen:"Boleto antecedente de la cesión",
   fecha_operacion_larga:"Fecha de la operación", inmobiliaria_nombre:"Nombre de la inmobiliaria", inmobiliaria_matricula:"Matrícula de la inmobiliaria", alquiler_monto_letras:"Canon mensual en letras", comision_porcentaje:"Porcentaje de comisión"
 };
 function tokensDeTextoDocWorks(texto){
@@ -3317,6 +3317,8 @@ function sustituirTokens(tpl, op, perfil, tipo) {
     locador_nombre:op.locador_nombre||"___", locador_dni:op.locador_dni||"___", locador_domicilio:op.locador_domicilio||"___",
     locatario_nombre:op.locatario_nombre||"___", locatario_dni:op.locatario_dni||"___", locatario_domicilio:op.locatario_domicilio||"___",
     inmueble_direccion:op.inmueble_direccion||"___", inmueble_partido:op.inmueble_partido||"___", inmueble_provincia:op.inmueble_provincia||"___",
+    compra_instrumento_nombre:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).nombre,
+    compra_boleto_origen:String(op.compra_boleto_origen||"").trim(),
     nomenclatura_catastral: op.nomenclatura_catastral ? (", Nomenclatura Catastral "+op.nomenclatura_catastral) : "",
     nomenclatura_catastral_texto: op.nomenclatura_catastral ? (", Nomenclatura Catastral "+op.nomenclatura_catastral) : "",
     precio_letras: op.precio ? fmt$L(op.precio, op.moneda) : "___",
@@ -3360,6 +3362,7 @@ function tokensEncabezadoParaTipo(tipo) {
   var compra = ["comprador_nombre","comprador_dni","comprador_domicilio","vendedor_nombre","vendedor_dni","vendedor_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","precio_letras","anticipo_letras","saldo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
   var alq = ["locador_nombre","locador_dni","locador_domicilio","locatario_nombre","locatario_dni","locatario_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","alquiler_monto_letras","anticipo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
   var lista=(tipo==="alquiler"||tipo==="reserva_alquiler")?alq:compra;
+  if(tipo==="reserva"||tipo==="boleto")lista=lista.concat(["compra_instrumento_nombre"]);
   return Array.from(new Set(tokensDeTextoDocWorks(DEFAULT_ENCABEZADOS[tipo]||"").concat(lista)));
 }
 
@@ -3379,6 +3382,7 @@ function labelTokenEncabezado(k, tipo) {
     nomenclatura_catastral: "Nomenclatura catastral",
     precio_letras: "Precio en letras", anticipo_letras: "Seña/anticipo en letras", saldo_letras: "Saldo en letras",
     alquiler_monto_letras: "Canon en letras", fecha_operacion_larga: "Fecha (larga)",
+    compra_instrumento_nombre: "Instrumentación prevista",
     inmobiliaria_nombre: "Inmobiliaria", inmobiliaria_matricula: "Matrícula"
   };
   return map[k] || k;
@@ -4299,11 +4303,12 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
     ? buildDocSectionsFromEditableBody(op,clausulasLib||[],tipo,bloquesPlantilla)
     : buildDocSectionsStandard(op,clausulasLib||[],tipo);
   doc.secciones=(doc.secciones||[]).filter(function(sec){return !bloqueComisionOculto(sec,op)&&!((tipo||op.tipo)==="alquiler"&&op.alquiler_incluye_seguro===false&&(/^[0-9]+\.\s*SEGURO$/.test(sec.titulo)||sec._bloqueId==="alquiler.seguro"));});
-  if((tipo||op.tipo)==="reserva"&&op.compra_instrumento&&op.compra_instrumento!=="escritura"&&instrumentoCompraConfig(op)&&doc.secciones&&doc.secciones.length){
+  if((tipo||op.tipo)==="reserva"&&instrumentoCompraConfig(op)&&doc.secciones&&doc.secciones.length){
     var seccionesInstrumento=doc.secciones.slice(),primera=seccionesInstrumento[0];
     var nota="Instrumentación prevista: "+instrumentoCompraConfig(op).nombre+".";
     if(op.compra_instrumento==="cesion_boleto"&&String(op.compra_boleto_origen||"").trim())nota+=" Boleto antecedente: "+String(op.compra_boleto_origen).trim()+".";
-    if(!(primera.items||[]).some(function(item){return String(item).includes("Instrumentación prevista:");})){
+    var chipYaPresente=Array.isArray(bloquesPlantilla)&&bloquesPlantilla.some(function(b){return /\{\{\s*compra_instrumento_nombre\s*\}\}/.test(String(b&&b.contenido||""));});
+    if(!chipYaPresente&&!(doc.secciones||[]).some(function(sec){return (sec.items||[]).some(function(item){return String(item).includes("Instrumentación prevista:");});})){
       seccionesInstrumento[0]=Object.assign({},primera,{items:(primera.items||[]).concat([nota])});
       doc=Object.assign({},doc,{secciones:seccionesInstrumento});
     }
@@ -6844,6 +6849,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   var tokensBase=[
     ["comprador_nombre","Comprador"],["comprador_dni","DNI/CUIT comprador"],["vendedor_nombre","Vendedor"],["vendedor_dni","DNI/CUIT vendedor"],["locador_nombre","Locador"],["locatario_nombre","Locatario / Inquilino"],
     ["inmueble_direccion","Dirección"],["inmueble_partido","Partido / localidad"],["inmueble_provincia","Provincia"],
+    ...(["reserva","boleto"].includes(tipo)?[["compra_instrumento_nombre","Instrumentación prevista"],["compra_boleto_origen","Boleto antecedente (si corresponde)"]]:[]),
     ["precio_letras","Precio en letras"],["moneda_txt","Moneda"],["anticipo_letras","Anticipo en letras"],["saldo_letras","Saldo en letras"],["fecha_posesion","Fecha de posesión"],
     ["comision_porcentaje","Comisión"],["comision_vendedor","Comisión vendedor"],["comision_comprador","Comisión comprador"],["alquiler_monto_inicial","Canon inicial"],["alquiler_inicio","Inicio"],["alquiler_fin","Vencimiento"],
     ["res_alq_monto_reserva","Reserva alquiler · importe numérico"],["res_alq_monto_mensual","Alquiler mensual · importe numérico"],["res_alq_inicio_estimado","Inicio estimado"],["devolucion_motivo","Motivo devolución · texto cargado"],["comodato_plazo","Plazo comodato"],["comodato_uso","Destino comodato"],
