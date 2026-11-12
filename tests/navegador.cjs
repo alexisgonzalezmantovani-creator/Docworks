@@ -103,6 +103,13 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
 
   }
   await page.locator('#dw-modelo-documento').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
+  // El espacio de documentos muestra Introducción, Cláusulas y Firmas
+  // plegadas inicialmente: se abre solo la sección que se está revisando.
+  assert.equal(await page.locator('#dw-model-clauses').evaluate(el=>el.open),false);
+  assert.equal(await page.getByRole('button',{name:'Desplegar introducción'}).getAttribute('aria-expanded'),'false');
+  assert.equal(await page.locator('#dw-model-source-switch').evaluate(el=>el.open),false);
+  checks+=3;
+  await page.locator('#dw-model-clauses > summary').click();
   const primeraClausula=page.locator('.dw-clause-compact').first();
   await primeraClausula.locator('.dw-clause-toggle').click();
   const nombreClausula=primeraClausula.locator('.dw-clause-name');
@@ -114,6 +121,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await primeraClausula.locator('.dw-clause-toggle').click();
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
   assert.equal(await nav.getByRole('button').count(),2,'Documentos y Biblioteca de cláusulas');checks++;
+  await page.getByRole('button',{name:'Desplegar introducción'}).click();
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
   assert.equal(await page.locator('#dw-model-preview-area').count(),1);checks++;
   const acciones=page.getByTestId('dw-model-actions');

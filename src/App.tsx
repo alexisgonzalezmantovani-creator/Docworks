@@ -470,7 +470,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.52";
+var DOCWORKS_VERSION = "6.53";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -6988,14 +6988,14 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   function setTipoDocSel(v){if(typeof onTipoDocChange==="function")onTipoDocChange(v);else setTipoDocInterno(v);}
   const [encabezadoEditing,setEncabezadoEditing]=useState(false);
   const [encabezadoDraft,setEncabezadoDraft]=useState("");
-  const [introduccionAbierta,setIntroduccionAbierta]=useState(true);
+  const [introduccionAbierta,setIntroduccionAbierta]=useState(false);
   const [introduccionDirty,setIntroduccionDirty]=useState(false);
   function cerrarIntroduccion(){
     function cerrar(){setEncabezadoEditing(false);setEncabezadoDraft("");setIntroduccionDirty(false);setIntroduccionAbierta(false);}
     if(saveStatus==="saving")return;
     if(introduccionDirty)requestDwConfirm("¿Descartar los cambios sin guardar de la introducción?",cerrar);else cerrar();
   }
-  useEffect(function(){setIntroduccionDirty(false);setEncabezadoEditing(false);setIntroduccionAbierta(true);},[tipoDocSel]);
+  useEffect(function(){setIntroduccionDirty(false);setEncabezadoEditing(false);setIntroduccionAbierta(false);},[tipoDocSel]);
   const [confirmLockDefaults,setConfirmLockDefaults]=useState(false);
   const [confirmPreviewReviewed,setConfirmPreviewReviewed]=useState(false);
   const [saveStatus,setSaveStatus]=useState(null);
@@ -7073,7 +7073,9 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
   return <div style={{display:"flex",flexDirection:"column",gap:12}}>
     {!puedeEditar&&<div className="notice" style={{fontSize:12}}>Esta configuración es de solo lectura. Solo Dueño y Administrador pueden editar encabezados y cláusulas.</div>}
     {pasoModelo===3&&mostrarIntroduccion!==false&&<div id="dw-config-introduccion" className="card" style={{padding:14,scrollMarginTop:90}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div style={{fontSize:15,fontFamily:"DM Serif Display,serif",color:"var(--text)"}}>Introducción</div><button type="button" className="btn btn-ghost btn-sm" aria-label={introduccionAbierta?"Ocultar introducción":"Desplegar introducción"} aria-expanded={introduccionAbierta} disabled={saveStatus==="saving"} onClick={function(){if(introduccionAbierta)cerrarIntroduccion();else setIntroduccionAbierta(true);}}>{introduccionAbierta?"−":"+"}</button></div>
+      <button type="button" aria-label={introduccionAbierta?"Ocultar introducción":"Desplegar introducción"} aria-expanded={introduccionAbierta} disabled={saveStatus==="saving"} onClick={function(){if(introduccionAbierta)cerrarIntroduccion();else setIntroduccionAbierta(true);}} style={{width:"100%",minHeight:44,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,background:"none",border:0,color:"var(--text)",cursor:"pointer",fontFamily:"inherit",textAlign:"left",padding:"8px 0"}}>
+        <span style={{fontSize:14,fontWeight:700}}>Introducción</span><span aria-hidden="true" style={{fontSize:17,color:"var(--muted)",minWidth:20,textAlign:"center"}}>{introduccionAbierta?"−":"+"}</span>
+      </button>
       {introduccionAbierta&&<>
       <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Los datos se completan desde la operación.</div>
       {!ocultarSelector&&<label className="field" style={{display:"block",marginBottom:10}}><span className="field-label">Tipo de documento</span><select className="inp" value={tipoDocSel} onChange={function(e){setTipoDocSel(e.target.value);setEncabezadoEditing(false);setEncabezadoDraft("");}} style={{width:"100%"}}>{PLANTILLA_TIPOS.map(function(tipo){return <option key={tipo} value={tipo}>{TIPOS[tipo]||tipo}</option>;})}</select></label>}
@@ -7082,7 +7084,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
       </>}
       {saveStatus==="saving"&&<div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Guardando cambios…</div>}{saveStatus==="saved"&&<div style={{fontSize:12,color:"var(--green)",marginTop:8}}>Cambios guardados.</div>}{saveStatus==="error"&&<div style={{fontSize:12,color:"var(--red)",marginTop:8}}>No se pudo guardar. Revisá la conexión e intentá nuevamente.</div>}
     </div>}
-    {(pasoModelo===2||pasoModelo===3)&&<div id="dw-config-clausulas" style={{scrollMarginTop:90,border:"1px solid var(--border)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:12}}>
+    {(pasoModelo===2||pasoModelo===3)&&<div id="dw-config-clausulas" style={pasoModelo===3?{scrollMarginTop:90,display:"flex",flexDirection:"column",gap:10}:{scrollMarginTop:90,border:"1px solid var(--border)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:12}}>
       {children}
 
     </div>}

@@ -28,15 +28,15 @@ let checks=0;function check(label,fn){fn();checks++;console.log('OK',label);}
  let profile={rol:'dueno',encabezados_custom:{reserva:'Personalizado {{comprador_nombre}}'},plantillas:{}},saves=0,fail=false;
  function renderIntro(){root.render(a.createElement(a.EncabezadoFijadoPanel,{perfil:profile,tipoDocExterno:'reserva',ocultarSelector:true,barraSuperior:true,pasoModelo:3,clausulas:[],onSavePerfil:async p=>{saves++;if(fail)return {error:{message:'Sin conexión'}};profile=p;renderIntro();return {};}}));}
  await a.act(async()=>renderIntro());
- check('sin título duplicado ni tarjeta blanca en acciones',()=>{assert.equal(document.getElementById('dw-config-modelo'),null);assert.ok(!document.querySelector('[data-testid=dw-model-actions]').classList.contains('card'));});
- await click(button('Editar introducción'));
+ check('sin título duplicado ni tarjeta blanca en acciones',()=>{assert.equal(document.getElementById('dw-config-modelo'),null);assert.ok(!document.querySelector('[data-testid=dw-model-actions]').classList.contains('card'));assert.equal(document.querySelector('[aria-label="Desplegar introducción"]')?.getAttribute('aria-expanded'),'false');});
+ await click(document.querySelector('[aria-label="Desplegar introducción"]'));await click(button('Editar introducción'));
  check('campos agrupados y colores distintos',()=>{assert.ok(document.querySelector('[aria-label="Campos obligatorios"]'));assert.ok(document.querySelector('[aria-label="Campos opcionales"]'));assert.ok(document.querySelector('.dw-intro-token.required'));assert.ok(document.querySelector('.dw-intro-token.optional'));assert.notEqual(document.querySelector('.dw-intro-token.required').style.background,document.querySelector('.dw-intro-token.optional').style.background);assert.equal(button('Mejorar con IA').disabled,false);});
  check('obligatorios incluidos siguen visibles y no se duplican',()=>{const b=document.querySelector('.dw-intro-token.required[disabled]');assert.ok(b);assert.ok(b.textContent.includes('Incluido'));});
- await click(button('−'));
+ await click(document.querySelector('[aria-label="Ocultar introducción"]'));
  check('cerrar sin cambios no pide confirmación ni guarda',()=>{assert.equal(pending,null);assert.equal(saves,0);assert.equal(document.querySelector('[contenteditable]'),null);});
- await click(button('+'));await click(button('Editar introducción'));
+ await click(document.querySelector('[aria-label="Desplegar introducción"]'));await click(button('Editar introducción'));
  await a.act(async()=>{const e=document.querySelector('[contenteditable]');e.append(' Cambio');e.dispatchEvent(new Event('input',{bubbles:true}));});
- await click(button('−'));
+ await click(document.querySelector('[aria-label="Ocultar introducción"]'));
  check('cerrar con cambios pide confirmación y conserva el borrador',()=>{assert.ok(pending.message.includes('Descartar'));assert.ok(document.querySelector('[contenteditable]').textContent.includes('Cambio'));assert.equal(saves,0);});pending=null;
  await click(button('Restablecer valor predeterminado'));
  check('restablecer espera confirmación',()=>{assert.ok(pending.message.includes('predeterminado'));assert.equal(saves,0);assert.ok(document.querySelector('[contenteditable]'));});pending=null;
