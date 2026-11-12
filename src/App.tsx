@@ -1883,7 +1883,7 @@ function esMontoMayorACero(valor){ var n=parseMontoAR(valor); return isFinite(n)
 // 4.29: el paso depende del tipo de documento (en Reserva de alquiler el locatario va primero; en documentos simples todo lo demás está en el paso 4).
 function getPasoDeCampo(campo,tipo){
   if(tipo==="alquiler"&&(campo==="alquiler_seguro_dias"||campo==="alquiler_incluye_seguro"))return 7;
-  if(campo==="compra_instrumento"||campo==="compra_boleto_origen")return ["refuerzo_reserva","devolucion_reserva"].includes(tipo)?4:5;
+  if(campo==="compra_instrumento"||campo==="compra_boleto_origen")return 4;
   if(campo==="entrega_aires_detalle"||campo==="entrega_muebles_detalle"||campo==="alquiler_inventario"){var pasos=getSteps(tipo);return pasos[pasos.length-1].id;}
   var simple=["comodato","exclusividad","refuerzo_reserva","devolucion_reserva"].indexOf(tipo)>=0;
   var m=String(campo||"").match(/^(comprador|vendedor|locador|locatario)_/);
@@ -4945,6 +4945,23 @@ function StepInmueble({data,onChange,faltantes}){
         <BarrioComplejoField data={data} onChange={onChange} faltantes={faltantes}/>
         <Inp id="dw-field-inmueble_partido" label="Partido / Municipio" value={data.inmueble_partido||""} onChange={function(e){onChange("inmueble_partido",e.target.value);}} placeholder="Ej.: Pilar" {...estiloCampoFaltante(faltantes,"inmueble_partido")}/>
         <Inp id="dw-field-inmueble_provincia" label="Provincia" value={data.inmueble_provincia||""} onChange={function(e){onChange("inmueble_provincia",e.target.value);}} placeholder="Buenos Aires" {...estiloCampoFaltante(faltantes,"inmueble_provincia")}/>
+        {(data.tipo==="reserva"||data.tipo==="boleto")&&<div className="col2" style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
+          <div style={{fontSize:14,fontWeight:700,color:"var(--text)",marginBottom:5}}>¿Cómo se instrumentará la compraventa?</div>
+          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:10}}>Esta elección modifica las menciones correspondientes en el documento. No describe necesariamente el título actual del inmueble.</div>
+          <div className="grid2">
+        <Slt id="dw-field-compra_instrumento" label="Instrumento previsto" className="col2" value={data.compra_instrumento||"escritura"} onChange={function(e){onChange("compra_instrumento",e.target.value);}}>
+          <option value="escritura">Escritura traslativa de dominio</option>
+          <option value="boleto">Boleto de compraventa</option>
+          <option value="cesion_boleto">Cesión de boleto de compraventa</option>
+        </Slt>
+        <div className="col2" style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:-5}}>La elección no acredita el dominio ni sustituye el asesoramiento jurídico.</div>
+        {data.compra_instrumento==="cesion_boleto"&&<div className="col2">
+          <Txa id="dw-field-compra_boleto_origen" label="Identificación del boleto que se cede" value={data.compra_boleto_origen||""} onChange={function(e){onChange("compra_boleto_origen",e.target.value);}} rows={3} placeholder="Fecha del boleto original, partes y referencia del inmueble" {...estiloCampoFaltante(faltantes,"compra_boleto_origen")}/>
+          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:5}}>Para emitir una cesión, cargá un contrato específico en Documentos → Opciones avanzadas → Usar mi contrato completo. El modelo estándar no se convierte automáticamente en cesión.</div>
+        </div>}
+
+          </div>
+        </div>}
       </div>
     </div>
   );
@@ -5090,16 +5107,6 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
         <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
         <Inp id="dw-field-anticipo" label="Seña / Anticipo" value={data.anticipo||""} onChange={function(e){onChange("anticipo",e.target.value);}} placeholder="10.000" money {...estiloCampoFaltante(faltantes,"anticipo")}/>
         <Field label="Saldo restante"><div className="val-box" aria-live="polite">{fmt$(Math.max(0,precio-anticipo),data.moneda)}</div>{anticipo>precio&&precio>0&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginTop:6}}>La seña o anticipo supera el precio total. Revisá los importes.</div>}</Field>
-        <Slt id="dw-field-compra_instrumento" label="Instrumentación de la operación" className="col2" value={data.compra_instrumento||"escritura"} onChange={function(e){onChange("compra_instrumento",e.target.value);}}>
-          <option value="escritura">Escritura traslativa de dominio</option>
-          <option value="boleto">Boleto de compraventa</option>
-          <option value="cesion_boleto">Cesión de boleto de compraventa</option>
-        </Slt>
-        <div className="col2" style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:-5}}>Esta elección es independiente del crédito, las cuotas y el medio de pago. No implica por sí sola una transmisión de dominio.</div>
-        {data.compra_instrumento==="cesion_boleto"&&<div className="col2">
-          <Txa id="dw-field-compra_boleto_origen" label="Identificación del boleto que se cede" value={data.compra_boleto_origen||""} onChange={function(e){onChange("compra_boleto_origen",e.target.value);}} rows={3} placeholder="Fecha del boleto original, partes y referencia del inmueble" {...estiloCampoFaltante(faltantes,"compra_boleto_origen")}/>
-          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginTop:5}}>Para emitir una cesión, cargá un contrato específico en Documentos → Pegar mi contrato. El modelo estándar no se convierte automáticamente en cesión.</div>
-        </div>}
         {data.tipo==="reserva"&&<div className="col2 dw-economic-refuerzo-toggle">
           <label className="dw-economic-refuerzo-label">
             <input id="dw-field-reserva_incluye_refuerzo" type="checkbox" checked={!!data.reserva_incluye_refuerzo} onChange={function(e){onChange("reserva_incluye_refuerzo",e.target.checked);}}/>
