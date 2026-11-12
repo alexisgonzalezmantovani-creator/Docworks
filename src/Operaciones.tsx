@@ -4893,7 +4893,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   var docTabs=getDocTabs(op);
   var TABS=docTabs.TABS, TAB_RESUMEN=docTabs.TAB_RESUMEN, TABS_ALL=docTabs.TABS_ALL;
 
-  function setTab(id){ onChangeTab(id); }
+  function setTab(id){ if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();onChangeTab(id); }
   const [busy,setBusy]=useState({pdf:false,docx:false,share:false});
   const [err,setErr]=useState("");
   const [lastAction,setLastAction]=useState(null); // "pdf" | "docx" | "share"
@@ -4921,14 +4921,32 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     var snap=op&&op.plantilla_snapshot;
     var lista=snap&&snap.tipo===tab&&Array.isArray(snap.body_blocks)&&snap.body_blocks.length
       ?snap.body_blocks:getBodyBlocksForDocument(perfil,tab,bloquesReserva);
-    return Array.isArray(lista)?lista.filter(function(b){return b&&b.id&&b.activo!==false&&String(b.contenido||"").trim();}):[];
+    if(!Array.isArray(lista)||!lista.length)return [];
+    // Mostrar únicamente bloques que se imprimen de verdad (respeta las
+    // condiciones, las cláusulas apagadas y los documentos históricos).
+    var doc=getDoc();
+    var visibles=new Set((doc.secciones||[]).map(function(sec){return sec&&sec._bloqueId;}).filter(Boolean));
+    return lista.filter(function(b){return b&&b.id&&visibles.has(b.id)&&b.activo!==false&&String(b.contenido||"").trim();});
   }
+  function cerrarEdicionAjuste(){
+    setAjusteEditando(null);setPartesAjuste([]);setErrorAjuste("");
+  }
+  const ajusteOriginalRef=useRef("");
+  function hayCambiosAjuste(){
+    return ajusteEditando!==null&&partesAjuste.map(function(p){return p.chip||p.texto||"";}).join("")!==ajusteOriginalRef.current;
+  }
+  function permitirDescartarAjuste(){
+    return !hayCambiosAjuste()||window.confirm("Hay cambios manuales sin guardar. ¿Descartarlos?");
+  }
+  // Una operación nueva nunca debe heredar el borrador visual de otra.
+  useEffect(function(){cerrarEdicionAjuste();ajusteOriginalRef.current="";},[op&&op.id]);
   function abrirAjuste(b){
     var guardado=op&&op.ajustes_manuales&&op.ajustes_manuales[tab]&&op.ajustes_manuales[tab][b.id];
     var contenido=typeof guardado==="string"?guardado:String(b.contenido||"");
     setPartesAjuste(contenido.split(/(\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\})/g).map(function(p){
       return /^\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}$/.test(p)?{chip:p}:{texto:p};
     }));
+    ajusteOriginalRef.current=contenido;
     setAjusteEditando(b.id);setErrorAjuste("");
   }
   async function guardarAjuste(b){
@@ -5236,7 +5254,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           }} style={{flexShrink:0,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(248,113,113,0.35)",background:"rgba(248,113,113,0.12)",color:"var(--red)",fontSize:12,fontWeight:600,cursor:"pointer"}}>↻ Reintentar</button>}
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
-        {onUpdateOperation&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&
+        {onUpdateOperation&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
           <details className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
               ✎ Hacer ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>
@@ -5251,7 +5269,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                   <span style={{fontSize:13,fontWeight:650,color:"var(--text)"}}>{b.titulo||"Cláusula"}</span>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     {vigente&&<span style={{fontSize:10,color:"var(--green)"}}>Personalizada</span>}
-                    <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(ajusteEditando===b.id){setAjusteEditando(null);setErrorAjuste("");}else abrirAjuste(b);}}>{ajusteEditando===b.id?"Cerrar":"Editar"}</button>
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(ajusteEditando===b.id){if(permitirDescartarAjuste())cerrarEdicionAjuste();}else if(permitirDescartarAjuste())abrirAjuste(b);}}>{ajusteEditando===b.id?"Cerrar":"Editar"}</button>
                   </div>
                 </div>
                 {ajusteEditando===b.id&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
@@ -5263,7 +5281,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                   {errorAjuste&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorAjuste}</div>}
                   <div style={{display:"flex",gap:7,justifyContent:"flex-end",flexWrap:"wrap"}}>
                     {vigente&&<button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){restaurarAjuste(b);}}>Restaurar original</button>}
-                    <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){setAjusteEditando(null);setErrorAjuste("");}}>Cancelar</button>
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(permitirDescartarAjuste())cerrarEdicionAjuste();}}>Cancelar</button>
                     <button type="button" className="btn btn-primary btn-sm" disabled={guardandoAjuste} onClick={function(){guardarAjuste(b);}}>{guardandoAjuste?"Guardando…":"Guardar ajuste"}</button>
                   </div>
                 </div>}
