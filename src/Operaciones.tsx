@@ -1756,37 +1756,54 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .content{overscroll-behavior-x:none!important;-webkit-overflow-scrolling:touch;}
   .op-card .op-card-side .op-actions{max-width:100%!important;}
 }
-/* Operaciones desktop: los botones nunca comparten el panel estrecho de
-   última actividad. La fila de acciones ocupa todo el ancho de la tarjeta.
-   Se aplica también a documentos anidados y a ventanas de PC angostas. */
+/* Operaciones PC: información en la columna izquierda; últimas actividades,
+   documentos, progreso y ACCIONES en la columna DERECHA, una debajo de otra.
+   Se dimensiona la columna para evitar el choque Documento / Abrir. */
 @media (min-width:761px){
   .dw-dashboard-root .op-card-premium .op-card-inner{
-    display:flex!important;flex-direction:column!important;gap:8px!important;
+    display:flex!important;flex-direction:row!important;
+    align-items:stretch!important;gap:14px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-inner>div:first-child{
+    flex:1 1 auto!important;width:auto!important;min-width:0!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side{
-    display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;
-    align-items:center!important;justify-content:flex-end!important;
-    width:100%!important;max-width:100%!important;min-width:0!important;
-    box-sizing:border-box!important;border-left:0!important;
-    border-top:1px solid var(--border)!important;
-    padding:10px 0 0!important;gap:10px 16px!important;
+    display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;
+    flex:0 1 420px!important;width:45%!important;min-width:295px!important;
+    max-width:420px!important;align-items:stretch!important;
+    justify-content:center!important;box-sizing:border-box!important;
+    border-top:0!important;border-left:1px solid var(--border)!important;
+    padding:0 0 0 14px!important;margin:0!important;gap:7px!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side>div:has(>.op-actions){
-    flex:0 1 auto!important;min-width:0!important;margin-left:auto!important;
+    width:100%!important;min-width:0!important;margin:0!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions{
     display:flex!important;flex-flow:row wrap!important;
     align-items:center!important;justify-content:flex-end!important;
-    width:auto!important;max-width:100%!important;min-width:0!important;
-    gap:8px!important;margin:0!important;
+    width:100%!important;max-width:100%!important;min-width:0!important;
+    box-sizing:border-box!important;gap:6px!important;margin:4px 0 0!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{
-    flex:0 0 auto!important;min-width:max-content!important;
-    padding:9px 12px!important;box-sizing:border-box!important;
+    flex:0 0 auto!important;min-width:0!important;
+    padding:8px 10px!important;box-sizing:border-box!important;
     white-space:nowrap!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions .op-more{
     flex:0 0 36px!important;min-width:36px!important;max-width:36px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-side-extra{
+    display:block!important;text-align:right!important;
+  }
+}
+/* En ventanas medianas los controles pueden pasar a otra línea
+   dentro del sector derecho, nunca por encima de otro botón. */
+@media (min-width:761px) and (max-width:1100px){
+  .dw-dashboard-root .op-card-premium .op-card-side{
+    min-width:285px!important;width:48%!important;max-width:380px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{
+    padding:7px 8px!important;font-size:12px!important;
   }
 }
 /* iPhone apaisado: conservar Ayuda en la barra superior; evitar sidebar recortada por altura. */
@@ -5143,6 +5160,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
 
   const descargaEnCursoRef=useRef({pdf:false,docx:false});
   async function handlePDF(docOverride=undefined){
+    if(hayCambiosAjuste()){setErr("Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
     if(descargaEnCursoRef.current.pdf)return;
     descargaEnCursoRef.current.pdf=true;
     setBusy(function(b){return Object.assign({},b,{pdf:true});});setErr("");setLastAction("pdf");
@@ -5160,6 +5178,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   }
 
   async function handleDOCX(docOverride=undefined){
+    if(hayCambiosAjuste()){setErr("Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
     if(descargaEnCursoRef.current.docx)return;
     descargaEnCursoRef.current.docx=true;
     setBusy(function(b){return Object.assign({},b,{docx:true});});setErr("");setLastAction("docx");
@@ -5177,6 +5196,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   }
 
   async function handleShareWhatsApp(docOverride=undefined){
+    if(hayCambiosAjuste()){setErr("Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
     setErr("");setLastAction("share");
     setBusy(function(b){return Object.assign({},b,{share:true});});
     try{
@@ -5290,7 +5310,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         {onUpdateOperation&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
           <details className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
-              ✎ Hacer ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>
+              ✎ Hacer ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length} modificada(s)</span>}
             </summary>
             <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"8px 0 12px"}}>
               Cambiá palabras o párrafos de esta operación sin alterar el modelo de la inmobiliaria. Los chips quedan bloqueados. Guardá cada cláusula para actualizar la vista previa, el PDF y el Word.
