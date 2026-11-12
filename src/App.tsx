@@ -4295,6 +4295,21 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
     clausulasLib=actuales;
     if(Array.isArray(snap.body_blocks)&&snap.body_blocks.length)bloquesPlantilla=snap.body_blocks;
   }
+  // Ajustes manuales por operación: se aplican sobre copias de los bloques,
+  // nunca sobre la plantilla maestra ni sobre su snapshot. Los chips {{...}}
+  // siguen resolviéndose con los datos vigentes al generar el documento.
+  var ajustesTipo=op&&op.ajustes_manuales&&op.ajustes_manuales[tipo||op.tipo];
+  if(ajustesTipo&&typeof ajustesTipo==="object"&&Array.isArray(bloquesPlantilla)){
+    bloquesPlantilla=bloquesPlantilla.map(function(b){
+      var ajuste=Object.prototype.hasOwnProperty.call(ajustesTipo,b.id)?ajustesTipo[b.id]:undefined;
+      if(typeof ajuste!=="string"||!ajuste.trim())return b;
+      var chips=function(t){return (String(t||"").match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(x){return x.replace(/\\s+/g,"");});};
+      // Validar de nuevo al exportar: una operación antigua o alterada nunca
+      // puede eliminar, reordenar ni sustituir los campos automáticos.
+      if(JSON.stringify(chips(ajuste))!==JSON.stringify(chips(b.contenido)))return b;
+      return Object.assign({},b,{contenido:ajuste});
+    });
+  }
   // Última barrera contra datos heredados: cualquier vista, preview, exportación
   // o documento generado para alquiler usa únicamente las comisiones de locador
   // y locatario.
