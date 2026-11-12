@@ -4230,8 +4230,9 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   // vea compacta cuando hay muchas operaciones con documentos vinculados).
   const [openFolders,setOpenFolders]=useState({});
   function getName(op){
-      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return (op.locatario_nombre?nombreConSufijo(op,"locatario","—"):"—")+" (locatario) · "+(op.locador_nombre?nombreConSufijo(op,"locador","—"):"—")+" (locador)";
-      return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+" (comprador) · "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+" (vendedor)";
+      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return (op.locatario_nombre?nombreConSufijo(op,"locatario","—")+" (locatario)":"—")+" · "+(op.locador_nombre?nombreConSufijo(op,"locador","—")+" (locador)":"—");
+      var esCesion=(op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto";
+      return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+(esCesion?" (cesionario)":" (comprador)")+" · "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+(esCesion?" (cedente)":" (vendedor)");
     }
   function getMonto(op){if(op.tipo==="alquiler")return op.alquiler_monto_inicial?fmt$(op.alquiler_monto_inicial,op.alquiler_moneda)+"/mes":null;if(op.tipo==="reserva_alquiler")return op.res_alq_monto_mensual?fmt$(op.res_alq_monto_mensual,op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS")+"/mes est.":null;return op.precio?fmt$(op.precio,op.moneda):null;}
 
@@ -5561,6 +5562,24 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
   const resumenPendientesPaso = faltantesPasoActual.slice(0,3).map(function(f){return f.label;}).join(", ")+(faltantesPasoActual.length>3?" y "+(faltantesPasoActual.length-3)+" más":"");
   const documentoListo = faltantesDetalle.length===0;
+  // Ayuda contextual breve: el usuario sabe qué cargar, sin añadir pantallas.
+  const nombresPasos=esAlq?["Documento","Locador","Locatario","Inmueble","Condiciones","Garantía","Cláusulas"]:
+    esResAlq?["Documento","Locador","Locatario","Inmueble","Condiciones","Cláusulas"]:
+    esDocSimple?["Documento","Primera parte","Segunda parte","Datos del documento","Cláusulas"]:
+    ["Documento","Comprador","Vendedor","Inmueble","Importes y condiciones","Cláusulas"];
+  if(data.compra_instrumento==="cesion_boleto"&&!esAlq&&!esResAlq&&!esDocSimple){
+    nombresPasos[1]="Cesionario";nombresPasos[2]="Cedente";
+  }
+  if(esExclusividad){nombresPasos[1]="Inmobiliaria autorizada";nombresPasos[2]="Autorizante";}
+  if(esContratoPropioOp)nombresPasos.pop();
+  const guiaActual=step===1?"Elegí el documento que necesitás preparar.":
+    ["Locador","Locatario","Comprador","Vendedor","Cesionario","Cedente","Autorizante","Primera parte","Segunda parte"].includes(nombresPasos[step-1])?
+      "Datos de la persona o parte interviniente. El teléfono y el correo pueden quedar solo para uso interno.":
+    nombresPasos[step-1]==="Inmueble"?"Indicá el tipo de inmueble, su dirección y, en compraventas, la instrumentación prevista.":
+    nombresPasos[step-1]==="Garantía"?"Elegí la garantía acordada; completá solo los datos de esa modalidad.":
+    nombresPasos[step-1]==="Cláusulas"?"Revisá las cláusulas frecuentes. Las obligatorias ya se incluyen desde el modelo.":
+    nombresPasos[step-1]==="Datos del documento"?"Completá únicamente lo que corresponde a este documento.":
+    "Ingresá los importes, fechas y condiciones pactadas.";
   function avanzarConAviso(){
     // El botón Siguiente siempre avanza. Los pendientes se revisan al final.
     setStep(function(s){return Math.min(s+1,total+1);});
@@ -5806,8 +5825,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     }
     // Compra normal (reserva / boleto)
     if(step===1)return <StepTipo data={data} onChange={set} grupo="compra"/>;
-    if(step===2)return <StepPersona data={data} onChange={set} prefix="comprador" titulo="Comprador" faltantes={camposFaltantes}/>;
-    if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo="Vendedor" faltantes={camposFaltantes}/>;
+    if(step===2)return <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.compra_instrumento==="cesion_boleto"?"Cesionario (adquiere los derechos)":"Comprador"} faltantes={camposFaltantes}/>;
+    if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={data.compra_instrumento==="cesion_boleto"?"Cedente (cede los derechos)":"Vendedor"} faltantes={camposFaltantes}/>;
     if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
     if(step===5)return <StepEconomicoCompra data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes} mostrarEscribania={modoEdicion}/>;
     if(step===6)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
@@ -5840,20 +5859,18 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }
   return(
     <div style={{paddingBottom:4}}>
-      {step>total&&faltantesDetalle.length>0&&(
-        <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"10px 14px",borderRadius:10,background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",marginBottom:10,fontSize:12.5,color:"var(--red)"}}>
-          <span>⚠</span>
-          <span>Revisá {faltantesDetalle.length} dato{faltantesDetalle.length===1?"":"s"}: {faltantesDetalle.map(function(f){return f.label;}).join(", ")}.</span>
-        </div>
-      )}
       {step>total&&<div role="status" aria-live="polite" style={{marginBottom:12,fontSize:13,color:"var(--text)"}}>{documentoListo?"Todo listo para generar el documento.":"Datos por completar: "+faltantesDetalle.length+". Podés revisarlos o guardar el borrador."}</div>}
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
+      {step<=total&&<div style={{marginBottom:10,lineHeight:1.4}}>
+        <span style={{fontWeight:700,color:"var(--text)",fontSize:13}}>Paso {step} de {total} · {nombresPasos[step-1]||"Datos"}</span>
+        <span style={{fontSize:12,color:"var(--dim)",marginLeft:7}}>{guiaActual}</span>
+      </div>}
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
-          <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Progreso</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Datos esenciales · {camposCompletados} de {totalProgreso}</span>
           <span style={{fontSize:12,fontWeight:700,color:pct===100?"var(--green)":"var(--gold)"}}>{pct}%</span>
         </div>
-        <div style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:10,overflow:"hidden"}}>
+        <div role="progressbar" aria-label="Datos esenciales completados" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:10,overflow:"hidden"}}>
           <div style={{height:"100%",width:pct+"%",background:pct===100?"linear-gradient(90deg,#22c55e,#4ade80)":"linear-gradient(90deg,#c9962a,var(--gold),var(--gold2))",borderRadius:10,transition:"width 0.4s cubic-bezier(0.4,0,0.2,1)"}}/>
         </div>
       </div>
@@ -5865,7 +5882,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           <div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {step<total?<Btn onClick={avanzarConAviso}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
+            {step<total?<Btn onClick={avanzarConAviso}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar documento →</Btn>}
           </div>
         </div>
       </div>}
@@ -5889,7 +5906,7 @@ function PapeleraView({puedeGestionar=false,papelera,onRestore,onDeletePermanent
     var dias=Math.ceil((venc-Date.now())/(24*60*60*1000));
     return Math.max(0,dias);
   }
-  function getName(op){if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler")return (op.locatario_nombre?nombreConSufijo(op,"locatario","—"):"—")+" (locatario) ← "+(op.locador_nombre?nombreConSufijo(op,"locador","—"):"—")+" (locador)";return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+" (comprador) ← "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+" (vendedor)";}
+  function getName(op){if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler")return (op.locatario_nombre?nombreConSufijo(op,"locatario","—"):"—")+" (locatario) ← "+(op.locador_nombre?nombreConSufijo(op,"locador","—"):"—")+" (locador)";var cesion=(op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto";return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+(cesion?" (cesionario)":" (comprador)")+" ← "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+(cesion?" (cedente)":" (vendedor)");}
   return(
     <div>
       {!embedded&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18,flexWrap:"wrap",gap:10}}>
