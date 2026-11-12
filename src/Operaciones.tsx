@@ -1756,6 +1756,39 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .content{overscroll-behavior-x:none!important;-webkit-overflow-scrolling:touch;}
   .op-card .op-card-side .op-actions{max-width:100%!important;}
 }
+/* Operaciones desktop: los botones nunca comparten el panel estrecho de
+   última actividad. La fila de acciones ocupa todo el ancho de la tarjeta.
+   Se aplica también a documentos anidados y a ventanas de PC angostas. */
+@media (min-width:761px){
+  .dw-dashboard-root .op-card-premium .op-card-inner{
+    display:flex!important;flex-direction:column!important;gap:8px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side{
+    display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;
+    align-items:center!important;justify-content:flex-end!important;
+    width:100%!important;max-width:100%!important;min-width:0!important;
+    box-sizing:border-box!important;border-left:0!important;
+    border-top:1px solid var(--border)!important;
+    padding:10px 0 0!important;gap:10px 16px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side>div:has(>.op-actions){
+    flex:0 1 auto!important;min-width:0!important;margin-left:auto!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions{
+    display:flex!important;flex-flow:row wrap!important;
+    align-items:center!important;justify-content:flex-end!important;
+    width:auto!important;max-width:100%!important;min-width:0!important;
+    gap:8px!important;margin:0!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{
+    flex:0 0 auto!important;min-width:max-content!important;
+    padding:9px 12px!important;box-sizing:border-box!important;
+    white-space:nowrap!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions .op-more{
+    flex:0 0 36px!important;min-width:36px!important;max-width:36px!important;
+  }
+}
 /* iPhone apaisado: conservar Ayuda en la barra superior; evitar sidebar recortada por altura. */
 @media (orientation:landscape) and (max-height:500px) and (max-width:1100px) and (hover:none) and (pointer:coarse){
   .app-wrap .sidebar{display:none!important;}
