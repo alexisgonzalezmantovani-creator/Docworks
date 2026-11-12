@@ -5258,7 +5258,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
                     {partesAjuste.map(function(p,i){return p.chip
                       ?<span key={i} title="Campo automático protegido" style={{borderRadius:6,padding:"6px 9px",fontSize:11,fontWeight:700,background:"rgba(89,199,243,.13)",color:"var(--text)",border:"1px solid var(--border)"}}>🔒 {p.chip.replace(/[{}]/g,"").replace(/_/g," ")}</span>
-                      :<textarea key={i} className="inp" aria-label={"Texto editable "+(i+1)} rows={Math.max(2,Math.min(7,String(p.texto||"").split("\n").length+1))} style={{flex:"1 1 230px",minWidth:0,maxWidth:"100%",resize:"vertical",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/;})}
+                      :<textarea key={i} className="inp" aria-label={"Texto editable "+(i+1)} rows={Math.max(2,Math.min(7,String(p.texto||"").split("\n").length+1))} style={{flex:"1 1 230px",minWidth:0,maxWidth:"100%",resize:"vertical",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/>;})}
                   </div>
                   {errorAjuste&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorAjuste}</div>}
                   <div style={{display:"flex",gap:7,justifyContent:"flex-end",flexWrap:"wrap"}}>
