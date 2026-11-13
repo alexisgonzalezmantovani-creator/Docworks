@@ -1869,6 +1869,141 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .dw-commission-print input:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 @media(max-width:640px){.dw-commission-line{gap:7px}.dw-commission-mode{width:124px!important}.dw-commission-value{width:65px}.dw-commission-value.is-fixed{width:96px}.dw-commission-controls:has(.is-fixed){flex-wrap:nowrap}.dw-commission-controls:has(.is-fixed) .dw-commission-mode{width:104px!important}.dw-commission-controls:has(.is-fixed) .dw-commission-value{width:90px}.dw-commission-controls:has(.is-fixed) .dw-commission-currency{width:68px!important;padding-left:7px!important;padding-right:0!important;font-size:14px!important}.dw-commission-print{min-height:36px}}
 
+
+/* Operaciones · iPhone/iPad compactos: columna de acciones a la derecha.
+   Corrige la antigua regla mobile que forzaba display:block/column
+   y enviaba Documento / Abrir / Editar / ⋯ al pie de la tarjeta. */
+@media (max-width:760px), (orientation:landscape) and (max-height:500px) and (hover:none) and (pointer:coarse) and (max-width:1100px) {
+  .dw-dashboard-root .op-card-premium .op-card-inner{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(128px,min(43%,190px))!important;
+    align-items:start!important;
+    gap:10px!important;
+    padding:11px 10px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-inner>div:first-child{
+    min-width:0!important;
+    width:auto!important;
+    flex:none!important;
+    overflow-wrap:anywhere;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side{
+    display:flex!important;
+    flex-direction:column!important;
+    flex-wrap:nowrap!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    box-sizing:border-box!important;
+    min-width:0!important;
+    max-width:none!important;
+    width:auto!important;
+    height:100%!important;
+    margin:0!important;
+    padding:0 0 0 9px!important;
+    gap:8px!important;
+    border-top:0!important;
+    border-left:1px solid var(--border2)!important;
+    overflow:visible!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side>.op-side-extra:first-child{
+    display:block!important;
+    order:0!important;
+    min-width:0!important;
+    text-align:right!important;
+    margin:0!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side>.op-side-extra:first-child .op-side-label{
+    display:block!important;
+    font-size:9px!important;
+    line-height:1.15!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side>div:has(>.op-actions){
+    display:block!important;
+    order:1!important;
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 36px!important;
+    align-items:stretch!important;
+    justify-content:stretch!important;
+    flex-wrap:nowrap!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    margin:0!important;
+    padding:0!important;
+    gap:5px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{
+    display:inline-flex!important;
+    flex:none!important;
+    min-width:0!important;
+    max-width:none!important;
+    width:100%!important;
+    min-height:38px!important;
+    padding:7px 5px!important;
+    gap:4px!important;
+    font-size:11px!important;
+    white-space:nowrap!important;
+    justify-content:center!important;
+    box-sizing:border-box!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn svg{
+    flex:none!important;
+    width:12px!important;
+    height:12px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.op-add-doc-action{
+    grid-column:1/-1!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn:not(.op-add-doc-action):not(:last-of-type){
+    grid-column:1/-1!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn:last-of-type{
+    grid-column:1!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>div:last-child{
+    grid-column:2!important;
+    justify-self:stretch!important;
+    width:36px!important;
+    min-width:0!important;
+    max-width:36px!important;
+    display:block!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>div:last-child>span{
+    display:block!important;
+    width:100%!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions .op-more{
+    display:flex!important;
+    width:36px!important;
+    min-width:36px!important;
+    max-width:36px!important;
+    min-height:38px!important;
+    padding:0!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-side-progress{
+    display:block!important;
+    order:2!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    flex:none!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side>div:has(>.op-docs-count){
+    display:none!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-updated-inline{
+    display:none!important;
+  }
+}
+
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
 .dw-operation-page-heading{z-index:40;isolation:isolate;background-color:var(--bg)!important;background-image:none;backdrop-filter:none;opacity:1;flex-shrink:0;box-shadow:0 7px 0 var(--bg)}
 .dw-operation-page-heading::before{content:"";position:absolute;inset:-30px -28px 0;background:var(--bg);z-index:-1;pointer-events:none}
@@ -4424,7 +4559,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
               <div style={{fontSize:13,color:"var(--text)",fontWeight:650}}>{getName(op)}</div>
               {monto&&<span className="monto-tag">{monto}</span>}
             </div>
-            <div style={{fontSize:12,color:"var(--dim)",marginTop:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+            <div className="op-card-updated-inline" style={{fontSize:12,color:"var(--dim)",marginTop:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
               <span style={{fontWeight:700,color:"var(--muted)"}}>{"Actualizado"}</span>
               <span>·</span><span>{fechaUltima}</span>
             </div>
