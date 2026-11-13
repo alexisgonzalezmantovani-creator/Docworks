@@ -865,9 +865,9 @@ export const GS = `
   .dw-aspecto-layout .dw-aspecto-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
   .dw-aspecto-layout .dw-aspecto-nav-item{padding:10px 5px;justify-content:center;text-align:center}
   .dw-aspecto-layout .dw-aspecto-nav-icon,.dw-aspecto-layout .dw-aspecto-nav-arrow,.dw-aspecto-layout .dw-aspecto-nav-copy small{display:none}
-  .dw-auto-data-chip{border:1px solid rgba(56,189,248,.35)!important;background:rgba(14,165,233,.10)!important;color:var(--info,#38bdf8)!important;border-radius:9px!important;font-weight:650!important}
-  .dw-auto-data-chip:hover{background:rgba(14,165,233,.18)!important}
-  .dw-auto-data-chip:focus-visible{outline:2px solid #38bdf8;outline-offset:2px}
+  .dw-auto-data-chip{border:1px solid var(--border2)!important;background:var(--surface2)!important;color:var(--text)!important;border-radius:9px!important;font-weight:650!important}
+  .dw-auto-data-chip:hover{background:var(--card)!important;border-color:var(--muted)!important}
+  .dw-auto-data-chip:focus-visible{outline:2px solid var(--text);outline-offset:2px}
   .dw-location-toggle,.dw-aspecto-field-toggle{display:flex;align-items:center;gap:9px;min-height:38px;box-sizing:border-box;width:100%;padding:9px 10px;margin:0 0 8px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;line-height:1.4;cursor:pointer}
   .dw-location-toggle input,.dw-aspecto-field-toggle input{flex:none;margin:0;accent-color:var(--gold)}
   .dw-location-toggle:has(input:disabled),.dw-aspecto-field-toggle:has(input:disabled){opacity:.55;cursor:not-allowed}
