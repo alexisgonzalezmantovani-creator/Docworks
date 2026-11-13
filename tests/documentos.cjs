@@ -51,13 +51,13 @@ delete global.document;
  check('contrato propio reúne dirección, partido y provincia sin confundir la calle',()=>{
    const op={...app.EMPTY_OP,tipo:'reserva',inmueble_direccion:'Av. San Martín 1200',inmueble_partido:'San Martín',inmueble_provincia:'Buenos Aires',
      plantilla_snapshot:{tipo:'reserva',documento_propio:'Inmueble {{inmueble_direccion}}. Comprador {{comprador_nombre}}.',inmobiliaria_nombre:'Prueba'}};
-   const doc=app.aplicarEncabezadoPersonalizado({},op,'reserva',{});
+   const doc=app.buildDocSections(app.opParaDocumento(op),[],'reserva');
    assert.match(doc.textoOriginal,/Av\\. San Martín 1200, San Martín, Buenos Aires/);
  });
  check('contrato propio antiguo conserva municipio y provincia separados',()=>{
    const op={...app.EMPTY_OP,tipo:'reserva',inmueble_direccion:'Calle 1',inmueble_partido:'Pilar',inmueble_provincia:'Buenos Aires',
      plantilla_snapshot:{tipo:'reserva',documento_propio:'{{inmueble_direccion}}, {{inmueble_partido}}, {{inmueble_provincia}}',inmobiliaria_nombre:'Prueba'}};
-   const doc=app.aplicarEncabezadoPersonalizado({},op,'reserva',{});
+   const doc=app.buildDocSections(app.opParaDocumento(op),[],'reserva');
    assert.match(doc.textoOriginal,/Calle 1, Pilar, Buenos Aires/);
    assert.ok(!doc.textoOriginal.includes('Pilar, Buenos Aires, Pilar'));
  });
