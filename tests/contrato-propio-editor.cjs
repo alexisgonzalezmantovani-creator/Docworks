@@ -148,4 +148,10 @@ check('controles de datos insertados tienen tamaño táctil mínimo',()=>{
  assert.ok(editor.includes('minWidth:40,padding:"6px 9px"'));
  assert.ok(editor.includes('En el contrato ({capturados.length})'));
 });
+check('quitar y deshacer mantienen abierta la revisión y restauran selección',()=>{
+ assert.ok(editor.includes('cambiarTexto(nuevo.texto,revisar)'));
+ assert.ok(editor.includes('cambiarTexto(accion.textoAnterior,revisar)'));
+ assert.ok(editor.includes('fin:accion.finAnterior'));
+ assert.ok(editor.includes('finAnterior:seleccionRef.current.fin'));
+});
 console.log('APROBADAS '+n+' pruebas de contrato propio.');

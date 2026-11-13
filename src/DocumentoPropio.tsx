@@ -129,7 +129,7 @@ export default function DocumentoPropioEditor({
   const inputRef=useRef<HTMLTextAreaElement|null>(null);
   const espejoRef=useRef<HTMLDivElement|null>(null);
   const [editandoTexto,setEditandoTexto]=useState(false);
-  const [ultimaAccionChip,setUltimaAccionChip]=useState<{textoAnterior:string;textoPosterior:string;cursorAnterior:number;scrollAnterior:number}|null>(null);
+  const [ultimaAccionChip,setUltimaAccionChip]=useState<{textoAnterior:string;textoPosterior:string;cursorAnterior:number;finAnterior:number;scrollAnterior:number}|null>(null);
   // Recordar la selección del texto antes de que el selector de chips tome el foco (iPhone/Safari).
   const seleccionRef=useRef({inicio:textoActual.length,fin:textoActual.length});
   const guardandoRef=useRef(false);
@@ -229,9 +229,9 @@ export default function DocumentoPropioEditor({
   function deshacerUltimoChip(){
     const accion=ultimaAccionChip;
     if(!accion||texto!==accion.textoPosterior)return;
-    cambiarTexto(accion.textoAnterior);
+    cambiarTexto(accion.textoAnterior,revisar);
     setUltimaAccionChip(null);
-    seleccionRef.current={inicio:accion.cursorAnterior,fin:accion.cursorAnterior};
+    seleccionRef.current={inicio:accion.cursorAnterior,fin:accion.finAnterior};
     requestAnimationFrame(()=>{
       const input=inputRef.current;
       if(input)input.scrollTop=accion.scrollAnterior;
@@ -261,8 +261,8 @@ export default function DocumentoPropioEditor({
     if(nuevo.cursor===null)return;
     const input=inputRef.current;
     const scrollPrevio=input?.scrollTop??0;
-    setUltimaAccionChip({textoAnterior:texto,textoPosterior:nuevo.texto,cursorAnterior:seleccionRef.current.inicio,scrollAnterior:scrollPrevio});
-    cambiarTexto(nuevo.texto);
+    setUltimaAccionChip({textoAnterior:texto,textoPosterior:nuevo.texto,cursorAnterior:seleccionRef.current.inicio,finAnterior:seleccionRef.current.fin,scrollAnterior:scrollPrevio});
+    cambiarTexto(nuevo.texto,revisar);
     seleccionRef.current={inicio:nuevo.cursor,fin:nuevo.cursor};
     requestAnimationFrame(()=>{
       if(!inputRef.current)return;
@@ -274,7 +274,7 @@ export default function DocumentoPropioEditor({
     // El select nativo suele mover la selección a 0 o al final; usamos la última del textarea.
     const nuevo=insertarDatoAutomatico(texto,key,seleccionRef.current.inicio,seleccionRef.current.fin);
     const scrollPrevio=inputRef.current?.scrollTop??0;
-    setUltimaAccionChip({textoAnterior:texto,textoPosterior:nuevo.texto,cursorAnterior:seleccionRef.current.inicio,scrollAnterior:scrollPrevio});
+    setUltimaAccionChip({textoAnterior:texto,textoPosterior:nuevo.texto,cursorAnterior:seleccionRef.current.inicio,finAnterior:seleccionRef.current.fin,scrollAnterior:scrollPrevio});
     cambiarTexto(nuevo.texto,mantenerRevision);
     seleccionRef.current={inicio:nuevo.cursor,fin:nuevo.cursor};
     // No robar el foco al selector en iPhone (evita abrir el teclado de golpe).
