@@ -11,6 +11,15 @@ export function analizarChipsDocumentoPropio(texto:string, permitidos:Set<string
   return {capturados,repetidos,invalidos,llavesMal};
 }
 
+// Mantener la inserción dentro del texto seleccionado sin mover párrafos.
+export function insertarDatoAutomatico(texto:string,key:string,inicio:number,fin:number){
+  const base=String(texto||"");
+  const desde=Math.max(0,Math.min(base.length,Number.isFinite(inicio)?Math.trunc(inicio):base.length));
+  const hasta=Math.max(desde,Math.min(base.length,Number.isFinite(fin)?Math.trunc(fin):desde));
+  const chip="{{"+key+"}}";
+  return {texto:base.slice(0,desde)+chip+base.slice(hasta),cursor:desde+chip.length};
+}
+
 // Un editor de texto plano: el contenido pertenece íntegramente a la inmobiliaria.
 // Los datos variables se eligen de un catálogo cerrado y se resuelven al generar la operación.
 const CHIPS = [
@@ -113,7 +122,7 @@ export default function DocumentoPropioEditor({
   const valido=texto.trim().length>40&&texto.length<=80000&&!invalidos.length&&!repetidos.length&&!llavesMal&&!faltantes.length;
   const chipsImportesRecomendados=tipo==="reserva_alquiler"?["reserva_alquiler_reserva","reserva_alquiler_canon"]
     :tipo==="alquiler"?["alquiler_monto_letras"]
-    :(tipo==="reserva"||tipo==="boleto"||tipo==="refuerzo_reserva"||tipo==="devolucion_reserva")?["precio_letras"]:[];
+    :(tipo==="reserva"||tipo==="boleto"||tipo==="exclusividad"||tipo==="refuerzo_reserva"||tipo==="devolucion_reserva")?["precio_letras"]:[];
   const importesSinChip=chipsImportesRecomendados.filter(k=>!capturados.includes(k));
   // Accesos rápidos cortos: lo insertado desaparece y queda en el documento.
   const ordenSugeridos=[...nombres,"inmueble_direccion",...chipsImportesRecomendados,...rolesPorGrupo[grupo].map(rol=>rol+"_dni"),"fecha_operacion_larga","inmobiliaria_nombre"];
@@ -173,12 +182,18 @@ export default function DocumentoPropioEditor({
   function insertar(key:string){
     if(!permitidos.has(key)||capturados.includes(key))return;
     // El select nativo suele mover la selección a 0 o al final; usamos la última del textarea.
-    const from=Math.min(seleccionRef.current.inicio,texto.length);
-    const to=Math.min(seleccionRef.current.fin,texto.length);
-    const chip="{{"+key+"}}";
-    cambiarTexto(texto.slice(0,from)+chip+texto.slice(to));
-    seleccionRef.current={inicio:from+chip.length,fin:from+chip.length};
-    setTimeout(()=>{if(inputRef.current && document.activeElement===inputRef.current){inputRef.current.setSelectionRange(from+chip.length,from+chip.length);}},0);
+    const nuevo=insertarDatoAutomatico(texto,key,seleccionRef.current.inicio,seleccionRef.current.fin);
+    const scrollPrevio=inputRef.current?.scrollTop??0;
+    cambiarTexto(nuevo.texto);
+    seleccionRef.current={inicio:nuevo.cursor,fin:nuevo.cursor};
+    // No robar el foco al selector en iPhone (evita abrir el teclado de golpe).
+    // Si el editor ya estaba activo, conservar el cursor y el desplazamiento.
+    requestAnimationFrame(()=>{
+      const input=inputRef.current;
+      if(!input)return;
+      input.scrollTop=scrollPrevio;
+      if(document.activeElement===input)input.setSelectionRange(nuevo.cursor,nuevo.cursor);
+    });
   }
   async function guardar(){
     if(guardandoRef.current||!necesitaGuardar)return;

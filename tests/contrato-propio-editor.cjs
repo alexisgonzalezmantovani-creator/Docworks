@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const esbuild=require('esbuild'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const dir=path.resolve(__dirname,'..'),out=fs.mkdtempSync(path.join(os.tmpdir(),'dw-contrato-propio-'));
 esbuild.buildSync({entryPoints:[path.join(dir,'src/DocumentoPropio.tsx')],bundle:true,platform:'node',format:'cjs',outfile:path.join(out,'editor.cjs')});
-const {analizarChipsDocumentoPropio:analizar}=require(path.join(out,'editor.cjs'));
+const {analizarChipsDocumentoPropio:analizar,insertarDatoAutomatico:insertar}=require(path.join(out,'editor.cjs'));
 const permitidos=new Set(['comprador_nombre','vendedor_nombre','inmueble_direccion','comprador_dni']);
 let n=0;function check(nombre,funcion){funcion();n++;console.log('OK',nombre);}
 const base='Contrato de reserva. Parte compradora {{comprador_nombre}}, parte vendedora {{vendedor_nombre}}, inmueble {{inmueble_direccion}}. Firmas.';
@@ -31,6 +31,19 @@ check('borrar un chip devuelve su disponibilidad y elimina el aviso',()=>{
 check('ignora texto con llaves simples que no representa un chip',()=>{
  const r=analizar('Contrato {no-chip} {{inmueble_direccion}}',permitidos);
  assert.equal(r.llavesMal,false);assert.deepEqual(r.capturados,['inmueble_direccion']);
+});
+check('insertar dato respeta el cursor en el medio de un párrafo',()=>{
+ const r=insertar('Antes. Después.','comprador_dni',7,7);
+ assert.equal(r.texto,'Antes. {{comprador_dni}}Después.');
+ assert.equal(r.cursor,24);
+});
+check('insertar dato reemplaza solo la selección',()=>{
+ const r=insertar('El nombre anterior firma.','comprador_nombre',3,18);
+ assert.equal(r.texto,'El {{comprador_nombre}}firma.');
+});
+check('insertar dato tolera posiciones fuera del texto',()=>{
+ assert.equal(insertar('abc','precio_letras',999,999).texto,'abc{{precio_letras}}');
+ assert.equal(insertar('abc','precio_letras',-2,-1).texto,'{{precio_letras}}abc');
 });
 const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
 check('el guardado exige que no haya duplicados',()=>assert.match(editor,/!repetidos\.length/));
