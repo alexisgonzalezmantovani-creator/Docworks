@@ -240,7 +240,7 @@ export default function DocumentoPropioEditor({
         return <span key={i} style={{background:invalido?"#fee2e2":"#dff3ff",color:invalido?"#991b1b":"#0369a1",borderRadius:4,fontWeight:650,boxDecorationBreak:"clone",WebkitBoxDecorationBreak:"clone"}}>{etiqueta}</span>;
       })}{texto.endsWith("\n")?"\u200b":null}</div>
       <textarea ref={inputRef} className="inp" aria-label="Texto del contrato propio" value={texto} disabled={estado==="saving"}
-        style={{position:"relative",zIndex:1,width:"100%",height:360,minHeight:360,resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",padding:12,fontSize:16,lineHeight:1.65,whiteSpace:"pre-wrap",overflowWrap:"break-word",color:editandoTexto?"var(--text)":"transparent",caretColor:"var(--text)",background:"transparent"}}
+        style={{position:"relative",zIndex:1,width:"100%",height:360,minHeight:360,resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",padding:12,fontSize:16,lineHeight:1.65,whiteSpace:"pre-wrap",overflowWrap:"break-word",color:editandoTexto||!texto?"var(--text)":"transparent",caretColor:"var(--text)",background:"transparent"}}
         placeholder="Pegá acá todo tu contrato…" onFocus={()=>setEditandoTexto(true)} onBlur={()=>setEditandoTexto(false)} onChange={ev=>{cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
         onScroll={ev=>{if(espejoRef.current){espejoRef.current.scrollTop=ev.currentTarget.scrollTop;espejoRef.current.scrollLeft=ev.currentTarget.scrollLeft;}}}
         onSelect={ev=>recordarSeleccion(ev.currentTarget)}
