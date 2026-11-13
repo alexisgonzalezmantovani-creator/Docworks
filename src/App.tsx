@@ -6023,14 +6023,12 @@ function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esCo
   return(
     <div>
       <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:3}}>Resumen — revisá antes de emitir</div>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Ficha técnica de todo lo cargado. Revisá nombres, DNI, montos y fechas para evitar errores tipográficos en el documento definitivo.</p>
       <div role="status" style={{fontSize:12.5,fontWeight:700,color:faltantes.length?"var(--gold)":"var(--green)",marginBottom:12}}>
-        {faltantes.length?"⚠ Faltan "+faltantes.length+" datos críticos para el documento":"✓ Datos críticos completos para el documento"}
+        {faltantes.length?"⚠ "+faltantes.length+" "+(faltantes.length===1?"dato pendiente":"datos pendientes"):"✓ Sin datos pendientes"}
       </div>
       {faltantes.length>0&&(
-        <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"10px 14px",borderRadius:10,background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",marginBottom:12,fontSize:12.5,color:"var(--red)"}}>
-          <span>⚠</span>
-          <div style={{flex:1,minWidth:0}}><div style={{fontWeight:750,marginBottom:5}}>Revisá estos datos:</div><ul style={{listStyle:"none",padding:0,margin:"0 0 5px"}}>{faltantes.map(function(f){return <li key={f.campo} style={{margin:"3px 0"}}><button type="button" onClick={function(){onVolver(f.campo);}} style={{background:"none",border:0,padding:0,color:"inherit",textDecoration:"underline",cursor:"pointer",font:"inherit",textAlign:"left"}}>• {f.label}</button></li>;})}</ul><div style={{fontSize:12,color:"var(--muted)"}}>Podés completarlos más tarde.</div></div>
+        <div style={{padding:"10px 14px",borderRadius:10,background:"rgba(212,168,83,0.055)",border:"1px solid rgba(212,168,83,0.3)",marginBottom:12,fontSize:12.5,color:"var(--text)"}}>
+          <ul aria-label="Datos para completar" style={{listStyle:"none",padding:0,margin:0,display:"grid",gap:7}}>{faltantes.map(function(f){return <li key={f.campo}><button type="button" onClick={function(){onVolver(f.campo);}} style={{background:"none",border:0,padding:"4px 0",color:"inherit",textDecoration:"underline",cursor:"pointer",font:"inherit",textAlign:"left",minHeight:32}}>• {f.label}</button></li>;})}</ul>
         </div>
       )}
       <Tarjeta t="Partes">
@@ -6052,22 +6050,19 @@ function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esCo
         {(data.tipo==="reserva"||data.tipo==="boleto"||data.tipo==="exclusividad")&&<Fila k="Comisión" v={[data.comision_vendedor?resumenComision(data,"comision_vendedor",data.tipo==="exclusividad"?"Autorizante":"Vendedor","Precio total",parseMontoAR(data.precio||0),data.moneda||"USD","comision_vendedor","3"):null,data.comision_comprador?resumenComision(data,"comision_comprador","Comprador","Precio total",parseMontoAR(data.precio||0),data.moneda||"USD","comision_comprador",""):null].filter(Boolean).join(" · ")}/>}
         {(data.tipo==="alquiler"||data.tipo==="reserva_alquiler")&&<Fila k="Comisión" v={getComisionComponents(data).map(function(c){return resumenComision(data,c.prefix,c.rol,c.prefix.indexOf("res_alq_")===0?"canon mensual":"total del contrato",c.base,c.baseMoneda,c.prefix,(c.prefix.indexOf("res_alq_")===0?data.res_alq_comision:data.alquiler_comision)||"1");}).join(" · ")}/>}
       </Tarjeta>
-      <Tarjeta t={"Cláusulas adicionales ("+(clausulasSel.length+(data.clausulas_custom?1:0))+")"}>
-        {clausulasSel.length===0&&!data.clausulas_custom&&<div style={{fontSize:12,color:"var(--dim)"}}>No agregaste cláusulas adicionales. Las incluidas en el modelo se conservan.</div>}
+      {(clausulasSel.length>0||!!data.clausulas_custom)&&<Tarjeta t={"Cláusulas adicionales ("+(clausulasSel.length+(data.clausulas_custom?1:0))+")"}>
         {clausulasSel.map(function(c){return <Fila key={c.id} k={c.titulo} v="✓"/>;})}
         {data.clausulas_custom&&<Fila k={data.clausulas_custom_titulo||"Cláusula adicional"} v="✓"/>}
-      </Tarjeta>
+      </Tarjeta>}
       {requiereContratoCesion&&<div role="alert" style={{padding:"11px 13px",margin:"12px 0",border:"1px solid var(--gold)",borderRadius:10,fontSize:12.5,color:"var(--text)",lineHeight:1.55}}>La cesión de boleto necesita un contrato propio revisado. Podés guardar esta operación, pero no generar ni compartir como cesión el modelo estándar de compraventa. Configurá el contrato en Documentos y revisá su alcance antes de emitir.</div>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:6}}>
         <Btn v="ghost" className="dw-operation-back" onClick={onVolver}>← Volver a editar</Btn>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
-          {faltantes.length>0&&<Btn v="danger" onClick={function(){var f=faltantes[0];onVolver(f.campo);}}>Revisar faltantes ({faltantes.length})</Btn>}
           <Btn v="success" onClick={abrirMenu}>Guardar o emitir →</Btn>
         </div>
       </div>
       <Modal open={showMenu} onClose={function(){setShowMenu(false);}} title={menuPaso==="estado"?"¿Cómo querés dejar la operación?":"Documento listo para guardar"}>
         {menuPaso==="estado" ? <div>
-          <div style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.5,marginBottom:12}}>Elegí el estado definitivo. Esto se guarda junto con el documento.</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:9}}>
             {estados.map(function(e){var sel=estadoFinal===e.id;return <button type="button" key={e.id} onClick={function(){setEstadoFinal(e.id);setMenuPaso("acciones");}} style={{padding:"14px 12px",borderRadius:12,border:"1px solid "+(sel?e.tone:"var(--border2)"),background:sel?"rgba(212,168,83,.07)":"var(--card)",cursor:"pointer",textAlign:"left",minHeight:118}}>
               <div style={{fontSize:18,color:e.tone,fontWeight:800,marginBottom:7}}>{e.icon}</div><div style={{fontSize:13,fontWeight:800,color:"var(--text)",marginBottom:4}}>{e.label}</div><div style={{fontSize:12,color:"var(--dim)",lineHeight:1.4}}>{e.desc}</div>
@@ -6083,7 +6078,6 @@ function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esCo
             <Btn disabled={requiereContratoCesion} v="secondary" onClick={function(){setShowMenu(false);onFinalizarAccion("whatsapp",estadoFinal);}} className="w-full">💬 Guardar y enviar por WhatsApp</Btn>
             <Btn v="secondary" onClick={function(){setShowMenu(false);onFinalizarAccion("guardar",estadoFinal);}} className="w-full">💾 Guardar y terminar</Btn>
           </div>
-          <div style={{fontSize:12,color:"var(--dim)",marginTop:10,lineHeight:1.5}}>La elección Borrador / Activo / Cerrado queda registrada en la operación. El contenido del documento no se modifica.</div>
         </div>}
       </Modal>
     </div>

@@ -4,7 +4,7 @@ const dom=new JSDOM('<html><head></head><body><div id="test"></div></body></html
 for(const k of ['window','document','HTMLElement','HTMLInputElement','HTMLTextAreaElement','CustomEvent','Event','Node','localStorage'])global[k]=dom.window[k];global.IS_REACT_ACT_ENVIRONMENT=true;
 global.MessageChannel=class{constructor(){this.port1={onmessage:null};this.port2={postMessage:()=>setTimeout(()=>this.port1.onmessage?.({}),0)}}};
 const source=fs.readFileSync(dir+'/src/App.tsx','utf8');
-require('esbuild').buildSync({stdin:{contents:source+'\nimport {act,createElement} from "react";import {createRoot} from "react-dom/client";export {act,createElement,createRoot,StepInmueble,StepDocSimple,StepPersona,StepClausulas,CompartidaBlock,StepEconomicoCompra,StepCondicionesAlquiler,StepCondicionesReservaAlq,SeguroOperacion,EMPTY_OP,SAMPLE_OP_PREVIEW,derivedTokensGenerales,getResumenMonto,getCamposFaltantes,getCamposFaltantesDetalle,draftTieneContenido,getComisionComponents,datosCompraCompartidos,valorComisionPredeterminado,buildDocSections,opParaDocumento,docToPlainText,generarPDF,generarDOCX,getDefaultBodyBlocks};',resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
+require('esbuild').buildSync({stdin:{contents:source+'\nimport {act,createElement} from "react";import {createRoot} from "react-dom/client";export {act,createElement,createRoot,StepInmueble,StepDocSimple,StepPersona,StepClausulas,PasoResumenFinal,CompartidaBlock,StepEconomicoCompra,StepCondicionesAlquiler,StepCondicionesReservaAlq,SeguroOperacion,EMPTY_OP,SAMPLE_OP_PREVIEW,derivedTokensGenerales,getResumenMonto,getCamposFaltantes,getCamposFaltantesDetalle,draftTieneContenido,getComisionComponents,datosCompraCompartidos,valorComisionPredeterminado,buildDocSections,opParaDocumento,docToPlainText,generarPDF,generarDOCX,getDefaultBodyBlocks};',resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
 const a=require(tmp+'/app.cjs'),root=a.createRoot(document.getElementById('test'));let count=0;
 function check(label,fn){fn();count++;console.log('OK',label)}
 async function fill(el,v){assert.ok(el);await a.act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,v);el.dispatchEvent(new Event('input',{bubbles:true}));});}
@@ -12,6 +12,20 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
 (async()=>{
  let state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler'};
  function render(Component,extra={}){root.render(a.createElement(Component,{data:state,onChange:(k,v)=>{if(Object.is(state[k],v))return;state={...state,[k]:v};render(Component,extra)},equipo:[],faltantes:[],...extra}));}
+ let campoRevision=null;
+ state={...a.EMPTY_OP,tipo:'reserva'};
+ await a.act(async()=>render(a.PasoResumenFinal,{clausulas:[],perfil:{},onVolver:campo=>{campoRevision=campo;},onFinalizarAccion:()=>{}}));
+ const pendientesRevision=a.getCamposFaltantesDetalle(state,{});
+ check('el resumen muestra una única lista de datos pendientes',()=>{
+  assert.ok(pendientesRevision.length>0);
+  assert.equal(document.querySelectorAll('[aria-label="Datos para completar"] button').length,pendientesRevision.length);
+  assert.equal([...document.querySelectorAll('button')].filter(b=>b.textContent.includes('Revisar faltantes')).length,0);
+  assert.ok(!document.body.textContent.includes('Ficha técnica de todo lo cargado'));
+  assert.ok(!document.body.textContent.includes('No agregaste cláusulas adicionales'));
+ });
+ await click(document.querySelector('[aria-label="Datos para completar"] button'));
+ check('tocar dato pendiente regresa a su campo sin pérdida de navegación',()=>assert.equal(campoRevision,pendientesRevision[0].campo));
+ state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler'};
  for(const [tipo,Component,fields] of [
   ['reserva',a.StepEconomicoCompra,['precio','anticipo']],['boleto',a.StepEconomicoCompra,['precio','anticipo']],
   ['exclusividad',a.StepDocSimple,['precio']],['refuerzo_reserva',a.StepDocSimple,['precio']],['devolucion_reserva',a.StepDocSimple,['precio']],

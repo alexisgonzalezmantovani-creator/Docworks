@@ -1,6 +1,10 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
 const dir=path.resolve(__dirname,'..'),html=fs.readFileSync(dir+'/landing/index.html','utf8');let count=0;const check=(s,f)=>{f();count++;console.log('OK',s)};
 (async()=>{
+check('landing fuera del despliegue Git automático de app',()=>{
+ const cfg=JSON.parse(fs.readFileSync(dir+'/landing/vercel.json','utf8'));
+ assert.equal(cfg.git.deploymentEnabled,false);
+});
 const dom=new JSDOM(html,{url:'https://docworks-landing.vercel.app/',runScripts:'outside-only'}),doc=dom.window.document;let calls=[],respuesta={ok:true,status:200,json:async()=>({id:'qa'})};dom.window.eval(fs.readFileSync(dir+'/landing/captcha.js','utf8'));dom.window.fetch=async(url,options)=>{calls.push({url,options});if(respuesta instanceof Error)throw respuesta;return respuesta;};for(const s of doc.querySelectorAll('script'))if(s.textContent.includes("getElementById('signup-form')"))dom.window.eval(s.textContent);
 check('sin notas internas, aprobación prometida ni promesa de seguridad absoluta',()=>{for(const text of ['oferta comercial definitiva','sin esperar una aprobación','previstas en la aplicación','La aplicación contempla','Minutos. Es súper rápido','Sí. Cada inmobiliaria'])assert.ok(!html.includes(text));});
 check('tarjeta social real y URL absoluta para ambos formatos',()=>{for(const selector of ['meta[property="og:image"]','meta[name="twitter:image"]'])assert.equal(doc.querySelector(selector).content,'https://docworks-landing.vercel.app/social-card.png');const b=fs.readFileSync(dir+'/landing/social-card.png');assert.equal(b.subarray(1,4).toString(),'PNG');assert.equal(b.readUInt32BE(16),1200);assert.equal(b.readUInt32BE(20),630);});

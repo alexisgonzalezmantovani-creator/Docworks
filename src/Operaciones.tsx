@@ -4624,7 +4624,6 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
             </div>
             <div className="op-card-side">
               <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{ultN&&Number.isFinite(new Date(ultN).getTime())?new Date(ultN).toLocaleDateString("es-AR"):"Sin actividad"}</div></div>
-              <div className="op-side-extra"><div className="op-side-label">Documento</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{TIPOS[op.tipo]||op.tipo}</div></div>
               <div>{acciones}</div>
             </div>
           </div>
@@ -6163,7 +6162,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }
   return(
     <div style={{paddingBottom:4}}>
-      {step>total&&<div role="status" aria-live="polite" style={{marginBottom:12,fontSize:13,color:"var(--text)"}}>{documentoListo?"Todo listo para generar el documento.":"Datos por completar: "+faltantesDetalle.length+". Podés revisarlos o guardar el borrador."}</div>}
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
