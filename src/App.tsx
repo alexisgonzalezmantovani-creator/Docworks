@@ -3136,7 +3136,7 @@ function finalizeDoc(doc, op, clausulasLib) {
     n++;
     extra.push({num:n,titulo:String(titulo||"").trim()||"CONDICIÓN PARTICULAR",texto:texto,obligatoria:!!obligatoria});
   }
-  var seleccionadasIds = op.clausulas_ids || [];
+  var seleccionadasIds = Array.isArray(op.clausulas_ids) ? op.clausulas_ids : [];
   // El orden final sigue el orden de la biblioteca (el que definió el
   // Dueño/Administrador en Configuración → Plantillas con las flechas ↑/↓),
   // no el orden en que el broker las fue tildando. Las obligatorias se
@@ -3150,6 +3150,8 @@ function finalizeDoc(doc, op, clausulasLib) {
       // genérica de compraventa, nunca debe entrar en alquiler/reserva de alquiler.
       if ((op.tipo==="alquiler" || op.tipo==="reserva_alquiler") && c.id==="c4") return false;
       if (clausulaRepiteSeccionDoc(c, doc)) return false;
+       // El alquiler amoblado ya incorpora su inventario como anexo: no repetir la cláusula genérica.
+       if (op.tipo==="alquiler" && op.alquiler_amoblado && configDetalleClausula(c)?.campo==="entrega_muebles_detalle") return false;
       return c.obligatoria || seleccionadasIds.indexOf(c.id) !== -1;
     })
     .forEach(function(c) {
@@ -5594,16 +5596,18 @@ function SeguroOperacion({data,onChange,faltantes=[]}){
   </div>;
 }
 function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]}){
-  var selected=data.clausulas_ids||[];
+  var selected=Array.isArray(data.clausulas_ids)?data.clausulas_ids:[];
   var cfgOpcionales=obtenerPlantillaConfig(perfil,data.tipo,clausulas);
   var idsOpcionales=Array.isArray(cfgOpcionales.clausulas_ids)?cfgOpcionales.clausulas_ids:[];
   var idsObligatorias=Array.isArray(cfgOpcionales.obligatorias_ids)?cfgOpcionales.obligatorias_ids:[];
   // El catálogo que ve el broker contiene solo extras habilitados; los del modelo no se exponen.
   var idsFrecuentes=Array.isArray(cfgOpcionales.frecuentes_ids)?cfgOpcionales.frecuentes_ids:[];
   var lista=filtrarCatalogoClausulas(clausulas,{tipo:data.tipo,idsProtegidos:idsObligatorias,esTextoBase:clausulaYaEnTextoBase,aplicaTipo:clausulaAplicaTipo}).filter(function(c){return !c.obligatoria&&(idsOpcionales.indexOf(c.id)!==-1||idsFrecuentes.indexOf(c.id)!==-1);});
-  var inventarioPrevio=data.tipo==="alquiler"&&!!(data.alquiler_amoblado||String(data.alquiler_inventario||"").trim());
-  if(inventarioPrevio)lista=lista.filter(function(c){var cfg=configDetalleClausula(c);return !cfg||cfg.campo!=="entrega_muebles_detalle";});
+  var inventarioPrevio=data.tipo==="alquiler"&&!!data.alquiler_amoblado;
+  // Si una cláusula ya estaba seleccionada, debe seguir visible para poder desmarcarla.
+  if(inventarioPrevio)lista=lista.filter(function(c){var cfg=configDetalleClausula(c);return !cfg||cfg.campo!=="entrega_muebles_detalle"||selected.includes(c.id);});
   lista.sort(function(a,b){return Number(selected.includes(b.id))-Number(selected.includes(a.id))||Number(idsFrecuentes.indexOf(b.id)!==-1)-Number(idsFrecuentes.indexOf(a.id)!==-1);});
+  var cantidadSeleccionadas=lista.filter(function(c){return selected.includes(c.id);}).length;
   var protegidas=obtenerIdsObligatoriosDePlantilla(perfil,data.tipo);
   var nombreInmobiliariaObligatoria=(perfil&&perfil.nombre&&String(perfil.nombre).trim())?String(perfil.nombre).trim():"la inmobiliaria";
   function toggle(id){
@@ -5631,14 +5635,18 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   var busqueda=buscarClausula.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
   var listaVisible=busqueda?lista.filter(function(c){return String(c.titulo||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(busqueda);}):lista;
   // Cerrar el editor es solo una acción visual: no borra la cláusula personal.
-  useEffect(function(){onChange("clausulas_custom_titulo",tituloCustom);onChange("clausulas_custom",contenidoCustom);},[tituloCustom,contenidoCustom]);
-  async function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}if(String(contenidoCustom||"").trim()&&!window.confirm("Ya tenés una cláusula escrita. ¿Reemplazarla por el texto redactado con IA?"))return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
+  useEffect(function(){
+    if(String(data.clausulas_custom_titulo||"")!==tituloCustom)onChange("clausulas_custom_titulo",tituloCustom);
+    if(String(data.clausulas_custom||"")!==contenidoCustom)onChange("clausulas_custom",contenidoCustom);
+  },[tituloCustom,contenidoCustom]);
+  async function completarRedaccionIA(){if(loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
+  function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}if(String(contenidoCustom||"").trim()){requestDwConfirm("Ya tenés una cláusula escrita. ¿Reemplazarla por el texto redactado con IA?",function(){void completarRedaccionIA();},"Reemplazar");return;}void completarRedaccionIA();}
   return <div>
     <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.55,marginBottom:14}}>El documento ya incluye las cláusulas del modelo. Solo elegí una de estas opciones si necesitás agregar algo a esta operación.</p>
     <SeguroOperacion data={data} onChange={onChange} faltantes={faltantes}/>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",margin:"2px 0 8px"}}>
       <span style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Cláusulas adicionales</span>
-      <span role="status" style={{fontSize:12,color:selected.length?"var(--green)":"var(--dim)"}}>{selected.length===0?"Ninguna seleccionada":selected.length===1?"1 seleccionada":selected.length+" seleccionadas"}</span>
+      <span role="status" style={{fontSize:12,color:cantidadSeleccionadas?"var(--green)":"var(--dim)"}}>{cantidadSeleccionadas===0?"Ninguna seleccionada":cantidadSeleccionadas===1?"1 seleccionada":cantidadSeleccionadas+" seleccionadas"}</span>
     </div>
     {data.tipo==="alquiler"&&(<div className="dw-inventario-existente">
         <label style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,border:"1px solid var(--border)",background:data.alquiler_amoblado?"rgba(212,168,83,0.08)":"transparent",cursor:"pointer",fontSize:12.5,color:"var(--text)",width:"fit-content"}}>
@@ -5665,7 +5673,8 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
           <button type="button" aria-label={(sel?"Quitar ":"Incluir ")+c.titulo} disabled={obligatoria||protegida} onClick={function(){toggle(c.id);if(sel)setClausulaExpandida(null);}} className={"dw-ios-sw dw-op-clause-switch"+(sel?" on":"")+((obligatoria||protegida)?" locked":"")} role="switch" aria-checked={sel} title={sel?"Cláusula incluida":"Incluir cláusula"}/>
         </div>
         {expandida&&<div id={"dw-op-clause-detail-"+c.id} className="dw-op-clause-detail">{mostrarTokensDocWorks(c.contenido)}</div>}
-        {sel&&detalleCfg&&<Txa id={"dw-field-"+detalleCfg.campo} label={detalleCfg.label} hint="Se incorpora al documento de esta operación. Completá el detalle acordado por las partes." value={data[detalleCfg.campo]||""} onChange={function(e){onChange(detalleCfg.campo,e.target.value);onChange(detalleCfg.campo+"_id",c.id);}} rows={4} placeholder={detalleCfg.placeholder}/>}
+        {sel&&inventarioPrevio&&detalleCfg?.campo==="entrega_muebles_detalle"&&<div role="note" style={{fontSize:12,color:"var(--muted)",padding:"4px 0 10px"}}>El inventario ya se incluye como anexo. Esta cláusula no se repetirá; podés desmarcarla acá.</div>}
+        {sel&&detalleCfg&&!(inventarioPrevio&&detalleCfg.campo==="entrega_muebles_detalle")&&<Txa id={"dw-field-"+detalleCfg.campo} label={detalleCfg.label} hint="Se incorpora al documento de esta operación. Completá el detalle acordado por las partes." value={data[detalleCfg.campo]||""} onChange={function(e){onChange(detalleCfg.campo,e.target.value);onChange(detalleCfg.campo+"_id",c.id);}} rows={4} placeholder={detalleCfg.placeholder}/>}
       </div>;})}
     </div>
     <div style={{marginTop:14,paddingTop:12,borderTop:"1px dashed var(--border2)"}}>
@@ -5688,8 +5697,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
         {errorIA&&<div style={{fontSize:12,color:"var(--red)",marginTop:5}}>{errorIA}</div>}
         <div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Esta cláusula se guarda únicamente en esta operación; no modifica la biblioteca de la inmobiliaria.</div>
         {(!!String(contenidoCustom||"").trim()||!!String(tituloCustom||"").trim())&&<button type="button" onClick={function(){
-          if(!window.confirm("¿Eliminar la cláusula propia de esta operación? Esta acción borra su título y texto."))return;
-          setTituloCustom("");setContenidoCustom("");setIdeaIA("");setErrorIA("");setShowAdd(false);
+          requestDwConfirm("¿Eliminar la cláusula propia de esta operación? Esta acción borra su título y texto.",function(){setTituloCustom("");setContenidoCustom("");setIdeaIA("");setErrorIA("");setShowAdd(false);},"Eliminar");
         }} style={{marginTop:12,padding:"8px 10px",border:"1px solid var(--border2)",borderRadius:8,background:"transparent",color:"var(--red)",cursor:"pointer",fontSize:12}}>Eliminar mi cláusula</button>}
       </div>}
     </div>
