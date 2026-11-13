@@ -1178,9 +1178,35 @@ export var MOBILE_STABILITY_CSS = `
   .field-error{font-size:13px!important;}
 }
 @media (max-width: 640px){
-  .stats-money-row{grid-template-columns: 1fr !important;
-    gap: 8px !important;}
-  .stats-money-row > .card{padding: 12px !important;}
+  /* Los tres montos permanecen en una sola fila, incluso en iPhone SE. */
+  .stats-money-row{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;}
+  .stats-money-row > .card{
+    min-width:0!important;
+    max-width:none!important;
+    padding:10px 6px!important;
+    border-radius:10px!important;
+    box-sizing:border-box!important;
+    overflow:hidden;
+  }
+  .stats-money-row .stats-money-icon{display:none!important;}
+  .stats-money-row .stats-money-value{
+    font-family:'DM Sans',sans-serif!important;
+    font-size:clamp(10px,2.7vw,12px)!important;
+    font-weight:800!important;
+    line-height:1.25!important;
+    letter-spacing:-.025em!important;
+    font-variant-numeric:tabular-nums;
+    overflow-wrap:anywhere;
+    word-break:normal;
+  }
+  .stats-money-row .stats-money-label{
+    font-size:10px!important;
+    line-height:1.25!important;
+    font-weight:650!important;
+    margin-top:5px!important;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
 }
 /* 4.11 PRO — "Nueva operación" y demás paneles: hoja inferior (como la 3.67), nunca a pantalla completa. */
 @media (max-width:640px){
@@ -4790,7 +4816,7 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
   // (reserva → boleto, refuerzo, comodato, etc.) nunca vuelven a sumar.
   var usd=operacionesVisibles.filter(function(o){return o.moneda==="USD"&&o.precio;}).reduce(function(s,o){return s+parseMontoAR(o.precio||0);},0);
   var ars=operacionesVisibles.filter(function(o){return o.moneda==="ARS"&&o.precio;}).reduce(function(s,o){return s+parseMontoAR(o.precio||0);},0);
-  var canon=operacionesVisibles.filter(function(o){return o.tipo==="alquiler"&&o.alquiler_monto_inicial;}).reduce(function(s,o){return s+parseFloat(o.alquiler_monto_inicial||0);},0);
+  var canon=operacionesVisibles.filter(function(o){return o.tipo==="alquiler"&&o.alquiler_monto_inicial;}).reduce(function(s,o){var n=parseMontoAR(o.alquiler_monto_inicial);return s+(isFinite(n)?n:0);},0);
   function grupoRaiz(o){return [o].concat(operaciones.filter(function(h){return h.parent_id===o.id;}));}
   function comisionOperacion(o){
     var items=getComisionComponents(o);
@@ -4853,9 +4879,9 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
         })}
       </div>
 
-      {!esBroker && <div className="stats-money-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+      {!esBroker && <div className="stats-money-row" aria-label="Resumen de importes" style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,marginBottom:16}}>
         {[{l:"Total USD",v:"U$D "+usd.toLocaleString("es-AR"),i:"💵"},{l:"Total ARS",v:"$ "+ars.toLocaleString("es-AR"),i:"💴"},{l:"Canon/mes",v:"$ "+canon.toLocaleString("es-AR"),i:"🏘"}].map(function(s){
-          return <div key={s.l} className="card" style={{padding:18}}><div style={{fontSize:18,marginBottom:6}}>{s.i}</div><div style={{fontFamily:"DM Serif Display,serif",fontSize:18,color:"var(--teal)",lineHeight:1.2,marginBottom:3}}>{s.v}</div><div style={{fontSize:12,color:"var(--dim)"}}>{s.l}</div></div>;
+          return <div key={s.l} className="card stats-money-card" title={s.l+": "+s.v} style={{padding:18}}><div className="stats-money-icon" aria-hidden="true" style={{fontSize:18,marginBottom:6}}>{s.i}</div><div className="stats-money-value" style={{fontFamily:"DM Serif Display,serif",fontSize:18,color:"var(--teal)",lineHeight:1.2,marginBottom:3}}>{s.v}</div><div className="stats-money-label" style={{fontSize:12,color:"var(--dim)"}}>{s.l}</div></div>;
         })}
       </div>}
 
