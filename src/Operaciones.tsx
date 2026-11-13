@@ -2025,7 +2025,7 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions{
     display:grid!important;
-    grid-template-columns:minmax(0,1fr) 36px!important;
+    grid-template-columns:minmax(0,1fr) 44px!important;
     align-items:stretch!important;
     justify-content:stretch!important;
     flex-wrap:nowrap!important;
@@ -2068,9 +2068,9 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions>div:last-child{
     grid-column:2!important;
     justify-self:stretch!important;
-    width:36px!important;
+    width:44px!important;
     min-width:0!important;
-    max-width:36px!important;
+    max-width:44px!important;
     display:block!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions>div:last-child>span{
@@ -2079,10 +2079,10 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions .op-more{
     display:flex!important;
-    width:36px!important;
-    min-width:36px!important;
-    max-width:36px!important;
-    min-height:38px!important;
+    width:44px!important;
+    min-width:44px!important;
+    max-width:44px!important;
+    min-height:44px!important;
     padding:0!important;
     align-items:center!important;
     justify-content:center!important;
@@ -2104,7 +2104,7 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 }
 
 /* Botones táctiles cómodos sin moverlos debajo de la tarjeta en iPhone. */
-@media (max-width:760px){
+@media (max-width:760px), (orientation:landscape) and (max-height:500px) and (hover:none) and (pointer:coarse) and (max-width:1100px){
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn,
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions .op-more{
     min-height:44px!important;

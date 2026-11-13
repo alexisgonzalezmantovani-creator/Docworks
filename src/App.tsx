@@ -4797,8 +4797,8 @@ function MenuAyudaDocWorks({abierto,onToggle,onCerrar,onPreparar,onClausulas,onC
   </div>;
 }
 
-function Btn({children=null,onClick=undefined,v=undefined,s=undefined,disabled=undefined,className=undefined,type=undefined,title=undefined,style=undefined}){
-  return <button type={type||"button"} onClick={onClick} disabled={disabled} title={title} style={style} className={"btn btn-"+(v||"primary")+(s?" btn-"+s:"")+(className?" "+className:"")}>{children}</button>;
+function Btn({children=null,onClick=undefined,v=undefined,s=undefined,disabled=undefined,className=undefined,type=undefined,title=undefined,style=undefined,ariaLabel=undefined,ariaExpanded=undefined,ariaHaspopup=undefined}){
+  return <button type={type||"button"} onClick={onClick} disabled={disabled} title={title} aria-label={ariaLabel} aria-expanded={ariaExpanded} aria-haspopup={ariaHaspopup} style={style} className={"btn btn-"+(v||"primary")+(s?" btn-"+s:"")+(className?" "+className:"")}>{children}</button>;
 }
 function Field({label=undefined,hint=undefined,children=undefined,className=undefined,htmlFor=undefined}){
   return <div className={"field "+(className||"")}>{label&&<label className="field-label" htmlFor={htmlFor}>{label}</label>}{children}{hint&&<span className="field-hint">{hint}</span>}</div>;
@@ -6743,7 +6743,7 @@ function Dropdown({items}){
   },[open]);
   return(
     <div style={{position:"relative",display:"inline-block"}}>
-      <span ref={btnRef} style={{display:"inline-block"}}><Btn v="secondary" s="md" className="op-more" onClick={toggle} style={{minWidth:44,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}>⋯</Btn></span>
+      <span ref={btnRef} style={{display:"inline-block"}}><Btn v="secondary" s="md" className="op-more" onClick={toggle} ariaLabel="Más acciones" ariaHaspopup="menu" ariaExpanded={open} style={{minWidth:44,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}>⋯</Btn></span>
       {open&&pos&&createPortal(
         <div ref={menuRef} role="menu" aria-label="Acciones de operación" className="dropdown-menu" style={{position:"fixed",top:pos.top,left:pos.left,width:pos.width,maxHeight:pos.maxHeight,overflowY:"auto",right:"auto",zIndex:20000,WebkitOverflowScrolling:"touch",overscrollBehavior:"contain"}}>
           {items.map(function(item,i){

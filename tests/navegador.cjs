@@ -32,7 +32,22 @@ function EstadisticasHarness(){
  ];
  return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><main style={{maxWidth:1000,margin:'0 auto',padding:14}}><EstadisticasView operaciones={operaciones} equipo={[]} perfil={{rol:'dueno'}} currentUserRole="dueno"/></main></>;
 }
-createRoot(document.getElementById('root')).render(location.pathname==='/superadmin'?<><GStyles/><PanelSuperadminPrueba contexto={{usuario:{nombre:'Administración de prueba'}}} onLogout={()=>{}}/></>:location.pathname==='/aspecto'?<AspectoHarness/>:location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
+function OperacionesHarness(){
+ const org={rol:'dueno',nombre:'Inmobiliaria de prueba',matricula:'0000',plantillas:{}};
+ const fecha='2026-11-12T12:00:00Z';
+ const operaciones=[
+  {...EMPTY_OP,id:'reserva-qa',tipo:'reserva',estado:'activo',inmueble_direccion:'Casa modelo en barrio privado',comprador_nombre:'Comprador de prueba',vendedor_nombre:'Vendedor de prueba',precio:'180000',moneda:'USD',created_at:fecha},
+  {...EMPTY_OP,id:'carpeta-qa',tipo:'reserva_alquiler',estado:'activo',inmueble_direccion:'Departamento de prueba',locador_nombre:'Locador de prueba',locatario_nombre:'Locatario de prueba',created_at:fecha},
+  {...EMPTY_OP,id:'contrato-qa',tipo:'alquiler',estado:'activo',parent_id:'carpeta-qa',inmueble_direccion:'Departamento de prueba',locador_nombre:'Locador de prueba',locatario_nombre:'Locatario de prueba',created_at:fecha}
+ ];
+ return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><main style={{maxWidth:1200,margin:'0 auto',padding:12,boxSizing:'border-box'}}>
+ <DashboardView usuarioActual={{id:'qa-dueno',rol_base:'dueno'}} operaciones={operaciones} clausulas={[]} perfil={org} bloquesReserva={[]} papelera={[]}
+  onNew={()=>{}} onEdit={()=>{}} onViewDoc={()=>{}} onDelete={()=>{}} onChangeEstado={()=>{}} onDuplicar={()=>{}}
+  onConvertir={()=>{}} onConvertirComodato={()=>{}} onConvertirRefuerzo={()=>{}} onConvertirBoleto={()=>{}} onConvertirDevolucion={()=>{}}
+  onRestore={()=>{}} onDeletePermanente={()=>{}} onVaciarPapelera={()=>{}} onRestoreVersion={()=>{}} />
+ </main></>;
+}
+createRoot(document.getElementById('root')).render(location.pathname==='/operaciones'?<OperacionesHarness/>:location.pathname==='/superadmin'?<><GStyles/><PanelSuperadminPrueba contexto={{usuario:{nombre:'Administración de prueba'}}} onLogout={()=>{}}/></>:location.pathname==='/aspecto'?<AspectoHarness/>:location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
 `;
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+harness,resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:path.join(out,'harness.js')});
 const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.woff2'){res.setHeader('Content-Type','font/woff2');res.end(fs.readFileSync(path.join(root,'public/fonts/dm-sans-latin.woff2')));}else if(req.url.startsWith('/pdfjs-6.5.438/')){const target=path.join(root,'public',req.url);if(!fs.existsSync(target)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',target.endsWith('.mjs')?'text/javascript':target.endsWith('.wasm')?'application/wasm':'application/octet-stream');res.end(fs.readFileSync(target));}else if(req.url==='/docworks-header-logo.png'){res.setHeader('Content-Type','image/png');res.end(fs.readFileSync(path.join(root,'public/docworks-header-logo.png')));}else if(req.url==='/harness.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(out,'harness.js')));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/harness.js"></script></body></html>');}});
@@ -71,6 +86,47 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    assert.equal(await page.locator('textarea').count(),0);checks++;
    if(tipo==='boleto')await page.screenshot({path:path.join(out,name+'.png'),fullPage:true});
   }
+  // Regression de iPhone/iPad/desktop: botones dentro del sector derecho, sin solaparse.
+  for(const [ancho,alto] of (name==='iphone'?[[320,740],[375,812],[390,844],[430,932]]:[[width,height]])){
+   await page.setViewportSize({width:ancho,height:alto});
+   await page.goto('http://127.0.0.1:'+server.address().port+'/operaciones');
+   await page.locator('.dw-dashboard-root .op-card-premium').first().waitFor();
+   const carpeta=page.locator('.op-folder-chip').first();
+   assert.equal(await carpeta.count(),1,'Carpeta visible en QA');checks++;
+   await carpeta.click();
+   await page.locator('.op-doc-card').first().waitFor();
+   const medidas=await page.locator('.dw-dashboard-root .op-card-premium').evaluateAll(cards=>cards.map(card=>{
+    const inner=card.querySelector('.op-card-inner'),izq=inner&&inner.firstElementChild,side=card.querySelector('.op-card-side'),acciones=side&&side.querySelector('.op-actions');
+    const rect=node=>{const r=node.getBoundingClientRect();return {x:r.left,y:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+    return {izq:rect(izq),side:rect(side),acciones:rect(acciones),card:rect(card),
+     buttons:[...acciones.querySelectorAll('button')].filter(b=>getComputedStyle(b).display!=='none').map(rect)};
+   }));
+   assert.ok(medidas.length>=3,'Se comprueban raíz, carpeta y documento');checks++;
+   for(const [i,m] of medidas.entries()){
+    assert.ok(m.side.x>=m.izq.right-2,ancho+' tarjeta '+i+' sector derecho');checks++;
+    assert.ok(m.acciones.x>=m.side.x-2&&m.acciones.right<=m.side.right+2,ancho+' tarjeta '+i+' acciones contenidas');checks++;
+    assert.ok(m.buttons.length>=3,ancho+' tarjeta '+i+' botones visibles');checks++;
+    for(const b of m.buttons)assert.ok(b.width>=30&&b.height>=30&&b.x>=m.card.x-2&&b.right<=m.card.right+2,ancho+' tarjeta '+i+' botón dentro del borde');
+    for(let j=0;j<m.buttons.length;j++)for(let k=j+1;k<m.buttons.length;k++){
+     const a=m.buttons[j],b=m.buttons[k];
+     assert.ok(a.right<=b.x+1||b.right<=a.x+1||a.bottom<=b.y+1||b.bottom<=a.y+1,ancho+' tarjeta '+i+' sin botones superpuestos');
+    }
+    checks++;
+   }
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),ancho+' sin desplazamiento horizontal');checks++;
+   const mas=page.locator('.op-card-premium').first().getByRole('button',{name:'Más acciones'});
+   assert.equal(await mas.getAttribute('aria-expanded'),'false');checks++;
+   await mas.click();
+   const menu=page.getByRole('menu',{name:'Acciones de operación'});
+   await menu.waitFor();
+   assert.equal(await mas.getAttribute('aria-expanded'),'true');checks++;
+   const area=await menu.boundingBox();
+   assert.ok(area&&area.x>=0&&area.x+area.width<=ancho+1,ancho+' menú completo dentro del ancho');checks++;
+   await page.keyboard.press('Escape');
+   await menu.waitFor({state:'detached'});
+   assert.equal(await mas.getAttribute('aria-expanded'),'false');checks++;
+  }
+  await page.setViewportSize({width,height});
   await page.goto('http://127.0.0.1:'+server.address().port+'/aspecto');
   if(width<600)await page.getByRole('group',{name:'Vista del aspecto del documento'}).getByRole('button',{name:'Vista previa',exact:true}).click();
   const pdfCanvas=page.locator('.dw-pdf-preview > .dw-pdf-sheet canvas');
