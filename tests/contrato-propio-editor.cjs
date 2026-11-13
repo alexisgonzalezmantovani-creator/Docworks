@@ -39,7 +39,7 @@ check('insertar dato respeta el cursor en el medio de un párrafo',()=>{
 });
 check('insertar dato reemplaza solo la selección',()=>{
  const r=insertar('El nombre anterior firma.','comprador_nombre',3,18);
- assert.equal(r.texto,'El {{comprador_nombre}}firma.');
+ assert.equal(r.texto,'El {{comprador_nombre}} firma.');
 });
 check('insertar dato tolera posiciones fuera del texto',()=>{
  assert.equal(insertar('abc','precio_letras',999,999).texto,'abc{{precio_letras}}');
