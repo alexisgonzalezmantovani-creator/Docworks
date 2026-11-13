@@ -83,6 +83,33 @@ const CHIPS = [
   ["exclusividad_vigencia","Vigencia de la autorización"]
 ] as const;
 
+// Íconos vectoriales sobrios, del mismo tamaño en PC, tablet y teléfono.
+function IconoDato({dato}:{dato:string}){
+  const tipo=/_dni$/.test(dato)?"dni":
+    /^(comprador|vendedor|locador|locatario|comodante|comodatario|autorizante)_/.test(dato)?"persona":
+    /^inmueble_/.test(dato)?"inmueble":
+    /^(precio_|anticipo_|saldo_|alquiler_monto_|reserva_alquiler_)/.test(dato)?"importe":
+    /^(fecha_|alquiler_inicio|alquiler_fin)/.test(dato)?"fecha":"documento";
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+    style={{flexShrink:0}}>
+    {tipo==="persona"&&<><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-2a7 7 0 0 1 14 0v2"/></>}
+    {tipo==="dni"&&<><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16h6M14 10h4M14 14h4"/></>}
+    {tipo==="inmueble"&&<><path d="m3 11 9-8 9 8M5 10v11h14V10M10 21v-7h4v7"/></>}
+    {tipo==="importe"&&<><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/></>}
+    {tipo==="fecha"&&<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h3"/></>}
+    {tipo==="documento"&&<><path d="M6 2h9l4 4v16H6zM15 2v5h4M9 12h7M9 16h7"/></>}
+  </svg>;
+}
+
+function nombreDatoBreve(dato:string,etiqueta:string){
+  if(dato==="inmueble_direccion")return "Dirección";
+  if(dato==="fecha_operacion_larga")return "Fecha";
+  if(/^[a-z]+_nombre$/.test(dato)&&dato!=="inmobiliaria_nombre")return etiqueta.replace(/^Nombre del |^Nombre de la /,"");
+  if(/_dni$/.test(dato))return etiqueta.replace(/^DNI del |^DNI de la /,"DNI ");
+  return etiqueta;
+}
+
 export default function DocumentoPropioEditor({
   tipo, perfil, onSavePerfil, confirmar, onCancelar
 }: {
@@ -346,18 +373,18 @@ export default function DocumentoPropioEditor({
     {capturados.length>0&&<div aria-label="Datos automáticos ya insertados" style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6}}>
       <span style={{fontSize:11,color:"var(--muted)",marginRight:3}}>En tu contrato:</span>
       {capturados.map(key=>{
-        const etiqueta=CHIPS.find(([k])=>k===key)?.[1]||key.replace(/_/g," ");
+        const etiqueta=nombreDatoBreve(key,CHIPS.find(([k])=>k===key)?.[1]||key.replace(/_/g," "));
         const errorChip=invalidos.includes(key)||repetidos.includes(key);
-        return <span key={key} style={{display:"inline-flex",alignItems:"stretch",maxWidth:"100%",
+        return <span key={key} style={{display:"inline-flex",alignItems:"stretch",maxWidth:"100%",minHeight:36,
             border:"1px solid "+(errorChip?"#fca5a5":"rgba(56,189,248,.35)"),
             color:errorChip?"#991b1b":"#0369a1",background:errorChip?"#fee2e2":"#dff3ff",
-            borderRadius:7,overflow:"hidden",fontSize:11,fontWeight:650}}>
+            borderRadius:10,overflow:"hidden",fontSize:12,fontWeight:650}}>
           <button type="button" title={"Buscar "+etiqueta+" en el texto"} aria-label={"Buscar "+etiqueta+" en el contrato"}
             disabled={estado==="saving"} onClick={()=>irAlDato(key)}
-            style={{padding:"5px 7px",border:0,background:"transparent",color:"inherit",font:"inherit",cursor:"pointer",textAlign:"left",overflowWrap:"anywhere"}}>{etiqueta}</button>
+            style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 10px",border:0,background:"transparent",color:"inherit",font:"inherit",cursor:"pointer",textAlign:"left",overflowWrap:"anywhere"}}><IconoDato dato={key}/>{etiqueta}</button>
           <button type="button" title={"Quitar "+etiqueta+" del contrato"} aria-label={"Quitar "+etiqueta+" del contrato"}
             disabled={estado==="saving"} onClick={()=>quitar(key)}
-            style={{minWidth:26,padding:"4px 6px",border:0,borderLeft:"1px solid rgba(3,105,161,.16)",background:"transparent",color:"inherit",fontSize:15,cursor:"pointer"}}>×</button>
+            style={{minWidth:34,padding:"6px 8px",border:0,borderLeft:"1px solid rgba(3,105,161,.16)",background:"transparent",color:"inherit",fontSize:17,cursor:"pointer"}}>×</button>
         </span>;
       })}
     </div>}
@@ -374,7 +401,7 @@ export default function DocumentoPropioEditor({
     {chipsSugeridos.length>0&&!revisar&&<div role="group" aria-label="Datos recomendados para insertar" style={{display:"flex",flexDirection:"column",gap:7}}>
       <div style={{fontSize:12,color:"var(--muted)"}}>Datos frecuentes · tocá para insertar</div>
       <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
-        {chipsSugeridos.map(([key,label])=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip" aria-label={"Insertar "+label} title={"Insertar "+label} disabled={estado==="saving"} style={{minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}} onClick={()=>insertar(key)}>+ {label}</button>)}
+        {chipsSugeridos.map(([key,label])=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip" aria-label={"Insertar "+label} title={"Insertar "+label} disabled={estado==="saving"} style={{display:"inline-flex",alignItems:"center",gap:8,minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left",borderRadius:10,padding:"8px 11px"}} onClick={()=>insertar(key)}><IconoDato dato={key}/><span>{nombreDatoBreve(key,label)}</span><span aria-hidden="true" style={{fontSize:16,marginLeft:2,opacity:.7}}>+</span></button>)}
       </div>
     </div>}
     {!chipsSugeridos.length&&capturados.length>0&&!revisar&&<div role="status" style={{fontSize:12,color:"var(--muted)"}}>Datos principales insertados.</div>}
@@ -392,7 +419,7 @@ export default function DocumentoPropioEditor({
       <span style={{fontSize:12,color:"var(--muted)"}}>Faltan estos datos (tocá para insertarlos):</span>
       {faltantes.map(key=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip"
         disabled={estado==="saving"} onClick={()=>insertar(key,true)}
-        style={{minHeight:38,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}}>+ {CHIPS.find(([k])=>k===key)?.[1]||key}</button>)}
+        style={{display:"inline-flex",alignItems:"center",gap:8,minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left",borderRadius:10,padding:"8px 11px"}}><IconoDato dato={key}/><span>{nombreDatoBreve(key,CHIPS.find(([k])=>k===key)?.[1]||key)}</span><span aria-hidden="true" style={{fontSize:16,opacity:.7}}>+</span></button>)}
     </div>}
     {revisar&&texto.trim().length>40&&advertenciasContenido.length>0&&
       <div style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:"var(--muted)"}}>

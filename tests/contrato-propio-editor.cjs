@@ -119,4 +119,12 @@ check('errores de chips desconocidos se explican sin mostrar códigos internos',
  assert.ok(editor.includes('datos automáticos que este documento no reconoce'));
  assert.ok(!editor.includes('Chips desconocidos: '+String.fromCharCode(34)+'+invalidos.join'));
 });
+check('chips visuales tienen íconos accesibles y botones táctiles',()=>{
+ assert.match(editor,/function IconoDato\(/);
+ assert.match(editor,/function nombreDatoBreve\(/);
+ assert.ok(editor.includes('<IconoDato dato={key}/>'));
+ assert.ok(editor.includes('aria-hidden="true"'));
+ assert.ok(editor.includes('onClick={()=>quitar(key)}'));
+ assert.ok(editor.includes('onClick={()=>insertar(key)}'));
+});
 console.log('APROBADAS '+n+' pruebas de contrato propio.');
