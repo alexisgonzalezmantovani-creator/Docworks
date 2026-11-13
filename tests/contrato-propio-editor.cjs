@@ -76,6 +76,12 @@ check('el botón de quitar está en cada etiqueta insertada',()=>{
  assert.ok(editor.includes('onClick={()=>quitar(key)}'));
  assert.ok(editor.includes('aria-label={"Quitar "+etiqueta+" del contrato"}'));
 });
+check('deshacer aparece sólo después de modificar chips',()=>{
+ const src=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
+ assert.ok(src.includes('texto===ultimaAccionChip.textoPosterior'));
+ assert.ok(src.includes('onClick={deshacerUltimoChip}'));
+ assert.ok(src.includes('setUltimaAccionChip(null);cambiarTexto(ev.target.value)'));
+});
 const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
 check('el guardado exige que no haya duplicados',()=>assert.match(editor,/!repetidos\.length/));
 check('el contrato propio incluye los chips optativos de tratamiento y artículo',()=>{assert.match(editor,/comprador_tratamiento/);assert.match(editor,/vendedor_articulo/);assert.match(editor,/comodante_tratamiento/);assert.match(editor,/autorizante_articulo/);});

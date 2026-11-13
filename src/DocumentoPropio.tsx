@@ -99,6 +99,7 @@ export default function DocumentoPropioEditor({
   const inputRef=useRef<HTMLTextAreaElement|null>(null);
   const espejoRef=useRef<HTMLDivElement|null>(null);
   const [editandoTexto,setEditandoTexto]=useState(false);
+  const [ultimaAccionChip,setUltimaAccionChip]=useState<{textoAnterior:string;textoPosterior:string;cursorAnterior:number;scrollAnterior:number}|null>(null);
   // Recordar la selección del texto antes de que el selector de chips tome el foco (iPhone/Safari).
   const seleccionRef=useRef({inicio:textoActual.length,fin:textoActual.length});
   const guardandoRef=useRef(false);
@@ -195,6 +196,17 @@ export default function DocumentoPropioEditor({
     };
   },[dirty,estado,confirmar]);
   function cambiarTexto(v:string){setTexto(v);setRevisar(false);setMostrarVista(false);setError("");setEstado("idle");}
+  function deshacerUltimoChip(){
+    const accion=ultimaAccionChip;
+    if(!accion||texto!==accion.textoPosterior)return;
+    cambiarTexto(accion.textoAnterior);
+    setUltimaAccionChip(null);
+    seleccionRef.current={inicio:accion.cursorAnterior,fin:accion.cursorAnterior};
+    requestAnimationFrame(()=>{
+      const input=inputRef.current;
+      if(input)input.scrollTop=accion.scrollAnterior;
+    });
+  }
   function recordarSeleccion(el:HTMLTextAreaElement){
     seleccionRef.current={inicio:el.selectionStart,fin:el.selectionEnd};
   }
@@ -219,6 +231,7 @@ export default function DocumentoPropioEditor({
     if(nuevo.cursor===null)return;
     const input=inputRef.current;
     const scrollPrevio=input?.scrollTop??0;
+    setUltimaAccionChip({textoAnterior:texto,textoPosterior:nuevo.texto,cursorAnterior:seleccionRef.current.inicio,scrollAnterior:scrollPrevio});
     cambiarTexto(nuevo.texto);
     seleccionRef.current={inicio:nuevo.cursor,fin:nuevo.cursor};
     requestAnimationFrame(()=>{
@@ -231,6 +244,7 @@ export default function DocumentoPropioEditor({
     // El select nativo suele mover la selección a 0 o al final; usamos la última del textarea.
     const nuevo=insertarDatoAutomatico(texto,key,seleccionRef.current.inicio,seleccionRef.current.fin);
     const scrollPrevio=inputRef.current?.scrollTop??0;
+    setUltimaAccionChip({textoAnterior:texto,textoPosterior:nuevo.texto,cursorAnterior:seleccionRef.current.inicio,scrollAnterior:scrollPrevio});
     cambiarTexto(nuevo.texto);
     seleccionRef.current={inicio:nuevo.cursor,fin:nuevo.cursor};
     // No robar el foco al selector en iPhone (evita abrir el teclado de golpe).
@@ -247,6 +261,7 @@ export default function DocumentoPropioEditor({
     setRevisar(true);setError("");
     if(!valido){setError("Antes de guardar, corregí los campos señalados en Revisar.");return;}
     guardandoRef.current=true;
+    setUltimaAccionChip(null);
     setEstado("saving");
     const perfilPrev=perfil;
     const mapa={...(perfilPrev.plantillas||{})};
@@ -291,6 +306,7 @@ export default function DocumentoPropioEditor({
   ).slice(0,5);
   function recuperarVersion(item:{version:string|number;texto:string}){
     confirmar("¿Recuperar la versión "+item.version+"? Se abrirá como borrador, sin sobrescribir el modelo publicado hasta que guardes.",()=>{
+      setUltimaAccionChip(null);
       cambiarTexto(item.texto);
       seleccionRef.current={inicio:item.texto.length,fin:item.texto.length};
       inputRef.current?.focus();
@@ -320,7 +336,7 @@ export default function DocumentoPropioEditor({
       })}{texto.endsWith("\n")?"\u200b":null}</div>
       <textarea ref={inputRef} className="inp" aria-label="Texto del contrato propio" value={texto} disabled={estado==="saving"}
         style={{position:"relative",zIndex:1,width:"100%",height:360,minHeight:360,resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",padding:12,fontSize:16,lineHeight:1.65,whiteSpace:"pre-wrap",overflowWrap:"break-word",color:editandoTexto||!texto?"var(--text)":"transparent",caretColor:"var(--text)",background:"transparent"}}
-        placeholder="Pegá acá todo tu contrato…" onFocus={()=>setEditandoTexto(true)} onBlur={()=>setEditandoTexto(false)} onChange={ev=>{cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
+        placeholder="Pegá acá todo tu contrato…" onFocus={()=>setEditandoTexto(true)} onBlur={()=>setEditandoTexto(false)} onChange={ev=>{setUltimaAccionChip(null);cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
         onScroll={ev=>{if(espejoRef.current){espejoRef.current.scrollTop=ev.currentTarget.scrollTop;espejoRef.current.scrollLeft=ev.currentTarget.scrollLeft;}}}
         onSelect={ev=>recordarSeleccion(ev.currentTarget)}
         onClick={ev=>recordarSeleccion(ev.currentTarget)}
@@ -390,6 +406,7 @@ export default function DocumentoPropioEditor({
       </div>}
     {error&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{error}</div>}
     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+      {ultimaAccionChip&&texto===ultimaAccionChip.textoPosterior&&<button type="button" className="btn btn-secondary" disabled={estado==="saving"} onClick={deshacerUltimoChip}>↶ Deshacer</button>}
       <button type="button" className="btn btn-secondary" onClick={()=>{setRevisar(true);setMostrarVista(false);}}>Revisar</button>
       <button type="button" className="btn btn-secondary" onClick={()=>setMostrarVista(v=>!v)}>{mostrarVista?"Cerrar vista previa":"Vista previa"}</button>
       <button type="button" className="btn btn-primary" disabled={estado==="saving"||!necesitaGuardar} onClick={guardar}>{estado==="saving"?"Guardando…":"Guardar cambios"}</button>
