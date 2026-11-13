@@ -5572,9 +5572,9 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }
   if(esExclusividad){nombresPasos[1]="Inmobiliaria autorizada";nombresPasos[2]="Autorizante";}
   if(esContratoPropioOp)nombresPasos.pop();
-  const guiaActual=step===1?"Elegí el documento que necesitás preparar.":
+  const guiaActual=step===1?"Tocá el documento que necesitás. DocWorks te lleva directamente a cargar los datos.":
     ["Locador","Locatario","Comprador","Vendedor","Cesionario","Cedente","Autorizante","Primera parte","Segunda parte"].includes(nombresPasos[step-1])?
-      "Datos de la persona o parte interviniente. El teléfono y el correo pueden quedar solo para uso interno.":
+      "Primero completá nombre, DNI/CUIT y domicilio. El teléfono y el correo son opcionales: podés dejarlos solo para uso interno.":
     nombresPasos[step-1]==="Inmueble"?"Indicá el tipo de inmueble, su dirección y, en compraventas, la instrumentación prevista.":
     nombresPasos[step-1]==="Garantía"?"Elegí la garantía acordada; completá solo los datos de esa modalidad.":
     nombresPasos[step-1]==="Cláusulas"?"Revisá las cláusulas frecuentes. Las obligatorias ya se incluyen desde el modelo.":
@@ -5716,6 +5716,16 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     return next;
   });},[onTipoChange,perfil,clausulas,initial]);
   const setBulk=useCallback(function(patch){setData(function(d){return Object.assign({},d,patch);});},[]);
+  // En una operación nueva, tocar el documento alcanza para empezar a cargar.
+  // Refuerzo y devolución permanecen en este paso para vincular una reserva anterior.
+  function seleccionarTipoDidactico(campo,valor){
+    if(campo!=="tipo"){set(campo,valor);return;}
+    if(valor!==data.tipo&&(initial||draftTieneContenido(data))&&
+       !window.confirm("¿Cambiar el tipo de documento? Los datos que ya cargaste se conservarán; revisalos antes de generar el documento."))return;
+    set("tipo",valor);
+    if(!initial&&valor!=="refuerzo_reserva"&&valor!=="devolucion_reserva")setStep(2);
+  }
+  const tipoElegido=(TIPO_GRUPOS[grupo]&&TIPO_GRUPOS[grupo].tipos.find(function(t){return t.value===data.tipo;}))||null;
 
   // Si el perfil de la inmobiliaria termina de cargar después de abrir el formulario,
   // completamos la parte "Inmobiliaria autorizada" sin pedirle al usuario que vuelva
@@ -5749,6 +5759,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // no volver a tipear todos los datos de las partes y el inmueble.
   function elegirReservaParaDevolucion(op){
     setBulk({...datosCompraCompartidos(op),
+      inmueble_documentacion_actual:op.inmueble_documentacion_actual||"",
+      inmueble_documentacion_detalle:op.inmueble_documentacion_detalle||"",
+      inmueble_ocupacion_actual:op.inmueble_ocupacion_actual||"",
+      inmueble_ocupacion_detalle:op.inmueble_ocupacion_detalle||"",
+      inmueble_deudas_estado:op.inmueble_deudas_estado||"",
+      inmueble_deudas_detalle:op.inmueble_deudas_detalle||"",
       compra_instrumento:op.compra_instrumento||"escritura",
       compra_boleto_origen:op.compra_boleto_origen||"",
       parent_id: op.id,
@@ -5760,9 +5776,16 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",
       clausulas_ids:op.clausulas_ids||[]
     });
+    setStep(2);
   }
   function elegirReservaParaRefuerzo(op){
     setBulk({...datosCompraCompartidos(op),
+      inmueble_documentacion_actual:op.inmueble_documentacion_actual||"",
+      inmueble_documentacion_detalle:op.inmueble_documentacion_detalle||"",
+      inmueble_ocupacion_actual:op.inmueble_ocupacion_actual||"",
+      inmueble_ocupacion_detalle:op.inmueble_ocupacion_detalle||"",
+      inmueble_deudas_estado:op.inmueble_deudas_estado||"",
+      inmueble_deudas_detalle:op.inmueble_deudas_detalle||"",
       compra_instrumento:op.compra_instrumento||"escritura",
       compra_boleto_origen:op.compra_boleto_origen||"",
       parent_id: op.id,
@@ -5778,6 +5801,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       refuerzo_trayectoria:antecedenteReservaParaRefuerzo(op),
       clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"", clausulas_custom_titulo:op.clausulas_custom_titulo||"",
     });
+    setStep(2);
   }
 
   // Declarar total antes de usarlo en dependencias: evita ReferenceError en tablet/iPhone.
@@ -5787,7 +5811,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     return(
       <div>
         <div className="dw-operation-groups-balanced" style={{minHeight:260,paddingTop:4}}>
-          <StepGrupo onSelect={function(g){setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);}}/>
+          <StepGrupo onSelect={function(g){
+            if(draftTieneContenido(data)&&!window.confirm("¿Cambiar de categoría? Se conservarán los datos que ya cargaste, pero deberás revisarlos."))return;
+            setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);
+          }}/>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:14}}>
           <Btn v="ghost" onClick={onCancel}>Cancelar</Btn>
@@ -5798,7 +5825,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
 
   function renderStep(){
     if(esAlq){
-      if(step===1)return <StepTipo data={data} onChange={set} grupo="alquiler"/>;
+      if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="alquiler"/>;
       if(step===2)return <StepPersona data={data} onChange={set} prefix="locador" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes}/>;
       if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
@@ -5807,7 +5834,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       if(step===7)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     }
     if(esResAlq){
-      if(step===1)return <StepTipo data={data} onChange={set} grupo="alquiler"/>;
+      if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="alquiler"/>;
       if(step===2)return <StepPersona data={data} onChange={set} prefix="locador" titulo="Locador (propietario)" faltantes={camposFaltantes}/>;
       if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
@@ -5816,7 +5843,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     }
     if(esDocSimple){
       var grupoReal=grupo||"otros";
-      if(step===1)return <StepTipo data={data} onChange={set} grupo={grupoReal} operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} onSelectReservaDevolucion={elegirReservaParaDevolucion}/>;
+      if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo={grupoReal} operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} onSelectReservaDevolucion={elegirReservaParaDevolucion}/>;
       if(step===2)return data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes}/>;
       if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes}/>;
       if(step===4)return <StepDocSimple data={data} onChange={set}/>;
@@ -5824,7 +5851,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       return null;
     }
     // Compra normal (reserva / boleto)
-    if(step===1)return <StepTipo data={data} onChange={set} grupo="compra"/>;
+    if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="compra"/>;
     if(step===2)return <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.compra_instrumento==="cesion_boleto"?"Cesionario (adquiere los derechos)":"Comprador"} faltantes={camposFaltantes}/>;
     if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={data.compra_instrumento==="cesion_boleto"?"Cedente (cede los derechos)":"Vendedor"} faltantes={camposFaltantes}/>;
     if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
@@ -5861,13 +5888,17 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     <div style={{paddingBottom:4}}>
       {step>total&&<div role="status" aria-live="polite" style={{marginBottom:12,fontSize:13,color:"var(--text)"}}>{documentoListo?"Todo listo para generar el documento.":"Datos por completar: "+faltantesDetalle.length+". Podés revisarlos o guardar el borrador."}</div>}
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
-      {step<=total&&<div style={{marginBottom:10,lineHeight:1.4}}>
-        <span style={{fontWeight:700,color:"var(--text)",fontSize:13}}>Paso {step} de {total} · {nombresPasos[step-1]||"Datos"}</span>
-        <span style={{fontSize:12,color:"var(--dim)",marginLeft:7}}>{guiaActual}</span>
+      {step<=total&&<div aria-live="polite" style={{marginBottom:12,lineHeight:1.45,display:"flex",flexDirection:"column",gap:4}}>
+        <div style={{display:"flex",alignItems:"center",gap:9,flexWrap:"wrap"}}>
+          <span style={{fontWeight:750,color:"var(--text)",fontSize:14}}>Paso {step} de {total} · {nombresPasos[step-1]||"Datos"}</span>
+          {step>1&&tipoElegido&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:7,background:"var(--surface2)",color:"var(--muted)"}}>{tipoElegido.label}</span>}
+        </div>
+        <div style={{fontSize:12.5,color:"var(--dim)"}}>{guiaActual}</div>
+        {step>1&&faltantesPasoActual.length>0&&<div style={{fontSize:11,color:"var(--muted)"}}>Pendientes en este paso: {faltantesPasoActual.length}. Podés continuar y revisarlos al final.</div>}
       </div>}
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
-          <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em"}}>Datos esenciales · {camposCompletados} de {totalProgreso}</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.05em"}} title="No se cuentan los datos opcionales.">Datos principales · {camposCompletados} de {totalProgreso}</span>
           <span style={{fontSize:12,fontWeight:700,color:pct===100?"var(--green)":"var(--gold)"}}>{pct}%</span>
         </div>
         <div role="progressbar" aria-label="Datos esenciales completados" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:10,overflow:"hidden"}}>
@@ -5882,7 +5913,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           <div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {step<total?<Btn onClick={avanzarConAviso}>Siguiente →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar documento →</Btn>}
+            {step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar documento →</Btn>}
           </div>
         </div>
       </div>}
