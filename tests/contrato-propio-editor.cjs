@@ -89,6 +89,10 @@ check('la recuperación histórica requiere confirmación y deja borrador',()=>{
 check('se bloquea el atajo del navegador al guardar',()=>assert.match(editor,/ev\.preventDefault\(\);guardar\(\);/));
 check('los chips recomendados se recalculan usando solo los disponibles',()=>{assert.match(editor,/const chipsSugeridos=disponibles\.filter/);assert.match(editor,/nombres\.includes\(key\)/);});
 check('tocar un chip inserta el dato y lo hace desaparecer de las sugerencias',()=>{assert.match(editor,/chipsSugeridos\.map\(\(\[key,label\]\)=>/);assert.match(editor,/onClick=\{\(\)=>insertar\(key\)\}/);assert.match(editor,/capturados\.includes\(key\)/);});
+check('buscar un chip usa la selección real y no calcula renglones a mano',()=>{
+ assert.ok(editor.includes('input.setSelectionRange(pos,pos+key.length+4,"forward")'));
+ assert.ok(!editor.includes('linea*26-70'));
+});
 check('los chips insertados son visibles también al escribir y se pueden localizar',()=>{
  assert.match(editor,/aria-label="Datos automáticos ya insertados"/);
  assert.match(editor,/capturados\.map\(key=>/);

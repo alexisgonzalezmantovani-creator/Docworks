@@ -251,9 +251,9 @@ export default function DocumentoPropioEditor({
       const input=inputRef.current;
       if(!input)return;
       input.focus();
-      input.setSelectionRange(pos,pos+key.length+4);
-      const linea=texto.slice(0,pos).split("\n").length-1;
-      input.scrollTop=Math.max(0,linea*26-70);
+      // El navegador desplaza la selección al sitio real, incluso con
+      // párrafos que se ajustan a varias líneas en pantallas angostas.
+      input.setSelectionRange(pos,pos+key.length+4,"forward");
     });
   }
   function quitar(key:string){
