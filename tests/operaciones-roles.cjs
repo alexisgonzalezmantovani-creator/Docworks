@@ -45,7 +45,26 @@ async function hook(ctx){await render(app.createElement(Hook,{ctx}));}
 const fakeOp={...row.datos,id:'op-own',tipo:'reserva',estado:'activo'};
 const dashboardProps={operaciones:[fakeOp],clausulas:[],perfil:{rol:'dueno'},bloquesReserva:[],papelera:[],onNew(){},onEdit(){},onDelete(){},onViewDoc(){},onChangeEstado(){},onDuplicar(){},onRestoreVersion(){},onConvertir(){},onConvertirComodato(){},onConvertirRefuerzo(){},onConvertirBoleto(){},onConvertirDevolucion(){}};
 const initial={operaciones:[fakeOp],papelera:[{...fakeOp,id:'trash',deleted_at:'2026-11-02T12:00:00Z'}]};
+const casosPartes=[
+ {tipo:'alquiler',locatario_nombre:'Ana',locador_nombre:'Juan',esperado:'Ana (locatario) · Juan (locador)'},
+ {tipo:'reserva_alquiler',locatario_nombre:'Ana',locador_nombre:'',esperado:'Ana (locatario) · —'},
+ {tipo:'reserva',comprador_nombre:'Pedro',vendedor_nombre:'Lucía',esperado:'Pedro (comprador) · Lucía (vendedor)'},
+ {tipo:'boleto',compra_instrumento:'cesion_boleto',comprador_nombre:'Sofía',vendedor_nombre:'Lucas',esperado:'Sofía (cesionario) · Lucas (cedente)'},
+ {tipo:'comodato',comprador_nombre:'Mario',vendedor_nombre:'Rosa',esperado:'Mario (comodatario) · Rosa (comodante)'},
+ {tipo:'exclusividad',comprador_nombre:'Bayugar Propiedades',vendedor_nombre:'Julia',esperado:'Julia (autorizante) · Bayugar Propiedades (inmobiliaria)'},
+ {tipo:'reserva',comprador_nombre:'',vendedor_nombre:'',esperado:'— · —'}
+];
 (async()=>{try{
+ for(const caso of casosPartes){
+  const op={...fakeOp,...caso,id:'test-'+caso.tipo,estado:'activo',created_at:'2026-11-02T12:00:00Z'};
+  app.lsSet('dashboard_estado_tab_v1','todas');
+  await render(app.createElement(app.DashboardView,{...dashboardProps,operaciones:[op]}));
+  check('Operaciones '+caso.tipo,()=>assert.ok(document.querySelector('.op-card-premium')?.textContent.includes(caso.esperado),document.querySelector('.op-card-premium')?.textContent.slice(0,350)));
+  await render(null);
+  await render(app.createElement(app.PapeleraView,{papelera:[{...op,deleted_at:'2026-11-02T12:00:00Z'}],puedeGestionar:false}));
+  check('Papelera '+caso.tipo,()=>assert.ok(document.querySelector('.op-card')?.textContent.includes(caso.esperado),document.querySelector('.op-card')?.textContent.slice(0,350)));
+  await render(null);
+ }
  for(const role of ['dueno','admin','broker','vendedor','viewer']){
   const id=['broker','vendedor'].includes(role)?role:'owner';currentUser=id;
   await render(app.createElement(app.DashboardView,{...dashboardProps,usuarioActual:{id,rol_base:role}}));

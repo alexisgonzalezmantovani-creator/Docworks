@@ -50,6 +50,19 @@ export const EMPTY_OP = {
   tareas_custom:[],
 };
 
+
+export function resumenPartesOperacion(op,nombreConSufijo){
+  var d=op||{},tipo=d.tipo||"";
+  function parte(campo,rol){
+    var nombre=String(d[campo+"_nombre"]||"").trim();
+    return nombre?nombreConSufijo(d,campo,nombre)+" ("+rol+")":"—";
+  }
+  if(tipo==="alquiler"||tipo==="reserva_alquiler")return parte("locatario","locatario")+" · "+parte("locador","locador");
+  if(tipo==="comodato")return parte("comprador","comodatario")+" · "+parte("vendedor","comodante");
+  if(tipo==="exclusividad")return parte("vendedor","autorizante")+" · "+parte("comprador","inmobiliaria");
+  var cesion=(tipo==="reserva"||tipo==="boleto")&&d.compra_instrumento==="cesion_boleto";
+  return parte("comprador",cesion?"cesionario":"comprador")+" · "+parte("vendedor",cesion?"cedente":"vendedor");
+}
 export var CAMPOS_CRITICOS_POR_TIPO = {
   reserva: [["comprador_nombre","Nombre del comprador"],["comprador_dni","DNI del comprador"],["comprador_domicilio","Domicilio del comprador"],["vendedor_nombre","Nombre del vendedor"],["vendedor_dni","DNI del vendedor"],["vendedor_domicilio","Domicilio del vendedor"],["inmueble_direccion","Dirección del inmueble"],["precio","Precio de la operación"],["anticipo","Seña / anticipo (debe ser mayor a 0)"],["reserva_aceptacion_dias","Plazo de aceptación de la reserva"]],
   boleto: [["comprador_nombre","Nombre del comprador"],["comprador_dni","DNI del comprador"],["comprador_domicilio","Domicilio del comprador"],["vendedor_nombre","Nombre del vendedor"],["vendedor_dni","DNI del vendedor"],["vendedor_domicilio","Domicilio del vendedor"],["inmueble_direccion","Dirección del inmueble"],["precio","Precio de la operación"],["fecha_posesion","Fecha de posesión"]],
@@ -4405,11 +4418,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   // Carpetas abiertas/cerradas (colapsadas por defecto para que la lista se
   // vea compacta cuando hay muchas operaciones con documentos vinculados).
   const [openFolders,setOpenFolders]=useState({});
-  function getName(op){
-      if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler") return (op.locatario_nombre?nombreConSufijo(op,"locatario","—")+" (locatario)":"—")+" · "+(op.locador_nombre?nombreConSufijo(op,"locador","—")+" (locador)":"—");
-      var esCesion=(op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto";
-      return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+(esCesion?" (cesionario)":" (comprador)")+" · "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+(esCesion?" (cedente)":" (vendedor)");
-    }
+  function getName(op){return resumenPartesOperacion(op,nombreConSufijo);}
   function getMonto(op){if(op.tipo==="alquiler")return op.alquiler_monto_inicial?fmt$(op.alquiler_monto_inicial,op.alquiler_moneda)+"/mes":null;if(op.tipo==="reserva_alquiler")return op.res_alq_monto_mensual?fmt$(op.res_alq_monto_mensual,op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS")+"/mes est.":null;return op.precio?fmt$(op.precio,op.moneda):null;}
 
   const [sharingId,setSharingId]=useState(null);
@@ -5674,7 +5683,7 @@ export function enfocarCampoOperacion(campo){
 }
 
 export function crearOperacionForm(deps){
- const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -5896,10 +5905,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // Refuerzo y devolución permanecen en este paso para vincular una reserva anterior.
   function seleccionarTipoDidactico(campo,valor){
     if(campo!=="tipo"){set(campo,valor);return;}
-    if(valor!==data.tipo&&(initial||draftTieneContenido(data))&&
-       !window.confirm("¿Cambiar el tipo de documento? Los datos que ya cargaste se conservarán; revisalos antes de generar el documento."))return;
-    set("tipo",valor);
-    if(!initial&&valor!=="refuerzo_reserva"&&valor!=="devolucion_reserva")setStep(2);
+    function cambiar(){set("tipo",valor);if(!initial&&valor!=="refuerzo_reserva"&&valor!=="devolucion_reserva")setStep(2);}
+    if(valor!==data.tipo&&(initial||draftTieneContenido(data))){
+      requestDwConfirm("¿Cambiar el tipo de documento? Los datos que ya cargaste se conservarán; revisalos antes de generar el documento.",cambiar,"Cambiar documento");
+      return;
+    }
+    cambiar();
   }
   const tipoElegido=(TIPO_GRUPOS[grupo]&&TIPO_GRUPOS[grupo].tipos.find(function(t){return t.value===data.tipo;}))||null;
 
@@ -5988,8 +5999,9 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       <div>
         <div className="dw-operation-groups-balanced" style={{minHeight:260,paddingTop:4}}>
           <StepGrupo onSelect={function(g){
-            if(draftTieneContenido(data)&&!window.confirm("¿Cambiar de categoría? Se conservarán los datos que ya cargaste, pero deberás revisarlos."))return;
-            setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);
+            function cambiar(){setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);}
+            if(draftTieneContenido(data))requestDwConfirm("¿Cambiar de categoría? Se conservarán los datos que ya cargaste, pero deberás revisarlos.",cambiar,"Cambiar categoría");
+            else cambiar();
           }}/>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:14}}>
@@ -6109,11 +6121,13 @@ export function crearPapeleraView(deps){
 function PapeleraView({puedeGestionar=false,papelera,onRestore,onDeletePermanente,onVaciar,confirmVaciar,setConfirmVaciar,embedded}){
   const [confirmDelId,setConfirmDelId]=useState(null);
   function diasRestantes(deletedAt){
-    var venc=new Date(deletedAt).getTime()+PAPELERA_DIAS*24*60*60*1000;
+    var tiempo=new Date(deletedAt||'').getTime();
+    if(!Number.isFinite(tiempo))return null;
+    var venc=tiempo+PAPELERA_DIAS*24*60*60*1000;
     var dias=Math.ceil((venc-Date.now())/(24*60*60*1000));
     return Math.max(0,dias);
   }
-  function getName(op){if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler")return (op.locatario_nombre?nombreConSufijo(op,"locatario","—"):"—")+" (locatario) ← "+(op.locador_nombre?nombreConSufijo(op,"locador","—"):"—")+" (locador)";var cesion=(op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto";return (op.comprador_nombre?nombreConSufijo(op,"comprador","—"):"—")+(cesion?" (cesionario)":" (comprador)")+" ← "+(op.vendedor_nombre?nombreConSufijo(op,"vendedor","—"):"—")+(cesion?" (cedente)":" (vendedor)");}
+  function getName(op){return resumenPartesOperacion(op,nombreConSufijo);}
   return(
     <div>
       {!embedded&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18,flexWrap:"wrap",gap:10}}>
@@ -6142,8 +6156,8 @@ function PapeleraView({puedeGestionar=false,papelera,onRestore,onDeletePermanent
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:5}}>
                     <span className="badge badge-tipo">{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]}</span>
-                    <span style={{fontSize:12,color:"var(--dim)"}}>Eliminada el {new Date(op.deleted_at).toLocaleDateString("es-AR")}</span>
-                    <span style={{fontSize:12,padding:"1px 8px",borderRadius:20,background:dias<=5?"rgba(248,113,113,0.12)":"rgba(255,255,255,0.06)",color:dias<=5?"var(--red)":"var(--dim)"}}>{dias>0?dias+" días restantes":"Pendiente de purga"}</span>
+                    <span style={{fontSize:12,color:"var(--dim)"}}>Eliminada el {Number.isFinite(new Date(op.deleted_at||"").getTime())?new Date(op.deleted_at).toLocaleDateString("es-AR"):"fecha no disponible"}</span>
+                    <span style={{fontSize:12,padding:"1px 8px",borderRadius:20,background:dias!==null&&dias<=5?"rgba(248,113,113,0.12)":"rgba(255,255,255,0.06)",color:dias!==null&&dias<=5?"var(--red)":"var(--dim)"}}>{dias===null?"Plazo sin calcular":dias>0?dias+" días restantes":"Pendiente de purga"}</span>
                   </div>
                   <div style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>{getName(op)}</div>
                   <div style={{fontSize:12,color:"var(--dim)"}}>{op.inmueble_direccion?"📍 "+op.inmueble_direccion:"Sin dirección"}</div>
