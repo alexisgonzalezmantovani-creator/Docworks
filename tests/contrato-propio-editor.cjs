@@ -80,10 +80,9 @@ check('quitar chip respeta saltos de línea y párrafos de Word',()=>{
  const original='Encabezado\n{{precio_letras}}\nCláusula siguiente.';
  assert.equal(quitar(original,'precio_letras').texto,'Encabezado\n\nCláusula siguiente.');
 });
-check('el botón de quitar está en cada etiqueta insertada',()=>{
- const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
- assert.ok(editor.includes('onClick={()=>quitar(key)}'));
- assert.ok(editor.includes('aria-label={"Quitar "+etiqueta+" del contrato"}'));
+check('no hay lista independiente de chips insertados',()=>{
+ assert.ok(!editor.includes('aria-label="Datos automáticos ya insertados"'));
+ assert.ok(editor.includes('aria-label="Texto del contrato propio"'));
 });
 check('deshacer aparece sólo después de modificar chips',()=>{
  const src=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
@@ -96,51 +95,51 @@ check('el guardado exige que no haya duplicados',()=>assert.match(editor,/!repet
 check('el contrato propio incluye los chips optativos de tratamiento y artículo',()=>{assert.match(editor,/comprador_tratamiento/);assert.match(editor,/vendedor_articulo/);assert.match(editor,/comodante_tratamiento/);assert.match(editor,/autorizante_articulo/);});
 check('la recuperación histórica requiere confirmación y deja borrador',()=>{assert.match(editor,/versionesDisponibles\.map/);assert.match(editor,/confirmar\("¿Recuperar la versión /);assert.match(editor,/La recuperación no guarda ni publica nada automáticamente/);});
 check('se bloquea el atajo del navegador al guardar',()=>assert.match(editor,/ev\.preventDefault\(\);guardar\(\);/));
-check('los chips recomendados se recalculan usando solo los disponibles',()=>{assert.match(editor,/const chipsSugeridos=disponibles\.filter/);assert.match(editor,/nombres\.includes\(key\)/);});
-check('tocar un chip inserta el dato y lo hace desaparecer de las sugerencias',()=>{assert.match(editor,/chipsSugeridos\.map\(\(\[key,label\]\)=>/);assert.match(editor,/onClick=\{\(\)=>insertar\(key\)\}/);assert.match(editor,/capturados\.includes\(key\)/);});
+check('selector único recibe todos los datos y separa los usados',()=>{
+ assert.ok(editor.includes('<DatosCompactos items={todos.filter'));
+ assert.ok(editor.includes('usados={capturados}'));
+});
+check('selector único inserta datos sin duplicarlos',()=>{
+ assert.ok(editor.includes('onInsert={key=>insertar(key,revisar)}'));
+ assert.ok(editor.includes('if(!permitidos.has(key)||capturados.includes(key))return'));
+});
 check('buscar un chip usa la selección real y no calcula renglones a mano',()=>{
  assert.ok(editor.includes('input.setSelectionRange(pos,pos+key.length+4,"forward")'));
  assert.ok(!editor.includes('linea*26-70'));
 });
-check('los chips insertados son visibles también al escribir y se pueden localizar',()=>{
- assert.match(editor,/aria-label="Datos automáticos ya insertados"/);
- assert.match(editor,/capturados\.map\(key=>/);
- assert.match(editor,/onClick=\{\(\)=>irAlDato\(key\)\}/);
- assert.match(editor,/setSelectionRange\(pos,pos\+key\.length\+4,"forward"\)/);
+check('chips visibles directamente en el texto del contrato',()=>{
+ assert.ok(editor.includes('const etiqueta=nombreDatoBreve(match[1]'));
+ assert.ok(editor.includes('input.setSelectionRange(pos,pos+key.length+4,"forward")'));
 });
 check('selector separa las condiciones económicas y conserva todos los tipos',()=>{
  assert.match(editor,/titulo:"Condiciones de pago"/);
  assert.match(editor,/titulo:"Inmobiliaria y otros"/);
  assert.match(editor,/titulo:"Importes y fechas"/);
 });
-check('revisión permite insertar los datos obligatorios faltantes con un toque',()=>{
- assert.ok(editor.includes('aria-label="Datos obligatorios pendientes"'));
- assert.ok(editor.includes('faltantes.map(key=><button'));
- assert.ok(editor.includes('onClick={()=>insertar(key)}'));
+check('revisión señala faltantes sin duplicar botones',()=>{
+ assert.ok(editor.includes('Datos pendientes:'));
+ assert.ok(editor.includes('Abrí «Insertar dato»'));
 });
-check('revisión conserva los datos pendientes al insertar uno',()=>{
+check('revisión permanece abierta al insertar desde el selector',()=>{
  assert.ok(editor.includes('function insertar(key:string,mantenerRevision=false)'));
- assert.ok(editor.includes('cambiarTexto(nuevo.texto,mantenerRevision)'));
- assert.ok(editor.includes('onClick={()=>insertar(key,true)}'));
+ assert.ok(editor.includes('onInsert={key=>insertar(key,revisar)}'));
  assert.ok(editor.includes('if(!mantenerRevision)setRevisar(false)'));
 });
-check('al revisar se ocultan botones frecuentes duplicados y se priorizan faltantes',()=>{
- assert.ok(editor.includes('{chipsSugeridos.length>0&&!revisar&&'));
- assert.ok(editor.includes('{revisar&&faltantes.length>0&&'));
+check('no hay botones frecuentes duplicados bajo el selector',()=>{
+ assert.ok(!editor.includes('aria-label="Datos recomendados para insertar"'));
+ assert.ok(editor.includes('<DatosCompactos items='));
 });
 check('errores de chips desconocidos se explican sin mostrar códigos internos',()=>{
  assert.ok(editor.includes('datos automáticos que este documento no reconoce'));
  assert.ok(!editor.includes('Chips desconocidos: '+String.fromCharCode(34)+'+invalidos.join'));
 });
-check('chips visuales tienen íconos accesibles y botones táctiles',()=>{
- assert.match(editor,/function IconoDato\(/);
- assert.match(editor,/function nombreDatoBreve\(/);
- assert.ok(editor.includes('<IconoDato dato={key}/>'));
- assert.ok(editor.includes('aria-hidden="true"'));
- assert.ok(editor.includes('onClick={()=>quitar(key)}'));
- assert.ok(editor.includes('onClick={()=>insertar(key)}'));
+check('selector compartido usa botones con íconos',()=>{
+ const picker=fs.readFileSync(path.join(dir,'src/DatosCompactos.tsx'),'utf8');
+ assert.ok(picker.includes('function Icon('));
+ assert.ok(picker.includes('aria-hidden="true"'));
+ assert.ok(picker.includes('minHeight:42'));
 });
-check('nombres breves se aplican a editor y vista previa del texto',()=>{
+check('etiquetas breves se conservan en los datos del contrato',()=>{
  assert.ok(editor.includes('const etiqueta=nombreDatoBreve(match[1]'));
  assert.ok(editor.includes('nombreDatoBreve(trozo.slice(2,-2)'));
  assert.ok(editor.includes('nombreDatoBreve(key,label)'));
@@ -153,9 +152,9 @@ check('etiquetas cortas respetan las mayúsculas y datos específicos',()=>{
  assert.equal(nombreBreve('precio_letras','Precio'),'Precio');
  assert.equal(nombreBreve('inmobiliaria_nombre','Inmobiliaria'),'Inmobiliaria');
 });
-check('controles de datos insertados tienen tamaño táctil mínimo',()=>{
- assert.ok(editor.includes('minWidth:40,padding:"6px 9px"'));
- assert.ok(editor.includes('En el contrato ({capturados.length})'));
+check('botones de insertar tienen tamaño táctil mínimo',()=>{
+ const picker=fs.readFileSync(path.join(dir,'src/DatosCompactos.tsx'),'utf8');
+ assert.ok(picker.includes('minHeight:42'));
 });
 check('quitar y deshacer mantienen abierta la revisión y restauran selección',()=>{
  assert.ok(editor.includes('cambiarTexto(nuevo.texto,revisar)'));

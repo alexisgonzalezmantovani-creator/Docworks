@@ -377,7 +377,7 @@ export default function DocumentoPropioEditor({
         onKeyUp={ev=>recordarSeleccion(ev.currentTarget)}
         onKeyDown={ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="s"){ev.preventDefault();guardar();}}} />
     </div>
-    <DatosCompactos items={disponibles.map(([key,label])=>({key,label:nombreDatoBreve(key,label)}))}
+    <DatosCompactos items={todos.filter(([key])=>key!=="inmueble_partido"&&key!=="inmueble_provincia").map(([key,label])=>({key,label:nombreDatoBreve(key,label)}))}
       usados={capturados} onInsert={key=>insertar(key,revisar)} disabled={estado==="saving"}/>
     <span style={{fontSize:11,color:"var(--muted)"}}>{texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
     {revisar&&<div role={valido?"status":"alert"} style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:valido?"var(--green)":"var(--amber)"}}>
