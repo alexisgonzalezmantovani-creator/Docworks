@@ -15,9 +15,11 @@ function HojaPDF({documento,pagina,ampliada=false,onRendered=undefined}){
         const hoja=await documento.getPage(pagina);
         if(!vigente||!canvas.current)return;
         const original=hoja.getViewport({scale:1});
+        // Vista fija: llenar el ancho disponible en lugar de encoger la hoja
+        // para que entre toda su altura en pantalla. Se puede desplazar
+        // verticalmente para leerla, sin controles ni gestos de zoom.
         const ancho=Math.max(100,caja.current.clientWidth-24);
-        const alto=Math.max(180,ampliada?window.innerHeight-170:window.innerHeight-Math.max(12,caja.current.getBoundingClientRect().top)-48);
-        const escala=Math.min(ancho/original.width,alto/original.height,ampliada?2:1);
+        const escala=Math.min(ancho/original.width,ampliada?2:1.15);
         const viewport=hoja.getViewport({scale:escala});
         const pixelRatio=Math.min(window.devicePixelRatio||1,2);
         const elemento=canvas.current;
