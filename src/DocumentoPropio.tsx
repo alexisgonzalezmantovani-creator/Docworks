@@ -104,6 +104,10 @@ export default function DocumentoPropioEditor({
     :tipo==="alquiler"?["alquiler_monto_letras"]
     :(tipo==="reserva"||tipo==="boleto"||tipo==="refuerzo_reserva"||tipo==="devolucion_reserva")?["precio_letras"]:[];
   const importesSinChip=chipsImportesRecomendados.filter(k=>!capturados.includes(k));
+  // Accesos rápidos cortos: lo insertado desaparece y queda en el documento.
+  const chipsSugeridos=disponibles.filter(([key])=>
+    nombres.includes(key)||key==="inmueble_direccion"||chipsImportesRecomendados.includes(key)
+  ).slice(0,6);
   // Un DNI fijo del Word original puede filtrar datos de otra operación.
   // Es orientativo: nunca reemplazamos ni alteramos el texto del usuario.
   const textoSinChips=texto.replace(/\{\{[a-zA-Z0-9_]+\}\}/g,"");
@@ -222,6 +226,13 @@ export default function DocumentoPropioEditor({
       </label>
       <span role="status" style={{fontSize:11,color:"var(--muted)"}}>{capturados.length} datos insertados · {disponibles.length} disponibles · {texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
     </div>
+    {chipsSugeridos.length>0&&<div role="group" aria-label="Datos recomendados para insertar" style={{display:"flex",flexDirection:"column",gap:7}}>
+      <div style={{fontSize:12,color:"var(--muted)"}}>Datos principales: tocá uno para insertarlo donde dejaste el cursor. Al insertarlo, desaparece de esta lista.</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+        {chipsSugeridos.map(([key,label])=><button key={key} type="button" className="btn btn-secondary btn-sm" aria-label={"Insertar "+label} title={"Insertar "+label} disabled={estado==="saving"} style={{minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}} onClick={()=>insertar(key)}>+ {label}</button>)}
+      </div>
+    </div>}
+    {!chipsSugeridos.length&&capturados.length>0&&<div role="status" style={{fontSize:12,color:"var(--green)"}}>✓ Ya insertaste los datos principales recomendados.</div>}
     {revisar&&<div role={valido?"status":"alert"} style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:valido?"var(--green)":"var(--amber)"}}>
       {valido?"✓ Los datos principales están vinculados. Revisá también la redacción y los importes antes de usarlo.":[
         texto.trim().length<=40?"Pegá el texto completo del contrato":null,

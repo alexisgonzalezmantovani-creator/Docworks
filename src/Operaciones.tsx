@@ -2066,6 +2066,17 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
+/* Botones táctiles cómodos sin moverlos debajo de la tarjeta en iPhone. */
+@media (max-width:760px){
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn,
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions .op-more{
+    min-height:44px!important;
+  }
+  .stats-money-row .stats-money-value{
+    white-space:pre-line!important;
+  }
+}
+
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
 .dw-operation-page-heading{z-index:40;isolation:isolate;background-color:var(--bg)!important;background-image:none;backdrop-filter:none;opacity:1;flex-shrink:0;box-shadow:0 7px 0 var(--bg)}
 .dw-operation-page-heading::before{content:"";position:absolute;inset:-30px -28px 0;background:var(--bg);z-index:-1;pointer-events:none}
@@ -4541,7 +4552,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     var removiendo = !!removingIds[op.id];
 
     const acciones=(
-      <div className="op-actions" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
+      <div className="op-actions" role="group" aria-label="Acciones de la operación" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
         {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={13}/> <span>{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span></Btn>}
         <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
         {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}
@@ -4781,6 +4792,44 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
  return DashboardView;
 }
 
+
+/* Canon mensual: nunca sumar pesos y dólares ni contar dos veces un alquiler
+   cuando la reserva y el contrato viven en la misma carpeta. */
+export function calcularCanonesPorMoneda(raices, operaciones, parseMontoAR){
+  const porPadre=new Map();
+  (operaciones||[]).forEach(function(op){
+    if(!op||!op.parent_id)return;
+    const id=String(op.parent_id);
+    if(!porPadre.has(id))porPadre.set(id,[]);
+    porPadre.get(id).push(op);
+  });
+  const centavos={ARS:0,USD:0};
+  (raices||[]).forEach(function(raiz){
+    if(!raiz)return;
+    const pendientes=[raiz],vistos=new Set(),contratos=[];
+    while(pendientes.length){
+      const op=pendientes.shift();
+      if(!op||vistos.has(op.id))continue;
+      vistos.add(op.id);
+      if(op.tipo==="alquiler"&&op.alquiler_monto_inicial!==""&&op.alquiler_monto_inicial!=null)contratos.push(op);
+      (porPadre.get(String(op.id))||[]).forEach(function(h){pendientes.push(h);});
+    }
+    if(!contratos.length)return;
+    // En una carpeta con contratos renovados solo cuenta el último contrato.
+    contratos.sort(function(a,b){
+      const fa=Date.parse(a.updated_at||a.actualizado_en||a.created_at||"")||0;
+      const fb=Date.parse(b.updated_at||b.actualizado_en||b.created_at||"")||0;
+      return fa-fb;
+    });
+    const contrato=contratos[contratos.length-1];
+    const monto=parseMontoAR(contrato.alquiler_monto_inicial);
+    if(!Number.isFinite(monto)||monto<=0)return;
+    const moneda=contrato.alquiler_moneda==="USD"?"USD":"ARS";
+    centavos[moneda]+=Math.round(monto*100);
+  });
+  return {ARS:centavos.ARS/100,USD:centavos.USD/100};
+}
+
 export function crearEstadisticasView(deps){
  const {Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState} = deps;
 
@@ -4844,7 +4893,9 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
   // (reserva → boleto, refuerzo, comodato, etc.) nunca vuelven a sumar.
   var usd=operacionesVisibles.filter(function(o){return o.moneda==="USD"&&o.precio;}).reduce(function(s,o){return s+parseMontoAR(o.precio||0);},0);
   var ars=operacionesVisibles.filter(function(o){return o.moneda==="ARS"&&o.precio;}).reduce(function(s,o){return s+parseMontoAR(o.precio||0);},0);
-  var canon=operacionesVisibles.filter(function(o){return o.tipo==="alquiler"&&o.alquiler_monto_inicial;}).reduce(function(s,o){var n=parseMontoAR(o.alquiler_monto_inicial);return s+(isFinite(n)?n:0);},0);
+  var canones=calcularCanonesPorMoneda(operacionesVisibles,operaciones,parseMontoAR);
+  var canonLineas=[canones.USD>0?"U$D "+canones.USD.toLocaleString("es-AR",{maximumFractionDigits:2}):null,canones.ARS>0?"$ "+canones.ARS.toLocaleString("es-AR",{maximumFractionDigits:2}):null].filter(Boolean);
+  var canonTexto=canonLineas.length?canonLineas.join("\n"):"$ 0";
   function grupoRaiz(o){return [o].concat(operaciones.filter(function(h){return h.parent_id===o.id;}));}
   function comisionOperacion(o){
     var items=getComisionComponents(o);
@@ -4908,8 +4959,8 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
       </div>
 
       {!esBroker && <div className="stats-money-row" aria-label="Resumen de importes" style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,marginBottom:16}}>
-        {[{l:"Total USD",v:"U$D "+usd.toLocaleString("es-AR"),i:"💵"},{l:"Total ARS",v:"$ "+ars.toLocaleString("es-AR"),i:"💴"},{l:"Canon/mes",v:"$ "+canon.toLocaleString("es-AR"),i:"🏘"}].map(function(s){
-          return <div key={s.l} className="card stats-money-card" title={s.l+": "+s.v} style={{padding:18}}><div className="stats-money-icon" aria-hidden="true" style={{fontSize:18,marginBottom:6}}>{s.i}</div><div className="stats-money-value" style={{fontFamily:"DM Serif Display,serif",fontSize:18,color:"var(--teal)",lineHeight:1.2,marginBottom:3}}>{s.v}</div><div className="stats-money-label" style={{fontSize:12,color:"var(--dim)"}}>{s.l}</div></div>;
+        {[{l:"Total USD",v:"U$D "+usd.toLocaleString("es-AR"),i:"💵"},{l:"Total ARS",v:"$ "+ars.toLocaleString("es-AR"),i:"💴"},{l:"Canon/mes",v:canonTexto,i:"🏘"}].map(function(s){
+          return <div key={s.l} className="card stats-money-card" title={s.l+": "+s.v.replace(/\n/g," · ")} style={{padding:18}}><div className="stats-money-icon" aria-hidden="true" style={{fontSize:18,marginBottom:6}}>{s.i}</div><div className="stats-money-value" style={{fontFamily:"DM Serif Display,serif",fontSize:18,color:"var(--teal)",lineHeight:1.2,marginBottom:3}}>{s.v}</div><div className="stats-money-label" style={{fontSize:12,color:"var(--dim)"}}>{s.l}</div></div>;
         })}
       </div>}
 

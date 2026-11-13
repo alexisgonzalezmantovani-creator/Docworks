@@ -36,4 +36,6 @@ const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
 check('el guardado exige que no haya duplicados',()=>assert.match(editor,/!repetidos\.length/));
 check('la recuperación histórica requiere confirmación y deja borrador',()=>{assert.match(editor,/versionesDisponibles\.map/);assert.match(editor,/confirmar\("¿Recuperar la versión /);assert.match(editor,/La recuperación no guarda ni publica nada automáticamente/);});
 check('se bloquea el atajo del navegador al guardar',()=>assert.match(editor,/ev\.preventDefault\(\);guardar\(\);/));
+check('los chips recomendados se recalculan usando solo los disponibles',()=>{assert.match(editor,/const chipsSugeridos=disponibles\.filter/);assert.match(editor,/nombres\.includes\(key\)/);});
+check('tocar un chip inserta el dato y lo hace desaparecer de las sugerencias',()=>{assert.match(editor,/chipsSugeridos\.map\(\(\[key,label\]\)=>/);assert.match(editor,/onClick=\{\(\)=>insertar\(key\)\}/);assert.match(editor,/capturados\.includes\(key\)/);});
 console.log('APROBADAS '+n+' pruebas de contrato propio.');

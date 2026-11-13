@@ -23,7 +23,15 @@ function AspectoHarness(){
  const [perfil,setPerfil]=useState({rol:'dueno',nombre:'Inmobiliaria de ejemplo',matricula:'0000',web:'ejemplo.test',direccion:'Calle de ejemplo 123, Pilar',plantillas:{}});
  return <><GStyles/><main style={{maxWidth:1100,margin:'0 auto',padding:14}}><ConfiguracionView requestedTab={{tab:'plantillas'}} perfil={perfil} onChange={async p=>{setPerfil(p);return {};}} currentUserId="prueba" currentUserRole="dueno" equipo={[]} operaciones={[]} clausulas={[]} bloquesReserva={[]}/></main></>;
 }
-function EstadisticasHarness(){return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14}}><EstadisticasView operaciones={[]} equipo={[]} perfil={{rol:'dueno'}} currentUserRole="dueno"/></main></>;}
+function EstadisticasHarness(){
+ const operaciones=[
+   {...EMPTY_OP,id:'renta-ars',tipo:'alquiler',alquiler_monto_inicial:'250000',alquiler_moneda:'ARS',created_at:'2026-11-01T12:00:00Z'},
+   {...EMPTY_OP,id:'reserva-vinculada',tipo:'reserva_alquiler',created_at:'2026-11-02T12:00:00Z'},
+   {...EMPTY_OP,id:'renta-usd',parent_id:'reserva-vinculada',tipo:'alquiler',alquiler_monto_inicial:'1900',alquiler_moneda:'USD',created_at:'2026-11-03T12:00:00Z'},
+   {...EMPTY_OP,id:'venta-prueba',tipo:'reserva',precio:'123000',moneda:'USD',created_at:'2026-11-04T12:00:00Z'}
+ ];
+ return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><main style={{maxWidth:1000,margin:'0 auto',padding:14}}><EstadisticasView operaciones={operaciones} equipo={[]} perfil={{rol:'dueno'}} currentUserRole="dueno"/></main></>;
+}
 createRoot(document.getElementById('root')).render(location.pathname==='/superadmin'?<><GStyles/><PanelSuperadminPrueba contexto={{usuario:{nombre:'Administración de prueba'}}} onLogout={()=>{}}/></>:location.pathname==='/aspecto'?<AspectoHarness/>:location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
 `;
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+harness,resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:path.join(out,'harness.js')});
@@ -221,6 +229,19 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   assert.ok(await page.locator('.recharts-wrapper svg').count()>=2);checks++;
   assert.equal(await page.getByText('No se pudieron cargar los gráficos.',{exact:false}).count(),0);checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' estadísticas overflow');checks++;
+  const money=page.locator('.stats-money-row > .stats-money-card');
+  assert.equal(await money.count(),3,'Los tres importes siempre comparten la fila');checks++;
+  const canon=await money.nth(2).locator('.stats-money-value').innerText();
+  assert.ok(canon.includes('U$D 1.900')&&canon.includes('$ 250.000'),'Canon mensual sin mezclar monedas');checks++;
+  const posiciones=await money.evaluateAll(ns=>ns.map(n=>({top:n.getBoundingClientRect().top,left:n.getBoundingClientRect().left})));
+  assert.ok(posiciones.every(x=>Math.abs(x.top-posiciones[0].top)<2),'Los tres totales aparecen en la misma fila');checks++;
+  if(name==='iphone'){
+    await page.setViewportSize({width:320,height:740});
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'iPhone 320px sin desborde en estadísticas');checks++;
+    const c=await money.evaluateAll(ns=>ns.map(n=>n.getBoundingClientRect().top));
+    assert.ok(c.every(y=>Math.abs(y-c[0])<2),'Los tres totales entran en iPhone de 320px');checks++;
+    await page.setViewportSize({width,height});
+  }
   await page.screenshot({path:path.join(out,'estadisticas-'+name+'.png'),fullPage:true});
   await page.goto('http://127.0.0.1:'+server.address().port+'/superadmin');
   await page.locator('.sa-overview button').first().waitFor();
