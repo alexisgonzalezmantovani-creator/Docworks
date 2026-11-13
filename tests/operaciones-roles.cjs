@@ -45,6 +45,12 @@ async function hook(ctx){await render(app.createElement(Hook,{ctx}));}
 const fakeOp={...row.datos,id:'op-own',tipo:'reserva',estado:'activo'};
 const dashboardProps={operaciones:[fakeOp],clausulas:[],perfil:{rol:'dueno'},bloquesReserva:[],papelera:[],onNew(){},onEdit(){},onDelete(){},onViewDoc(){},onChangeEstado(){},onDuplicar(){},onRestoreVersion(){},onConvertir(){},onConvertirComodato(){},onConvertirRefuerzo(){},onConvertirBoleto(){},onConvertirDevolucion(){}};
 const initial={operaciones:[fakeOp],papelera:[{...fakeOp,id:'trash',deleted_at:'2026-11-02T12:00:00Z'}]};
+// Una carpeta cuenta una vez aunque el estado del documento hijo sea distinto.
+const casosEstadoCarpeta=[
+ {raiz:"borrador",hijo:"activo",esperado:["1","1","0","0"],visible:true},
+ {raiz:"cerrado",hijo:"borrador",esperado:["1","0","1","0"],visible:false},
+ {raiz:"cerrado",hijo:"cerrado",esperado:["1","0","0","1"],visible:false}
+];
 const casosPartes=[
  {tipo:'alquiler',locatario_nombre:'Ana',locador_nombre:'Juan',esperado:'Ana (locatario) · Juan (locador)'},
  {tipo:'reserva_alquiler',locatario_nombre:'Ana',locador_nombre:'',esperado:'Ana (locatario) · —'},
@@ -55,6 +61,19 @@ const casosPartes=[
  {tipo:'reserva',comprador_nombre:'',vendedor_nombre:'',esperado:'— · —'}
 ];
 (async()=>{try{
+ for(const caso of casosEstadoCarpeta){
+  app.lsSet('dashboard_estado_tab_v1','activo');
+  app.lsSet('dashboard_filtros_v1',{desde:'',hasta:'',agente:'todos',montoMin:'',montoMax:'',sucursal:'todos'});
+  const origen={...fakeOp,id:'group-root',estado:caso.raiz,parent_id:null};
+  const derivado={...fakeOp,id:'group-child',tipo:'boleto',estado:caso.hijo,parent_id:'group-root'};
+  await render(app.createElement(app.DashboardView,{...dashboardProps,operaciones:[origen,derivado]}));
+  check('estado agrupado '+caso.raiz+'/'+caso.hijo,()=>{
+    const items=Array.from(document.querySelectorAll('.dw-overview-stat')).slice(0,4);
+    assert.deepEqual(items.map(el=>el.querySelector('.dw-overview-value')?.textContent),caso.esperado);
+    assert.equal(!!document.querySelector('.op-card-premium'),caso.visible);
+  });
+  await render(null);
+ }
  for(const caso of casosPartes){
   const op={...fakeOp,...caso,id:'test-'+caso.tipo,estado:'activo',created_at:'2026-11-02T12:00:00Z'};
   app.lsSet('dashboard_estado_tab_v1','todas');

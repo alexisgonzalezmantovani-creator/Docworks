@@ -4900,7 +4900,7 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
   function f(k){return data[prefix+"_"+k]||"";}
   function s(k){return function(e){onChange(prefix+"_"+k,e.target.value);};}
   function onBlurNombre(){ var v=f("nombre"); var cap=capitalizarNombrePropio(v); if(cap!==v) onChange(prefix+"_nombre",cap); }
-  var cotitulares = data[prefix+"_cotitulares"]||[];
+  var cotitulares = Array.isArray(data[prefix+"_cotitulares"])?data[prefix+"_cotitulares"]:[];
   var esCesionCompra=(data.tipo==="reserva"||data.tipo==="boleto")&&data.compra_instrumento==="cesion_boleto";
   var rolAdicional=esCesionCompra?(prefix==="vendedor"?"CEDENTE":"CESIONARIO"):rolDePrefix(data.tipo,prefix);
   var etiquetaParte=({LOCADOR:"propietario",LOCATARIO:"inquilino",VENDEDOR:"vendedor",COMPRADOR:"comprador",CEDENTE:"cedente",CESIONARIO:"cesionario",COMODANTE:"comodante",COMODATARIO:"comodatario",AUTORIZANTE:"autorizante",INMOBILIARIA:"representante de la inmobiliaria"})[rolAdicional]||"participante";
@@ -4910,8 +4910,9 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
   function quitarCotitular(i){
     var persona=cotitulares[i]||{};
     var tieneDatos=["nombre","dni","domicilio","email","telefono"].some(function(k){return String(persona[k]||"").trim()!=="";});
-    if(tieneDatos&&!window.confirm("¿Quitar esta persona adicional? Los datos cargados se perderán."))return;
-    setCotitulares(cotitulares.filter(function(p,idx){return idx!==i;}));
+    function quitar(){setCotitulares(cotitulares.filter(function(p,idx){return idx!==i;}));}
+    if(tieneDatos)requestDwConfirm("¿Quitar esta persona adicional? Los datos cargados se perderán.",quitar,"Quitar persona");
+    else quitar();
   }
   function onBlurNombreCotitular(i){ return function(){ var p=cotitulares[i]; if(!p) return; var cap=capitalizarNombrePropio(p.nombre); if(cap!==p.nombre) actualizarCotitular(i,"nombre",cap); }; }
   return(
@@ -4935,7 +4936,7 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
             <div key={i} style={{padding:"10px 12px",borderRadius:10,background:"rgba(255,255,255,0.02)",border:"1px solid var(--border)",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
                 <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.06em"}}>{etiquetaParte.charAt(0).toUpperCase()+etiquetaParte.slice(1)} {i+2}</div>
-                <button onClick={function(){quitarCotitular(i);}} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:12}}>✕ Quitar</button>
+                <button type="button" aria-label={"Quitar "+etiquetaParte+" "+(i+2)} onClick={function(){quitarCotitular(i);}} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:12,minHeight:40,padding:"7px 9px"}}>✕ Quitar</button>
               </div>
               <div className="dw-persona-fields">
                 <Inp id={"dw-field-"+prefix+"_cotitular_"+i+"_nombre"} label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",e.target.value);}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_cotitular_"+i+"_nombre")}/>

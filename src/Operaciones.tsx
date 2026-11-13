@@ -51,6 +51,14 @@ export const EMPTY_OP = {
 };
 
 
+// Cada carpeta cuenta una vez, aun cuando sus documentos tengan estados distintos.
+export function estadoCarpetaOperacion(op,hijos){
+  var estados=[op].concat(Array.isArray(hijos)?hijos:[]).filter(Boolean).map(function(x){return x.estado||"borrador";});
+  if(estados.includes("activo"))return "activo";
+  if(estados.includes("borrador"))return "borrador";
+  if(estados.includes("cerrado"))return "cerrado";
+  return "borrador";
+}
 export function resumenPartesOperacion(op,nombreConSufijo){
   var d=op||{},tipo=d.tipo||"";
   function parte(campo,rol){
@@ -4385,7 +4393,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       matchSearch=grupoDe(op).some(function(o){return operacionCoincideBusqueda(o,effectiveSearch);});
     }
     if(filtroTipo!=="todos")matchTipo=grupoDe(op).some(function(o){return o.tipo===filtroTipo;});
-    if(estadoTab!=="todas"&&estadoTab!=="papelera")matchEstado=op.estado===estadoTab;
+    if(estadoTab!=="todas"&&estadoTab!=="papelera")matchEstado=estadoCarpetaOperacion(op,childrenMap[op.id])===estadoTab;
     var matchAvanzado=true;
     if(filtros.agente!=="todos") matchAvanzado=grupoDe(op).some(function(o){return String(o.broker_id||"")===String(filtros.agente);});
     if(filtros.sucursal!=="todos") matchAvanzado=matchAvanzado&&grupoDe(op).some(function(o){return String(o.sucursal||o.sucursal_nombre||"")===String(filtros.sucursal);});
@@ -4399,22 +4407,24 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   filtered.sort(function(a,b){
     function prioridad(o){
       // Priorizar trabajo pendiente real, sin convertir todas las operaciones en alertas.
-      if(o.estado==="borrador"&&getCamposFaltantesDetalle(o,perfil).length>0)return 0;
-      if(o.estado==="activo")return 1;
-      if(o.estado==="borrador")return 2;
-      if(o.estado==="cerrado")return 3;
+      var estado=estadoCarpetaOperacion(o,childrenMap[o.id]);
+      if(estado==="borrador"&&getCamposFaltantesDetalle(o,perfil).length>0)return 0;
+      if(estado==="activo")return 1;
+      if(estado==="borrador")return 2;
+      if(estado==="cerrado")return 3;
       return 4;
     }
     var p=prioridad(a)-prioridad(b);
     if(p!==0)return p;
-    return new Date(b.actualizado_en||b.updated_at||b.created_at||0).getTime()-new Date(a.actualizado_en||a.updated_at||a.created_at||0).getTime();
+    var db=new Date(b.actualizado_en||b.updated_at||b.created_at||0).getTime(),da=new Date(a.actualizado_en||a.updated_at||a.created_at||0).getTime();
+    return (Number.isFinite(db)?db:0)-(Number.isFinite(da)?da:0);
   });
   var total=raices.length;
-  var activas=raices.filter(function(o){return o.estado==="activo";}).length;
+  var activas=raices.filter(function(o){return estadoCarpetaOperacion(o,childrenMap[o.id])==="activo";}).length;
   var alq=raices.filter(function(o){return grupoDe(o).some(function(x){return x.tipo==="alquiler"||x.tipo==="reserva_alquiler";});}).length;
   var compras=raices.filter(function(o){return grupoDe(o).some(function(x){return x.tipo==="boleto"||x.tipo==="reserva";});}).length;
-  var nuevasCount=raices.filter(function(o){return o.estado==="borrador";}).length;
-  var cerradasCount=raices.filter(function(o){return o.estado==="cerrado";}).length;
+  var nuevasCount=raices.filter(function(o){return estadoCarpetaOperacion(o,childrenMap[o.id])==="borrador";}).length;
+  var cerradasCount=raices.filter(function(o){return estadoCarpetaOperacion(o,childrenMap[o.id])==="cerrado";}).length;
   // Carpetas abiertas/cerradas (colapsadas por defecto para que la lista se
   // vea compacta cuando hay muchas operaciones con documentos vinculados).
   const [openFolders,setOpenFolders]=useState({});
@@ -4562,10 +4572,10 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
                 <div style={{fontSize:13,color:"var(--text)",fontWeight:650}}>{getName(op)}</div>{((esResAlq||op.tipo==="alquiler")&&!op.locador_nombre)&&<span style={{fontSize:11,color:"#f59e0b"}}>⚠ Falta locador</span>}{((esReserva||op.tipo==="boleto")&&!op.vendedor_nombre)&&<span style={{fontSize:11,color:"#f59e0b"}}>⚠ Falta vendedor</span>}
                 {monto&&<span className="monto-tag">{monto}</span>}
               </div>
-              <div style={{fontSize:12,color:"var(--dim)",marginTop:6}}>Creado el {new Date(op.created_at).toLocaleDateString("es-AR")}</div>
+              <div style={{fontSize:12,color:"var(--dim)",marginTop:6}}>Creado el {op.created_at&&Number.isFinite(new Date(op.created_at).getTime())?new Date(op.created_at).toLocaleDateString("es-AR"):"fecha no disponible"}</div>
             </div>
             <div className="op-card-side">
-              <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{ultN?new Date(ultN).toLocaleDateString("es-AR"):"Sin actividad"}</div></div>
+              <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{ultN&&Number.isFinite(new Date(ultN).getTime())?new Date(ultN).toLocaleDateString("es-AR"):"Sin actividad"}</div></div>
               <div className="op-side-extra"><div className="op-side-label">Documento</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{TIPOS[op.tipo]||op.tipo}</div></div>
               <div>{acciones}</div>
             </div>
@@ -4574,22 +4584,19 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       );
     }
 
-    var estadoClase=op.estado||"borrador";
+    var estadoClase=estadoCarpetaOperacion(op,hijosOp);
     var hijosCount=hijosOp.length;
-    var docsTotal=(esReserva||esResAlq)?(opcionesDoc(op)||[]).length:(hijosCount>0?hijosCount+1:1);
-    var docsHechos=(esReserva||esResAlq)?Math.min(docsTotal,1+hijosCount):(hijosCount>0?hijosCount+1:1);
+    var docsHechos=1+hijosCount;
     // Para operaciones individuales, el progreso refleja los campos críticos cargados.
     // En carpetas con varios documentos, mantiene el progreso de documentos vinculados.
     var camposCriticos=CAMPOS_CRITICOS_POR_TIPO[op.tipo]||[];
     var detallePendientes=getCamposFaltantesDetalle(op,perfil);
     var camposPendientes=detallePendientes.length;
-    var progreso=docsTotal>1
-      ? Math.max(0,Math.min(100,Math.round((docsHechos/Math.max(1,docsTotal))*100)))
-      : (camposCriticos.length>0?Math.max(0,Math.min(100,Math.round((1-camposPendientes/camposCriticos.length)*100))):0);
-    var etiquetaProgreso=docsTotal>1?"Avance de documentos vinculados":"Datos completos";
+    var pendientesPrincipales=detallePendientes.filter(function(f){return camposCriticos.some(function(c){return c[0]===f.campo;});}).length;
+    var progreso=camposCriticos.length>0?Math.max(0,Math.min(100,Math.round((1-pendientesPrincipales/camposCriticos.length)*100))):0;
+    var etiquetaProgreso="Datos principales";
     var ultima=op.actualizado_en||op.updated_at||op.created_at;
-    var fechaUltima=ultima&&!isNaN(new Date(ultima).getTime())?new Date(ultima).toLocaleDateString("es-AR"):"Sin fecha";
-    function haceFecha(v){if(!v)return "Sin actividad";var d=new Date(v),ms=Math.max(0,Date.now()-d.getTime()),min=Math.floor(ms/60000),hor=Math.floor(min/60),dias=Math.floor(hor/24);if(min<1)return "Ahora";if(min<60)return "Hace "+min+" min";if(hor<24)return "Hace "+hor+" h";if(dias<30)return "Hace "+dias+" día"+(dias===1?"":"s");return d.toLocaleDateString("es-AR");}
+    function haceFecha(v){if(!v)return "Sin actividad";var d=new Date(v);if(!Number.isFinite(d.getTime()))return "Fecha no disponible";var ms=Math.max(0,Date.now()-d.getTime()),min=Math.floor(ms/60000),hor=Math.floor(min/60),dias=Math.floor(hor/24);if(min<1)return "Ahora";if(min<60)return "Hace "+min+" min";if(hor<24)return "Hace "+hor+" h";if(dias<30)return "Hace "+dias+" día"+(dias===1?"":"s");return d.toLocaleDateString("es-AR");}
     var direccion=op.inmueble_direccion||"";
     return(
       <div key={op.id} className="op-card op-card-premium fade-up" style={Object.assign({position:"relative" as const,marginTop:0},removiendo?{opacity:0,transform:"translateX(24px) scale(0.97)",pointerEvents:"none" as const,transition:"opacity .22s ease,transform .22s ease"}:{})}>
@@ -4597,7 +4604,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
           <div style={{flex:1,minWidth:0,paddingLeft:2}}>
             <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginBottom:8}}>
               <span className="op-type-badge">{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]||op.tipo}</span>
-              <span className={"op-status-hero "+estadoClase}>{ESTADOS[op.estado]||"Borrador"}</span>
+              <span className={"op-status-hero "+estadoClase} title={hijosOp.length&&estadoClase!==(op.estado||"borrador")?"Incluye el estado de los documentos vinculados":undefined}>{hijosOp.length&&estadoClase!==(op.estado||"borrador")?"Carpeta · ":""}{ESTADOS[estadoClase]||"Borrador"}</span>
               {op.compartida&&<span className="badge" style={{background:"rgba(96,165,250,0.14)",color:"#60a5fa"}}>Compartida</span>}
               {folder&&<button type="button" className="op-folder-chip" onClick={folder.toggle} aria-expanded={!!folder.isOpen}><DWIcon name="folder" size={13}/> Carpeta · {folder.n} docs <span style={{display:"inline-flex",transition:"transform .15s",transform:folder.isOpen?"rotate(90deg)":"none"}}><DWIcon name="chevronRight" size={11} strokeWidth={2.2}/></span></button>}
             </div>
@@ -4609,17 +4616,14 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
               <div style={{fontSize:13,color:"var(--text)",fontWeight:650}}>{getName(op)}</div>
               {monto&&<span className="monto-tag">{monto}</span>}
             </div>
-            <div className="op-card-updated-inline" style={{fontSize:12,color:"var(--dim)",marginTop:6,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-              <span style={{fontWeight:700,color:"var(--muted)"}}>{"Actualizado"}</span>
-              <span>·</span><span>{fechaUltima}</span>
-            </div>
+            
 
 
           </div>
           <div className="op-card-side">
             <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{haceFecha(ultima)}</div></div>
             <div><div className="op-docs-count">{docsHechos} {docsHechos===1?"documento":"documentos"}</div></div>
-            <div className="op-side-progress"><div className="op-side-label">{etiquetaProgreso}</div><div className="op-progress-row"><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}% completo</span></div>{docsTotal<=1&&camposPendientes>0&&<div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>{"Faltan "+camposPendientes+" "+(camposPendientes===1?"dato":"datos")+" para completar · Revisar al editar"}</div>}</div>
+            <div className="op-side-progress"><div className="op-side-label">{etiquetaProgreso}</div><div className="op-progress-row" role="progressbar" aria-label={etiquetaProgreso} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progreso}><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}% completo</span></div>{camposPendientes>0&&<div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>{"Faltan "+camposPendientes+" "+(camposPendientes===1?"dato":"datos")+" para revisar al editar"}</div>}</div>
             <div>{acciones}</div>
             {op.broker_nombre||op.broker?<div className="op-side-extra"><div className="op-side-label">Agente</div><div style={{fontSize:12,fontWeight:650,color:"var(--text)",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{op.broker_nombre||op.broker}</div></div>:null}
           </div>
