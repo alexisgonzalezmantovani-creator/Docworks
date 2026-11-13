@@ -150,7 +150,7 @@ export default function DocumentoPropioEditor({
     const chip="{{"+key+"}}";
     cambiarTexto(texto.slice(0,from)+chip+texto.slice(to));
     seleccionRef.current={inicio:from+chip.length,fin:from+chip.length};
-    setTimeout(()=>{if(inputRef.current){inputRef.current.focus();inputRef.current.setSelectionRange(from+chip.length,from+chip.length);}},0);
+    setTimeout(()=>{if(inputRef.current && document.activeElement===inputRef.current){inputRef.current.setSelectionRange(from+chip.length,from+chip.length);}},0);
   }
   async function guardar(){
     if(guardandoRef.current||!necesitaGuardar)return;
