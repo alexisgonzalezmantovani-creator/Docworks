@@ -5570,10 +5570,11 @@ function StepGarantia({data,onChange,faltantes}){
           <Inp id="dw-field-alquiler_garantia_titular" label={data.alquiler_garantia_tipo==="recibo_sueldo"?"Titular del recibo de sueldo":data.alquiler_garantia_tipo==="aval_bancario"?"Entidad bancaria":"Aseguradora / entidad"} value={data.alquiler_garantia_titular||""} onChange={function(e){onChange("alquiler_garantia_titular",e.target.value);}} placeholder={data.alquiler_garantia_tipo==="recibo_sueldo"?"Nombre y apellido":data.alquiler_garantia_tipo==="aval_bancario"?"Nombre del banco":"Nombre de la aseguradora"} {...estiloCampoFaltante(faltantes,"alquiler_garantia_titular")}/>
         </div>
       )}
-      <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
+      <DetallesFormulario inicialmenteAbierto={!!String(data.alquiler_garantia_texto_personalizado||"").trim()} style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
+        <summary style={{cursor:"pointer",fontSize:13,fontWeight:700,color:"var(--text)",minHeight:36}}>Editar texto de garantía (opcional)</summary>
         <Txa id="dw-field-alquiler_garantia_texto_personalizado" label="Texto de la cláusula de garantía (opcional)" value={data.alquiler_garantia_texto_personalizado||""} onChange={function(e){onChange("alquiler_garantia_texto_personalizado",e.target.value);}} placeholder="Pegá acá el texto que te envía la aseguradora / entidad de garantía (ej. Garantías Confiar, Fianzas y Créditos, etc.)..." rows={4}/>
         <div style={{fontSize:12,color:"var(--dim)",marginTop:4}}>Si lo completás, reemplaza el texto automático de la cláusula de Garantía en el contrato.</div>
-      </div>
+      </DetallesFormulario>
     </div>
   );
 }
@@ -5602,7 +5603,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   var lista=filtrarCatalogoClausulas(clausulas,{tipo:data.tipo,idsProtegidos:idsObligatorias,esTextoBase:clausulaYaEnTextoBase,aplicaTipo:clausulaAplicaTipo}).filter(function(c){return !c.obligatoria&&(idsOpcionales.indexOf(c.id)!==-1||idsFrecuentes.indexOf(c.id)!==-1);});
   var inventarioPrevio=data.tipo==="alquiler"&&!!(data.alquiler_amoblado||String(data.alquiler_inventario||"").trim());
   if(inventarioPrevio)lista=lista.filter(function(c){var cfg=configDetalleClausula(c);return !cfg||cfg.campo!=="entrega_muebles_detalle";});
-  lista.sort(function(a,b){return Number(idsFrecuentes.indexOf(b.id)!==-1)-Number(idsFrecuentes.indexOf(a.id)!==-1);});
+  lista.sort(function(a,b){return Number(selected.includes(b.id))-Number(selected.includes(a.id))||Number(idsFrecuentes.indexOf(b.id)!==-1)-Number(idsFrecuentes.indexOf(a.id)!==-1);});
   var protegidas=obtenerIdsObligatoriosDePlantilla(perfil,data.tipo);
   var nombreInmobiliariaObligatoria=(perfil&&perfil.nombre&&String(perfil.nombre).trim())?String(perfil.nombre).trim():"la inmobiliaria";
   function toggle(id){
@@ -5626,26 +5627,38 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   var ideaIARef=useRef<HTMLTextAreaElement | null>(null);
   var [loadingIA,setLoadingIA]=useState(false);
   var [errorIA,setErrorIA]=useState("");
-  useEffect(function(){onChange("clausulas_custom_titulo",showAdd?tituloCustom:"");onChange("clausulas_custom",showAdd?contenidoCustom:"");},[tituloCustom,contenidoCustom,showAdd]);
-  async function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
+  var [buscarClausula,setBuscarClausula]=useState("");
+  var busqueda=buscarClausula.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  var listaVisible=busqueda?lista.filter(function(c){return String(c.titulo||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(busqueda);}):lista;
+  // Cerrar el editor es solo una acción visual: no borra la cláusula personal.
+  useEffect(function(){onChange("clausulas_custom_titulo",tituloCustom);onChange("clausulas_custom",contenidoCustom);},[tituloCustom,contenidoCustom]);
+  async function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}if(String(contenidoCustom||"").trim()&&!window.confirm("Ya tenés una cláusula escrita. ¿Reemplazarla por el texto redactado con IA?"))return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
   return <div>
-    <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.55,marginBottom:14}}>Tu documento se completa automáticamente con los datos del formulario. Si esta operación necesita una condición adicional, podés elegirla acá.</p>
+    <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.55,marginBottom:14}}>El documento ya incluye las cláusulas del modelo. Solo elegí una de estas opciones si necesitás agregar algo a esta operación.</p>
     <SeguroOperacion data={data} onChange={onChange} faltantes={faltantes}/>
-    <div style={{fontSize:12,fontWeight:750,color:"var(--text)",margin:"2px 0 8px"}}>Cláusulas adicionales</div>
-    {inventarioPrevio&&(<div className="dw-inventario-existente">
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",margin:"2px 0 8px"}}>
+      <span style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Cláusulas adicionales</span>
+      <span role="status" style={{fontSize:12,color:selected.length?"var(--green)":"var(--dim)"}}>{selected.length===0?"Ninguna seleccionada":selected.length===1?"1 seleccionada":selected.length+" seleccionadas"}</span>
+    </div>
+    {data.tipo==="alquiler"&&(<div className="dw-inventario-existente">
         <label style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,border:"1px solid var(--border)",background:data.alquiler_amoblado?"rgba(212,168,83,0.08)":"transparent",cursor:"pointer",fontSize:12.5,color:"var(--text)",width:"fit-content"}}>
           <input type="checkbox" checked={!!data.alquiler_amoblado} onChange={function(e){onChange("alquiler_amoblado",e.target.checked);}}/>
           Se alquila amoblado
         </label>
         {data.alquiler_amoblado&&<Txa id="dw-field-alquiler_inventario" label="Inventario de bienes muebles" hint="Detallá los muebles y artefactos que se entregan (uno por línea). Se incorpora como anexo del contrato." value={data.alquiler_inventario||""} onChange={function(e){onChange("alquiler_inventario",e.target.value);}} rows={5} placeholder={"Ej:\nHeladera con freezer\nCocina 4 hornallas\nJuego de living (sofá 3 cuerpos + 2 sillones)\nMesa de comedor + 4 sillas\nCama matrimonial + colchón\n..."} style={{marginTop:8}}/>}
       </div>)}
-    {lista.length===0&&<div className="notice" style={{fontSize:13,lineHeight:1.5,marginBottom:10}}>No hay cláusulas adicionales disponibles para este documento. Podés agregar una propia para esta operación o pedir al administrador que habilite más opciones.</div>}
+    {lista.length>6&&<div style={{marginBottom:10}}>
+      <Inp id="dw-buscar-clausula-extra" label="Buscar cláusula" value={buscarClausula} onChange={function(e){setBuscarClausula(e.target.value);}} placeholder="Escribí una palabra del título" autoComplete="off"/>
+    </div>}
+    {lista.length===0&&<div className="notice" style={{fontSize:13,lineHeight:1.5,marginBottom:10}}>No hay cláusulas adicionales habilitadas. Podés escribir una propia o pedirle al administrador que habilite opciones.</div>}
+    {lista.length>0&&listaVisible.length===0&&<div role="status" className="notice" style={{fontSize:13,lineHeight:1.5,marginBottom:10}}>No encontré cláusulas con ese nombre. Podés cambiar la búsqueda o escribir una propia.</div>}
     <div style={{display:"flex",flexDirection:"column",gap:7}}>
-      {lista.map(function(c){var obligatoria=!!c.obligatoria;var protegida=protegidas.indexOf(c.id)!==-1;var sel=obligatoria||protegida||selected.includes(c.id);var expandida=clausulaExpandida===c.id;var detalleCfg=configDetalleClausula(c);return <div key={c.id} className="op-card" style={{padding:"0 11px",borderColor:sel?"var(--gold)":"var(--border2)"}}>
+      {listaVisible.map(function(c){var obligatoria=!!c.obligatoria;var protegida=protegidas.indexOf(c.id)!==-1;var sel=obligatoria||protegida||selected.includes(c.id);var expandida=clausulaExpandida===c.id;var detalleCfg=configDetalleClausula(c);return <div key={c.id} className="op-card" style={{padding:"0 11px",borderColor:sel?"var(--gold)":"var(--border2)"}}>
         <div className="dw-op-clause-row">
           <button type="button" className="dw-op-clause-title" aria-expanded={expandida} aria-controls={"dw-op-clause-detail-"+c.id} onClick={function(){setClausulaExpandida(expandida?null:c.id);}}>
             <span className="dw-op-clause-name">{c.titulo}</span>
-            {idsFrecuentes.indexOf(c.id)!==-1&&<span style={{fontSize:10,color:"var(--gold)",whiteSpace:"nowrap"}}>Frecuente</span>}
+            {sel&&<span style={{fontSize:10,color:"var(--green)",whiteSpace:"nowrap"}}>Incluida</span>}
+            {!sel&&idsFrecuentes.indexOf(c.id)!==-1&&<span style={{fontSize:10,color:"var(--gold)",whiteSpace:"nowrap"}}>Frecuente</span>}
             {(obligatoria||protegida)&&<span className="badge badge-gold">Obligatoria</span>}
           </button>
           <button type="button" className="dw-op-clause-expand" aria-label={(expandida?"Ocultar detalle de ":"Ver detalle de ")+c.titulo} aria-expanded={expandida} aria-controls={"dw-op-clause-detail-"+c.id} title={expandida?"Ocultar detalle":"Ver detalle"} onClick={function(){setClausulaExpandida(expandida?null:c.id);}}>{expandida?"−":"+"}</button>
@@ -5656,23 +5669,28 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
       </div>;})}
     </div>
     <div style={{marginTop:14,paddingTop:12,borderTop:"1px dashed var(--border2)"}}>
-      <button type="button" onClick={function(){setShowAdd(function(v){return !v;});}} style={{width:"100%",padding:"11px 13px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",cursor:"pointer",textAlign:"left",fontWeight:700}}>＋ Agregar cláusula</button>
-      {showAdd&&<div style={{marginTop:9,padding:12,borderRadius:12,border:"1px solid var(--border2)",background:"rgba(212,168,83,.035)"}}>
+      <button type="button" aria-expanded={showAdd} aria-controls="dw-clausula-personal-editor" onClick={function(){setShowAdd(function(v){return !v;});}} style={{width:"100%",padding:"11px 13px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",cursor:"pointer",textAlign:"left",fontWeight:700}}>{showAdd?"− Ocultar editor de mi cláusula":String(contenidoCustom||"").trim()?"✎ Editar mi cláusula agregada":"＋ Escribir una cláusula propia"}</button>
+      {!showAdd&&!!String(contenidoCustom||"").trim()&&<div style={{fontSize:12,color:"var(--green)",marginTop:6}}>Tu cláusula sigue incluida en esta operación aunque el editor esté cerrado.</div>}
+      {showAdd&&<div id="dw-clausula-personal-editor" style={{marginTop:9,padding:12,borderRadius:12,border:"1px solid var(--border2)",background:"rgba(212,168,83,.035)"}}>
         <Inp label="Título" value={tituloCustom} onChange={function(e){setTituloCustom(e.target.value);}} placeholder="Ej.: Prohibición de mascotas"/>
         <AvisoClausulasPersonalizadas/>
         <Txa label="Texto" value={contenidoCustom} onChange={function(e){setContenidoCustom(e.target.value);}} placeholder="Escribí la cláusula…" rows={4}/>
         <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){setContenidoCustom(function(v){return (v?v+" ":"")+t;});}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictar texto de la cláusula</span></div>
-        <div style={{marginTop:14,padding:"12px 13px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
-          <div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginBottom:5}}>✦ Redactar con IA</div>
+        <details style={{marginTop:14,padding:"12px 13px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
+          <summary style={{fontSize:12,fontWeight:750,color:"var(--text)",marginBottom:5,cursor:"pointer",minHeight:26}}>✦ Redactar con IA (opcional)</summary>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:9}}>Describí en pocas palabras la condición que querés agregar. No incluyas nombres, DNI, domicilios ni datos de la operación.</div>
           <textarea ref={ideaIARef} className="inp" aria-label="Idea para redactar una cláusula con IA" maxLength={6000} rows={2} value={ideaIA} onChange={function(e){setIdeaIA(e.target.value);if(errorIA)setErrorIA("");}} placeholder="Ej.: El inmueble se entrega recién pintado y con los aires funcionando" style={{width:"100%",minHeight:70,resize:"vertical",boxSizing:"border-box"}}/>
           <div style={{display:"flex",gap:8,justifyContent:"flex-end",alignItems:"center",marginTop:8,flexWrap:"wrap"}}>
             <VozATextoButton onText={function(t){setIdeaIA(function(v){return (v?v+" ":"")+t;});}} disabled={loadingIA}/>
             <Btn s="sm" v="primary" onClick={narrarConIA} disabled={!IA_HABILITADA||loadingIA} title={!IA_HABILITADA?MENSAJE_IA_PAUSADA:undefined}>{loadingIA?"Redactando…":"✦ Redactar con IA"}</Btn>
           </div>
-        </div>
+        </details>
         {errorIA&&<div style={{fontSize:12,color:"var(--red)",marginTop:5}}>{errorIA}</div>}
         <div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Esta cláusula se guarda únicamente en esta operación; no modifica la biblioteca de la inmobiliaria.</div>
+        {(!!String(contenidoCustom||"").trim()||!!String(tituloCustom||"").trim())&&<button type="button" onClick={function(){
+          if(!window.confirm("¿Eliminar la cláusula propia de esta operación? Esta acción borra su título y texto."))return;
+          setTituloCustom("");setContenidoCustom("");setIdeaIA("");setErrorIA("");setShowAdd(false);
+        }} style={{marginTop:12,padding:"8px 10px",border:"1px solid var(--border2)",borderRadius:8,background:"transparent",color:"var(--red)",cursor:"pointer",fontSize:12}}>Eliminar mi cláusula</button>}
       </div>}
     </div>
 
