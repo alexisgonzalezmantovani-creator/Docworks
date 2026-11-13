@@ -102,10 +102,13 @@ function IconoDato({dato}:{dato:string}){
   </svg>;
 }
 
-function nombreDatoBreve(dato:string,etiqueta:string){
+export function nombreDatoBreve(dato:string,etiqueta:string){
   if(dato==="inmueble_direccion")return "Dirección";
   if(dato==="fecha_operacion_larga")return "Fecha";
-  if(/^[a-z]+_nombre$/.test(dato)&&dato!=="inmobiliaria_nombre")return etiqueta.replace(/^Nombre del |^Nombre de la /,"");
+  if(/^[a-z]+_nombre$/.test(dato)&&dato!=="inmobiliaria_nombre"){
+    const nombre=etiqueta.replace(/^Nombre del |^Nombre de la /,"");
+    return nombre.charAt(0).toLocaleUpperCase("es-AR")+nombre.slice(1);
+  }
   if(/_dni$/.test(dato))return etiqueta.replace(/^DNI del |^DNI de la /,"DNI ");
   return etiqueta;
 }
@@ -371,7 +374,7 @@ export default function DocumentoPropioEditor({
         onKeyDown={ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="s"){ev.preventDefault();guardar();}}} />
     </div>
     {capturados.length>0&&<div aria-label="Datos automáticos ya insertados" style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6}}>
-      <span style={{fontSize:11,color:"var(--muted)",marginRight:3}}>En tu contrato:</span>
+      <span style={{fontSize:11,color:"var(--muted)",marginRight:3}}>En el contrato ({capturados.length})</span>
       {capturados.map(key=>{
         const etiqueta=nombreDatoBreve(key,CHIPS.find(([k])=>k===key)?.[1]||key.replace(/_/g," "));
         const errorChip=invalidos.includes(key)||repetidos.includes(key);
@@ -381,10 +384,10 @@ export default function DocumentoPropioEditor({
             borderRadius:10,overflow:"hidden",fontSize:12,fontWeight:650}}>
           <button type="button" title={"Buscar "+etiqueta+" en el texto"} aria-label={"Buscar "+etiqueta+" en el contrato"}
             disabled={estado==="saving"} onClick={()=>irAlDato(key)}
-            style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 10px",border:0,background:"transparent",color:"inherit",font:"inherit",cursor:"pointer",textAlign:"left",overflowWrap:"anywhere"}}><IconoDato dato={key}/>{etiqueta}</button>
+            style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 10px",border:0,background:"transparent",color:"inherit",font:"inherit",cursor:"pointer",textAlign:"left",overflowWrap:"anywhere",minHeight:40}}><IconoDato dato={key}/>{etiqueta}</button>
           <button type="button" title={"Quitar "+etiqueta+" del contrato"} aria-label={"Quitar "+etiqueta+" del contrato"}
             disabled={estado==="saving"} onClick={()=>quitar(key)}
-            style={{minWidth:34,padding:"6px 8px",border:0,borderLeft:"1px solid rgba(3,105,161,.16)",background:"transparent",color:"inherit",fontSize:17,cursor:"pointer"}}>×</button>
+            style={{minWidth:40,padding:"6px 9px",border:0,borderLeft:"1px solid rgba(3,105,161,.16)",background:"transparent",color:"inherit",fontSize:17,cursor:"pointer"}}>×</button>
         </span>;
       })}
     </div>}

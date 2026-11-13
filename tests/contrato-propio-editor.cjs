@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const esbuild=require('esbuild'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const dir=path.resolve(__dirname,'..'),out=fs.mkdtempSync(path.join(os.tmpdir(),'dw-contrato-propio-'));
 esbuild.buildSync({entryPoints:[path.join(dir,'src/DocumentoPropio.tsx')],bundle:true,platform:'node',format:'cjs',outfile:path.join(out,'editor.cjs')});
-const {analizarChipsDocumentoPropio:analizar,insertarDatoAutomatico:insertar,quitarDatoAutomatico:quitar}=require(path.join(out,'editor.cjs'));
+const {analizarChipsDocumentoPropio:analizar,insertarDatoAutomatico:insertar,quitarDatoAutomatico:quitar,nombreDatoBreve:nombreBreve}=require(path.join(out,'editor.cjs'));
 const permitidos=new Set(['comprador_nombre','vendedor_nombre','inmueble_direccion','comprador_dni']);
 let n=0;function check(nombre,funcion){funcion();n++;console.log('OK',nombre);}
 const base='Contrato de reserva. Parte compradora {{comprador_nombre}}, parte vendedora {{vendedor_nombre}}, inmueble {{inmueble_direccion}}. Firmas.';
@@ -131,5 +131,17 @@ check('nombres breves se aplican a editor y vista previa del texto',()=>{
  assert.ok(editor.includes('const etiqueta=nombreDatoBreve(match[1]'));
  assert.ok(editor.includes('nombreDatoBreve(trozo.slice(2,-2)'));
  assert.ok(editor.includes('nombreDatoBreve(key,label)'));
+});
+check('etiquetas cortas respetan las mayúsculas y datos específicos',()=>{
+ assert.equal(nombreBreve('comprador_nombre','Nombre del comprador'),'Comprador');
+ assert.equal(nombreBreve('locatario_nombre','Nombre del locatario'),'Locatario');
+ assert.equal(nombreBreve('comprador_dni','DNI del comprador'),'DNI comprador');
+ assert.equal(nombreBreve('inmueble_direccion','Dirección completa del inmueble'),'Dirección');
+ assert.equal(nombreBreve('precio_letras','Precio'),'Precio');
+ assert.equal(nombreBreve('inmobiliaria_nombre','Inmobiliaria'),'Inmobiliaria');
+});
+check('controles de datos insertados tienen tamaño táctil mínimo',()=>{
+ assert.ok(editor.includes('minWidth:40,padding:"6px 9px"'));
+ assert.ok(editor.includes('En el contrato ({capturados.length})'));
 });
 console.log('APROBADAS '+n+' pruebas de contrato propio.');
