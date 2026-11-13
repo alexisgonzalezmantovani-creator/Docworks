@@ -5131,12 +5131,12 @@ function CompartidaBlock({data,onChange,equipo}){
     onChange("compartida_colega_email", m?m.email||"":"");
   }
   return (
-    <div style={{marginTop:12,paddingTop:12,borderTop:"1px dashed var(--border)"}}>
-      <button type="button" aria-expanded={on} onClick={function(){onChange("compartida",!on);}} style={{display:"flex",width:"100%",minHeight:46,alignItems:"center",justifyContent:"space-between",gap:12,padding:"12px 16px",borderRadius:12,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left"}}>
+    <div className="dw-share-options">
+      <button type="button" className={"dw-share-toggle"+(on?" is-active":"")} aria-expanded={on} aria-controls="dw-share-external-panel" onClick={function(){onChange("compartida",!on);}}>
         <span>{on?"✓ Operación compartida":"+ Operación compartida"}</span>
         <span aria-hidden="true">{on?"−":"+"}</span>
       </button>
-      {on&&<div style={{marginTop:10}}>
+      {on&&<div id="dw-share-external-panel" className="dw-share-panel">
         <div className="grid2">
           <Inp id="dw-field-compartida_inmobiliaria" label="Inmobiliaria colega" value={data.compartida_inmobiliaria||""} onChange={function(e){onChange("compartida_inmobiliaria",e.target.value);}} placeholder="Nombre de la inmobiliaria"/>
           <Inp id="dw-field-compartida_matricula" label="N° de matrícula" value={data.compartida_matricula||""} onChange={function(e){onChange("compartida_matricula",e.target.value);}} placeholder="Ej. CUCICBA 1234"/>
@@ -5146,11 +5146,11 @@ function CompartidaBlock({data,onChange,equipo}){
           <option value="parte_compradora">Sólo 50% de la parte compradora / locataria</option>
         </Slt>
       </div>}
-      <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:600,color:"var(--text)",cursor:"pointer",marginTop:12}}>
-        <input type="checkbox" checked={conColega} onChange={function(e){onChange("compartida_colega_activo",e.target.checked);}}/>
-        Compartir con un colega de mi inmobiliaria
-      </label>
-      {conColega&&<div style={{marginTop:10}}>
+      <button type="button" className={"dw-share-toggle"+(conColega?" is-active":"")} aria-expanded={conColega} aria-controls="dw-share-colleague-panel" onClick={function(){onChange("compartida_colega_activo",!conColega);}}>
+        <span>{conColega?"✓ Compartir con un colega de mi inmobiliaria":"+ Compartir con un colega de mi inmobiliaria"}</span>
+        <span aria-hidden="true">{conColega?"−":"+"}</span>
+      </button>
+      {conColega&&<div id="dw-share-colleague-panel" className="dw-share-panel">
         {miembros.length===0
           ? <div className="notice" style={{fontSize:12}}>Todavía no cargaste a nadie en Configuración → Equipo. Agregá a tu colega ahí para poder seleccionarlo acá.</div>
           : <Slt label="Colega (miembro del equipo)" value={data.compartida_colega_id||""} onChange={function(e){seleccionarColega(e.target.value);}} className="col2">
@@ -5171,7 +5171,10 @@ function CompartidaBlock({data,onChange,equipo}){
             </div>
           </div>
         )}
-        <div className="notice notice-gold" style={{marginTop:8,fontSize:12}}>El colega elegido queda registrado como corredor asociado a esta operación y va a poder verla y editarla desde su propia sesión (no en simultáneo con vos — el último que guarda es el que queda). Cuando el documento esté terminado, usá "📤 Compartir documento" para enviarle el PDF final por WhatsApp, mail u otra app.</div>
+        <div className="dw-colleague-info" role="note">
+          <strong>Cómo funciona:</strong> El colega elegido queda registrado como corredor asociado a esta operación y puede verla y editarla desde su propia sesión.
+          <div style={{marginTop:6}}>Si ambos editan, prevalece el último guardado. Cuando el documento esté terminado, usá «Compartir documento» para enviarle el PDF por WhatsApp, correo u otra aplicación.</div>
+        </div>
       </div>}
     </div>
   );
@@ -5666,7 +5669,9 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   var inventarioPrevio=data.tipo==="alquiler"&&!!data.alquiler_amoblado;
   // Si una cláusula ya estaba seleccionada, debe seguir visible para poder desmarcarla.
   if(inventarioPrevio)lista=lista.filter(function(c){var cfg=configDetalleClausula(c);return !cfg||cfg.campo!=="entrega_muebles_detalle"||selected.includes(c.id);});
-  lista.sort(function(a,b){return Number(selected.includes(b.id))-Number(selected.includes(a.id))||Number(idsFrecuentes.indexOf(b.id)!==-1)-Number(idsFrecuentes.indexOf(a.id)!==-1);});
+  // Los ítems frecuentes tienen prioridad inicial, pero seleccionar una cláusula NO
+  // reordena las tarjetas: así el scroll y el foco permanecen sobre la misma.
+  lista.sort(function(a,b){return Number(idsFrecuentes.includes(b.id))-Number(idsFrecuentes.includes(a.id));});
   var cantidadSeleccionadas=lista.filter(function(c){return selected.includes(c.id);}).length;
   var protegidas=obtenerIdsObligatoriosDePlantilla(perfil,data.tipo);
   var nombreInmobiliariaObligatoria=(perfil&&perfil.nombre&&String(perfil.nombre).trim())?String(perfil.nombre).trim():"la inmobiliaria";

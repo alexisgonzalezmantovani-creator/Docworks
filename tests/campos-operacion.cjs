@@ -4,7 +4,7 @@ const dom=new JSDOM('<html><head></head><body><div id="test"></div></body></html
 for(const k of ['window','document','HTMLElement','HTMLInputElement','HTMLTextAreaElement','CustomEvent','Event','Node','localStorage'])global[k]=dom.window[k];global.IS_REACT_ACT_ENVIRONMENT=true;
 global.MessageChannel=class{constructor(){this.port1={onmessage:null};this.port2={postMessage:()=>setTimeout(()=>this.port1.onmessage?.({}),0)}}};
 const source=fs.readFileSync(dir+'/src/App.tsx','utf8');
-require('esbuild').buildSync({stdin:{contents:source+'\nimport {act,createElement} from "react";import {createRoot} from "react-dom/client";export {act,createElement,createRoot,StepInmueble,StepDocSimple,StepPersona,StepEconomicoCompra,StepCondicionesAlquiler,StepCondicionesReservaAlq,SeguroOperacion,EMPTY_OP,SAMPLE_OP_PREVIEW,derivedTokensGenerales,getResumenMonto,getCamposFaltantes,getCamposFaltantesDetalle,draftTieneContenido,getComisionComponents,datosCompraCompartidos,valorComisionPredeterminado,buildDocSections,opParaDocumento,docToPlainText,generarPDF,generarDOCX,getDefaultBodyBlocks};',resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
+require('esbuild').buildSync({stdin:{contents:source+'\nimport {act,createElement} from "react";import {createRoot} from "react-dom/client";export {act,createElement,createRoot,StepInmueble,StepDocSimple,StepPersona,StepClausulas,CompartidaBlock,StepEconomicoCompra,StepCondicionesAlquiler,StepCondicionesReservaAlq,SeguroOperacion,EMPTY_OP,SAMPLE_OP_PREVIEW,derivedTokensGenerales,getResumenMonto,getCamposFaltantes,getCamposFaltantesDetalle,draftTieneContenido,getComisionComponents,datosCompraCompartidos,valorComisionPredeterminado,buildDocSections,opParaDocumento,docToPlainText,generarPDF,generarDOCX,getDefaultBodyBlocks};',resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
 const a=require(tmp+'/app.cjs'),root=a.createRoot(document.getElementById('test'));let count=0;
 function check(label,fn){fn();count++;console.log('OK',label)}
 async function fill(el,v){assert.ok(el);await a.act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,v);el.dispatchEvent(new Event('input',{bubbles:true}));});}
@@ -53,6 +53,44 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
    assert.equal(document.getElementById('dw-field-inmueble_documentacion_actual'),null);
    assert.equal(document.body.textContent.includes('Documentación actual'),false);
    assert.equal(state.inmueble_documentacion_actual,'boleto');
+ });
+ const adicionales=[
+  {id:'qa-pintura',titulo:'Entrega con interiores pintados',contenido:'El inmueble se entregará con los interiores pintados.',tipos:['reserva'],activo:true,obligatoria:false},
+  {id:'qa-llaves',titulo:'Entrega de llaves organizada',contenido:'Las llaves se entregarán según el acuerdo.',tipos:['reserva'],activo:true,obligatoria:false},
+  {id:'qa-revision',titulo:'Revisión de instalaciones',contenido:'Las partes revisarán las instalaciones.',tipos:['reserva'],activo:true,obligatoria:false}
+ ];
+ const perfilAdicionales={plantillas:{reserva:{clausulas_ids:adicionales.map(x=>x.id),obligatorias_ids:[],frecuentes_ids:[]}}};
+ state={...a.EMPTY_OP,tipo:'reserva',clausulas_ids:[]};
+ await a.act(async()=>render(a.StepClausulas,{clausulas:adicionales,perfil:perfilAdicionales,esAlquiler:false}));
+ const ordenExtras=()=>Array.from(document.querySelectorAll('.dw-op-clause-name')).map(x=>x.textContent.trim());
+ const antesExtras=ordenExtras();
+ check('cláusulas adicionales parten en el orden del catálogo',()=>assert.deepEqual(antesExtras,adicionales.map(x=>x.titulo)));
+ await click(document.querySelector('[aria-label="Incluir Entrega con interiores pintados"]'));
+ check('marcar cláusula no la mueve arriba ni reordena las demás',()=>{
+   assert.deepEqual(ordenExtras(),antesExtras);
+   assert.deepEqual(state.clausulas_ids,['qa-pintura']);
+   assert.equal(document.querySelector('[aria-label="Quitar Entrega con interiores pintados"]').getAttribute('aria-checked'),'true');
+ });
+ await click(document.querySelector('[aria-label="Quitar Entrega con interiores pintados"]'));
+ check('desmarcar cláusula tampoco reordena las tarjetas',()=>{assert.deepEqual(ordenExtras(),antesExtras);assert.deepEqual(state.clausulas_ids,[]);});
+ state={...a.EMPTY_OP,tipo:'reserva',compartida:false,compartida_colega_activo:false};
+ const colegaQA=[{id:'qa-broker',nombre:'Lucía de prueba',email:'lucia@example.test',rol:'broker'}];
+ await a.act(async()=>render(a.CompartidaBlock,{equipo:colegaQA}));
+ check('operaciones compartidas usan dos botones idénticos, sin checkbox suelto',()=>{
+   assert.equal(document.querySelectorAll('.dw-share-toggle').length,2);
+   assert.equal(document.querySelectorAll('.dw-share-options input[type="checkbox"]').length,0);
+   assert.ok(Array.from(document.querySelectorAll('.dw-share-toggle')).every(x=>x.getAttribute('aria-expanded')==='false'));
+ });
+ await click(document.querySelectorAll('.dw-share-toggle')[0]);
+ check('botón externo abre únicamente la colaboración con otra inmobiliaria',()=>{
+   assert.equal(state.compartida,true);assert.equal(state.compartida_colega_activo,false);
+   assert.ok(document.querySelector('#dw-share-external-panel'));
+ });
+ await click(document.querySelectorAll('.dw-share-toggle')[1]);
+ check('botón del colega abre su propio panel sin cambiar colaboración externa',()=>{
+   assert.equal(state.compartida,true);assert.equal(state.compartida_colega_activo,true);
+   assert.ok(document.querySelector('#dw-share-colleague-panel'));
+   assert.ok(document.querySelector('.dw-colleague-info').textContent.includes('corredor asociado'));
  });
  state={...a.EMPTY_OP,tipo:'reserva'};await a.act(async()=>render(a.StepInmueble));
  check('barrio y UF no ocupan campos en una operación nueva sin seleccionar',()=>{assert.equal(document.getElementById('dw-field-inmueble_barrio'),null);assert.equal(document.getElementById('dw-field-inmueble_unidad_funcional'),null);});

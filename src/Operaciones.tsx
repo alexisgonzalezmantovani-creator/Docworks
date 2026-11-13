@@ -1912,6 +1912,38 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .dw-barrio-toggle:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .dw-barrio-datos{margin-top:10px}
 
+/* Operación compartida: ambos controles se ven y funcionan igual en PC,
+   tablet y teléfono. La información importante nunca se apoya en color tenue. */
+.dw-operation-page .dw-share-options{display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+.dw-operation-page .dw-share-toggle{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ width:100%;min-height:48px;padding:12px 16px;box-sizing:border-box;
+ border:1px solid var(--border2);border-radius:12px;
+ background:var(--card);color:var(--text);font:inherit;font-size:14px;
+ font-weight:700;line-height:1.4;cursor:pointer;text-align:left;
+}
+.dw-operation-page .dw-share-toggle.is-active{border-color:var(--gold);background:var(--gold-soft)}
+.dw-operation-page .dw-share-toggle:hover{border-color:var(--gold)}
+.dw-operation-page .dw-share-toggle:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.dw-operation-page .dw-share-toggle>span:first-child{min-width:0;overflow-wrap:anywhere}
+.dw-operation-page .dw-share-toggle>span:last-child{flex:none;font-size:19px;line-height:1}
+.dw-operation-page .dw-share-panel{
+ min-width:0;margin:0;padding:14px;border:1px solid var(--border2);
+ border-radius:11px;background:var(--surface2)
+}
+.dw-operation-page .dw-colleague-info{
+ margin-top:14px;padding:14px 16px;
+ border:1px solid var(--border2);border-left:3px solid var(--gold);
+ border-radius:10px;background:var(--card);color:var(--text);
+ font-size:14px;font-weight:500;line-height:1.6;overflow-wrap:anywhere
+}
+.dw-operation-page .dw-colleague-info strong{color:var(--text);font-size:14px;font-weight:800}
+@media(max-width:640px){
+ .dw-operation-page .dw-share-toggle{min-height:46px;padding:11px 12px;font-size:13px}
+ .dw-operation-page .dw-share-panel{padding:12px}
+ .dw-operation-page .dw-colleague-info{padding:12px 13px;font-size:13.5px}
+}
+
 /* Comisión: modalidad y valor juntos; inclusión en la misma fila cuando hay espacio. */
 .dw-commissions-stack{display:grid;gap:8px}
 .dw-commission-editor{padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);min-width:0}
