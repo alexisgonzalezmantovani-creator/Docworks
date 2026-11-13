@@ -1,4 +1,4 @@
-import React,{useId,useRef,useState} from "react";
+import React,{useEffect,useId,useRef,useState} from "react";
 type Dato={key:string;label:string};
 type Props={items:Dato[];usados?:string[];onInsert:(key:string)=>void;disabled?:boolean};
 const categorias=["Personas","Inmueble","Importes","Fechas","Otros"];
@@ -22,6 +22,7 @@ export default function DatosCompactos({items,usados=[],onInsert,disabled=false}
  const [abierto,setAbierto]=useState(false),[categoriaActiva,setCategoriaActiva]=useState("Personas"),[rol,setRol]=useState(""),[busqueda,setBusqueda]=useState("");
  const panelId=useId(),triggerRef=useRef<HTMLButtonElement>(null);
  const usadosSet=new Set(usados),pendientes=items.filter(d=>!usadosSet.has(d.key));
+ useEffect(()=>{if(pendientes.length===0&&abierto){setAbierto(false);setBusqueda("");}},[pendientes.length,abierto]);
  const grupos=categorias.filter(c=>items.some(d=>categoria(d.key)===c));
  const activa=grupos.includes(categoriaActiva)?categoriaActiva:grupos[0]||"Otros";
  const personas=roles.filter(([p])=>items.some(d=>categoria(d.key)==="Personas"&&d.key.startsWith(p+"_")));

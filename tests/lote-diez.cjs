@@ -40,7 +40,7 @@ let checks=0;function check(label,fn){fn();checks++;console.log('OK',label);}
  check('selector tiene categorías, personas y campos disponibles',()=>{
   assert.ok(document.querySelector('[aria-label="Categorías de datos"]'));
   assert.ok(document.querySelector('[aria-label="Elegir persona"]'));
-  assert.ok(document.querySelector('[aria-label^="Insertar "]'));
+  assert.ok(document.querySelector('[aria-label^="Insertar "]:not([aria-label="Insertar dato"])'));
   const toggle=document.querySelector('[aria-label="Insertar dato"]');
   assert.equal(toggle.getAttribute('aria-expanded'),'true');
   assert.ok(document.getElementById(toggle.getAttribute('aria-controls')));
@@ -65,7 +65,7 @@ let checks=0;function check(label,fn){fn();checks++;console.log('OK',label);}
  await click(document.querySelector('[aria-label="Desplegar introducción"]'));await click(button('Editar introducción'));
  await a.act(async()=>{const e=document.querySelector('[contenteditable]');e.append(' Cambio');e.dispatchEvent(new Event('input',{bubbles:true}));});
  await click(document.querySelector('[aria-label="Insertar dato"]'));
- const primerChip=document.querySelector('[aria-label^="Insertar "]');
+ const primerChip=document.querySelector('[aria-label^="Insertar "]:not([aria-label="Insertar dato"])');
  assert.ok(primerChip,'Tiene que haber al menos un chip disponible');
  const chipElegido=primerChip.getAttribute('aria-label');
  const totalAntes=document.querySelectorAll('[data-dw-token]').length;
