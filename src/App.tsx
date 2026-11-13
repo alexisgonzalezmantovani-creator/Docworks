@@ -4400,7 +4400,20 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
       inmobiliaria_matricula:op.inmobiliaria_matricula||snap.inmobiliaria_matricula||""
     });
     var datosInmob={nombre:extrasPropios.inmobiliaria_nombre,matricula:extrasPropios.inmobiliaria_matricula};
-    var cuerpoPropio=resolveVars(sustituirTokens(textoPropio,op,datosInmob,tipo||op.tipo),op,extrasPropios);
+    // Solo para "Tu contrato completo": el dato Dirección del inmueble incluye
+    // calle, partido/municipio y provincia, sin cambiar el formulario ni los
+    // modelos DocWorks estándar. Mantener compatibilidad con contratos antiguos
+    // que ya insertaron partido/provincia como chips separados.
+    var partesLugar=[op.inmueble_direccion,op.inmueble_partido,op.inmueble_provincia]
+      .map(function(valor){return String(valor||"").trim();}).filter(Boolean);
+    var direccionCompleta="";
+    partesLugar.forEach(function(parte){
+      if(!direccionCompleta||!direccionCompleta.toLocaleLowerCase("es-AR").includes(parte.toLocaleLowerCase("es-AR")))
+        direccionCompleta+=(direccionCompleta?", ":"")+parte;
+    });
+    var ubicacionEnChipsSeparados=/\{\{\s*inmueble_(?:partido|provincia)\s*\}\}/.test(textoPropio);
+    var datosContratoPropio=ubicacionEnChipsSeparados?op:Object.assign({},op,{inmueble_direccion:direccionCompleta||op.inmueble_direccion});
+    var cuerpoPropio=resolveVars(sustituirTokens(textoPropio,datosContratoPropio,datosInmob,tipo||op.tipo),op,extrasPropios);
     return {documentoPropio:true,tipo:tipo||op.tipo,titulo:"",subtitulo:"",ciudad:"",fecha:"",
       encabezado:cuerpoPropio.replace(/\n/g,"\n\n"),textoOriginal:cuerpoPropio,partes:[],firmas:[],secciones:[],clausulas:[],
       contactosIndividuales:[],contactos:[],conformidad:null,ocultarPartesEnCuerpo:true};

@@ -22,7 +22,7 @@ const CHIPS = [
   ["comodante_nombre","Nombre del comodante"],["comodante_tratamiento","Tratamiento del comodante (Sr./Sra.)"],["comodante_articulo","Artículo del comodante (el/la)"],["comodante_dni","DNI del comodante"],["comodante_domicilio","Domicilio del comodante"],
   ["comodatario_nombre","Nombre del comodatario"],["comodatario_tratamiento","Tratamiento del comodatario (Sr./Sra.)"],["comodatario_articulo","Artículo del comodatario (el/la)"],["comodatario_dni","DNI del comodatario"],["comodatario_domicilio","Domicilio del comodatario"],
   ["autorizante_nombre","Nombre del autorizante"],["autorizante_tratamiento","Tratamiento del autorizante (Sr./Sra.)"],["autorizante_articulo","Artículo del autorizante (el/la)"],["autorizante_dni","DNI del autorizante"],["autorizante_domicilio","Domicilio del autorizante"],
-  ["inmueble_direccion","Dirección del inmueble"],["inmueble_partido","Partido / municipio"],
+  ["inmueble_direccion","Dirección completa del inmueble"],["inmueble_partido","Partido / municipio"],
   ["inmueble_provincia","Provincia"],["precio_letras","Precio en letras"],
   ["anticipo_letras","Reserva / anticipo en letras"],["saldo_letras","Saldo en letras"],
   ["alquiler_monto_letras","Alquiler en letras"],
@@ -95,7 +95,15 @@ export default function DocumentoPropioEditor({
   const {capturados,repetidos,invalidos,llavesMal}=analizarChipsDocumentoPropio(texto,permitidos);
   // Cada dato automático se ofrece una sola vez dentro del contrato completo.
   // La lista se recalcula al escribir o borrar, sin perder la posición del cursor.
-  const disponibles=todos.filter(([key])=>!capturados.includes(key));
+  const disponibles=todos.filter(([key])=>!capturados.includes(key)&&key!=="inmueble_partido"&&key!=="inmueble_provincia");
+  // Ubicación agrupada solo en este editor. Los chips antiguos de partido y
+  // provincia siguen siendo válidos en los contratos ya guardados.
+  const gruposInsercion=[
+    {titulo:"Personas",items:disponibles.filter(([key])=>/^(comprador|vendedor|locador|locatario|comodante|comodatario|autorizante)_/.test(key))},
+    {titulo:"Inmueble",items:disponibles.filter(([key])=>/^inmueble_/.test(key))},
+    {titulo:"Importes y fechas",items:disponibles.filter(([key])=>/^(precio_|anticipo_|saldo_|alquiler_|reserva_alquiler_|fecha_)/.test(key))},
+    {titulo:"Inmobiliaria y condiciones",items:disponibles.filter(([key])=>!/^(comprador|vendedor|locador|locatario|comodante|comodatario|autorizante|inmueble|precio|anticipo|saldo|alquiler|reserva_alquiler|fecha)_/.test(key))}
+  ];
   const nombres=grupo==="locacion"?["locador_nombre","locatario_nombre"]
     :grupo==="comodato"?["comodante_nombre","comodatario_nombre"]
     :grupo==="exclusividad"?["autorizante_nombre","inmobiliaria_nombre"]
@@ -107,9 +115,12 @@ export default function DocumentoPropioEditor({
     :(tipo==="reserva"||tipo==="boleto"||tipo==="refuerzo_reserva"||tipo==="devolucion_reserva")?["precio_letras"]:[];
   const importesSinChip=chipsImportesRecomendados.filter(k=>!capturados.includes(k));
   // Accesos rápidos cortos: lo insertado desaparece y queda en el documento.
+  const ordenSugeridos=[...nombres,...rolesPorGrupo[grupo].map(rol=>rol+"_dni"),"inmueble_direccion",...chipsImportesRecomendados,"fecha_operacion_larga","inmobiliaria_nombre"];
   const chipsSugeridos=disponibles.filter(([key])=>
-    nombres.includes(key)||key==="inmueble_direccion"||chipsImportesRecomendados.includes(key)
-  ).slice(0,6);
+    nombres.includes(key)||rolesPorGrupo[grupo].some(rol=>key===rol+"_dni")||
+    key==="inmueble_direccion"||chipsImportesRecomendados.includes(key)||
+    key==="fecha_operacion_larga"||key==="inmobiliaria_nombre"
+  ).sort((a,b)=>ordenSugeridos.indexOf(a[0])-ordenSugeridos.indexOf(b[0])).slice(0,8);
   // Un DNI fijo del Word original puede filtrar datos de otra operación.
   // Es orientativo: nunca reemplazamos ni alteramos el texto del usuario.
   const textoSinChips=texto.replace(/\{\{[a-zA-Z0-9_]+\}\}/g,"");
@@ -242,13 +253,13 @@ export default function DocumentoPropioEditor({
         <select className="inp" style={{display:"block",width:"min(100%,320px)",marginTop:5,fontSize:16}} defaultValue=""
           aria-label="Agregar chip en la posición del cursor" disabled={disponibles.length===0||estado==="saving"} onChange={ev=>{insertar(ev.target.value);ev.target.value="";}}>
           <option value="">{disponibles.length?"Elegir un dato…":"✓ Todos los datos disponibles están insertados"}</option>
-          {disponibles.map(([key,label])=><option key={key} value={key}>{label}</option>)}
+          {gruposInsercion.filter(g=>g.items.length>0).map(g=><optgroup key={g.titulo} label={g.titulo}>{g.items.map(([key,label])=><option key={key} value={key}>{label}</option>)}</optgroup>)}
         </select>
       </label>
       <span role="status" style={{fontSize:11,color:"var(--muted)"}}>{capturados.length} datos insertados · {disponibles.length} disponibles · {texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
     </div>
     {chipsSugeridos.length>0&&<div role="group" aria-label="Datos recomendados para insertar" style={{display:"flex",flexDirection:"column",gap:7}}>
-      <div style={{fontSize:12,color:"var(--muted)"}}>Datos principales: tocá uno para insertarlo donde dejaste el cursor. Al insertarlo, desaparece de esta lista.</div>
+      <div style={{fontSize:12,color:"var(--muted)"}}>Datos más usados: tocá uno para insertarlo donde dejaste el cursor. Para ver los demás, usá el selector por categorías. Cada dato insertado desaparece de las opciones.</div>
       <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
         {chipsSugeridos.map(([key,label])=><button key={key} type="button" className="btn btn-secondary btn-sm" aria-label={"Insertar "+label} title={"Insertar "+label} disabled={estado==="saving"} style={{minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}} onClick={()=>insertar(key)}>+ {label}</button>)}
       </div>
