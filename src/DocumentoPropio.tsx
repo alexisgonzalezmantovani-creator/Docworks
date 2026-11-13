@@ -54,6 +54,7 @@ export default function DocumentoPropioEditor({
   const [mostrarVista,setMostrarVista]=useState(false);
   const inputRef=useRef<HTMLTextAreaElement|null>(null);
   const espejoRef=useRef<HTMLDivElement|null>(null);
+  const [editandoTexto,setEditandoTexto]=useState(false);
   // Recordar la selección del texto antes de que el selector de chips tome el foco (iPhone/Safari).
   const seleccionRef=useRef({inicio:textoActual.length,fin:textoActual.length});
   const guardandoRef=useRef(false);
@@ -215,21 +216,21 @@ export default function DocumentoPropioEditor({
         necesita el generador de documentos. No se agrega zoom ni editor externo. */}
     <div style={{position:"relative",minHeight:360}}>
       <div ref={espejoRef} aria-hidden="true" style={{
-        position:"absolute",inset:0,zIndex:0,pointerEvents:"none",overflow:"auto",
+        position:"absolute",inset:0,zIndex:0,pointerEvents:"none",overflow:"auto",visibility:editandoTexto?"hidden":"visible",
         border:"1px solid transparent",borderRadius:8,padding:"12px",
         boxSizing:"border-box",fontFamily:"inherit",fontSize:16,lineHeight:1.65,
         whiteSpace:"pre-wrap",overflowWrap:"break-word",wordBreak:"normal",
         color:"var(--text)"
-      }}>{texto.split(/(\\{\\{[a-zA-Z0-9_]+\\}\\})/g).map((fragmento,i)=>{
-        const match=/^\\{\\{([a-zA-Z0-9_]+)\\}\\}$/.exec(fragmento);
+      }}>{texto.split(/(\{\{[a-zA-Z0-9_]+\}\})/g).map((fragmento,i)=>{
+        const match=/^\{\{([a-zA-Z0-9_]+)\}\}$/.exec(fragmento);
         if(!match)return <React.Fragment key={i}>{fragmento}</React.Fragment>;
         const etiqueta=CHIPS.find(([key])=>key===match[1])?.[1]||match[1].replace(/_/g," ");
         const invalido=!permitidos.has(match[1])||repetidos.includes(match[1]);
         return <span key={i} style={{background:invalido?"#fee2e2":"#dff3ff",color:invalido?"#991b1b":"#0369a1",borderRadius:4,fontWeight:650,boxDecorationBreak:"clone",WebkitBoxDecorationBreak:"clone"}}>{etiqueta}</span>;
-      })}{texto.endsWith("\\n")?"\\u200b":null}</div>
+      })}{texto.endsWith("\n")?"\u200b":null}</div>
       <textarea ref={inputRef} className="inp" aria-label="Texto del contrato propio" value={texto} disabled={estado==="saving"}
-        style={{position:"relative",zIndex:1,width:"100%",height:360,minHeight:360,resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",padding:12,fontSize:16,lineHeight:1.65,whiteSpace:"pre-wrap",overflowWrap:"break-word",color:"transparent",caretColor:"var(--text)",background:"transparent"}}
-        placeholder="Pegá acá todo tu contrato…" onChange={ev=>{cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
+        style={{position:"relative",zIndex:1,width:"100%",height:360,minHeight:360,resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",padding:12,fontSize:16,lineHeight:1.65,whiteSpace:"pre-wrap",overflowWrap:"break-word",color:editandoTexto?"var(--text)":"transparent",caretColor:"var(--text)",background:"transparent"}}
+        placeholder="Pegá acá todo tu contrato…" onFocus={()=>setEditandoTexto(true)} onBlur={()=>setEditandoTexto(false)} onChange={ev=>{cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
         onScroll={ev=>{if(espejoRef.current){espejoRef.current.scrollTop=ev.currentTarget.scrollTop;espejoRef.current.scrollLeft=ev.currentTarget.scrollLeft;}}}
         onSelect={ev=>recordarSeleccion(ev.currentTarget)}
         onClick={ev=>recordarSeleccion(ev.currentTarget)}
