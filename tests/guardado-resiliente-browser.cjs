@@ -2,6 +2,13 @@ const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),http
 const dir=path.resolve(__dirname,'..'),out=fs.mkdtempSync(path.join(os.tmpdir(),'dw-resiliente-browser-')),source=fs.readFileSync(dir+'/src/App.tsx','utf8'),ast=ts.createSourceFile('App.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let saveOp;(function visit(n){if(ts.isFunctionDeclaration(n)&&n.name?.text==='saveOp')saveOp=n.getText(ast);ts.forEachChild(n,visit)})(ast);
 const harness=`
 import {createRoot} from 'react-dom/client';
+// La interfaz completa muestra un modal; este harness aislado expone
+// su callback para que Playwright compruebe y confirme el cambio explícitamente.
+window.qaTipoConfirm=null;
+window.addEventListener('dw:confirm',e=>{
+ if(String(e.detail?.message||'').includes('Cambiar el tipo de documento'))
+   window.qaTipoConfirm=e.detail.onConfirm;
+});
 function GuardadoHarness(){
  const [operaciones,setOperaciones]=useState([]),[editOp,setEditOp]=useState(null),[showForm,setShowForm]=useState(true),[formInitialOverride,setFormInitialOverride]=useState(()=>lsGet('draftOperacion',null)?.data||{...EMPTY_OP,...SAMPLE_OP_PREVIEW,tipo:'comodato',comprador_nombre:'Compradora Real',comprador_cotitulares:[{nombre:'Cotitular Real',dni:'30123456'}]}),[saveStatus,setSaveStatus]=useState({state:'saved'}),[texto,setTexto]=useState('');
  const contexto={usuario:{id:'owner',rol_base:'dueno'},inmobiliaria:{id:'tenant-a'},habilitado:true},docworksAuth={contexto,session:{}},perfil={rol:'dueno',nombre:'Inmobiliaria Prueba',matricula:'1234',plantillas:{}},clausulas=[],bloquesReserva=[];
@@ -20,7 +27,16 @@ const casos=new Map();const server=http.createServer(async(req,res)=>{const key=
 try{for(const [width,height]of [[320,740],[390,844],[844,390],[1440,1000]]){const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.setViewportSize({width,height});await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1')?r.continue():r.abort());await page.goto('http://127.0.0.1:'+server.address().port+'/?case='+width);await page.evaluate(()=>localStorage.clear());await page.reload();await page.locator('#dw-field-comprador_nombre').fill('Nombre Revisado');const original=await page.evaluate(()=>window.qaSnapshot().data);assert.ok(original.id);checks++;
 await page.getByRole('button',{name:'💾 Guardar cambios',exact:true}).click();await page.getByText('No se pudo guardar. Revisá la conexión.',{exact:true}).waitFor();const estado=await(await page.request.get('http://127.0.0.1:'+server.address().port+'/qa/estado?case='+width)).json();assert.equal(estado.length,1);assert.equal(estado[0].id,original.id);checks+=2;
 await page.reload();await page.locator('#dw-field-comprador_nombre').waitFor();assert.equal(await page.locator('#dw-field-comprador_nombre').inputValue(),'Nombre Revisado');assert.equal(await page.evaluate(()=>window.qaSnapshot().data.id),original.id);checks+=2;
-await page.locator('.step-dot').first().click();await page.getByRole('button',{name:/Autorización de Venta Con o sin exclusividad/}).click();assert.deepEqual(await page.evaluate(()=>window.qaSnapshot().data.comprador_cotitulares),[]);await page.getByRole('button',{name:'Ver documento de prueba',exact:true}).click();assert.ok(!(await page.getByTestId('texto').textContent()).includes('Cotitular Real'));checks+=2;
-await page.getByRole('button',{name:/Comodato Préstamo de uso gratuito/}).click();assert.equal(await page.evaluate(()=>window.qaSnapshot().data.comprador_nombre),'Nombre Revisado');assert.equal(await page.evaluate(()=>window.qaSnapshot().data.comprador_cotitulares[0].nombre),'Cotitular Real');checks+=2;
+await page.locator('.step-dot').first().click();await page.getByRole('button',{name:/Autorización de Venta Con o sin exclusividad/}).click();
+assert.equal(await page.evaluate(()=>window.qaSnapshot().data.comprador_nombre),'Nombre Revisado','No cambiar datos antes de confirmar');
+assert.equal(await page.evaluate(()=>typeof window.qaTipoConfirm),'function','Debe pedir confirmación al cambiar de documento');
+await page.evaluate(()=>{const aprobar=window.qaTipoConfirm;window.qaTipoConfirm=null;aprobar();});
+await page.waitForFunction(()=>window.qaSnapshot().data.tipo==='exclusividad');
+assert.deepEqual(await page.evaluate(()=>window.qaSnapshot().data.comprador_cotitulares),[]);await page.getByRole('button',{name:'Ver documento de prueba',exact:true}).click();assert.ok(!(await page.getByTestId('texto').textContent()).includes('Cotitular Real'));checks+=2;
+await page.getByRole('button',{name:/Comodato Préstamo de uso gratuito/}).click();
+assert.equal(await page.evaluate(()=>typeof window.qaTipoConfirm),'function','Volver a comodato también necesita confirmación');
+await page.evaluate(()=>{const aprobar=window.qaTipoConfirm;window.qaTipoConfirm=null;aprobar();});
+await page.waitForFunction(()=>window.qaSnapshot().data.tipo==='comodato');
+assert.equal(await page.evaluate(()=>window.qaSnapshot().data.comprador_nombre),'Nombre Revisado');assert.equal(await page.evaluate(()=>window.qaSnapshot().data.comprador_cotitulares[0].nombre),'Cotitular Real');checks+=2;
 await page.getByRole('button',{name:'💾 Guardar cambios',exact:true}).click();await page.getByText('Operación confirmada',{exact:true}).waitFor();const final=await(await page.request.get('http://127.0.0.1:'+server.address().port+'/qa/estado?case='+width)).json();assert.equal(final.length,1);assert.equal(final[0].id,original.id);assert.equal(final[0].created_at,original.created_at);assert.equal(final[0].comprador_nombre,'Nombre Revisado');assert.equal(JSON.parse(await page.getByTestId('ops').textContent()).length,1);assert.equal(await page.evaluate(()=>localStorage.getItem('draftOperacion')),null);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.deepEqual(errors,[]);checks+=8;
 await page.screenshot({path:out+'/recuperado-'+width+'.png',fullPage:true});console.log('OK '+width+'×'+height+': respuesta perdida, recarga, tipo reversible y un solo registro');await page.close();}console.log('APROBADAS '+checks+' comprobaciones de guardado y recuperación Chromium.');}finally{await browser.close();server.close();}})().catch(e=>{console.error(e);server.close();process.exitCode=1});
