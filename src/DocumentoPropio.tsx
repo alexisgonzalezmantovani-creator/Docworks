@@ -1,5 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 
+// Los chips representan datos de una operación, no texto reutilizable:
+// detectar duplicados también cuando el contrato llega pegado desde Word.
+export function analizarChipsDocumentoPropio(texto:string, permitidos:Set<string>) {
+  const apariciones=Array.from(String(texto||"").matchAll(/\{\{([a-zA-Z0-9_]+)\}\}/g),m=>m[1]);
+  const capturados=Array.from(new Set(apariciones));
+  const repetidos=capturados.filter(key=>apariciones.filter(item=>item===key).length>1);
+  const invalidos=capturados.filter(key=>!permitidos.has(key));
+  const llavesMal=/\{\{|\}\}/.test(String(texto||"").replace(/\{\{[a-zA-Z0-9_]+\}\}/g,""));
+  return {capturados,repetidos,invalidos,llavesMal};
+}
+
 // Un editor de texto plano: el contenido pertenece íntegramente a la inmobiliaria.
 // Los datos variables se eligen de un catálogo cerrado y se resuelven al generar la operación.
 const CHIPS = [
@@ -49,6 +60,17 @@ export default function DocumentoPropioEditor({
   const baseGuardada=textoGuardadoLocal===null?textoActual:textoGuardadoLocal;
   const dirty=texto!==baseGuardada;
   const necesitaGuardar=dirty||config.modo_documento!=="propio";
+  // Mantener el texto recién guardado mientras vuelve la confirmación del perfil.
+  // Una actualización externa del modelo solo reemplaza un editor sin modificaciones.
+  useEffect(()=>{
+    if(textoGuardadoLocal!==null){
+      if(textoActual===textoGuardadoLocal)setTextoGuardadoLocal(null);
+    }else if(!dirty&&texto!==textoActual){
+      setTexto(textoActual);
+      seleccionRef.current={inicio:textoActual.length,fin:textoActual.length};
+      setEstado("idle");
+    }
+  },[textoActual,textoGuardadoLocal,dirty,texto]);
   const grupo=tipo==="alquiler"||tipo==="reserva_alquiler"?"locacion":tipo==="comodato"?"comodato":tipo==="exclusividad"?"exclusividad":"compra";
   const rolesPorGrupo:Record<string,string[]>={
     locacion:["locador","locatario"], comodato:["comodante","comodatario"],
@@ -68,18 +90,16 @@ export default function DocumentoPropioEditor({
     return true;
   });
   const permitidos=new Set<string>(todos.map(([key])=>key));
-  const capturados=Array.from(new Set((texto.match(/\{\{[a-zA-Z0-9_]+\}\}/g)||[]).map(t=>t.slice(2,-2))));
-  const invalidos=capturados.filter(t=>!permitidos.has(t));
+  const {capturados,repetidos,invalidos,llavesMal}=analizarChipsDocumentoPropio(texto,permitidos);
   // Cada dato automático se ofrece una sola vez dentro del contrato completo.
   // La lista se recalcula al escribir o borrar, sin perder la posición del cursor.
   const disponibles=todos.filter(([key])=>!capturados.includes(key));
-  const llavesMal=/\{\{|\}\}/.test(texto.replace(/\{\{[a-zA-Z0-9_]+\}\}/g,""));
   const nombres=grupo==="locacion"?["locador_nombre","locatario_nombre"]
     :grupo==="comodato"?["comodante_nombre","comodatario_nombre"]
     :grupo==="exclusividad"?["autorizante_nombre","inmobiliaria_nombre"]
     :["comprador_nombre","vendedor_nombre"];
   const faltantes=[...nombres,"inmueble_direccion"].filter(t=>!capturados.includes(t));
-  const valido=texto.trim().length>40&&texto.length<=80000&&!invalidos.length&&!llavesMal&&!faltantes.length;
+  const valido=texto.trim().length>40&&texto.length<=80000&&!invalidos.length&&!repetidos.length&&!llavesMal&&!faltantes.length;
   const chipsImportesRecomendados=tipo==="reserva_alquiler"?["reserva_alquiler_reserva","reserva_alquiler_canon"]
     :tipo==="alquiler"?["alquiler_monto_letras"]
     :(tipo==="reserva"||tipo==="boleto"||tipo==="refuerzo_reserva"||tipo==="devolucion_reserva")?["precio_letras"]:[];
@@ -164,12 +184,20 @@ export default function DocumentoPropioEditor({
     }catch(err:any){setEstado("error");setError(err?.message||"No se pudo guardar. El contrato sigue en pantalla.");}
     finally{guardandoRef.current=false;}
   }
-  function recuperarVersionAnterior(){
-    const textoAnterior=String(config.documento_propio_anterior||"");
-    if(!textoAnterior.trim())return;
-    confirmar("¿Recuperar el texto anterior? Se abrirá como borrador para que lo revises antes de guardarlo.",()=>{
-      cambiarTexto(textoAnterior);
-      seleccionRef.current={inicio:textoAnterior.length,fin:textoAnterior.length};
+  const historial=Array.isArray(config.historial_documento_propio)?config.historial_documento_propio:[];
+  const versionActual=Math.max(1,parseInt(String(config.version||1),10)||1);
+  const candidatas=[
+    {version:Math.max(1,versionActual-1),texto:String(config.documento_propio_anterior||"")},
+    ...historial.map((item:any)=>({version:item?.version||"anterior",texto:String(item?.texto||"")}))
+  ];
+  const versionesDisponibles=candidatas.filter((item,i,items)=>
+    item.texto.trim()&&item.texto!==textoActual&&items.findIndex(otro=>otro.texto===item.texto)===i
+  ).slice(0,5);
+  function recuperarVersion(item:{version:string|number;texto:string}){
+    confirmar("¿Recuperar la versión "+item.version+"? Se abrirá como borrador, sin sobrescribir el modelo publicado hasta que guardes.",()=>{
+      cambiarTexto(item.texto);
+      seleccionRef.current={inicio:item.texto.length,fin:item.texto.length};
+      inputRef.current?.focus();
     });
   }
   return <section className="card" aria-label="Editor de contrato propio" style={{padding:14,display:"flex",flexDirection:"column",gap:12}}>
@@ -182,7 +210,8 @@ export default function DocumentoPropioEditor({
       placeholder="Pegá acá todo tu contrato…" onChange={ev=>{cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
       onSelect={ev=>recordarSeleccion(ev.currentTarget)}
       onClick={ev=>recordarSeleccion(ev.currentTarget)}
-      onKeyUp={ev=>recordarSeleccion(ev.currentTarget)} />
+      onKeyUp={ev=>recordarSeleccion(ev.currentTarget)}
+      onKeyDown={ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="s"){ev.preventDefault();guardar();}}} />
     <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",alignItems:"center"}}>
       <label style={{fontSize:12,fontWeight:650,color:"var(--text)"}}>Insertar dato automático
         <select className="inp" style={{display:"block",width:"min(100%,320px)",marginTop:5,fontSize:16}} defaultValue=""
@@ -191,7 +220,7 @@ export default function DocumentoPropioEditor({
           {disponibles.map(([key,label])=><option key={key} value={key}>{label}</option>)}
         </select>
       </label>
-      <span style={{fontSize:11,color:"var(--muted)"}}>{texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
+      <span role="status" style={{fontSize:11,color:"var(--muted)"}}>{capturados.length} datos insertados · {disponibles.length} disponibles · {texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
     </div>
     {revisar&&<div role={valido?"status":"alert"} style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:valido?"var(--green)":"var(--amber)"}}>
       {valido?"✓ Los datos principales están vinculados. Revisá también la redacción y los importes antes de usarlo.":[
@@ -199,6 +228,7 @@ export default function DocumentoPropioEditor({
         texto.length>80000?"El texto supera los 80.000 caracteres":null,
         faltantes.length?"Faltan chips: "+faltantes.map(t=>CHIPS.find(([k])=>k===t)?.[1]||t).join(", "):null,
         invalidos.length?"Chips desconocidos: "+invalidos.join(", "):null,
+        repetidos.length?"Cada dato automático se usa una sola vez. Repetidos: "+repetidos.map(t=>CHIPS.find(([k])=>k===t)?.[1]||t).join(", "):null,
         llavesMal?"Hay chips con llaves incompletas":null
       ].filter(Boolean).join(". ")}
     </div>}
@@ -228,11 +258,17 @@ export default function DocumentoPropioEditor({
     {mostrarVista&&<div style={{background:"#fff",color:"#243447",border:"1px solid #d1d5db",borderRadius:8,padding:"clamp(18px,4vw,36px)",lineHeight:1.65,fontSize:13,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>
       <div style={{fontSize:11,color:"#64748b",marginBottom:12}}>VISTA DEL TEXTO · los chips se completarán con los datos reales</div>
       {texto.split(/(\{\{[a-zA-Z0-9_]+\}\})/g).map((trozo,i)=>/^\{\{[a-zA-Z0-9_]+\}\}$/.test(trozo)
-        ? <span key={i} style={{background:"#e0f2fe",color:"#075985",borderRadius:4}}>{CHIPS.find(([key])=>key===trozo.slice(2,-2))?.[1]||trozo}</span>
+        ? <span key={i} style={{background:repetidos.includes(trozo.slice(2,-2))?"#fee2e2":"#e0f2fe",color:repetidos.includes(trozo.slice(2,-2))?"#991b1b":"#075985",borderRadius:4}}>{CHIPS.find(([key])=>key===trozo.slice(2,-2))?.[1]||trozo}</span>
         : <span key={i}>{trozo}</span>)}
     </div>}
-    {config.modo_documento==="propio"&&String(config.documento_propio_anterior||"").trim()&&
-      <button type="button" className="btn btn-ghost btn-sm" style={{alignSelf:"flex-start"}} disabled={estado==="saving"} onClick={recuperarVersionAnterior}>↶ Recuperar texto anterior</button>}
+    {config.modo_documento==="propio"&&versionesDisponibles.length>0&&
+      <details style={{fontSize:12,alignSelf:"flex-start",width:"100%"}}>
+        <summary style={{cursor:"pointer",fontWeight:650,padding:"9px 0"}}>↶ Recuperar versión anterior ({versionesDisponibles.length})</summary>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap",padding:"5px 0 9px"}}>
+          {versionesDisponibles.map((item,i)=><button key={i} type="button" className="btn btn-secondary btn-sm" disabled={estado==="saving"} onClick={()=>recuperarVersion(item)}>Versión {item.version}</button>)}
+        </div>
+        <p style={{fontSize:11,color:"var(--muted)",margin:"0 0 8px"}}>La recuperación no guarda ni publica nada automáticamente.</p>
+      </details>}
     <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>
       Este modelo no modifica operaciones anteriores. El contrato propio debe ser revisado por la inmobiliaria; DocWorks no verifica automáticamente su validez jurídica.
     </div>
