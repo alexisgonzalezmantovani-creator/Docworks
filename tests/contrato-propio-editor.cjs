@@ -77,8 +77,8 @@ check('quitar chip antes de puntuación no deja espacios sobrantes',()=>{
  assert.equal(quitar('Firma {{comprador_nombre}}!','comprador_nombre').texto,'Firma!');
 });
 check('quitar chip respeta saltos de línea y párrafos de Word',()=>{
- const original='Encabezado\\n{{precio_letras}}\\nCláusula siguiente.';
- assert.equal(quitar(original,'precio_letras').texto,'Encabezado\\n\\nCláusula siguiente.');
+ const original='Encabezado\n{{precio_letras}}\nCláusula siguiente.';
+ assert.equal(quitar(original,'precio_letras').texto,'Encabezado\n\nCláusula siguiente.');
 });
 check('el botón de quitar está en cada etiqueta insertada',()=>{
  const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
