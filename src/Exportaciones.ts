@@ -202,14 +202,17 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       var rectTop=y+20;
       var rectBottom=y-18;
       if(esClasico){
-        hline(y+13,0.3,null,0.75);
+        // Los filetes en estilo clásico deben quedar fuera de los glifos.
+        // Antes el superior estaba a solo 4 pt de la línea base del nombre:
+        // atravesaba la altura real de la fuente Times.
+        hline(y+27,0.3,null,0.75);
         if(cabeceraBase) text(centeredX(cabeceraBase,mainSize,true),topTextY,cabeceraBase,mainSize,true);
         metaHeader.slice(0,2).forEach(function(v,i){
-          var fs=fitPdfTextSize(v,metaSize,8,maxHeaderW,false);
+          var fs=fitPdfTextSize(v,metaSize,7,maxHeaderW,false);
           text(centeredX(v,fs,false),metaY-(i*9),v,fs,false);
         });
-        hline(y-18-(metaHeader.length>1?2:0),0.3,null,0.75);
-        y-=48;
+        hline(y-(metaHeader.length>1?28:24),0.3,null,0.75);
+        y-=58;
       } else {
         rect(ML,rectBottom,W-ML-MR,rectTop-rectBottom,estilo==="corporativo"?rgbPdfStr(colorPrim):rgbPdfStr(tintRgb(colorPrim,0.94)));
         var mainColor=estilo==="corporativo"?{r:1,g:1,b:1}:colorPrim;
