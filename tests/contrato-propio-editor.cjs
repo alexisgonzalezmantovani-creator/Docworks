@@ -127,4 +127,9 @@ check('chips visuales tienen íconos accesibles y botones táctiles',()=>{
  assert.ok(editor.includes('onClick={()=>quitar(key)}'));
  assert.ok(editor.includes('onClick={()=>insertar(key)}'));
 });
+check('nombres breves se aplican a editor y vista previa del texto',()=>{
+ assert.ok(editor.includes('const etiqueta=nombreDatoBreve(match[1]'));
+ assert.ok(editor.includes('nombreDatoBreve(trozo.slice(2,-2)'));
+ assert.ok(editor.includes('nombreDatoBreve(key,label)'));
+});
 console.log('APROBADAS '+n+' pruebas de contrato propio.');

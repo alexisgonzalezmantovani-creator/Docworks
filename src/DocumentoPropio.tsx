@@ -357,7 +357,7 @@ export default function DocumentoPropioEditor({
       }}>{texto.split(/(\{\{[a-zA-Z0-9_]+\}\})/g).map((fragmento,i)=>{
         const match=/^\{\{([a-zA-Z0-9_]+)\}\}$/.exec(fragmento);
         if(!match)return <React.Fragment key={i}>{fragmento}</React.Fragment>;
-        const etiqueta=CHIPS.find(([key])=>key===match[1])?.[1]||match[1].replace(/_/g," ");
+        const etiqueta=nombreDatoBreve(match[1],CHIPS.find(([key])=>key===match[1])?.[1]||match[1].replace(/_/g," "));
         const invalido=!permitidos.has(match[1])||repetidos.includes(match[1]);
         return <span key={i} style={{background:invalido?"#fee2e2":"#dff3ff",color:invalido?"#991b1b":"#0369a1",borderRadius:4,fontWeight:650,boxDecorationBreak:"clone",WebkitBoxDecorationBreak:"clone"}}>{etiqueta}</span>;
       })}{texto.endsWith("\n")?"\u200b":null}</div>
@@ -448,7 +448,7 @@ export default function DocumentoPropioEditor({
     {mostrarVista&&<div style={{background:"#fff",color:"#243447",border:"1px solid #d1d5db",borderRadius:8,padding:"clamp(18px,4vw,36px)",lineHeight:1.65,fontSize:13,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>
       <div style={{fontSize:11,color:"#64748b",marginBottom:12}}>VISTA DEL TEXTO · los chips se completarán con los datos reales</div>
       {texto.split(/(\{\{[a-zA-Z0-9_]+\}\})/g).map((trozo,i)=>/^\{\{[a-zA-Z0-9_]+\}\}$/.test(trozo)
-        ? <span key={i} style={{background:repetidos.includes(trozo.slice(2,-2))?"#fee2e2":"#e0f2fe",color:repetidos.includes(trozo.slice(2,-2))?"#991b1b":"#075985",borderRadius:4}}>{CHIPS.find(([key])=>key===trozo.slice(2,-2))?.[1]||trozo}</span>
+        ? <span key={i} style={{background:repetidos.includes(trozo.slice(2,-2))?"#fee2e2":"#e0f2fe",color:repetidos.includes(trozo.slice(2,-2))?"#991b1b":"#075985",borderRadius:4}}>{nombreDatoBreve(trozo.slice(2,-2),CHIPS.find(([key])=>key===trozo.slice(2,-2))?.[1]||trozo)}</span>
         : <span key={i}>{trozo}</span>)}
     </div>}
     {config.modo_documento==="propio"&&versionesDisponibles.length>0&&
