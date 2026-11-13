@@ -737,8 +737,9 @@ function PagoMensualField({data,onChange,reserva=false}){
     <option value="1">Día 1</option><option value="5">Día 5</option><option value="10">Día 10</option><option value="15">Día 15</option><option value="otro">Otro día</option>
   </Slt>{data[campo]==="otro"&&<Inp id={"dw-field-"+campo+"_otro"} label="Otro día de pago" value={data[campo+"_otro"]||""} onChange={function(e){onChange(campo+"_otro",e.target.value);}} placeholder="Ej: 20" type="number" min="1" max="31" style={{marginTop:8}}/>}</div>;
 }
-// Datos declarados para la operación: no constituyen certificación de dominio,
-// ocupación ni libre deuda. Solo entran al contrato cuando se inserta su chip.
+// Documentación actual declarada: no constituye certificación de títulos.
+// Conservamos resolución de chips de ocupación y deudas SOLO por compatibilidad
+// con documentos históricos; no se ofrecen en nuevos formularios ni bibliotecas.
 function datosAdicionalesInmueble(op){
   op=op||{};
   var esVenta=op.tipo==="reserva"||op.tipo==="boleto";
@@ -1271,7 +1272,7 @@ var TOKEN_LABELS_DOCWORKS = {
   comprador_nombre:"Nombre del comprador / oferente", comprador_dni:"DNI / CUIT del comprador", comprador_domicilio:"Domicilio del comprador", comprador_email:"Correo electrónico del comprador", comprador_telefono:"Teléfono del comprador",
   vendedor_nombre:"Nombre del vendedor / titular", vendedor_dni:"DNI / CUIT del vendedor", vendedor_domicilio:"Domicilio del vendedor", vendedor_email:"Correo electrónico del vendedor", vendedor_telefono:"Teléfono del vendedor",
   locador_nombre:"Nombre del locador", locador_dni:"DNI / CUIT del locador", locador_domicilio:"Domicilio del locador", locatario_nombre:"Nombre del locatario", locatario_dni:"DNI / CUIT del locatario", locatario_domicilio:"Domicilio del locatario",
-  inmueble_barrio:"Barrio / complejo", inmueble_unidad_funcional:"Unidad funcional / lote", inmueble_direccion:"Dirección del inmueble", inmueble_partido:"Partido / Municipio", inmueble_provincia:"Provincia", nomenclatura_catastral:"Nomenclatura catastral", descripcion_inmueble:"Detalles adicionales del inmueble", inmueble_documentacion_actual_texto:"Documentación actual (declarada)", inmueble_ocupacion_actual_texto:"Ocupación informada", inmueble_deudas_estado_texto:"Deudas pendientes / verificación", inmueble_situacion_texto:"Situación del inmueble (resumen)", compra_instrumento_nombre:"Instrumentación prevista (escritura, boleto o cesión)", compra_boleto_origen:"Boleto antecedente de la cesión",
+  inmueble_barrio:"Barrio / complejo", inmueble_unidad_funcional:"Unidad funcional / lote", inmueble_direccion:"Dirección del inmueble", inmueble_partido:"Partido / Municipio", inmueble_provincia:"Provincia", nomenclatura_catastral:"Nomenclatura catastral", descripcion_inmueble:"Detalles adicionales del inmueble", inmueble_documentacion_actual_texto:"Documentación actual (declarada)", compra_instrumento_nombre:"Instrumentación prevista (escritura, boleto o cesión)", compra_boleto_origen:"Boleto antecedente de la cesión",
   fecha_operacion_larga:"Fecha de la operación", inmobiliaria_nombre:"Nombre de la inmobiliaria", inmobiliaria_matricula:"Matrícula de la inmobiliaria", alquiler_monto_letras:"Canon mensual en letras", comision_porcentaje:"Porcentaje de comisión"
 };
 function tokensDeTextoDocWorks(texto){
@@ -3399,8 +3400,7 @@ function tokensEncabezadoParaTipo(tipo) {
   var compra = ["comprador_nombre","comprador_dni","comprador_domicilio","vendedor_nombre","vendedor_dni","vendedor_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","precio_letras","anticipo_letras","saldo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
   var alq = ["locador_nombre","locador_dni","locador_domicilio","locatario_nombre","locatario_dni","locatario_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","alquiler_monto_letras","anticipo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
   var lista=(tipo==="alquiler"||tipo==="reserva_alquiler")?alq:compra;
-  if(tipo==="reserva"||tipo==="boleto")lista=lista.concat(["compra_instrumento_nombre","inmueble_documentacion_actual_texto","inmueble_deudas_estado_texto"]);
-  if(["reserva","boleto","reserva_alquiler","alquiler"].includes(tipo))lista=lista.concat(["inmueble_ocupacion_actual_texto","inmueble_situacion_texto"]);
+  if(tipo==="reserva"||tipo==="boleto")lista=lista.concat(["compra_instrumento_nombre","inmueble_documentacion_actual_texto"]);
   return Array.from(new Set(tokensDeTextoDocWorks(DEFAULT_ENCABEZADOS[tipo]||"").concat(lista)));
 }
 
@@ -3422,9 +3422,6 @@ function labelTokenEncabezado(k, tipo) {
     alquiler_monto_letras: "Canon en letras", fecha_operacion_larga: "Fecha (larga)",
     compra_instrumento_nombre: "Instrumentación prevista",
     inmueble_documentacion_actual_texto: "Documentación actual (declarada)",
-    inmueble_ocupacion_actual_texto: "Ocupación actual (declarada)",
-    inmueble_deudas_estado_texto: "Deudas y expensas (declaradas)",
-    inmueble_situacion_texto: "Situación del inmueble (resumen)",
     inmobiliaria_nombre: "Inmobiliaria", inmobiliaria_matricula: "Matrícula"
   };
   return map[k] || k;
@@ -5007,45 +5004,26 @@ function StepInmueble({data,onChange,faltantes}){
         <BarrioComplejoField data={data} onChange={onChange} faltantes={faltantes}/>
         <Inp id="dw-field-inmueble_partido" label="Partido / Municipio" value={data.inmueble_partido||""} onChange={function(e){onChange("inmueble_partido",e.target.value);}} placeholder="Ej.: Pilar" {...estiloCampoFaltante(faltantes,"inmueble_partido")}/>
         <Inp id="dw-field-inmueble_provincia" label="Provincia" value={data.inmueble_provincia||""} onChange={function(e){onChange("inmueble_provincia",e.target.value);}} placeholder="Buenos Aires" {...estiloCampoFaltante(faltantes,"inmueble_provincia")}/>
-        {(data.tipo==="reserva"||data.tipo==="boleto"||data.tipo==="alquiler"||data.tipo==="reserva_alquiler")&&<div className="col2" style={{marginTop:10}}>
+        {(data.tipo==="reserva"||data.tipo==="boleto")&&<div className="col2" style={{marginTop:10}}>
           <details style={{border:"1px solid var(--border2)",borderRadius:12,padding:"12px 14px",background:"var(--card)"}}>
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:30}}>
-              Información adicional del inmueble <span style={{fontSize:11,fontWeight:400,color:"var(--dim)"}}>(opcional)</span>
-              {((data.inmueble_documentacion_actual&&data.inmueble_documentacion_actual!=="no_informado")||(data.inmueble_ocupacion_actual&&data.inmueble_ocupacion_actual!=="no_informado")||(data.inmueble_deudas_estado&&data.inmueble_deudas_estado!=="no_informado"))&&<span style={{fontSize:11,color:"var(--green)",marginLeft:8}}>Con datos cargados</span>}
+              Documentación actual <span style={{fontSize:11,fontWeight:400,color:"var(--dim)"}}>(opcional)</span>
+              {data.inmueble_documentacion_actual&&data.inmueble_documentacion_actual!=="no_informado"&&<span style={{fontSize:11,color:"var(--green)",marginLeft:8}}>Cargada</span>}
             </summary>
-            <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"6px 0 12px"}}>Completá solo lo que conozcas. Esta información es declarativa; no acredita la titularidad, ocupación ni libre deuda. Para mencionarla en el contrato, agregá el chip correspondiente desde Cláusulas.</div>
+            <p style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"7px 0 12px"}}>Solo si conocés el dato. Indica qué documentación existe hoy; no cambia cómo se firmará la venta ni reemplaza la verificación de títulos.</p>
             <div className="grid2">
-              {(data.tipo==="reserva"||data.tipo==="boleto")&&<>
-                <Slt id="dw-field-inmueble_documentacion_actual" label="¿Qué documentación tiene actualmente?" value={data.inmueble_documentacion_actual||"no_informado"} onChange={function(e){onChange("inmueble_documentacion_actual",e.target.value);}} className="col2">
-                  <option value="no_informado">Sin informar / pendiente de verificar</option>
-                  <option value="escritura">Escritura pública</option>
-                  <option value="boleto">Boleto de compraventa</option>
-                  <option value="cesion_boleto">Cesión de boleto de compraventa</option>
-                  <option value="otro">Otra documentación</option>
-                </Slt>
-                {data.inmueble_documentacion_actual==="otro"&&<Inp id="dw-field-inmueble_documentacion_detalle" label="¿Qué documentación?" className="col2" value={data.inmueble_documentacion_detalle||""} onChange={function(e){onChange("inmueble_documentacion_detalle",e.target.value);}} placeholder="Describí brevemente el documento informado"/>}
-              </>}
-              <Slt id="dw-field-inmueble_ocupacion_actual" label="¿Cuál es la ocupación actual?" className="col2" value={data.inmueble_ocupacion_actual||"no_informado"} onChange={function(e){onChange("inmueble_ocupacion_actual",e.target.value);}}>
-                <option value="no_informado">Sin informar / pendiente de verificar</option>
-                <option value="desocupado">Desocupado</option>
-                <option value="propietario">Ocupado por el propietario</option>
-                <option value="inquilino">Ocupado por un inquilino</option>
-                <option value="otro">Otra situación</option>
+              <Slt id="dw-field-inmueble_documentacion_actual" label="¿Qué documentación tiene el inmueble hoy?" value={data.inmueble_documentacion_actual||"no_informado"} onChange={function(e){onChange("inmueble_documentacion_actual",e.target.value);}} className="col2">
+                <option value="no_informado">No informado / pendiente de verificar</option>
+                <option value="escritura">Escritura pública</option>
+                <option value="boleto">Boleto de compraventa</option>
+                <option value="cesion_boleto">Cesión de boleto de compraventa</option>
+                <option value="otro">Otro documento</option>
               </Slt>
-              {(data.inmueble_ocupacion_actual==="otro"||data.inmueble_ocupacion_actual==="inquilino")&&<Txa id="dw-field-inmueble_ocupacion_detalle" className="col2" label={data.inmueble_ocupacion_actual==="inquilino"?"Aclaraciones sobre la ocupación (opcional)":"¿Qué situación de ocupación?"} value={data.inmueble_ocupacion_detalle||""} onChange={function(e){onChange("inmueble_ocupacion_detalle",e.target.value);}} rows={2} placeholder="Ej.: contrato de alquiler vigente hasta determinada fecha"/>}
-              {(data.tipo==="reserva"||data.tipo==="boleto")&&<>
-                <Slt id="dw-field-inmueble_deudas_estado" className="col2" label="¿Hay deudas, impuestos o expensas pendientes?" value={data.inmueble_deudas_estado||"no_informado"} onChange={function(e){onChange("inmueble_deudas_estado",e.target.value);}}>
-                  <option value="no_informado">Sin informar</option>
-                  <option value="a_verificar">Pendiente de verificar</option>
-                  <option value="sin_deudas_declaradas">Según las partes, no hay deudas conocidas</option>
-                  <option value="pendientes">Se informaron cuestiones pendientes</option>
-                </Slt>
-                {data.inmueble_deudas_estado==="pendientes"&&<Txa id="dw-field-inmueble_deudas_detalle" className="col2" label="Detalle de lo pendiente (opcional)" value={data.inmueble_deudas_detalle||""} onChange={function(e){onChange("inmueble_deudas_detalle",e.target.value);}} rows={2} placeholder="Ej.: expensas del período a verificar"/>}
-              </>}
+              {data.inmueble_documentacion_actual==="otro"&&<Inp id="dw-field-inmueble_documentacion_detalle" label="Describí la documentación" className="col2" value={data.inmueble_documentacion_detalle||""} onChange={function(e){onChange("inmueble_documentacion_detalle",e.target.value);}} placeholder="Ej.: título o antecedente informado"/>}
             </div>
-            {!!datosAdicionalesInmueble(data).inmueble_situacion_texto&&<div style={{marginTop:12,padding:"10px 12px",border:"1px solid var(--border)",background:"var(--surface2)",borderRadius:9}}>
-              <div style={{fontSize:11,color:"var(--dim)",fontWeight:700,marginBottom:5}}>Así se verá si agregás el chip «Situación del inmueble»</div>
-              <div style={{fontSize:12,color:"var(--text)",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{datosAdicionalesInmueble(data).inmueble_situacion_texto}</div>
+            {!!datosAdicionalesInmueble(data).inmueble_documentacion_actual_texto&&<div style={{marginTop:12,padding:"10px 12px",border:"1px solid var(--border)",background:"var(--surface2)",borderRadius:9}}>
+              <div style={{fontSize:11,color:"var(--dim)",fontWeight:700,marginBottom:5}}>Vista previa del chip «Documentación actual»</div>
+              <div style={{fontSize:12,color:"var(--text)",lineHeight:1.5,whiteSpace:"pre-wrap"}}>{datosAdicionalesInmueble(data).inmueble_documentacion_actual_texto}</div>
             </div>}
           </details>
         </div>}
@@ -6949,8 +6927,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   var tokensBase=[
     ["comprador_nombre","Comprador"],["comprador_dni","DNI/CUIT comprador"],["vendedor_nombre","Vendedor"],["vendedor_dni","DNI/CUIT vendedor"],["locador_nombre","Locador"],["locatario_nombre","Locatario / Inquilino"],
     ["inmueble_direccion","Dirección"],["inmueble_partido","Partido / localidad"],["inmueble_provincia","Provincia"],
-    ...(["reserva","boleto"].includes(tipo)?[["compra_instrumento_nombre","Instrumentación prevista"],["compra_boleto_origen","Boleto antecedente (si corresponde)"],["inmueble_documentacion_actual_texto","Documentación actual (declarada)"],["inmueble_deudas_estado_texto","Deudas y expensas (declaradas)"]]:[]),
-    ...(["reserva","boleto","reserva_alquiler","alquiler"].includes(tipo)?[["inmueble_ocupacion_actual_texto","Ocupación actual (declarada)"],["inmueble_situacion_texto","Situación del inmueble (resumen)"]]:[]),
+    ...(["reserva","boleto"].includes(tipo)?[["compra_instrumento_nombre","Instrumentación prevista"],["compra_boleto_origen","Boleto antecedente (si corresponde)"],["inmueble_documentacion_actual_texto","Documentación actual (declarada)"]]:[]),
     ["precio_letras","Precio en letras"],["moneda_txt","Moneda"],["anticipo_letras","Anticipo en letras"],["saldo_letras","Saldo en letras"],["fecha_posesion","Fecha de posesión"],
     ["comision_porcentaje","Comisión"],["comision_vendedor","Comisión vendedor"],["comision_comprador","Comisión comprador"],["alquiler_monto_inicial","Canon inicial"],["alquiler_inicio","Inicio"],["alquiler_fin","Vencimiento"],
     ["res_alq_monto_reserva","Reserva alquiler · importe numérico"],["res_alq_monto_mensual","Alquiler mensual · importe numérico"],["res_alq_inicio_estimado","Inicio estimado"],["devolucion_motivo","Motivo devolución · texto cargado"],["comodato_plazo","Plazo comodato"],["comodato_uso","Destino comodato"],
