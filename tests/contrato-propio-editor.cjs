@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const esbuild=require('esbuild'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const dir=path.resolve(__dirname,'..'),out=fs.mkdtempSync(path.join(os.tmpdir(),'dw-contrato-propio-'));
 esbuild.buildSync({entryPoints:[path.join(dir,'src/DocumentoPropio.tsx')],bundle:true,platform:'node',format:'cjs',outfile:path.join(out,'editor.cjs')});
-const {analizarChipsDocumentoPropio:analizar,insertarDatoAutomatico:insertar}=require(path.join(out,'editor.cjs'));
+const {analizarChipsDocumentoPropio:analizar,insertarDatoAutomatico:insertar,quitarDatoAutomatico:quitar}=require(path.join(out,'editor.cjs'));
 const permitidos=new Set(['comprador_nombre','vendedor_nombre','inmueble_direccion','comprador_dni']);
 let n=0;function check(nombre,funcion){funcion();n++;console.log('OK',nombre);}
 const base='Contrato de reserva. Parte compradora {{comprador_nombre}}, parte vendedora {{vendedor_nombre}}, inmueble {{inmueble_direccion}}. Firmas.';
@@ -58,6 +58,23 @@ check('selección parcial de otro chip lo reemplaza entero sin dañarlo',()=>{
 check('inserción separa las palabras sin alterar signos de puntuación',()=>{
  assert.equal(insertar('Monto total.','precio_letras',6,6).texto,'Monto {{precio_letras}} total.');
  assert.equal(insertar('El precio es ().','precio_letras',14,14).texto,'El precio es ({{precio_letras}}).');
+});
+check('quitar un chip solo elimina esa variable',()=>{
+ const texto='Comprador {{comprador_nombre}} y DNI {{comprador_dni}}.';
+ const r=quitar(texto,'comprador_dni');
+ assert.equal(r.texto,'Comprador {{comprador_nombre}} y DNI .');
+ assert.deepEqual(analizar(r.texto,permitidos).capturados,['comprador_nombre']);
+});
+check('quitar un chip conserva párrafos y normaliza el doble espacio',()=>{
+ const texto='Antes {{precio_letras}} después.\\nOtro párrafo.';
+ const r=quitar(texto,'precio_letras');
+ assert.equal(r.texto,'Antes después.\\nOtro párrafo.');
+ assert.equal(quitar(texto,'no_existente').texto,texto);
+});
+check('el botón de quitar está en cada etiqueta insertada',()=>{
+ const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
+ assert.match(editor,/onClick=\\{\\(\\)=>quitar\\(key\\)\\}/);
+ assert.match(editor,/aria-label=\\{"Quitar "\\+etiqueta\\+" del contrato"\\}/);
 });
 const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
 check('el guardado exige que no haya duplicados',()=>assert.match(editor,/!repetidos\.length/));

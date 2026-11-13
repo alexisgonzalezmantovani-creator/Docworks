@@ -42,6 +42,19 @@ export function insertarDatoAutomatico(texto:string,key:string,inicio:number,fin
   return {texto:previo+separadorAntes+chip+separadorDespues+posterior,cursor};
 }
 
+// Quitar el chip elegido sin modificar ningún otro dato ni el texto restante.
+export function quitarDatoAutomatico(texto:string,key:string){
+  const base=String(texto||"");
+  const chip="{{"+key+"}}";
+  const inicio=base.indexOf(chip);
+  if(inicio<0)return {texto:base,cursor:null};
+  const fin=inicio+chip.length;
+  const previo=base.slice(0,inicio),posterior=base.slice(fin);
+  // Entre dos palabras, retirar solo uno de los dos espacios si sobran.
+  const dobleEspacio=previo.endsWith(" ")&&posterior.startsWith(" ");
+  return {texto:previo+(dobleEspacio?posterior.slice(1):posterior),cursor:inicio};
+}
+
 // Un editor de texto plano: el contenido pertenece íntegramente a la inmobiliaria.
 // Los datos variables se eligen de un catálogo cerrado y se resuelven al generar la operación.
 const CHIPS = [
@@ -201,6 +214,18 @@ export default function DocumentoPropioEditor({
       input.scrollTop=Math.max(0,linea*26-70);
     });
   }
+  function quitar(key:string){
+    const nuevo=quitarDatoAutomatico(texto,key);
+    if(nuevo.cursor===null)return;
+    const input=inputRef.current;
+    const scrollPrevio=input?.scrollTop??0;
+    cambiarTexto(nuevo.texto);
+    seleccionRef.current={inicio:nuevo.cursor,fin:nuevo.cursor};
+    requestAnimationFrame(()=>{
+      if(!inputRef.current)return;
+      inputRef.current.scrollTop=scrollPrevio;
+    });
+  }
   function insertar(key:string){
     if(!permitidos.has(key)||capturados.includes(key))return;
     // El select nativo suele mover la selección a 0 o al final; usamos la última del textarea.
@@ -307,12 +332,17 @@ export default function DocumentoPropioEditor({
       {capturados.map(key=>{
         const etiqueta=CHIPS.find(([k])=>k===key)?.[1]||key.replace(/_/g," ");
         const errorChip=invalidos.includes(key)||repetidos.includes(key);
-        return <button key={key} type="button" title={"Buscar "+etiqueta+" en el texto"}
-          aria-label={"Buscar "+etiqueta+" en el contrato"} disabled={estado==="saving"} onClick={()=>irAlDato(key)}
-          style={{padding:"4px 8px",borderRadius:7,fontSize:11,fontWeight:650,
+        return <span key={key} style={{display:"inline-flex",alignItems:"stretch",maxWidth:"100%",
             border:"1px solid "+(errorChip?"#fca5a5":"rgba(56,189,248,.35)"),
             color:errorChip?"#991b1b":"#0369a1",background:errorChip?"#fee2e2":"#dff3ff",
-            cursor:"pointer",maxWidth:"100%",overflowWrap:"anywhere"}}>{etiqueta}</button>;
+            borderRadius:7,overflow:"hidden",fontSize:11,fontWeight:650}}>
+          <button type="button" title={"Buscar "+etiqueta+" en el texto"} aria-label={"Buscar "+etiqueta+" en el contrato"}
+            disabled={estado==="saving"} onClick={()=>irAlDato(key)}
+            style={{padding:"5px 7px",border:0,background:"transparent",color:"inherit",font:"inherit",cursor:"pointer",textAlign:"left",overflowWrap:"anywhere"}}>{etiqueta}</button>
+          <button type="button" title={"Quitar "+etiqueta+" del contrato"} aria-label={"Quitar "+etiqueta+" del contrato"}
+            disabled={estado==="saving"} onClick={()=>quitar(key)}
+            style={{minWidth:26,padding:"4px 6px",border:0,borderLeft:"1px solid rgba(3,105,161,.16)",background:"transparent",color:"inherit",fontSize:15,cursor:"pointer"}}>×</button>
+        </span>;
       })}
     </div>}
     <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",alignItems:"center"}}>
