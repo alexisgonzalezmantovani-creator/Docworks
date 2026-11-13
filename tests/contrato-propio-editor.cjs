@@ -81,8 +81,9 @@ check('quitar chip respeta saltos de línea y párrafos de Word',()=>{
  assert.equal(quitar(original,'precio_letras').texto,'Encabezado\n\nCláusula siguiente.');
 });
 check('no hay lista independiente de chips insertados',()=>{
- assert.ok(!editor.includes('aria-label="Datos automáticos ya insertados"'));
- assert.ok(editor.includes('aria-label="Texto del contrato propio"'));
+ const src=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
+ assert.ok(!src.includes('aria-label="Datos automáticos ya insertados"'));
+ assert.ok(src.includes('aria-label="Texto del contrato propio"'));
 });
 check('deshacer aparece sólo después de modificar chips',()=>{
  const src=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
