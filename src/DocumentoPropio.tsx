@@ -53,6 +53,7 @@ export default function DocumentoPropioEditor({
   const [revisar,setRevisar]=useState(false);
   const [mostrarVista,setMostrarVista]=useState(false);
   const inputRef=useRef<HTMLTextAreaElement|null>(null);
+  const espejoRef=useRef<HTMLDivElement|null>(null);
   // Recordar la selección del texto antes de que el selector de chips tome el foco (iPhone/Safari).
   const seleccionRef=useRef({inicio:textoActual.length,fin:textoActual.length});
   const guardandoRef=useRef(false);
@@ -209,13 +210,32 @@ export default function DocumentoPropioEditor({
     <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
       Copiá desde Word y pegá acá la introducción, las cláusulas y las firmas. El texto mantiene los párrafos; el formato de Word, sus tablas e imágenes no se importan. DocWorks no añadirá cláusulas.
     </div>
-    <textarea ref={inputRef} className="inp" aria-label="Texto del contrato propio" value={texto} disabled={estado==="saving"}
-      style={{width:"100%",minHeight:360,resize:"vertical",boxSizing:"border-box",fontSize:16,lineHeight:1.65,whiteSpace:"pre-wrap"}}
-      placeholder="Pegá acá todo tu contrato…" onChange={ev=>{cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
-      onSelect={ev=>recordarSeleccion(ev.currentTarget)}
-      onClick={ev=>recordarSeleccion(ev.currentTarget)}
-      onKeyUp={ev=>recordarSeleccion(ev.currentTarget)}
-      onKeyDown={ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="s"){ev.preventDefault();guardar();}}} />
+    {/* El textarea conserva edición nativa, teclado iOS, selección y texto original.
+        El espejo visual colorea las variables sin alterar las llaves internas que
+        necesita el generador de documentos. No se agrega zoom ni editor externo. */}
+    <div style={{position:"relative",minHeight:360}}>
+      <div ref={espejoRef} aria-hidden="true" style={{
+        position:"absolute",inset:0,zIndex:0,pointerEvents:"none",overflow:"auto",
+        border:"1px solid transparent",borderRadius:8,padding:"12px",
+        boxSizing:"border-box",fontFamily:"inherit",fontSize:16,lineHeight:1.65,
+        whiteSpace:"pre-wrap",overflowWrap:"break-word",wordBreak:"normal",
+        color:"var(--text)"
+      }}>{texto.split(/(\\{\\{[a-zA-Z0-9_]+\\}\\})/g).map((fragmento,i)=>{
+        const match=/^\\{\\{([a-zA-Z0-9_]+)\\}\\}$/.exec(fragmento);
+        if(!match)return <React.Fragment key={i}>{fragmento}</React.Fragment>;
+        const etiqueta=CHIPS.find(([key])=>key===match[1])?.[1]||match[1].replace(/_/g," ");
+        const invalido=!permitidos.has(match[1])||repetidos.includes(match[1]);
+        return <span key={i} style={{background:invalido?"#fee2e2":"#dff3ff",color:invalido?"#991b1b":"#0369a1",borderRadius:4,fontWeight:650,boxDecorationBreak:"clone",WebkitBoxDecorationBreak:"clone"}}>{etiqueta}</span>;
+      })}{texto.endsWith("\\n")?"\\u200b":null}</div>
+      <textarea ref={inputRef} className="inp" aria-label="Texto del contrato propio" value={texto} disabled={estado==="saving"}
+        style={{position:"relative",zIndex:1,width:"100%",height:360,minHeight:360,resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",padding:12,fontSize:16,lineHeight:1.65,whiteSpace:"pre-wrap",overflowWrap:"break-word",color:"transparent",caretColor:"var(--text)",background:"transparent"}}
+        placeholder="Pegá acá todo tu contrato…" onChange={ev=>{cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
+        onScroll={ev=>{if(espejoRef.current){espejoRef.current.scrollTop=ev.currentTarget.scrollTop;espejoRef.current.scrollLeft=ev.currentTarget.scrollLeft;}}}
+        onSelect={ev=>recordarSeleccion(ev.currentTarget)}
+        onClick={ev=>recordarSeleccion(ev.currentTarget)}
+        onKeyUp={ev=>recordarSeleccion(ev.currentTarget)}
+        onKeyDown={ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="s"){ev.preventDefault();guardar();}}} />
+    </div>
     <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",alignItems:"center"}}>
       <label style={{fontSize:12,fontWeight:650,color:"var(--text)"}}>Insertar dato automático
         <select className="inp" style={{display:"block",width:"min(100%,320px)",marginTop:5,fontSize:16}} defaultValue=""
