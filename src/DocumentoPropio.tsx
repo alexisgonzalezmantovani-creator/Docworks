@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import DatosCompactos from "./DatosCompactos";
 
 // Los chips representan datos de una operación, no texto reutilizable:
 // detectar duplicados también cuando el contrato llega pegado desde Word.
@@ -376,41 +377,9 @@ export default function DocumentoPropioEditor({
         onKeyUp={ev=>recordarSeleccion(ev.currentTarget)}
         onKeyDown={ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="s"){ev.preventDefault();guardar();}}} />
     </div>
-    {capturados.length>0&&<div aria-label="Datos automáticos ya insertados" style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6}}>
-      <span style={{fontSize:11,color:"var(--muted)",marginRight:3}}>En el contrato ({capturados.length})</span>
-      {capturados.map(key=>{
-        const etiqueta=nombreDatoBreve(key,CHIPS.find(([k])=>k===key)?.[1]||key.replace(/_/g," "));
-        const errorChip=invalidos.includes(key)||repetidos.includes(key);
-        return <span key={key} style={{display:"inline-flex",alignItems:"stretch",maxWidth:"100%",minHeight:36,
-            border:"1px solid "+(errorChip?"#fca5a5":"rgba(56,189,248,.35)"),
-            color:errorChip?"#991b1b":"#0369a1",background:errorChip?"#fee2e2":"#dff3ff",
-            borderRadius:10,overflow:"hidden",fontSize:12,fontWeight:650}}>
-          <button type="button" title={"Buscar "+etiqueta+" en el texto"} aria-label={"Buscar "+etiqueta+" en el contrato"}
-            disabled={estado==="saving"} onClick={()=>irAlDato(key)}
-            style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 10px",border:0,background:"transparent",color:"inherit",font:"inherit",cursor:"pointer",textAlign:"left",overflowWrap:"anywhere",minHeight:40}}><IconoDato dato={key}/>{etiqueta}</button>
-          <button type="button" title={"Quitar "+etiqueta+" del contrato"} aria-label={"Quitar "+etiqueta+" del contrato"}
-            disabled={estado==="saving"} onClick={()=>quitar(key)}
-            style={{minWidth:40,padding:"6px 9px",border:0,borderLeft:"1px solid rgba(3,105,161,.16)",background:"transparent",color:"inherit",fontSize:17,cursor:"pointer"}}>×</button>
-        </span>;
-      })}
-    </div>}
-    <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-      <label style={{fontSize:12,fontWeight:650,color:"var(--text)"}}>Insertar dato automático
-        <select className="inp" style={{display:"block",width:"min(100%,320px)",marginTop:5,fontSize:16}} defaultValue=""
-          aria-label="Agregar chip en la posición del cursor" disabled={disponibles.length===0||estado==="saving"} onChange={ev=>{insertar(ev.target.value);ev.target.value="";}}>
-          <option value="">{disponibles.length?"Elegir un dato…":"✓ Todos los datos disponibles están insertados"}</option>
-          {gruposInsercion.filter(g=>g.items.length>0).map(g=><optgroup key={g.titulo} label={g.titulo}>{g.items.map(([key,label])=><option key={key} value={key}>{label}</option>)}</optgroup>)}
-        </select>
-      </label>
-      <span role="status" style={{fontSize:11,color:"var(--muted)"}}>{capturados.length} datos insertados · {disponibles.length} disponibles · {texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
-    </div>
-    {chipsSugeridos.length>0&&!revisar&&<div role="group" aria-label="Datos recomendados para insertar" style={{display:"flex",flexDirection:"column",gap:7}}>
-      <div style={{fontSize:12,color:"var(--muted)"}}>Datos frecuentes · tocá para insertar</div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
-        {chipsSugeridos.map(([key,label])=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip" aria-label={"Insertar "+label} title={"Insertar "+label} disabled={estado==="saving"} style={{display:"inline-flex",alignItems:"center",gap:8,minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left",borderRadius:10,padding:"8px 11px"}} onClick={()=>insertar(key)}><IconoDato dato={key}/><span>{nombreDatoBreve(key,label)}</span><span aria-hidden="true" style={{fontSize:16,marginLeft:2,opacity:.7}}>+</span></button>)}
-      </div>
-    </div>}
-    {!chipsSugeridos.length&&capturados.length>0&&!revisar&&<div role="status" style={{fontSize:12,color:"var(--muted)"}}>Datos principales insertados.</div>}
+    <DatosCompactos items={disponibles.map(([key,label])=>({key,label:nombreDatoBreve(key,label)}))}
+      usados={capturados} onInsert={key=>insertar(key,revisar)} disabled={estado==="saving"}/>
+    <span style={{fontSize:11,color:"var(--muted)"}}>{texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
     {revisar&&<div role={valido?"status":"alert"} style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:valido?"var(--green)":"var(--amber)"}}>
       {valido?"✓ Los datos principales están vinculados. Revisá también la redacción y los importes antes de usarlo.":[
         texto.trim().length<=40?"Pegá el texto completo del contrato":null,
@@ -421,12 +390,7 @@ export default function DocumentoPropioEditor({
         llavesMal?"Hay datos automáticos incompletos. Revisá los corchetes del texto":null
       ].filter(Boolean).join(". ")}
     </div>}
-    {revisar&&faltantes.length>0&&<div role="group" aria-label="Datos obligatorios pendientes" style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6}}>
-      <span style={{fontSize:12,color:"var(--muted)"}}>Faltan estos datos (tocá para insertarlos):</span>
-      {faltantes.map(key=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip"
-        disabled={estado==="saving"} onClick={()=>insertar(key,true)}
-        style={{display:"inline-flex",alignItems:"center",gap:8,minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left",borderRadius:10,padding:"8px 11px"}}><IconoDato dato={key}/><span>{nombreDatoBreve(key,CHIPS.find(([k])=>k===key)?.[1]||key)}</span><span aria-hidden="true" style={{fontSize:16,opacity:.7}}>+</span></button>)}
-    </div>}
+    {revisar&&faltantes.length>0&&<div role="status" style={{fontSize:12,color:"var(--muted)"}}>Datos pendientes: {faltantes.map(key=>nombreDatoBreve(key,CHIPS.find(([k])=>k===key)?.[1]||key)).join(", ")}. Abrí «Insertar dato» para agregarlos.</div>}
     {revisar&&texto.trim().length>40&&advertenciasContenido.length>0&&
       <div style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:"var(--muted)"}}>
         <strong style={{color:"var(--text)"}}>Para revisar en tu contrato (orientativo)</strong>

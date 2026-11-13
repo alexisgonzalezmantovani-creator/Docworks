@@ -1,4 +1,5 @@
 import { accionEnlaceCuenta, errorEnlaceCuenta, urlSinCredenciales } from './RetornoCuenta';
+import DatosCompactos from './DatosCompactos';
 import { AnaliticaVisitas } from './Analitica';
 import { solicitarCaptcha } from './Captcha';
 import { crearIdentificadorSeguro } from './Identificadores';
@@ -1241,12 +1242,9 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
         onKeyDown={function(e){ /* permitir Enter normal */ }}
         onInput={function(){setTokensUsados(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(editorRef.current)));reportarCambio();}}
       />
-      <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:12}}>
-        {[true,false].map(function(obligatorios){var grupo=tokens.filter(function(k){return esTokenObligatorioIntroduccion(k,tipo)===obligatorios;});var disponibles=grupo.filter(function(k){return tokensUsados.indexOf(k)===-1;});var visibles=disponibles;return <section key={String(obligatorios)} aria-label={obligatorios?"Campos obligatorios":"Campos opcionales"} style={{padding:11,borderRadius:10,border:"1px solid var(--border)",background:"var(--card2,var(--card))"}}>
-          <div style={{fontSize:12.5,fontWeight:700,display:"inline-block",padding:"5px 9px",borderRadius:999,background:obligatorios?"var(--dw-token-required-bg,#bceaff)":"var(--surface2,var(--card))",color:obligatorios?"var(--dw-token-required-text,#074d71)":"var(--muted)",marginBottom:5}}>{obligatorios?"Campos obligatorios":"Campos opcionales"} · {disponibles.length} para insertar</div>
-          <div style={{fontSize:11.5,color:"var(--muted)",marginBottom:9,lineHeight:1.5}}>{obligatorios?"Campos principales en celeste. Cada uno desaparece al insertarlo y vuelve si lo borrás.":"Datos complementarios en gris. Cada uno desaparece al insertarlo."}</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{visibles.map(function(k){var incluido=tokensUsados.indexOf(k)!==-1;return <button key={k} disabled={incluido} aria-label={"Insertar "+labelTokenEncabezado(k,tipo)} type="button" className={"dw-intro-token "+(obligatorios?"required":"optional")} title={(incluido?"Ya incluido: ":"Insertar ")+labelTokenEncabezado(k,tipo)} onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken(k);}} style={{minHeight:36,padding:"6px 10px",borderRadius:999,border:"1px solid var(--border2)",background:obligatorios?"var(--dw-token-required-bg,#bceaff)":"var(--surface2,var(--card))",color:obligatorios?"var(--dw-token-required-text,#074d71)":"var(--muted)",fontWeight:600,fontSize:12,cursor:incluido?"default":"pointer"}}>{incluido?"✓ ":"+ "}{labelTokenEncabezado(k,tipo)}{incluido?" · Incluido":""}</button>;})}{!visibles.length&&<span role="status" style={{fontSize:12,color:"var(--muted)"}}>{obligatorios?"✓ Ya insertaste todos los campos principales.":"✓ Ya insertaste todos los campos opcionales."}</span>}</div>
-        </section>;})}
+      <div style={{marginTop:12}}>
+        <DatosCompactos items={tokens.map(function(key){return {key:key,label:labelTokenEncabezado(key,tipo)};})}
+          usados={tokensUsados} onInsert={insertarToken} disabled={status==="saving"||status==="ia"}/>
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:12,alignItems:"center"}}>
         <button type="button" className="btn btn-ghost btn-sm" disabled={status==="saving"||status==="ia"} onClick={onCancel}>Cancelar</button>
@@ -6581,93 +6579,16 @@ function clavesCamposSugeridosDocWorks(tipo,titulo){
 // Menú desplegable para insertar variables ({{campo}}) en un texto de cláusula.
 // Inserta en la posición del cursor del textarea referenciado por taRef.
 function VariablePicker({taRef,value,onChange,label="",tipo="reserva",titulo=""}){
-  const [open,setOpen]=useState(false);
-  const [busqueda,setBusqueda]=useState("");
-  const [verTodos,setVerTodos]=useState(false);
-  const [pos,setPos]=useState(null);
-  const wrapRef=useRef<HTMLDivElement>(null);
-  const btnRef=useRef<HTMLButtonElement>(null);
-
-  function place(){
-    var el=btnRef.current;
-    if(!el)return;
-    var r=el.getBoundingClientRect();
-    var margen=8,menuW=Math.min(300,Math.max(160,window.innerWidth-2*margen));
-    var left=Math.min(Math.max(margen,r.left),Math.max(margen,window.innerWidth-menuW-margen));
-    var espacioAbajo=Math.max(0,window.innerHeight-r.bottom-margen);
-    var espacioArriba=Math.max(0,r.top-margen);
-    var abrirArriba=espacioAbajo<180&&espacioArriba>espacioAbajo;
-    var espacio=abrirArriba?espacioArriba:espacioAbajo;
-    setPos({
-      left:left,
-      top:abrirArriba?undefined:r.bottom+4,
-      bottom:abrirArriba?(window.innerHeight-r.top+4):undefined,
-      maxHeight:Math.max(48,Math.min(340,espacio-4)),
-    });
+  const usados=tokensDeTextoDocWorks(value);
+  function insertar(key){
+    var token="{{"+key+"}}",el=taRef&&taRef.current;
+    var inicio=el?el.selectionStart:value.length,fin=el?el.selectionEnd:value.length;
+    if(usados.indexOf(key)!==-1)return;
+    onChange(value.slice(0,inicio)+token+value.slice(fin));
+    requestAnimationFrame(function(){if(el){el.focus();el.setSelectionRange(inicio+token.length,inicio+token.length);}});
   }
-
-  useEffect(function(){
-    if(!open)return;
-    place();
-    function handleDown(e){
-      if(wrapRef.current&&wrapRef.current.contains(e.target))return;
-      setOpen(false);
-    }
-    function handleReflow(){ place(); }
-    document.addEventListener("mousedown",handleDown);
-    window.addEventListener("scroll",handleReflow,true);
-    window.addEventListener("resize",handleReflow);
-    window.addEventListener("orientationchange",handleReflow);
-    return function(){
-      document.removeEventListener("mousedown",handleDown);
-      window.removeEventListener("resize",handleReflow);
-      window.removeEventListener("orientationchange",handleReflow);
-      window.removeEventListener("scroll",handleReflow,true);
-    };
-  },[open]);
-
-  // Oculta del menú los tokens que ya están insertados en este texto.
-  // Si el usuario borra el token del texto, vuelve a aparecer automáticamente.
-  var tokensUsados = tokensDeTextoDocWorks(value);
-  function insert(key){
-    var token="{{"+key+"}}";
-    var el=taRef&&taRef.current;
-    var start=el?el.selectionStart:value.length;
-    var end=el?el.selectionEnd:value.length;
-    var next=value.slice(0,start)+token+value.slice(end);
-    onChange(next);
-    setOpen(false);
-    setVerTodos(false);
-    setBusqueda("");
-    setTimeout(function(){
-      if(el){el.focus();var pos2=start+token.length;el.setSelectionRange(pos2,pos2);}
-    },0);
-  }
-  var consulta=busqueda.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-  var camposDisponibles=VAR_GROUPS.flatMap(function(g){return g.fields;}).filter(function(f){return tokensUsados.indexOf(f.key)===-1;});
-  var favoritos=clavesCamposSugeridosDocWorks(tipo,titulo).map(function(k){return camposDisponibles.find(function(f){return f.key===k;});}).filter(Boolean).slice(0,5);
-  var gruposVisibles=VAR_GROUPS.map(function(g){return {group:g.group,fields:g.fields.filter(function(f){return tokensUsados.indexOf(f.key)===-1&&(consulta?(f.label+" "+f.key+" "+g.group).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(consulta):true);})};}).filter(function(g){return g.fields.length>0;});
-  return(
-    <div style={{position:"relative",display:"inline-block"}} ref={wrapRef}>
-      <span ref={btnRef} style={{display:"inline-block"}}>
-        <Btn v="ghost" s="sm" type="button" onClick={function(){setBusqueda("");setVerTodos(false);setOpen(function(o){return !o;});}}>🔗 {label||"Vincular dato"}</Btn>
-      </span>
-      {open&&pos&&(
-        <div className="var-picker-menu" onKeyDown={function(e){if(e.key==="Escape"){e.stopPropagation();setOpen(false);setBusqueda("");btnRef.current&&btnRef.current.focus();}}} style={{position:"fixed",width:"min(300px, calc(100vw - 16px))",boxSizing:"border-box",left:pos.left,top:pos.top,bottom:pos.bottom,maxHeight:pos.maxHeight,overflowY:"auto"}}>
-          <div style={{padding:"9px 10px 6px",fontSize:12,fontWeight:750,color:"var(--text)"}}>Campos sugeridos</div>
-          {favoritos.length===0&&camposDisponibles.length>0&&<div style={{padding:"6px 10px",fontSize:12,color:"var(--dim)"}}>Buscá el dato que necesites en todos los campos.</div>}
-          {!verTodos&&!consulta&&favoritos.map(function(f){return <button key={f.key} type="button" className="var-picker-item" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insert(f.key);}}>{f.label}</button>;})}
-          {camposDisponibles.length===0&&<div role="status" style={{padding:10,fontSize:12,color:"var(--green)"}}>Ya insertaste todos los campos.</div>}
-          {camposDisponibles.length>favoritos.length&&<button type="button" aria-expanded={verTodos} onClick={function(){setVerTodos(!verTodos);setBusqueda("");}} className="var-picker-item" style={{fontWeight:750,color:"var(--text)",borderTop:"1px solid var(--border)"}}>{verTodos?"− Ocultar campos":"＋ Ver todos los campos"} ({camposDisponibles.length})</button>}
-          {verTodos&&<div>
-            <div style={{padding:"8px",position:"sticky",top:0,background:"var(--card)",zIndex:1}}><input aria-label="Buscar campo para insertar" className="inp" type="search" value={busqueda} onChange={function(e){setBusqueda(e.target.value);}} placeholder="Buscar campo…" style={{width:"100%",minWidth:0,boxSizing:"border-box",fontSize:13}}/></div>
-            {gruposVisibles.length===0&&<div role="status" style={{padding:12,fontSize:12,color:"var(--muted)"}}>{consulta?"No se encontraron campos.":"No hay otros campos disponibles."}</div>}
-            {gruposVisibles.map(function(g){return <div key={g.group}><div className="var-picker-group">{g.group}</div>{g.fields.map(function(f){return <button key={f.key} type="button" className="var-picker-item" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insert(f.key);}}>{f.label}</button>;})}</div>;})}
-          </div>}
-        </div>
-      )}
-    </div>
-  );
+  var campos=VAR_GROUPS.flatMap(function(g){return g.fields;});
+  return <DatosCompactos items={campos} usados={usados} onInsert={insertar}/>;
 }
 
 // Selector múltiple de tipos de documento a los que aplica una cláusula.

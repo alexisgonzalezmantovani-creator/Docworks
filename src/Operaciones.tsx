@@ -5845,7 +5845,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     }
   });
   const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
-  const resumenPendientesPaso = faltantesPasoActual.slice(0,3).map(function(f){return f.label;}).join(", ")+(faltantesPasoActual.length>3?" y "+(faltantesPasoActual.length-3)+" más":"");
   const documentoListo = faltantesDetalle.length===0;
   // Ayuda contextual breve: el usuario sabe qué cargar, sin añadir pantallas.
   const nombresPasos=esAlq?["Documento","Locador","Locatario","Inmueble","Condiciones","Garantía","Cláusulas"]:
@@ -5857,14 +5856,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   }
   if(esExclusividad){nombresPasos[1]="Inmobiliaria autorizada";nombresPasos[2]="Autorizante";}
   if(esContratoPropioOp)nombresPasos.pop();
-  const guiaActual=step===1?"Tocá el documento que necesitás. DocWorks te lleva directamente a cargar los datos.":
-    ["Locador","Locatario","Comprador","Vendedor","Cesionario","Cedente","Autorizante","Primera parte","Segunda parte"].includes(nombresPasos[step-1])?
-      "Primero completá nombre, DNI/CUIT y domicilio. El teléfono y el correo son opcionales: podés dejarlos solo para uso interno.":
-    nombresPasos[step-1]==="Inmueble"?"Indicá el tipo de inmueble, su dirección y, en compraventas, la instrumentación prevista.":
-    nombresPasos[step-1]==="Garantía"?"Elegí la garantía acordada; completá solo los datos de esa modalidad.":
-    nombresPasos[step-1]==="Cláusulas"?"Revisá las cláusulas frecuentes. Las obligatorias ya se incluyen desde el modelo.":
-    nombresPasos[step-1]==="Datos del documento"?"Completá únicamente lo que corresponde a este documento.":
-    "Ingresá los importes, fechas y condiciones pactadas.";
   function avanzarConAviso(){
     // El botón Siguiente siempre avanza. Los pendientes se revisan al final.
     setStep(function(s){return Math.min(s+1,total+1);});
@@ -6176,14 +6167,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     <div style={{paddingBottom:4}}>
       {step>total&&<div role="status" aria-live="polite" style={{marginBottom:12,fontSize:13,color:"var(--text)"}}>{documentoListo?"Todo listo para generar el documento.":"Datos por completar: "+faltantesDetalle.length+". Podés revisarlos o guardar el borrador."}</div>}
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
-      {step<=total&&<div aria-live="polite" style={{marginBottom:12,lineHeight:1.45,display:"flex",flexDirection:"column",gap:4}}>
-        <div style={{display:"flex",alignItems:"center",gap:9,flexWrap:"wrap"}}>
-          <span style={{fontWeight:750,color:"var(--text)",fontSize:14}}>Paso {step} de {total} · {nombresPasos[step-1]||"Datos"}</span>
-          {step>1&&tipoElegido&&<span style={{fontSize:11,padding:"3px 8px",borderRadius:7,background:"var(--surface2)",color:"var(--muted)"}}>{tipoElegido.label}</span>}
-        </div>
-        <div style={{fontSize:12.5,color:"var(--dim)"}}>{guiaActual}</div>
-        {step>1&&faltantesPasoActual.length>0&&<div style={{fontSize:11,color:"var(--muted)"}}>Pendientes en este paso: {faltantesPasoActual.length}. Podés continuar y revisarlos al final.</div>}
-      </div>}
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.05em"}} title="No se cuentan los datos opcionales.">Datos principales · {camposCompletados} de {totalProgreso}</span>
