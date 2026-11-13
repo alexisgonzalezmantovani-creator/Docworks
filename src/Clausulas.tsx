@@ -449,6 +449,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
           <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Modelo del documento</div>
           <div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>{verEditorPropio?"Estás usando tu contrato. El modelo DocWorks se conserva.":contarModelo(tipoDocSel)+" cláusulas incluidas · Abrí una sección cuando quieras modificarla."}</div>
         </div>
+        {onAbrirAspecto&&<button type="button" className="btn btn-secondary btn-sm" title="Configurar aspecto del documento" aria-label="Configurar aspecto del documento" style={{minHeight:40,marginLeft:"auto",padding:"8px 12px",fontWeight:700,flex:"0 0 auto"}} onClick={function(){if(verEditorPropio)navegarConProteccionModelo(onAbrirAspecto);else if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Aspecto</button>}
       </div>
       {verEditorPropio
         ? <DocumentoPropioEditor key={"contrato-propio-"+tipoDocSel} tipo={tipoDocSel} perfil={perfil} onSavePerfil={guardarPerfil} confirmar={requestDwConfirm} onCancelar={function(){setPegarMiContrato(false);}}/>
@@ -489,11 +490,10 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
 
       </EncabezadoFijadoPanel>}
       <details id="dw-model-source-switch" className="card dw-model-disclosure" style={{padding:"12px 14px",marginTop:2}}>
-        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>Opciones avanzadas</span><span style={{fontSize:11.5,color:"var(--dim)"}}>{verEditorPropio?"Volver al modelo DocWorks":"Usar un contrato propio o configurar el aspecto"}</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>Opciones avanzadas</span><span style={{fontSize:11.5,color:"var(--dim)"}}>{verEditorPropio?"Volver al modelo DocWorks":"Usar mi contrato completo"}</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
         <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:10,paddingTop:12}}>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.6}}>{verEditorPropio?"Podés recuperar el modelo DocWorks. Sus cláusulas y tus contratos anteriores se conservan.":"Si ya tenés un contrato completo redactado, podés pegarlo como alternativa. No hace falta cambiar de modalidad para editar cláusulas. El cambio solo se aplica cuando guardás el texto propio."}</div>
           <button type="button" className="btn btn-secondary btn-sm" style={{minHeight:44,whiteSpace:"normal"}} onClick={verEditorPropio?volverModeloEstandar:abrirEditorContratoPropio}>{verEditorPropio?"Volver al modelo DocWorks":"Usar mi contrato completo"}</button>
-          {onAbrirAspecto&&<button type="button" className="btn btn-ghost btn-sm" style={{minHeight:40,whiteSpace:"normal"}} onClick={function(){if(verEditorPropio)navegarConProteccionModelo(onAbrirAspecto);else if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Configurar aspecto del documento</button>}
           {errorModeloPropio&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorModeloPropio}</div>}
         </div>
       </details>

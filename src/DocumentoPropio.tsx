@@ -70,6 +70,9 @@ export default function DocumentoPropioEditor({
   const permitidos=new Set<string>(todos.map(([key])=>key));
   const capturados=Array.from(new Set((texto.match(/\{\{[a-zA-Z0-9_]+\}\}/g)||[]).map(t=>t.slice(2,-2))));
   const invalidos=capturados.filter(t=>!permitidos.has(t));
+  // Cada dato automático se ofrece una sola vez dentro del contrato completo.
+  // La lista se recalcula al escribir o borrar, sin perder la posición del cursor.
+  const disponibles=todos.filter(([key])=>!capturados.includes(key));
   const llavesMal=/\{\{|\}\}/.test(texto.replace(/\{\{[a-zA-Z0-9_]+\}\}/g,""));
   const nombres=grupo==="locacion"?["locador_nombre","locatario_nombre"]
     :grupo==="comodato"?["comodante_nombre","comodatario_nombre"]
@@ -114,7 +117,7 @@ export default function DocumentoPropioEditor({
     seleccionRef.current={inicio:el.selectionStart,fin:el.selectionEnd};
   }
   function insertar(key:string){
-    if(!permitidos.has(key))return;
+    if(!permitidos.has(key)||capturados.includes(key))return;
     // El select nativo suele mover la selección a 0 o al final; usamos la última del textarea.
     const from=Math.min(seleccionRef.current.inicio,texto.length);
     const to=Math.min(seleccionRef.current.fin,texto.length);
@@ -175,17 +178,17 @@ export default function DocumentoPropioEditor({
       Copiá desde Word y pegá acá la introducción, las cláusulas y las firmas. El texto mantiene los párrafos; el formato de Word, sus tablas e imágenes no se importan. DocWorks no añadirá cláusulas.
     </div>
     <textarea ref={inputRef} className="inp" aria-label="Texto del contrato propio" value={texto} disabled={estado==="saving"}
-      style={{width:"100%",minHeight:360,resize:"vertical",boxSizing:"border-box",fontSize:14,lineHeight:1.65,whiteSpace:"pre-wrap"}}
+      style={{width:"100%",minHeight:360,resize:"vertical",boxSizing:"border-box",fontSize:16,lineHeight:1.65,whiteSpace:"pre-wrap"}}
       placeholder="Pegá acá todo tu contrato…" onChange={ev=>{cambiarTexto(ev.target.value);recordarSeleccion(ev.currentTarget);}}
       onSelect={ev=>recordarSeleccion(ev.currentTarget)}
       onClick={ev=>recordarSeleccion(ev.currentTarget)}
       onKeyUp={ev=>recordarSeleccion(ev.currentTarget)} />
     <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",alignItems:"center"}}>
       <label style={{fontSize:12,fontWeight:650,color:"var(--text)"}}>Insertar dato automático
-        <select className="inp" style={{display:"block",width:"min(100%,320px)",marginTop:5}} defaultValue=""
-          aria-label="Agregar chip en la posición del cursor" onChange={ev=>{insertar(ev.target.value);ev.target.value="";}}>
-          <option value="">Elegir un dato…</option>
-          {todos.map(([key,label])=><option key={key} value={key}>{label}</option>)}
+        <select className="inp" style={{display:"block",width:"min(100%,320px)",marginTop:5,fontSize:16}} defaultValue=""
+          aria-label="Agregar chip en la posición del cursor" disabled={disponibles.length===0||estado==="saving"} onChange={ev=>{insertar(ev.target.value);ev.target.value="";}}>
+          <option value="">{disponibles.length?"Elegir un dato…":"✓ Todos los datos disponibles están insertados"}</option>
+          {disponibles.map(([key,label])=><option key={key} value={key}>{label}</option>)}
         </select>
       </label>
       <span style={{fontSize:11,color:"var(--muted)"}}>{texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
