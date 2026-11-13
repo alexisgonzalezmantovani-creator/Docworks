@@ -97,7 +97,7 @@ check('los chips insertados son visibles también al escribir y se pueden locali
  assert.match(editor,/aria-label="Datos automáticos ya insertados"/);
  assert.match(editor,/capturados\.map\(key=>/);
  assert.match(editor,/onClick=\{\(\)=>irAlDato\(key\)\}/);
- assert.match(editor,/setSelectionRange\(pos,pos\+key\.length\+4\)/);
+ assert.match(editor,/setSelectionRange\(pos,pos\+key\.length\+4,"forward"\)/);
 });
 check('selector separa las condiciones económicas y conserva todos los tipos',()=>{
  assert.match(editor,/titulo:"Condiciones de pago"/);
