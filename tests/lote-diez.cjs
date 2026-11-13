@@ -30,12 +30,50 @@ let checks=0;function check(label,fn){fn();checks++;console.log('OK',label);}
  await a.act(async()=>renderIntro());
  check('sin título duplicado ni tarjeta blanca en acciones',()=>{assert.equal(document.getElementById('dw-config-modelo'),null);assert.ok(!document.querySelector('[data-testid=dw-model-actions]').classList.contains('card'));assert.equal(document.querySelector('[aria-label="Desplegar introducción"]')?.getAttribute('aria-expanded'),'false');});
  await click(document.querySelector('[aria-label="Desplegar introducción"]'));await click(button('Editar introducción'));
- check('campos agrupados y colores distintos',()=>{assert.ok(document.querySelector('[aria-label="Campos obligatorios"]'));assert.ok(document.querySelector('[aria-label="Campos opcionales"]'));assert.ok(document.querySelector('.dw-intro-token.required'));assert.ok(document.querySelector('.dw-intro-token.optional'));assert.notEqual(document.querySelector('.dw-intro-token.required').style.background,document.querySelector('.dw-intro-token.optional').style.background);assert.equal(button('Mejorar con IA').disabled,false);});
- check('chips insertados desaparecen y los restantes siguen disponibles',()=>{const visibles=[...document.querySelectorAll('.dw-intro-token')];assert.ok(visibles.length>0);assert.equal(visibles.filter(b=>b.disabled).length,0);assert.ok(visibles.every(b=>!b.textContent.includes('· Incluido')));});
+ check('selector de datos disponible y sin controles obsoletos',()=>{
+  const toggle=document.querySelector('[aria-label="Insertar dato"]');
+  assert.ok(toggle);assert.equal(toggle.getAttribute('aria-expanded'),'false');
+  assert.ok(!document.querySelector('.dw-intro-token'));
+  assert.equal(button('Mejorar con IA').disabled,false);
+ });
+ await click(document.querySelector('[aria-label="Insertar dato"]'));
+ check('selector tiene categorías, personas y campos disponibles',()=>{
+  assert.ok(document.querySelector('[aria-label="Categorías de datos"]'));
+  assert.ok(document.querySelector('[aria-label="Elegir persona"]'));
+  assert.ok(document.querySelector('[aria-label^="Insertar "]'));
+  const toggle=document.querySelector('[aria-label="Insertar dato"]');
+  assert.equal(toggle.getAttribute('aria-expanded'),'true');
+  assert.ok(document.getElementById(toggle.getAttribute('aria-controls')));
+ });
+ async function buscarDato(value){
+  const input=document.querySelector('[aria-label="Buscar dato"]');assert.ok(input);
+  await a.act(async()=>{
+   Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,value);
+   input.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+ }
+ await buscarDato('inmueble');
+ check('buscar encuentra datos de otras categorías sin cambiar de pestaña',()=>{
+  assert.ok(document.querySelector('[aria-label="Insertar Dirección del inmueble"]'));
+  assert.ok(!document.querySelector('[aria-label="Insertar DNI oferente/comprador"]'));
+ });
+ await buscarDato('');
+ await click(document.querySelector('[aria-label="Insertar dato"]'));
+ check('cerrar selector no altera la introducción',()=>assert.equal(document.querySelector('[aria-label="Insertar dato"]').getAttribute('aria-expanded'),'false'));
  await click(document.querySelector('[aria-label="Ocultar introducción"]'));
  check('cerrar sin cambios no pide confirmación ni guarda',()=>{assert.equal(pending,null);assert.equal(saves,0);assert.equal(document.querySelector('[contenteditable]'),null);});
  await click(document.querySelector('[aria-label="Desplegar introducción"]'));await click(button('Editar introducción'));
  await a.act(async()=>{const e=document.querySelector('[contenteditable]');e.append(' Cambio');e.dispatchEvent(new Event('input',{bubbles:true}));});
+ await click(document.querySelector('[aria-label="Insertar dato"]'));
+ const primerChip=document.querySelector('[aria-label^="Insertar "]');
+ assert.ok(primerChip,'Tiene que haber al menos un chip disponible');
+ const chipElegido=primerChip.getAttribute('aria-label');
+ const totalAntes=document.querySelectorAll('[data-dw-token]').length;
+ await click(primerChip);
+ check('insertar agrega chip al texto y lo retira del selector',()=>{
+  assert.equal(document.querySelectorAll('[data-dw-token]').length,totalAntes+1);
+  assert.equal(document.querySelector('[aria-label="'+chipElegido+'"]'),null);
+ });
  await click(document.querySelector('[aria-label="Ocultar introducción"]'));
  check('cerrar con cambios pide confirmación y conserva el borrador',()=>{assert.ok(pending.message.includes('Descartar'));assert.ok(document.querySelector('[contenteditable]').textContent.includes('Cambio'));assert.equal(saves,0);});pending=null;
  await click(button('Restablecer valor predeterminado'));

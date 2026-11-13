@@ -1,4 +1,4 @@
-import React,{useState} from "react";
+import React,{useId,useRef,useState} from "react";
 type Dato={key:string;label:string};
 type Props={items:Dato[];usados?:string[];onInsert:(key:string)=>void;disabled?:boolean};
 const categorias=["Personas","Inmueble","Importes","Fechas","Otros"];
@@ -20,29 +20,31 @@ function Icon({cat}:{cat:string}){
 }
 export default function DatosCompactos({items,usados=[],onInsert,disabled=false}:Props){
  const [abierto,setAbierto]=useState(false),[categoriaActiva,setCategoriaActiva]=useState("Personas"),[rol,setRol]=useState(""),[busqueda,setBusqueda]=useState("");
+ const panelId=useId(),triggerRef=useRef<HTMLButtonElement>(null);
  const usadosSet=new Set(usados),pendientes=items.filter(d=>!usadosSet.has(d.key));
  const grupos=categorias.filter(c=>items.some(d=>categoria(d.key)===c));
  const activa=grupos.includes(categoriaActiva)?categoriaActiva:grupos[0]||"Otros";
  const personas=roles.filter(([p])=>items.some(d=>categoria(d.key)==="Personas"&&d.key.startsWith(p+"_")));
  const rolActivo=personas.some(([p])=>p===rol)?rol:personas[0]?.[0]||"";
  const normalizar=(s:string)=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
- const visibles=pendientes.filter(d=>categoria(d.key)===activa&&(activa!=="Personas"||d.key.startsWith(rolActivo+"_"))&&(!busqueda||normalizar(d.label+" "+d.key).includes(normalizar(busqueda))));
+ const buscando=!!busqueda.trim();
+ const visibles=pendientes.filter(d=>(buscando?normalizar(d.label+" "+d.key).includes(normalizar(busqueda.trim())):categoria(d.key)===activa&&(activa!=="Personas"||d.key.startsWith(rolActivo+"_"))));
  const boton:React.CSSProperties={display:"inline-flex",alignItems:"center",gap:8,minHeight:42,padding:"8px 11px",border:"1px solid var(--border)",borderRadius:10,background:"var(--card2,var(--card))",color:"var(--text)",fontSize:13,fontWeight:600,cursor:"pointer",maxWidth:"100%",textAlign:"left"};
  return <div style={{minWidth:0}}>
-   <button type="button" aria-expanded={abierto} aria-label="Insertar dato" disabled={disabled||!pendientes.length} onMouseDown={e=>e.preventDefault()} onClick={()=>setAbierto(x=>!x)} style={{...boton,background:"var(--card)",borderColor:"var(--border2,var(--border))"}}>
+   <button ref={triggerRef} type="button" aria-expanded={abierto} aria-controls={panelId} aria-label="Insertar dato" disabled={disabled||!pendientes.length} onMouseDown={e=>e.preventDefault()} onClick={()=>setAbierto(x=>!x)} style={{...boton,background:"var(--card)",borderColor:"var(--border2,var(--border))"}}>
      <span aria-hidden="true" style={{fontSize:19}}>＋</span> Insertar dato <span aria-hidden="true" style={{marginLeft:8,color:"var(--muted)"}}>{abierto?"⌃":"⌄"}</span>
    </button>
-   {abierto&&<div aria-label="Elegir dato automático" style={{display:"flex",flexDirection:"column",gap:12,marginTop:9,padding:12,border:"1px solid var(--border)",borderRadius:12,background:"var(--card)",minWidth:0}}>
+   {abierto&&pendientes.length>0&&<div id={panelId} aria-label="Elegir dato automático" onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();setAbierto(false);setBusqueda("");triggerRef.current?.focus();}}} style={{display:"flex",flexDirection:"column",gap:12,marginTop:9,padding:12,border:"1px solid var(--border)",borderRadius:12,background:"var(--card)",minWidth:0}}>
      <div aria-label="Categorías de datos" style={{display:"flex",gap:7,overflowX:"auto",paddingBottom:4}}>
        {grupos.map(c=><button type="button" key={c} aria-pressed={activa===c} onMouseDown={e=>e.preventDefault()} onClick={()=>{setCategoriaActiva(c);setBusqueda("");}} style={{...boton,flexShrink:0,background:activa===c?"var(--surface2,var(--card))":"var(--card)",borderColor:activa===c?"var(--text)":"var(--border)"}}><Icon cat={c}/>{c}{items.filter(d=>categoria(d.key)===c).every(d=>usadosSet.has(d.key))?" ✓":""}</button>)}
      </div>
      {activa==="Personas"&&personas.length>1&&<div aria-label="Elegir persona" style={{display:"flex",gap:7,overflowX:"auto",paddingBottom:4}}>
        {personas.map(([key,nombre])=><button type="button" key={key} aria-pressed={rolActivo===key} onMouseDown={e=>e.preventDefault()} onClick={()=>{setRol(key);setBusqueda("");}} style={{...boton,flexShrink:0,background:rolActivo===key?"var(--surface2,var(--card))":"var(--card)",borderColor:rolActivo===key?"var(--text)":"var(--border)"}}>{nombre}{items.filter(d=>d.key.startsWith(key+"_")).every(d=>usadosSet.has(d.key))?" ✓":""}</button>)}
      </div>}
-     {items.length>14&&<input type="search" className="inp" aria-label="Buscar dato" placeholder="Buscar dato…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{fontSize:16,width:"100%",minWidth:0,maxWidth:340}}/>}
+     {items.length>8&&<input type="search" className="inp" aria-label="Buscar dato" placeholder="Buscar dato…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{fontSize:16,width:"100%",minWidth:0,maxWidth:340}}/>}
      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-       {visibles.map(d=><button type="button" key={d.key} aria-label={"Insertar "+d.label} onMouseDown={e=>e.preventDefault()} onClick={()=>onInsert(d.key)} style={boton}><Icon cat={activa}/><span>{d.label}</span><span aria-hidden="true" style={{fontSize:17,opacity:.7}}>+</span></button>)}
-       {!visibles.length&&<span role="status" style={{fontSize:12,color:"var(--muted)"}}>{busqueda?"No se encontraron datos.":"✓ No quedan datos pendientes en esta sección."}</span>}
+       {visibles.map(d=><button type="button" key={d.key} aria-label={"Insertar "+d.label} onMouseDown={e=>e.preventDefault()} onClick={()=>{onInsert(d.key);if(pendientes.length===1)setAbierto(false);}} style={boton}><Icon cat={categoria(d.key)}/><span>{d.label}</span><span aria-hidden="true" style={{fontSize:17,opacity:.7}}>+</span></button>)}
+       {!visibles.length&&<span role="status" style={{fontSize:12,color:"var(--muted)"}}>{buscando?"Sin coincidencias.":"✓ No quedan datos en esta sección."}</span>}
      </div>
    </div>}
  </div>;

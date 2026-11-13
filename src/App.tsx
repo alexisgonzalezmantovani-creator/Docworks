@@ -1230,7 +1230,7 @@ function EncabezadoEditor({tipo, value, onChange=undefined, onCancel, onSave, on
   return (
     <div style={{marginTop:8}}>
       <div style={{fontSize:12,color:"var(--dim)",marginBottom:8,lineHeight:1.45}}>
-        Usá chips para los datos variables: se completan solos al generar el documento. Al insertar cada campo, desaparece de la lista y pasa al texto. Si lo quitás del texto, vuelve a estar disponible.
+        Los datos que insertes se completan automáticamente al generar el documento.
       </div>
       <div
         ref={editorRef}
