@@ -36,6 +36,24 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
  const compra={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',id:'reserva-prueba',comprador_cotitulares:[{nombre:'Otra persona',dni:'30123456',telefono:'111111',telefono_en_doc:true}],vendedor_cotitulares:[{nombre:'Otra titular',dni:'30123457',email:'otra@example.test',email_en_doc:true}],comprador_telefono_en_doc:true,vendedor_email_en_doc:true,inmueble_en_barrio_complejo:true,inmueble_barrio:'Complejo de prueba',inmueble_unidad_funcional:'UF 8',escribania:'Escribanía ya asignada',inmueble_tipo:'otro',inmueble_tipo_otro:'Depósito',clausulas_custom_titulo:'Acuerdo especial',comision_vendedor_modo:'fijo',comision_vendedor_valor:'1234',comision_vendedor_moneda:'USD'};
  const previo=JSON.stringify(compra);
  for(const [nombre,tipo] of [['convertirABoleto','boleto'],['convertirAComodato','comodato']]){let nuevo;const fn=new Function('EMPTY_OP','yaConvertido','valorComisionPredeterminado','datosCompraCompartidos','crearDocumentoConfirmado','return ('+fns[nombre]+');')(a.EMPTY_OP,()=>false,a.valorComisionPredeterminado,a.datosCompraCompartidos,x=>{nuevo=x;});fn(compra);check(tipo+' conserva cotitulares, contacto, UF y cláusula propia',()=>{assert.deepEqual(nuevo.comprador_cotitulares,compra.comprador_cotitulares);assert.deepEqual(nuevo.vendedor_cotitulares,compra.vendedor_cotitulares);assert.notEqual(nuevo.comprador_cotitulares,compra.comprador_cotitulares);assert.equal(nuevo.comprador_telefono_en_doc,true);assert.equal(nuevo.vendedor_email_en_doc,true);assert.equal(nuevo.inmueble_unidad_funcional,'UF 8');assert.equal(nuevo.inmueble_barrio,'Complejo de prueba');assert.equal(nuevo.inmueble_en_barrio_complejo,true);assert.equal(nuevo.inmueble_tipo_otro,'Depósito');assert.equal(nuevo.clausulas_custom_titulo,'Acuerdo especial');assert.equal(JSON.stringify(compra),previo);});if(tipo==='boleto')check('boleto conserva comisión fija y escribanía asignada',()=>{assert.equal(nuevo.escribania,'Escribanía ya asignada');assert.equal(nuevo.comision_vendedor_modo,'fijo');assert.equal(nuevo.comision_vendedor_valor,'1234');assert.equal(nuevo.comision_vendedor_moneda,'USD');});}
+ for(const tipo of ['reserva','boleto']){
+  state={...a.EMPTY_OP,tipo};await a.act(async()=>render(a.StepInmueble));
+  check(tipo+' solo ofrece las tres formas de instrumentación',()=>{
+    const selector=document.getElementById('dw-field-compra_instrumento');
+    assert.ok(selector,'Debe estar presente el campo de instrumento');
+    assert.deepEqual(Array.from(selector.options).map(o=>o.value),['escritura','boleto','cesion_boleto']);
+    assert.equal(document.getElementById('dw-field-inmueble_documentacion_actual'),null);
+    assert.equal(document.body.textContent.includes('Documentación actual'),false);
+    assert.equal(selector.value,'escritura');
+  });
+ }
+ state={...a.EMPTY_OP,tipo:'reserva',inmueble_documentacion_actual:'boleto',inmueble_documentacion_detalle:'Antecedente histórico'};
+ await a.act(async()=>render(a.StepInmueble));
+ check('operación histórica conserva el dato sin ofrecer el campo anterior',()=>{
+   assert.equal(document.getElementById('dw-field-inmueble_documentacion_actual'),null);
+   assert.equal(document.body.textContent.includes('Documentación actual'),false);
+   assert.equal(state.inmueble_documentacion_actual,'boleto');
+ });
  state={...a.EMPTY_OP,tipo:'reserva'};await a.act(async()=>render(a.StepInmueble));
  check('barrio y UF no ocupan campos en una operación nueva sin seleccionar',()=>{assert.equal(document.getElementById('dw-field-inmueble_barrio'),null);assert.equal(document.getElementById('dw-field-inmueble_unidad_funcional'),null);});
  await click(document.querySelector('[aria-label="Barrio cerrado o complejo"]'));

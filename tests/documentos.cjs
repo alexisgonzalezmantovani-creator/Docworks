@@ -2,13 +2,19 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const esbuild=require('esbuild');
 const root=path.resolve(__dirname,'..');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-test-'));
-const exportsList=['camposTratamientoActivos','textoTratamientoPersona','sustituirTokens','resolveVars','PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion','datosCompraCompartidos','getResumenPartes'];
+const exportsList=['camposTratamientoActivos','textoTratamientoPersona','sustituirTokens','resolveVars','tokensEncabezadoParaTipo','PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion','datosCompraCompartidos','getResumenPartes'];
 esbuild.buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+'\nexport { '+exportsList.join(',')+' };',resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs')});
 global.document={querySelector:()=>({}),title:''};
 const app=require(path.join(tmp,'app.cjs'));
 delete global.document;
 (async()=>{
  let count=0;function check(label,fn){fn();count++;console.log('OK',label);}
+ check('la introducción nueva ofrece instrumento y no documentación actual',()=>{
+  assert.ok(app.tokensEncabezadoParaTipo('reserva').includes('compra_instrumento_nombre'));
+  assert.ok(app.tokensEncabezadoParaTipo('boleto').includes('compra_instrumento_nombre'));
+  assert.equal(app.tokensEncabezadoParaTipo('reserva').includes('inmueble_documentacion_actual_texto'),false);
+  assert.equal(app.tokensEncabezadoParaTipo('boleto').includes('inmueble_documentacion_actual_texto'),false);
+ });
  check('sin chips el tratamiento no aparece como un dato adicional',()=>{
   assert.equal(app.camposTratamientoActivos({tipo:'reserva'},{plantillas:{}}).comprador,false);
   assert.equal(app.getCamposFaltantesDetalle({...app.EMPTY_OP,tipo:'reserva'}).some(f=>f.campo==='comprador_tratamiento'),false);
