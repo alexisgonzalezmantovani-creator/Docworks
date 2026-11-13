@@ -22,7 +22,7 @@ assert.match(form,/draftTieneContenido\(data\) \? \{ data:data/,'No persistir un
 assert.match(form,/dw-operation-save-slot/,'Indicador de guardado junto a siguiente');
 assert.match(form,/if\(!initial && !draftTieneContenido\(dataRef\.current\)\) return;/,'Impedir guardar operaciones nuevas vacías');
 const app=fs.readFileSync(path.join(__dirname,'../src/App.tsx'),'utf8');
-const resumen=app.slice(app.indexOf('function PasoResumenFinal('),app.indexOf('function ',app.indexOf('function PasoResumenFinal(')+25));
+const resumen=app.slice(app.indexOf('function PasoResumenFinal('),app.indexOf('\nfunction ',app.indexOf('function PasoResumenFinal(')+25));
 assert.match(resumen,/aria-label="Datos para completar"/,'Mostrar lista accesible de faltantes solo en revisión');
 assert.doesNotMatch(resumen,/Revisar faltantes \(/,'Evitar segundo botón de revisión');
 const clauses=app.slice(app.indexOf('function StepClausulas('),app.indexOf('function StepBar('));
