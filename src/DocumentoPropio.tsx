@@ -14,14 +14,14 @@ export function analizarChipsDocumentoPropio(texto:string, permitidos:Set<string
 // Un editor de texto plano: el contenido pertenece íntegramente a la inmobiliaria.
 // Los datos variables se eligen de un catálogo cerrado y se resuelven al generar la operación.
 const CHIPS = [
-  ["comprador_nombre","Nombre del comprador"],["comprador_dni","DNI del comprador"],
+  ["comprador_nombre","Nombre del comprador"],["comprador_tratamiento","Tratamiento del comprador (Sr./Sra.)"],["comprador_articulo","Artículo del comprador (el/la)"],["comprador_dni","DNI del comprador"],
   ["comprador_domicilio","Domicilio del comprador"],["vendedor_nombre","Nombre del vendedor"],
-  ["vendedor_dni","DNI del vendedor"],["vendedor_domicilio","Domicilio del vendedor"],
-  ["locador_nombre","Nombre del locador"],["locador_dni","DNI del locador"],["locador_domicilio","Domicilio del locador"],
-  ["locatario_nombre","Nombre del locatario"],["locatario_dni","DNI del locatario"],["locatario_domicilio","Domicilio del locatario"],
-  ["comodante_nombre","Nombre del comodante"],["comodante_dni","DNI del comodante"],["comodante_domicilio","Domicilio del comodante"],
-  ["comodatario_nombre","Nombre del comodatario"],["comodatario_dni","DNI del comodatario"],["comodatario_domicilio","Domicilio del comodatario"],
-  ["autorizante_nombre","Nombre del autorizante"],["autorizante_dni","DNI del autorizante"],["autorizante_domicilio","Domicilio del autorizante"],
+  ["vendedor_dni","DNI del vendedor"],["vendedor_tratamiento","Tratamiento del vendedor (Sr./Sra.)"],["vendedor_articulo","Artículo del vendedor (el/la)"],["vendedor_domicilio","Domicilio del vendedor"],
+  ["locador_nombre","Nombre del locador"],["locador_tratamiento","Tratamiento del locador (Sr./Sra.)"],["locador_articulo","Artículo del locador (el/la)"],["locador_dni","DNI del locador"],["locador_domicilio","Domicilio del locador"],
+  ["locatario_nombre","Nombre del locatario"],["locatario_tratamiento","Tratamiento del locatario (Sr./Sra.)"],["locatario_articulo","Artículo del locatario (el/la)"],["locatario_dni","DNI del locatario"],["locatario_domicilio","Domicilio del locatario"],
+  ["comodante_nombre","Nombre del comodante"],["comodante_tratamiento","Tratamiento del comodante (Sr./Sra.)"],["comodante_articulo","Artículo del comodante (el/la)"],["comodante_dni","DNI del comodante"],["comodante_domicilio","Domicilio del comodante"],
+  ["comodatario_nombre","Nombre del comodatario"],["comodatario_tratamiento","Tratamiento del comodatario (Sr./Sra.)"],["comodatario_articulo","Artículo del comodatario (el/la)"],["comodatario_dni","DNI del comodatario"],["comodatario_domicilio","Domicilio del comodatario"],
+  ["autorizante_nombre","Nombre del autorizante"],["autorizante_tratamiento","Tratamiento del autorizante (Sr./Sra.)"],["autorizante_articulo","Artículo del autorizante (el/la)"],["autorizante_dni","DNI del autorizante"],["autorizante_domicilio","Domicilio del autorizante"],
   ["inmueble_direccion","Dirección del inmueble"],["inmueble_partido","Partido / municipio"],
   ["inmueble_provincia","Provincia"],["precio_letras","Precio en letras"],
   ["anticipo_letras","Reserva / anticipo en letras"],["saldo_letras","Saldo en letras"],

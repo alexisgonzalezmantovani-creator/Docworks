@@ -2,13 +2,46 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const esbuild=require('esbuild');
 const root=path.resolve(__dirname,'..');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-test-'));
-const exportsList=['PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion','datosCompraCompartidos','getResumenPartes'];
+const exportsList=['camposTratamientoActivos','textoTratamientoPersona','sustituirTokens','resolveVars','PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion','datosCompraCompartidos','getResumenPartes'];
 esbuild.buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+'\nexport { '+exportsList.join(',')+' };',resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs')});
 global.document={querySelector:()=>({}),title:''};
 const app=require(path.join(tmp,'app.cjs'));
 delete global.document;
 (async()=>{
  let count=0;function check(label,fn){fn();count++;console.log('OK',label);}
+ check('sin chips el tratamiento no aparece como un dato adicional',()=>{
+  assert.equal(app.camposTratamientoActivos({tipo:'reserva'},{plantillas:{}}).comprador,false);
+  assert.equal(app.getCamposFaltantesDetalle({...app.EMPTY_OP,tipo:'reserva'}).some(f=>f.campo==='comprador_tratamiento'),false);
+ });
+ check('un chip en introducción habilita solo el selector de la persona mencionada',()=>{
+  const perfil={encabezados_custom:{reserva:'Interviene {{comprador_tratamiento}} {{comprador_nombre}}'}};
+  const campos=app.camposTratamientoActivos({tipo:'reserva'},perfil);
+  assert.equal(campos.comprador,true);assert.equal(campos.vendedor,false);
+  assert.ok(app.getCamposFaltantesDetalle({...app.EMPTY_OP,tipo:'reserva'},perfil).some(f=>f.campo==='comprador_tratamiento'));
+ });
+ check('Sr. y Sra. resuelven el artículo correspondiente en la introducción',()=>{
+  const txt='Comparece {{comprador_articulo}} {{comprador_tratamiento}} {{comprador_nombre}}.';
+  assert.equal(app.sustituirTokens(txt,{comprador_tratamiento:'sr',comprador_nombre:'Juan'},null,'reserva'),'Comparece el Sr. Juan.');
+  assert.equal(app.sustituirTokens(txt,{comprador_tratamiento:'sra',comprador_nombre:'María'},null,'reserva'),'Comparece la Sra. María.');
+ });
+ check('sin selección queda marcado para revisar, sin adivinar por nombre',()=>{
+  assert.equal(app.textoTratamientoPersona({comprador_nombre:'María'},'comprador_tratamiento'),'___');
+  assert.equal(app.textoTratamientoPersona({comprador_nombre:'Juan'},'comprador_articulo'),'___');
+ });
+ check('chips resueltos en las cláusulas',()=>{
+  assert.equal(app.resolveVars('{{locador_articulo}} {{locador_tratamiento}} {{locador_nombre}}',{tipo:'alquiler',locador_tratamiento:'sra',locador_nombre:'María'}),'la Sra. María');
+ });
+ check('aliases de comodato y autorización se completan desde sus partes reales',()=>{
+  const op={tipo:'comodato',comprador_tratamiento:'sr',vendedor_tratamiento:'sra'};
+  assert.equal(app.textoTratamientoPersona(op,'comodatario_tratamiento'),'Sr.');
+  assert.equal(app.textoTratamientoPersona(op,'comodante_articulo'),'la');
+  assert.equal(app.textoTratamientoPersona({...op,tipo:'exclusividad'},'autorizante_tratamiento'),'Sra.');
+ });
+ check('los chips del contrato propio se detectan y los ocultos no aparecen',()=>{
+  const op={tipo:'comodato'},perfil={plantillas:{comodato:{modo_documento:'propio',documento_propio:'{{comodante_tratamiento}} firma el comodato'}}};
+  assert.equal(app.camposTratamientoActivos(op,perfil).vendedor,true);
+  assert.equal(app.camposTratamientoActivos(op,perfil).comprador,false);
+ });
  check('legacy obligatoria por defecto',()=>assert.equal(app.normalizarBodyBlock({id:'x'},0).obligatoria,true));
  check('legacy condicional opcional',()=>assert.equal(app.normalizarBodyBlock({id:'alquiler.seguro'},0).obligatoria,false));
  check('undefined de Supabase usa valor por defecto',()=>assert.equal(app.normalizarBodyBlock({id:'x',obligatoria:undefined},0).obligatoria,true));

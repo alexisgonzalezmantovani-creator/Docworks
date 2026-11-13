@@ -5738,7 +5738,7 @@ export function enfocarCampoOperacion(campo){
 }
 
 export function crearOperacionForm(deps){
- const {OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -5798,7 +5798,13 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     : !!(perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio");
   const totalNormal=esAlq?7:esResAlq?6:esDocSimple?5:6;
   const total=totalNormal-(esContratoPropioOp?1:0);
+  const tratamientosEnModelo=camposTratamientoActivos(data,perfil,clausulas);
   const faltantesDetalle = getCamposFaltantesDetalle(data,perfil);
+  ["comprador","vendedor","locador","locatario"].forEach(function(prefix){
+    if(tratamientosEnModelo[prefix]&&!["sr","sra"].includes(String(data[prefix+"_tratamiento"]||""))&&!faltantesDetalle.some(function(f){return f.campo===prefix+"_tratamiento";})){
+      faltantesDetalle.push({campo:prefix+"_tratamiento",label:"Tratamiento de "+prefix+" (Sr. / Sra.)",paso:getPasoDeCampo(prefix+"_tratamiento",data.tipo)});
+    }
+  });
   const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
   const resumenPendientesPaso = faltantesPasoActual.slice(0,3).map(function(f){return f.label;}).join(", ")+(faltantesPasoActual.length>3?" y "+(faltantesPasoActual.length-3)+" más":"");
   const documentoListo = faltantesDetalle.length===0;
@@ -6069,8 +6075,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   function renderStep(){
     if(esAlq){
       if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="alquiler"/>;
-      if(step===2)return <StepPersona data={data} onChange={set} prefix="locador" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes}/>;
-      if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;
+      if(step===2)return <StepPersona data={data} onChange={set} prefix="locador" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.locador}/>;
+      if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.locatario}/>;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesAlquiler data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
       if(step===6)return <StepGarantia data={data} onChange={set} faltantes={camposFaltantes}/>;
@@ -6078,8 +6084,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     }
     if(esResAlq){
       if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="alquiler"/>;
-      if(step===2)return <StepPersona data={data} onChange={set} prefix="locador" titulo="Locador (propietario)" faltantes={camposFaltantes}/>;
-      if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes}/>;;
+      if(step===2)return <StepPersona data={data} onChange={set} prefix="locador" titulo="Locador (propietario)" faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.locador}/>;
+      if(step===3)return <StepPersona data={data} onChange={set} prefix="locatario" titulo="Locatario (inquilino)" faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.locatario}/>;;
       if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
       if(step===5)return <StepCondicionesReservaAlq data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes}/>;
       if(step===6)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={true} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
@@ -6087,16 +6093,16 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     if(esDocSimple){
       var grupoReal=grupo||"otros";
       if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo={grupoReal} operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} onSelectReservaDevolucion={elegirReservaParaDevolucion}/>;
-      if(step===2)return data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes}/>;
-      if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes}/>;
+      if(step===2)return data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.comprador}/>;
+      if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.vendedor}/>;
       if(step===4)return <StepDocSimple data={data} onChange={set}/>;
       if(step===5)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
       return null;
     }
     // Compra normal (reserva / boleto)
     if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="compra"/>;
-    if(step===2)return <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.compra_instrumento==="cesion_boleto"?"Cesionario (adquiere los derechos)":"Comprador"} faltantes={camposFaltantes}/>;
-    if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={data.compra_instrumento==="cesion_boleto"?"Cedente (cede los derechos)":"Vendedor"} faltantes={camposFaltantes}/>;
+    if(step===2)return <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.compra_instrumento==="cesion_boleto"?"Cesionario (adquiere los derechos)":"Comprador"} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.comprador}/>;
+    if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={data.compra_instrumento==="cesion_boleto"?"Cedente (cede los derechos)":"Vendedor"} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.vendedor}/>;
     if(step===4)return <StepInmueble data={data} onChange={set} faltantes={camposFaltantes}/>;
     if(step===5)return <StepEconomicoCompra data={data} onChange={set} equipo={equipo} faltantes={camposFaltantes} mostrarEscribania={modoEdicion}/>;
     if(step===6)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
@@ -6148,7 +6154,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           <div style={{height:"100%",width:pct+"%",background:pct===100?"linear-gradient(90deg,#22c55e,#4ade80)":"linear-gradient(90deg,#c9962a,var(--gold),var(--gold2))",borderRadius:10,transition:"width 0.4s cubic-bezier(0.4,0,0.2,1)"}}/>
         </div>
       </div>
-      <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} esContratoPropioOp={esContratoPropioOp} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
+      <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} perfil={perfil} esContratoPropioOp={esContratoPropioOp} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
       {step<=total&&<div className="dw-operation-form-footer">
         <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Volver a opciones":"← Anterior"}</Btn>
         <div className="dw-operation-form-actions">

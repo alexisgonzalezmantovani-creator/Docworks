@@ -661,6 +661,8 @@ function tipoIdentificacion(valor,parte=null) {
 function personaVars(prefix, label) {
   return [
     { key: prefix+"_nombre",    label: label+" — Nombre completo" },
+    { key: prefix+"_tratamiento", label: label+" — Tratamiento (Sr./Sra.)" },
+    { key: prefix+"_articulo",    label: label+" — Artículo (el/la)" },
     { key: prefix+"_dni",       label: label+" — DNI / CUIT" },
     { key: prefix+"_domicilio", label: label+" — Domicilio" },
     { key: prefix+"_email",     label: label+" — Correo electrónico" },
@@ -920,6 +922,8 @@ function resolveVars(text, op, extra=undefined) {
       if (key==="comision_vendedor" || key==="comision_comprador" || key==="comision_porcentaje" ||
           key==="comision_vendedor_texto" || key==="comision_comprador_texto" || key==="comision_reserva_texto") return "";
     }
+    var honorifico=textoTratamientoPersona(op,key);
+    if(honorifico!==null)return honorifico;
     if (extra && Object.prototype.hasOwnProperty.call(extra, key)) return extra[key];
     if (Object.prototype.hasOwnProperty.call(derived, key)) return derived[key];
     return fmtVarValue(key, op || {});
@@ -2009,6 +2013,61 @@ function getInconsistenciasCamposOperacion(op){
   });
   return result;
 }
+
+/* Solo tiene sentido pedir un tratamiento si el modelo lo utiliza de verdad.
+   Se leen el texto y los chips, nunca se infiere sexo por nombre o DNI. */
+function camposTratamientoActivos(op,perfil=null,clausulas=[]){
+  op=op||{};
+  var tipo=op.tipo||"",cfg=perfil&&perfil.plantillas&&perfil.plantillas[tipo]||{};
+  var snap=op.plantilla_snapshot&&op.plantilla_snapshot.tipo===tipo?op.plantilla_snapshot:null;
+  var propios=snap?typeof snap.documento_propio==="string":cfg.modo_documento==="propio";
+  var partes=[],anadir=function(texto){if(typeof texto==="string"&&texto.trim())partes.push(texto);};
+  function anexar(lista){
+    (Array.isArray(lista)?lista:[]).forEach(function(item){
+      if(item&&item.activo!==false)anadir(item.contenido||item.texto);
+    });
+  }
+  if(snap){
+    if(propios)anadir(snap.documento_propio);
+    else{
+      if(snap.mostrar_introduccion!==false)anadir(snap.introduccion);
+      anexar(snap.body_blocks);
+      anexar(snap.clausulas);
+    }
+  }else if(propios){
+    anadir(cfg.documento_propio);
+  }else{
+    if(!(perfil&&perfil.mostrar_introduccion===false))
+      anadir(perfil&&perfil.encabezados_custom&&perfil.encabezados_custom[tipo]);
+    anexar(cfg.body_blocks);
+  }
+  if(!propios){
+    var seleccionados=Array.isArray(op.clausulas_ids)?op.clausulas_ids:[];
+    anexar((clausulas||[]).filter(function(c){return c&&seleccionados.includes(c.id);}));
+    anadir(op.clausulas_custom);
+  }
+  var texto=partes.join("\n");
+  var aliases={
+    comprador:tipo==="comodato"?["comprador","comodatario"]:["comprador"],
+    vendedor:tipo==="comodato"?["vendedor","comodante"]:tipo==="exclusividad"?["vendedor","autorizante"]:["vendedor"],
+    locador:["locador"],locatario:["locatario"]
+  };
+  var result={};
+  Object.keys(aliases).forEach(function(prefix){
+    result[prefix]=new RegExp("\\\\{\\\\{\\\\s*(?:"+aliases[prefix].join("|")+")_(?:tratamiento|articulo)\\\\s*\\\\}\\\\}").test(texto);
+  });
+  return result;
+}
+function textoTratamientoPersona(op,token){
+  var m=/^(comprador|vendedor|locador|locatario|comodante|comodatario|autorizante)_(tratamiento|articulo)$/.exec(String(token||""));
+  if(!m)return null;
+  var prefix=m[1]==="comodante"||m[1]==="autorizante"?"vendedor":m[1]==="comodatario"?"comprador":m[1];
+  var valor=String(op&&op[prefix+"_tratamiento"]||"").toLowerCase();
+  if(valor==="sr")return m[2]==="articulo"?"el":"Sr.";
+  if(valor==="sra")return m[2]==="articulo"?"la":"Sra.";
+  return "___";
+}
+
 function getCamposFaltantes(op,perfil=null){
   return getCamposFaltantesDetalle(op,perfil).map(function(f){return f.label;});
 }
@@ -2022,6 +2081,12 @@ function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
   });
   if(inmuebleEnBarrioComplejo(op))lista.push(["inmueble_barrio","Nombre del barrio o complejo"]);
   if(op.tipo==="alquiler"&&op.alquiler_amoblado)lista.push(["alquiler_inventario","Inventario de bienes muebles"]);
+  // Solo es necesario cuando la introducción o el contrato pide Sr./Sra. o el/la.
+  var tratamientos=camposTratamientoActivos(op,perfil);
+  ["comprador","vendedor","locador","locatario"].forEach(function(prefix){
+    if(tratamientos[prefix]&&!["sr","sra"].includes(String(op[prefix+"_tratamiento"]||"")))
+      lista.push([prefix+"_tratamiento","Tratamiento de "+prefix+" (Sr. / Sra.)"]);
+  });
   if(op.inmueble_tipo==="otro")lista.push(["inmueble_tipo_otro","Tipo de inmueble (otro)"]);
   if((op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto")lista.push(["compra_boleto_origen","Boleto antecedente de la cesión"]);
   if(op.tipo==="alquiler"){
@@ -3370,7 +3435,7 @@ function sustituirTokens(tpl, op, perfil, tipo) {
     inmobiliaria_nombre: (perfil&&perfil.nombre)||"",
     inmobiliaria_matricula: (perfil&&perfil.matricula)||"",
   };
-  return tpl.replace(/\{\{(\w+)\}\}/g, function(m,k){ if(TOKENS_CONTACTO_PARTES_PRIVADOS[k]) return ""; return (k in map) ? map[k] : m; });
+  return tpl.replace(/\{\{(\w+)\}\}/g, function(m,k){ if(TOKENS_CONTACTO_PARTES_PRIVADOS[k]) return ""; var trato=textoTratamientoPersona(op,k);if(trato!==null)return trato;return (k in map) ? map[k] : m; });
 }
 // Preámbulos por defecto (con tokens). Se usan si no hay personalización
 // y se pueden editar por tipo de documento en Plantillas → Introducción.
@@ -3400,10 +3465,12 @@ function getEncabezadoTemplate(tipo, perfil) {
 }
 
 function tokensEncabezadoParaTipo(tipo) {
-  var compra = ["comprador_nombre","comprador_dni","comprador_domicilio","vendedor_nombre","vendedor_dni","vendedor_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","precio_letras","anticipo_letras","saldo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
-  var alq = ["locador_nombre","locador_dni","locador_domicilio","locatario_nombre","locatario_dni","locatario_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","alquiler_monto_letras","anticipo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
+  var compra = ["comprador_nombre","comprador_tratamiento","comprador_articulo","comprador_dni","comprador_domicilio","vendedor_nombre","vendedor_tratamiento","vendedor_articulo","vendedor_dni","vendedor_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","precio_letras","anticipo_letras","saldo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
+  var alq = ["locador_nombre","locador_tratamiento","locador_articulo","locador_dni","locador_domicilio","locatario_nombre","locatario_tratamiento","locatario_articulo","locatario_dni","locatario_domicilio","inmueble_direccion","inmueble_partido","inmueble_provincia","nomenclatura_catastral","alquiler_monto_letras","anticipo_letras","fecha_operacion_larga","inmobiliaria_nombre","inmobiliaria_matricula"];
   var lista=(tipo==="alquiler"||tipo==="reserva_alquiler")?alq:compra;
   if(tipo==="reserva"||tipo==="boleto")lista=lista.concat(["compra_instrumento_nombre","inmueble_documentacion_actual_texto"]);
+  if(tipo==="comodato")lista=lista.concat(["comodante_tratamiento","comodante_articulo","comodatario_tratamiento","comodatario_articulo"]);
+  if(tipo==="exclusividad")lista=lista.concat(["autorizante_tratamiento","autorizante_articulo"]);
   return Array.from(new Set(tokensDeTextoDocWorks(DEFAULT_ENCABEZADOS[tipo]||"").concat(lista)));
 }
 
@@ -3411,6 +3478,13 @@ function labelTokenEncabezado(k, tipo) {
   var esAlq = tipo==="alquiler"||tipo==="reserva_alquiler";
   var map = {
     comprador_nombre: esAlq ? "Nombre locatario" : (tipo==="comodato" ? "Nombre comodatario" : "Nombre oferente/comprador"),
+    comprador_tratamiento:"Tratamiento del comprador (Sr./Sra.)", comprador_articulo:"Artículo del comprador (el/la)",
+    vendedor_tratamiento:"Tratamiento del vendedor (Sr./Sra.)", vendedor_articulo:"Artículo del vendedor (el/la)",
+    locador_tratamiento:"Tratamiento del locador (Sr./Sra.)", locador_articulo:"Artículo del locador (el/la)",
+    locatario_tratamiento:"Tratamiento del locatario (Sr./Sra.)", locatario_articulo:"Artículo del locatario (el/la)",
+    comodante_tratamiento:"Tratamiento del comodante (Sr./Sra.)", comodante_articulo:"Artículo del comodante (el/la)",
+    comodatario_tratamiento:"Tratamiento del comodatario (Sr./Sra.)", comodatario_articulo:"Artículo del comodatario (el/la)",
+    autorizante_tratamiento:"Tratamiento del autorizante (Sr./Sra.)", autorizante_articulo:"Artículo del autorizante (el/la)",
     comprador_dni: esAlq ? "DNI locatario" : "DNI oferente/comprador",
     comprador_domicilio: esAlq ? "Domicilio locatario" : "Domicilio oferente/comprador",
     vendedor_nombre: tipo==="comodato" ? "Nombre comodante" : "Nombre titular/vendedor",
@@ -4896,7 +4970,7 @@ function ContactoDocumentoField({id,label,type,value,onChange,checked,onChecked,
   </div>;
 }
 
-function StepPersona({data,onChange,prefix,titulo,faltantes}){
+function StepPersona({data,onChange,prefix,titulo,faltantes,mostrarTratamiento=false}){
   function f(k){return data[prefix+"_"+k]||"";}
   function s(k){return function(e){onChange(prefix+"_"+k,e.target.value);};}
   function onBlurNombre(){ var v=f("nombre"); var cap=capitalizarNombrePropio(v); if(cap!==v) onChange(prefix+"_nombre",cap); }
@@ -4919,7 +4993,15 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
     <div>
       <div role="heading" aria-level={2} style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:12}}>{esCesionCompra?(prefix==="vendedor"?"Cedente (cede sus derechos)":"Cesionario (recibe los derechos)"):tituloRolForm(data.tipo,prefix)}</div>
       <div className="dw-persona-fields">
-        <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",e.target.value);}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
+        {mostrarTratamiento?<div className="dw-persona-half dw-nombre-tratamiento" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 112px",gap:8,alignItems:"end",minWidth:0}}>
+          <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",e.target.value);}} onBlur={onBlurNombre} placeholder="Juan Pérez" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
+          <div className="field" style={{minWidth:0}}>
+            <label className="field-label" htmlFor={"dw-field-"+prefix+"_tratamiento"}>Tratamiento</label>
+            <select className="inp" id={"dw-field-"+prefix+"_tratamiento"} aria-label={"Tratamiento de "+titulo} title="Solo se solicita porque el modelo del documento usa este chip" style={{width:"100%",minWidth:0}} value={f("tratamiento")} onChange={s("tratamiento")} {...atributosErrorCampo("dw-field-"+prefix+"_tratamiento",faltantes&&faltantes.includes(prefix+"_tratamiento")?"Elegí Sr. o Sra.":undefined)}>
+              <option value="">Elegir…</option><option value="sr">Sr.</option><option value="sra">Sra.</option>
+            </select>
+          </div>
+        </div>:<Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",e.target.value);}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>}
         <div className="dw-persona-half dw-persona-identificacion"><IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="Número de DNI o CUIT" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/></div>
         <Inp id={"dw-field-"+prefix+"_domicilio"} label="Domicilio" value={f("domicilio")} onChange={s("domicilio")} placeholder="Calle, número, localidad y provincia" className="dw-persona-full" {...estiloCampoFaltante(faltantes,prefix+"_domicilio")}/>
         <ContactoDocumentoField id={"dw-field-"+prefix+"_telefono"} label="Teléfono" type="tel" value={f("telefono")} onChange={s("telefono")} checked={!!data[prefix+"_telefono_en_doc"]} onChecked={function(v){onChange(prefix+"_telefono_en_doc",v);}} placeholder="+54 9 11 1234-5678"/>
@@ -5931,10 +6013,10 @@ function getProximoPasoOperacion(op, operaciones){
   if(op.proceso_estado==="en_negociacion") return {icon:"↔",texto:"Continuar negociación",tone:"var(--gold)"};
   return {icon:"→",texto:"Continuar documentación / cierre",tone:"var(--teal)"};
 }
-function PasoResumenFinal({data,clausulas,onVolver,onFinalizarAccion,esContratoPropioOp=false}){
+function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esContratoPropioOp=false}){
   var partes=getResumenPartes(data);
   var monto=getResumenMonto(data);
-  var faltantes=getCamposFaltantesDetalle(data);
+  var faltantes=getCamposFaltantesDetalle(data,perfil);
   var clausulasSel=(data.clausulas_ids||[]).map(function(id){return clausulas.find(function(c){return c.id===id;});}).filter(Boolean);
   var esCesionCompra=(data.tipo==="reserva"||data.tipo==="boleto")&&data.compra_instrumento==="cesion_boleto";
   var requiereContratoCesion=esCesionCompra&&!esContratoPropioOp;
@@ -8189,7 +8271,7 @@ const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
 const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
-const OperacionForm = crearOperacionForm({OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
+const OperacionForm = crearOperacionForm({camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
 const ClausulasWorkspace = crearClausulasWorkspace({TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({parseMontoAR, Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
