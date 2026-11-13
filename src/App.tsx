@@ -2054,7 +2054,7 @@ function camposTratamientoActivos(op,perfil=null,clausulas=[]){
   };
   var result={};
   Object.keys(aliases).forEach(function(prefix){
-    result[prefix]=new RegExp("\\\\{\\\\{\\\\s*(?:"+aliases[prefix].join("|")+")_(?:tratamiento|articulo)\\\\s*\\\\}\\\\}").test(texto);
+    result[prefix]=new RegExp("\\{\\{\\s*(?:"+aliases[prefix].join("|")+")_(?:tratamiento|articulo)\\s*\\}\\}").test(texto);
   });
   return result;
 }
