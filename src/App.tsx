@@ -4866,15 +4866,14 @@ function getSteps(t){
 
 function IdentificacionField({value,onChange,placeholder=undefined,className=undefined,labelSuffix=undefined,style=undefined,error=undefined,id=undefined}){
   var tipo=tipoIdentificacion(value);
-  var dniActivo=tipo==="DNI";
-  var cuitActivo=tipo==="CUIT";
+  var identificacionCargada=!!String(value||"").trim();
   function Chip({label,active}){
     return <span style={{display:"inline-flex",alignItems:"center",padding:"3px 8px",borderRadius:8,border:"1px solid "+(active?"var(--gold)":"var(--border2)"),background:active?"rgba(212,168,83,0.14)":"transparent",color:active?"var(--gold)":"var(--dim)",fontSize:12,fontWeight:active?700:500}}>{label}</span>;
   }
   return <Field className={className}>
     <div className="dw-identificacion-heading" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:5}}>
-      <label className="field-label" htmlFor={id} style={{marginBottom:0}}>{tipo+(labelSuffix||"")}</label>
-      <div style={{display:"flex",gap:5,flexShrink:0}}><Chip label="DNI" active={dniActivo}/><Chip label="CUIT" active={cuitActivo}/></div>
+      <label className="field-label" htmlFor={id} style={{marginBottom:0}}>DNI / CUIT{labelSuffix||""}</label>
+      {identificacionCargada&&<div style={{display:"flex",gap:5,flexShrink:0}}><Chip label={"Detectado: "+tipo} active={true}/></div>}
     </div>
     <input id={id} className="inp" value={value||""} onChange={onChange} placeholder={placeholder} style={style} {...atributosErrorCampo(id,error)}/>
     {error&&<span id={id?id+"-error":undefined} className="field-error">{error}</span>}
@@ -4890,7 +4889,7 @@ function ContactoDocumentoField({id,label,type,value,onChange,checked,onChecked,
   var nombre=type==="tel"?"teléfono":"correo electrónico";
   return <div className="dw-contact-field" role="group" aria-labelledby={id+"-label"}>
     <div className="field dw-contact-input"><label id={id+"-label"} className="field-label" htmlFor={id}>{label}</label><input id={id} className="inp" type={type} inputMode={type==="tel"?"tel":"email"} value={value||""} onChange={onChange} placeholder={placeholder} autoComplete={autoComplete} style={style} {...atributosErrorCampo(id,error)}/>{error&&<span id={id+"-error"} className="field-error">{error}</span>}</div>
-    <div className="dw-contact-print"><span>Mostrar en el documento</span><button type="button" className={"dw-ios-sw"+(checked?" on":"")} role="switch" aria-checked={!!checked} aria-label={"Mostrar "+nombre+" en el documento"} aria-controls={id} onClick={function(){onChecked(!checked);}}/></div>
+    {(!!String(value||"").trim()||checked)&&<div className="dw-contact-print"><span>Incluir en el documento</span><button type="button" className={"dw-ios-sw"+(checked?" on":"")} role="switch" aria-checked={!!checked} aria-label={"Incluir "+nombre+" en el documento"} aria-controls={id} onClick={function(){onChecked(!checked);}}/></div>}
   </div>;
 }
 
@@ -4905,15 +4904,20 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
   function setCotitulares(next){ onChange(prefix+"_cotitulares", next); }
   function agregarCotitular(){ setCotitulares(cotitulares.concat([{nombre:"",dni:"",domicilio:"",email:"",telefono:""}])); }
   function actualizarCotitular(i,k,v){ setCotitulares(cotitulares.map(function(p,idx){ return idx===i ? Object.assign({},p,{[k]:v}) : p; })); }
-  function quitarCotitular(i){ setCotitulares(cotitulares.filter(function(p,idx){return idx!==i;})); }
+  function quitarCotitular(i){
+    var persona=cotitulares[i]||{};
+    var tieneDatos=["nombre","dni","domicilio","email","telefono"].some(function(k){return String(persona[k]||"").trim()!=="";});
+    if(tieneDatos&&!window.confirm("¿Quitar esta persona adicional? Los datos cargados se perderán."))return;
+    setCotitulares(cotitulares.filter(function(p,idx){return idx!==i;}));
+  }
   function onBlurNombreCotitular(i){ return function(){ var p=cotitulares[i]; if(!p) return; var cap=capitalizarNombrePropio(p.nombre); if(cap!==p.nombre) actualizarCotitular(i,"nombre",cap); }; }
   return(
     <div>
       <div role="heading" aria-level={2} style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:12}}>{esCesionCompra?(prefix==="vendedor"?"Cedente (cede sus derechos)":"Cesionario (recibe los derechos)"):tituloRolForm(data.tipo,prefix)}</div>
       <div className="dw-persona-fields">
-        <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
-        <div className="dw-persona-half dw-persona-identificacion"><IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="20-12345678-9" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/></div>
-        <Inp id={"dw-field-"+prefix+"_domicilio"} label="Domicilio" value={f("domicilio")} onChange={s("domicilio")} placeholder="Av. Corrientes 1234, CABA" className="dw-persona-full" {...estiloCampoFaltante(faltantes,prefix+"_domicilio")}/>
+        <Inp id={"dw-field-"+prefix+"_nombre"} label="Nombre completo / Razón social" value={f("nombre")} onChange={function(e){onChange(prefix+"_nombre",e.target.value);}} onBlur={onBlurNombre} placeholder="Juan Pérez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_nombre")}/>
+        <div className="dw-persona-half dw-persona-identificacion"><IdentificacionField id={"dw-field-"+prefix+"_dni"} value={f("dni")} onChange={s("dni")} placeholder="Número de DNI o CUIT" {...estiloCampoFaltante(faltantes,prefix+"_dni")}/></div>
+        <Inp id={"dw-field-"+prefix+"_domicilio"} label="Domicilio" value={f("domicilio")} onChange={s("domicilio")} placeholder="Calle, número, localidad y provincia" className="dw-persona-full" {...estiloCampoFaltante(faltantes,prefix+"_domicilio")}/>
         <ContactoDocumentoField id={"dw-field-"+prefix+"_telefono"} label="Teléfono" type="tel" value={f("telefono")} onChange={s("telefono")} checked={!!data[prefix+"_telefono_en_doc"]} onChecked={function(v){onChange(prefix+"_telefono_en_doc",v);}} placeholder="+54 9 11 1234-5678"/>
         <ContactoDocumentoField id={"dw-field-"+prefix+"_email"} label="Correo electrónico" type="email" autoComplete="email" value={f("email")} onChange={s("email")} checked={!!data[prefix+"_email_en_doc"]} onChecked={function(v){onChange(prefix+"_email_en_doc",v);}} placeholder="persona@correo.com" {...estiloCampoFaltante(faltantes,prefix+"_email","Revisá el formato del correo electrónico.")}/>
       </div>
@@ -4922,7 +4926,7 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
         <button type="button" onClick={agregarCotitular} style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",minHeight:46,padding:"12px 16px",borderRadius:12,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"center"}}>
           {"+ Agregar otro "+etiquetaParte}
         </button>
-        {cotitulares.length>0&&<div style={{fontSize:12,color:"var(--muted)",margin:"10px 0"}}>{cotitulares.length+" persona"+(cotitulares.length===1?"":"s")+" adicional"+(cotitulares.length===1?"":"es")+" cargada"+(cotitulares.length===1?"":"s")}</div>}
+        {cotitulares.length>0&&<div style={{fontSize:12,color:"var(--muted)",margin:"10px 0"}}>{cotitulares.length+" persona"+(cotitulares.length===1?"":"s")+" adicional"+(cotitulares.length===1?"":"es")}</div>}
         {cotitulares.map(function(p,i){
           return(
             <div key={i} style={{padding:"10px 12px",borderRadius:10,background:"rgba(255,255,255,0.02)",border:"1px solid var(--border)",marginBottom:8}}>
@@ -4931,8 +4935,8 @@ function StepPersona({data,onChange,prefix,titulo,faltantes}){
                 <button onClick={function(){quitarCotitular(i);}} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:12}}>✕ Quitar</button>
               </div>
               <div className="dw-persona-fields">
-                <Inp id={"dw-field-"+prefix+"_cotitular_"+i+"_nombre"} label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",capitalizarNombrePropio(e.target.value));}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_cotitular_"+i+"_nombre")}/>
-                <div className="dw-persona-half"><IdentificacionField id={"dw-field-"+prefix+"_cotitular_"+i+"_dni"} value={p.dni||""} onChange={function(e){actualizarCotitular(i,"dni",e.target.value);}} placeholder="27-98765432-1" {...estiloCampoFaltante(faltantes,prefix+"_cotitular_"+i+"_dni")}/></div>
+                <Inp id={"dw-field-"+prefix+"_cotitular_"+i+"_nombre"} label="Nombre completo" value={p.nombre||""} onChange={function(e){actualizarCotitular(i,"nombre",e.target.value);}} onBlur={onBlurNombreCotitular(i)} placeholder="María Gómez" className="dw-persona-half" {...estiloCampoFaltante(faltantes,prefix+"_cotitular_"+i+"_nombre")}/>
+                <div className="dw-persona-half"><IdentificacionField id={"dw-field-"+prefix+"_cotitular_"+i+"_dni"} value={p.dni||""} onChange={function(e){actualizarCotitular(i,"dni",e.target.value);}} placeholder="Número de DNI o CUIT" {...estiloCampoFaltante(faltantes,prefix+"_cotitular_"+i+"_dni")}/></div>
                 <Inp label="Domicilio (si es distinto)" value={p.domicilio||""} onChange={function(e){actualizarCotitular(i,"domicilio",e.target.value);}} placeholder="Dejalo vacío si es el mismo" className="dw-persona-full"/>
                 <ContactoDocumentoField id={"dw-field-"+prefix+"_cotitular_"+i+"_telefono"} label="Teléfono" type="tel" value={p.telefono||""} onChange={function(e){actualizarCotitular(i,"telefono",e.target.value);}} checked={typeof p.telefono_en_doc==="boolean"?p.telefono_en_doc:!!data[prefix+"_telefono_en_doc"]} onChecked={function(v){actualizarCotitular(i,"telefono_en_doc",v);}} placeholder="+54 9 11 1234-5678"/>
                 <ContactoDocumentoField id={"dw-field-"+prefix+"_cotitular_"+i+"_email"} label="Correo electrónico" type="email" autoComplete="off" value={p.email||""} onChange={function(e){actualizarCotitular(i,"email",e.target.value);}} checked={typeof p.email_en_doc==="boolean"?p.email_en_doc:!!data[prefix+"_email_en_doc"]} onChecked={function(v){actualizarCotitular(i,"email_en_doc",v);}} placeholder="persona@correo.com" {...estiloCampoFaltante(faltantes,prefix+"_cotitular_"+i+"_email","Revisá el formato del correo electrónico.")}/>
@@ -5818,12 +5822,12 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
 function StepGrupo({onSelect}){
   return (
     <div className="dw-grupo-selector">
-      <p className="dw-grupo-intro">Elegí el tipo de documento que querés generar.</p>
+      <p className="dw-grupo-intro">Primero elegí qué tipo de operación vas a preparar.</p>
       <div className="dw-grupo-grid">
         {Object.entries(TIPO_GRUPOS).map(function([key,g]){
           var labels={compra:"Compra",alquiler:"Alquiler",otros:"Otros documentos"};
           var icons={compra:"🏡",alquiler:"🏠",otros:"📌"};
-          var desc={compra:"Reservas y boletos de compraventa",alquiler:"Reservas y contratos de alquiler",otros:"Comodatos, exclusividades y documentos adicionales"};
+          var desc={compra:"Reserva de compra o boleto",alquiler:"Reserva o contrato de alquiler",otros:"Refuerzos, devoluciones, comodatos y exclusividades"};
           return (
             <button type="button" key={key} className={"dw-grupo-card dw-grupo-"+key} onClick={function(){onSelect(key);}}>
               <span className="dw-grupo-icon" aria-hidden="true">{icons[key]}</span>
