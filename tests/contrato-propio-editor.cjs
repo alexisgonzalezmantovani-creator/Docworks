@@ -111,4 +111,12 @@ check('revisión conserva los datos pendientes al insertar uno',()=>{
  assert.ok(editor.includes('onClick={()=>insertar(key,true)}'));
  assert.ok(editor.includes('if(!mantenerRevision)setRevisar(false)'));
 });
+check('al revisar se ocultan botones frecuentes duplicados y se priorizan faltantes',()=>{
+ assert.ok(editor.includes('{chipsSugeridos.length>0&&!revisar&&'));
+ assert.ok(editor.includes('{revisar&&faltantes.length>0&&'));
+});
+check('errores de chips desconocidos se explican sin mostrar códigos internos',()=>{
+ assert.ok(editor.includes('datos automáticos que este documento no reconoce'));
+ assert.ok(!editor.includes('Chips desconocidos: '+String.fromCharCode(34)+'+invalidos.join'));
+});
 console.log('APROBADAS '+n+' pruebas de contrato propio.');

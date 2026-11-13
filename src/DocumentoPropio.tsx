@@ -371,7 +371,7 @@ export default function DocumentoPropioEditor({
       </label>
       <span role="status" style={{fontSize:11,color:"var(--muted)"}}>{capturados.length} datos insertados · {disponibles.length} disponibles · {texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
     </div>
-    {chipsSugeridos.length>0&&<div role="group" aria-label="Datos recomendados para insertar" style={{display:"flex",flexDirection:"column",gap:7}}>
+    {chipsSugeridos.length>0&&!revisar&&<div role="group" aria-label="Datos recomendados para insertar" style={{display:"flex",flexDirection:"column",gap:7}}>
       <div style={{fontSize:12,color:"var(--muted)"}}>Datos frecuentes · tocá para insertar</div>
       <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
         {chipsSugeridos.map(([key,label])=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip" aria-label={"Insertar "+label} title={"Insertar "+label} disabled={estado==="saving"} style={{minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}} onClick={()=>insertar(key)}>+ {label}</button>)}
@@ -383,9 +383,9 @@ export default function DocumentoPropioEditor({
         texto.trim().length<=40?"Pegá el texto completo del contrato":null,
         texto.length>80000?"El texto supera los 80.000 caracteres":null,
         faltantes.length?"Faltan "+faltantes.length+" datos obligatorios. Podés agregarlos abajo":null,
-        invalidos.length?"Chips desconocidos: "+invalidos.join(", "):null,
+        invalidos.length?"Hay "+invalidos.length+" datos automáticos que este documento no reconoce; revisá las etiquetas rojas":null,
         repetidos.length?"Cada dato automático se usa una sola vez. Repetidos: "+repetidos.map(t=>CHIPS.find(([k])=>k===t)?.[1]||t).join(", "):null,
-        llavesMal?"Hay chips con llaves incompletas":null
+        llavesMal?"Hay datos automáticos incompletos. Revisá los corchetes del texto":null
       ].filter(Boolean).join(". ")}
     </div>}
     {revisar&&faltantes.length>0&&<div role="group" aria-label="Datos obligatorios pendientes" style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6}}>
