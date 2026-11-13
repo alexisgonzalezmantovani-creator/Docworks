@@ -18,7 +18,7 @@ export function insertarDatoAutomatico(texto:string,key:string,inicio:number,fin
   let hasta=Math.max(desde,Math.min(base.length,Number.isFinite(fin)?Math.trunc(fin):desde));
   // Nunca cortar una variable existente por la mitad: si el cursor cae dentro
   // de un chip, insertamos después; si una selección lo toca, lo incluye entero.
-  const tokens=Array.from(base.matchAll(/\\{\\{[a-zA-Z0-9_]+\\}\\}/g),m=>({
+  const tokens=Array.from(base.matchAll(/\{\{[a-zA-Z0-9_]+\}\}/g),m=>({
     inicio:m.index,fin:m.index+m[0].length
   }));
   if(desde===hasta){
