@@ -388,6 +388,12 @@ export default function DocumentoPropioEditor({
         llavesMal?"Hay chips con llaves incompletas":null
       ].filter(Boolean).join(". ")}
     </div>}
+    {revisar&&faltantes.length>0&&<div role="group" aria-label="Datos obligatorios pendientes" style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6}}>
+      <span style={{fontSize:12,color:"var(--muted)"}}>Faltan estos datos (tocá para insertarlos):</span>
+      {faltantes.map(key=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip"
+        disabled={estado==="saving"} onClick={()=>insertar(key)}
+        style={{minHeight:38,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}}>+ {CHIPS.find(([k])=>k===key)?.[1]||key}</button>)}
+    </div>}
     {revisar&&texto.trim().length>40&&advertenciasContenido.length>0&&
       <div style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:"var(--muted)"}}>
         <strong style={{color:"var(--text)"}}>Para revisar en tu contrato (orientativo)</strong>

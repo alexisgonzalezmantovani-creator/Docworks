@@ -100,4 +100,9 @@ check('selector separa las condiciones económicas y conserva todos los tipos',(
  assert.match(editor,/titulo:"Inmobiliaria y otros"/);
  assert.match(editor,/titulo:"Importes y fechas"/);
 });
+check('revisión permite insertar los datos obligatorios faltantes con un toque',()=>{
+ assert.ok(editor.includes('aria-label="Datos obligatorios pendientes"'));
+ assert.ok(editor.includes('faltantes.map(key=><button'));
+ assert.ok(editor.includes('onClick={()=>insertar(key)}'));
+});
 console.log('APROBADAS '+n+' pruebas de contrato propio.');
