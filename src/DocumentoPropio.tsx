@@ -49,10 +49,13 @@ export function quitarDatoAutomatico(texto:string,key:string){
   const inicio=base.indexOf(chip);
   if(inicio<0)return {texto:base,cursor:null};
   const fin=inicio+chip.length;
-  const previo=base.slice(0,inicio),posterior=base.slice(fin);
-  // Entre dos palabras, retirar solo uno de los dos espacios si sobran.
+  let previo=base.slice(0,inicio);
+  const posterior=base.slice(fin);
+  // La eliminación no debe dejar espacios dobles ni espacios antes de
+  // signos de puntuación. Conservar saltos de línea y el resto del Word.
+  if(/^[.,;:!?)]/.test(posterior))previo=previo.replace(/[ \t]+$/,"");
   const dobleEspacio=previo.endsWith(" ")&&posterior.startsWith(" ");
-  return {texto:previo+(dobleEspacio?posterior.slice(1):posterior),cursor:inicio};
+  return {texto:previo+(dobleEspacio?posterior.slice(1):posterior),cursor:previo.length};
 }
 
 // Un editor de texto plano: el contenido pertenece íntegramente a la inmobiliaria.

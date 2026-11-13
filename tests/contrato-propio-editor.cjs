@@ -62,7 +62,7 @@ check('inserción separa las palabras sin alterar signos de puntuación',()=>{
 check('quitar un chip solo elimina esa variable',()=>{
  const texto='Comprador {{comprador_nombre}} y DNI {{comprador_dni}}.';
  const r=quitar(texto,'comprador_dni');
- assert.equal(r.texto,'Comprador {{comprador_nombre}} y DNI .');
+ assert.equal(r.texto,'Comprador {{comprador_nombre}} y DNI.');
  assert.deepEqual(analizar(r.texto,permitidos).capturados,['comprador_nombre']);
 });
 check('quitar un chip conserva párrafos y normaliza el doble espacio',()=>{
@@ -70,6 +70,15 @@ check('quitar un chip conserva párrafos y normaliza el doble espacio',()=>{
  const r=quitar(texto,'precio_letras');
  assert.equal(r.texto,'Antes después.\nOtro párrafo.');
  assert.equal(quitar(texto,'no_existente').texto,texto);
+});
+check('quitar chip antes de puntuación no deja espacios sobrantes',()=>{
+ assert.equal(quitar('Precio {{precio_letras}}, pagadero en efectivo.','precio_letras').texto,'Precio, pagadero en efectivo.');
+ assert.equal(quitar('Importe {{precio_letras}}; saldo pendiente.','precio_letras').texto,'Importe; saldo pendiente.');
+ assert.equal(quitar('Firma {{comprador_nombre}}!','comprador_nombre').texto,'Firma!');
+});
+check('quitar chip respeta saltos de línea y párrafos de Word',()=>{
+ const original='Encabezado\\n{{precio_letras}}\\nCláusula siguiente.';
+ assert.equal(quitar(original,'precio_letras').texto,'Encabezado\\n\\nCláusula siguiente.');
 });
 check('el botón de quitar está en cada etiqueta insertada',()=>{
  const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
