@@ -1861,6 +1861,21 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 @media(max-width:1279px){.dw-operation-page .dw-persona-fields .dw-contact-field{grid-column:1/-1}}
 @media(max-width:640px){.dw-contact-field{flex-direction:column;align-items:stretch;gap:6px}.dw-contact-print{justify-content:flex-start;align-self:flex-start;min-height:34px}}
 
+
+/* iOS / Safari: evita el zoom automático al enfocar campos con fuente inferior a
+   16px, también en horizontal. No deshabilita el zoom manual por accesibilidad. */
+@media (hover:none) and (pointer:coarse) and (max-width:1100px){
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+  textarea,
+  select,
+  [contenteditable="true"],
+  [contenteditable="plaintext-only"]{
+    font-size:16px!important;
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+  }
+}
+
 /* Navegación del formulario más cómoda en computadora. */
 @media(min-width:761px){
  .dw-operation-page-heading>.btn,.dw-operation-form-footer .btn,.dw-operation-page .dw-operation-back{min-height:44px;padding:10px 18px;font-size:13.5px;line-height:1.2}

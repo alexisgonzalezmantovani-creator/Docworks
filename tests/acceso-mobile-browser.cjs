@@ -1,5 +1,18 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),http=require('node:http'),assert=require('node:assert/strict');
 const engine=process.argv.includes('--webkit')?'webkit':'chromium',root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-acceso-mobile-'));
+
+// Protección adicional: el CSS de móviles debe cubrir iPhone horizontal
+// y formularios completos sin impedir que el usuario haga zoom manual.
+const cssSource=fs.readFileSync(root+'/src/Operaciones.tsx','utf8');
+const cssStart=cssSource.indexOf('/* iOS / Safari: evita el zoom automático');
+const cssEnd=cssSource.indexOf('/* Navegación del formulario más cómoda en computadora. */',cssStart);
+assert.ok(cssStart>=0&&cssEnd>cssStart,'existe protección contra autozoom en iOS');
+const mobileCss=cssSource.slice(cssStart,cssEnd);
+for(const selector of ['(max-width:1100px)','(pointer:coarse)','textarea','select','[contenteditable="true"]','[contenteditable="plaintext-only"]','font-size:16px!important']){
+ assert.ok(mobileCss.includes(selector),'protección iOS: '+selector);
+}
+assert.ok(!/user-scalable\s*=\s*no|maximum-scale\s*=\s*1/.test(mobileCss),'permite zoom manual accesible');
+
 const harness=`
 import {createRoot} from 'react-dom/client';
 window.DOCWORKS_CAPTCHA={enabled:true,sitekey:'sitekey-ficticia-sin-proveedor'};
