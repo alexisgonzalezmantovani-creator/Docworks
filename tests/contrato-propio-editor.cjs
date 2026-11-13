@@ -45,6 +45,16 @@ check('insertar dato tolera posiciones fuera del texto',()=>{
  assert.equal(insertar('abc','precio_letras',999,999).texto,'abc{{precio_letras}}');
  assert.equal(insertar('abc','precio_letras',-2,-1).texto,'{{precio_letras}}abc');
 });
+check('cursor dentro de otro dato no rompe las llaves del chip existente',()=>{
+ const r=insertar('A {{comprador_nombre}} B','comprador_dni',8,8);
+ assert.equal(r.texto,'A {{comprador_nombre}}{{comprador_dni}} B');
+ assert.deepEqual(analizar(r.texto,new Set(['comprador_nombre','comprador_dni'])).invalidos,[]);
+});
+check('selección parcial de otro chip lo reemplaza entero sin dañarlo',()=>{
+ const r=insertar('A {{comprador_nombre}} B','comprador_dni',9,13);
+ assert.equal(r.texto,'A {{comprador_dni}} B');
+ assert.equal(analizar(r.texto,new Set(['comprador_dni'])).llavesMal,false);
+});
 const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
 check('el guardado exige que no haya duplicados',()=>assert.match(editor,/!repetidos\.length/));
 check('el contrato propio incluye los chips optativos de tratamiento y artículo',()=>{assert.match(editor,/comprador_tratamiento/);assert.match(editor,/vendedor_articulo/);assert.match(editor,/comodante_tratamiento/);assert.match(editor,/autorizante_articulo/);});

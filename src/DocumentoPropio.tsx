@@ -14,8 +14,24 @@ export function analizarChipsDocumentoPropio(texto:string, permitidos:Set<string
 // Mantener la inserción dentro del texto seleccionado sin mover párrafos.
 export function insertarDatoAutomatico(texto:string,key:string,inicio:number,fin:number){
   const base=String(texto||"");
-  const desde=Math.max(0,Math.min(base.length,Number.isFinite(inicio)?Math.trunc(inicio):base.length));
-  const hasta=Math.max(desde,Math.min(base.length,Number.isFinite(fin)?Math.trunc(fin):desde));
+  let desde=Math.max(0,Math.min(base.length,Number.isFinite(inicio)?Math.trunc(inicio):base.length));
+  let hasta=Math.max(desde,Math.min(base.length,Number.isFinite(fin)?Math.trunc(fin):desde));
+  // Nunca cortar una variable existente por la mitad: si el cursor cae dentro
+  // de un chip, insertamos después; si una selección lo toca, lo incluye entero.
+  const tokens=Array.from(base.matchAll(/\\{\\{[a-zA-Z0-9_]+\\}\\}/g),m=>({
+    inicio:m.index,fin:m.index+m[0].length
+  }));
+  if(desde===hasta){
+    const interior=tokens.find(t=>desde>t.inicio&&desde<t.fin);
+    if(interior){desde=interior.fin;hasta=interior.fin;}
+  }else{
+    for(const token of tokens){
+      if(token.inicio<hasta&&token.fin>desde){
+        desde=Math.min(desde,token.inicio);
+        hasta=Math.max(hasta,token.fin);
+      }
+    }
+  }
   const chip="{{"+key+"}}";
   return {texto:base.slice(0,desde)+chip+base.slice(hasta),cursor:desde+chip.length};
 }
