@@ -195,7 +195,7 @@ export default function DocumentoPropioEditor({
       window.removeEventListener("dw:model-navigation",proteger);
     };
   },[dirty,estado,confirmar]);
-  function cambiarTexto(v:string){setTexto(v);setRevisar(false);setMostrarVista(false);setError("");setEstado("idle");}
+  function cambiarTexto(v:string,mantenerRevision=false){setTexto(v);if(!mantenerRevision)setRevisar(false);setMostrarVista(false);setError("");setEstado("idle");}
   function deshacerUltimoChip(){
     const accion=ultimaAccionChip;
     if(!accion||texto!==accion.textoPosterior)return;
@@ -239,13 +239,13 @@ export default function DocumentoPropioEditor({
       inputRef.current.scrollTop=scrollPrevio;
     });
   }
-  function insertar(key:string){
+  function insertar(key:string,mantenerRevision=false){
     if(!permitidos.has(key)||capturados.includes(key))return;
     // El select nativo suele mover la selección a 0 o al final; usamos la última del textarea.
     const nuevo=insertarDatoAutomatico(texto,key,seleccionRef.current.inicio,seleccionRef.current.fin);
     const scrollPrevio=inputRef.current?.scrollTop??0;
     setUltimaAccionChip({textoAnterior:texto,textoPosterior:nuevo.texto,cursorAnterior:seleccionRef.current.inicio,scrollAnterior:scrollPrevio});
-    cambiarTexto(nuevo.texto);
+    cambiarTexto(nuevo.texto,mantenerRevision);
     seleccionRef.current={inicio:nuevo.cursor,fin:nuevo.cursor};
     // No robar el foco al selector en iPhone (evita abrir el teclado de golpe).
     // Si el editor ya estaba activo, conservar el cursor y el desplazamiento.
@@ -372,17 +372,17 @@ export default function DocumentoPropioEditor({
       <span role="status" style={{fontSize:11,color:"var(--muted)"}}>{capturados.length} datos insertados · {disponibles.length} disponibles · {texto.length.toLocaleString("es-AR")} / 80.000 caracteres</span>
     </div>
     {chipsSugeridos.length>0&&<div role="group" aria-label="Datos recomendados para insertar" style={{display:"flex",flexDirection:"column",gap:7}}>
-      <div style={{fontSize:12,color:"var(--muted)"}}>Datos más usados: tocá uno para insertarlo donde dejaste el cursor. Para ver los demás, usá el selector por categorías. Cada dato insertado desaparece de las opciones.</div>
+      <div style={{fontSize:12,color:"var(--muted)"}}>Datos frecuentes · tocá para insertar</div>
       <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
         {chipsSugeridos.map(([key,label])=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip" aria-label={"Insertar "+label} title={"Insertar "+label} disabled={estado==="saving"} style={{minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}} onClick={()=>insertar(key)}>+ {label}</button>)}
       </div>
     </div>}
-    {!chipsSugeridos.length&&capturados.length>0&&<div role="status" style={{fontSize:12,color:"var(--green)"}}>✓ Ya insertaste los datos principales recomendados.</div>}
+    {!chipsSugeridos.length&&capturados.length>0&&!revisar&&<div role="status" style={{fontSize:12,color:"var(--muted)"}}>Datos principales insertados.</div>}
     {revisar&&<div role={valido?"status":"alert"} style={{padding:11,borderRadius:8,border:"1px solid var(--border)",fontSize:12,lineHeight:1.6,color:valido?"var(--green)":"var(--amber)"}}>
       {valido?"✓ Los datos principales están vinculados. Revisá también la redacción y los importes antes de usarlo.":[
         texto.trim().length<=40?"Pegá el texto completo del contrato":null,
         texto.length>80000?"El texto supera los 80.000 caracteres":null,
-        faltantes.length?"Faltan chips: "+faltantes.map(t=>CHIPS.find(([k])=>k===t)?.[1]||t).join(", "):null,
+        faltantes.length?"Faltan "+faltantes.length+" datos obligatorios. Podés agregarlos abajo":null,
         invalidos.length?"Chips desconocidos: "+invalidos.join(", "):null,
         repetidos.length?"Cada dato automático se usa una sola vez. Repetidos: "+repetidos.map(t=>CHIPS.find(([k])=>k===t)?.[1]||t).join(", "):null,
         llavesMal?"Hay chips con llaves incompletas":null
@@ -391,7 +391,7 @@ export default function DocumentoPropioEditor({
     {revisar&&faltantes.length>0&&<div role="group" aria-label="Datos obligatorios pendientes" style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6}}>
       <span style={{fontSize:12,color:"var(--muted)"}}>Faltan estos datos (tocá para insertarlos):</span>
       {faltantes.map(key=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip"
-        disabled={estado==="saving"} onClick={()=>insertar(key)}
+        disabled={estado==="saving"} onClick={()=>insertar(key,true)}
         style={{minHeight:38,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}}>+ {CHIPS.find(([k])=>k===key)?.[1]||key}</button>)}
     </div>}
     {revisar&&texto.trim().length>40&&advertenciasContenido.length>0&&

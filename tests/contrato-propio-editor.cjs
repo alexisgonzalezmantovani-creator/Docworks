@@ -105,4 +105,10 @@ check('revisión permite insertar los datos obligatorios faltantes con un toque'
  assert.ok(editor.includes('faltantes.map(key=><button'));
  assert.ok(editor.includes('onClick={()=>insertar(key)}'));
 });
+check('revisión conserva los datos pendientes al insertar uno',()=>{
+ assert.ok(editor.includes('function insertar(key:string,mantenerRevision=false)'));
+ assert.ok(editor.includes('cambiarTexto(nuevo.texto,mantenerRevision)'));
+ assert.ok(editor.includes('onClick={()=>insertar(key,true)}'));
+ assert.ok(editor.includes('if(!mantenerRevision)setRevisar(false)'));
+});
 console.log('APROBADAS '+n+' pruebas de contrato propio.');
