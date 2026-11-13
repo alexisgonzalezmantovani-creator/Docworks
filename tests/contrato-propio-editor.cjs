@@ -66,15 +66,15 @@ check('quitar un chip solo elimina esa variable',()=>{
  assert.deepEqual(analizar(r.texto,permitidos).capturados,['comprador_nombre']);
 });
 check('quitar un chip conserva párrafos y normaliza el doble espacio',()=>{
- const texto='Antes {{precio_letras}} después.\\nOtro párrafo.';
+ const texto='Antes {{precio_letras}} después.\nOtro párrafo.';
  const r=quitar(texto,'precio_letras');
- assert.equal(r.texto,'Antes después.\\nOtro párrafo.');
+ assert.equal(r.texto,'Antes después.\nOtro párrafo.');
  assert.equal(quitar(texto,'no_existente').texto,texto);
 });
 check('el botón de quitar está en cada etiqueta insertada',()=>{
  const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
- assert.match(editor,/onClick=\\{\\(\\)=>quitar\\(key\\)\\}/);
- assert.match(editor,/aria-label=\\{"Quitar "\\+etiqueta\\+" del contrato"\\}/);
+ assert.ok(editor.includes('onClick={()=>quitar(key)}'));
+ assert.ok(editor.includes('aria-label={"Quitar "+etiqueta+" del contrato"}'));
 });
 const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
 check('el guardado exige que no haya duplicados',()=>assert.match(editor,/!repetidos\.length/));
