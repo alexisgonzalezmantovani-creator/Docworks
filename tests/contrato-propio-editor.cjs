@@ -39,4 +39,15 @@ check('la recuperación histórica requiere confirmación y deja borrador',()=>{
 check('se bloquea el atajo del navegador al guardar',()=>assert.match(editor,/ev\.preventDefault\(\);guardar\(\);/));
 check('los chips recomendados se recalculan usando solo los disponibles',()=>{assert.match(editor,/const chipsSugeridos=disponibles\.filter/);assert.match(editor,/nombres\.includes\(key\)/);});
 check('tocar un chip inserta el dato y lo hace desaparecer de las sugerencias',()=>{assert.match(editor,/chipsSugeridos\.map\(\(\[key,label\]\)=>/);assert.match(editor,/onClick=\{\(\)=>insertar\(key\)\}/);assert.match(editor,/capturados\.includes\(key\)/);});
+check('los chips insertados son visibles también al escribir y se pueden localizar',()=>{
+ assert.match(editor,/aria-label="Datos automáticos ya insertados"/);
+ assert.match(editor,/capturados\.map\(key=>/);
+ assert.match(editor,/onClick=\{\(\)=>irAlDato\(key\)\}/);
+ assert.match(editor,/setSelectionRange\(pos,pos\+key\.length\+4\)/);
+});
+check('selector separa las condiciones económicas y conserva todos los tipos',()=>{
+ assert.match(editor,/titulo:"Condiciones de pago"/);
+ assert.match(editor,/titulo:"Inmobiliaria y otros"/);
+ assert.match(editor,/titulo:"Importes y fechas"/);
+});
 console.log('APROBADAS '+n+' pruebas de contrato propio.');

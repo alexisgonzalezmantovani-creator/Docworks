@@ -102,7 +102,8 @@ export default function DocumentoPropioEditor({
     {titulo:"Personas",items:disponibles.filter(([key])=>/^(comprador|vendedor|locador|locatario|comodante|comodatario|autorizante)_/.test(key))},
     {titulo:"Inmueble",items:disponibles.filter(([key])=>/^inmueble_/.test(key))},
     {titulo:"Importes y fechas",items:disponibles.filter(([key])=>/^(precio_|anticipo_|saldo_|alquiler_|reserva_alquiler_|fecha_)/.test(key))},
-    {titulo:"Inmobiliaria y condiciones",items:disponibles.filter(([key])=>!/^(comprador|vendedor|locador|locatario|comodante|comodatario|autorizante|inmueble|precio|anticipo|saldo|alquiler|reserva_alquiler|fecha)_/.test(key))}
+    {titulo:"Condiciones de pago",items:disponibles.filter(([key])=>/^(reserva_pago_|boleto_pago_|compra_)/.test(key))},
+    {titulo:"Inmobiliaria y otros",items:disponibles.filter(([key])=>/^(inmobiliaria_|exclusividad_)/.test(key))}
   ];
   const nombres=grupo==="locacion"?["locador_nombre","locatario_nombre"]
     :grupo==="comodato"?["comodante_nombre","comodatario_nombre"]
@@ -152,6 +153,22 @@ export default function DocumentoPropioEditor({
   function cambiarTexto(v:string){setTexto(v);setRevisar(false);setMostrarVista(false);setError("");setEstado("idle");}
   function recordarSeleccion(el:HTMLTextAreaElement){
     seleccionRef.current={inicio:el.selectionStart,fin:el.selectionEnd};
+  }
+  // Tocar un dato insertado permite encontrarlo en el contrato sin modificarlo.
+  // La selección se mantiene en el textarea nativo, también en Safari/iPhone.
+  function irAlDato(key:string){
+    const pos=texto.indexOf("{{"+key+"}}");
+    if(pos<0)return;
+    setEditandoTexto(true);
+    seleccionRef.current={inicio:pos,fin:pos+key.length+4};
+    requestAnimationFrame(()=>{
+      const input=inputRef.current;
+      if(!input)return;
+      input.focus();
+      input.setSelectionRange(pos,pos+key.length+4);
+      const linea=texto.slice(0,pos).split("\n").length-1;
+      input.scrollTop=Math.max(0,linea*26-70);
+    });
   }
   function insertar(key:string){
     if(!permitidos.has(key)||capturados.includes(key))return;
@@ -248,6 +265,19 @@ export default function DocumentoPropioEditor({
         onKeyUp={ev=>recordarSeleccion(ev.currentTarget)}
         onKeyDown={ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="s"){ev.preventDefault();guardar();}}} />
     </div>
+    {capturados.length>0&&<div aria-label="Datos automáticos ya insertados" style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:6}}>
+      <span style={{fontSize:11,color:"var(--muted)",marginRight:3}}>En tu contrato:</span>
+      {capturados.map(key=>{
+        const etiqueta=CHIPS.find(([k])=>k===key)?.[1]||key.replace(/_/g," ");
+        const errorChip=invalidos.includes(key)||repetidos.includes(key);
+        return <button key={key} type="button" title={"Buscar "+etiqueta+" en el texto"}
+          aria-label={"Buscar "+etiqueta+" en el contrato"} disabled={estado==="saving"} onClick={()=>irAlDato(key)}
+          style={{padding:"4px 8px",borderRadius:7,fontSize:11,fontWeight:650,
+            border:"1px solid "+(errorChip?"#fca5a5":"rgba(56,189,248,.35)"),
+            color:errorChip?"#991b1b":"#0369a1",background:errorChip?"#fee2e2":"#dff3ff",
+            cursor:"pointer",maxWidth:"100%",overflowWrap:"anywhere"}}>{etiqueta}</button>;
+      })}
+    </div>}
     <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",alignItems:"center"}}>
       <label style={{fontSize:12,fontWeight:650,color:"var(--text)"}}>Insertar dato automático
         <select className="inp" style={{display:"block",width:"min(100%,320px)",marginTop:5,fontSize:16}} defaultValue=""
