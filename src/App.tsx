@@ -4995,9 +4995,9 @@ function BarrioComplejoField({data,onChange,faltantes=undefined}){
       <Inp id="dw-field-inmueble_barrio" label="Nombre del barrio o complejo" value={data.inmueble_barrio||""} onChange={function(e){onChange("inmueble_barrio",e.target.value);}} placeholder="Ej.: Santa Elena" {...estiloCampoFaltante(faltantes,"inmueble_barrio")}/>
     </div>}
     {barrioConservado&&<div style={{fontSize:12,color:"var(--dim)",margin:"5px 0"}}>El barrio cargado se conserva, pero no se incluirá mientras esta opción esté desactivada.</div>}
-    <div className="dw-barrio-datos">
+    {(activo||!!String(data.inmueble_unidad_funcional||"").trim())&&<div className="dw-barrio-datos">
       <Inp id="dw-field-inmueble_unidad_funcional" label="Unidad funcional o lote (opcional)" value={data.inmueble_unidad_funcional||""} onChange={function(e){onChange("inmueble_unidad_funcional",e.target.value);}} placeholder="Ej.: UF 3 o lote 12"/>
-    </div>
+    </div>}
   </div>;
 }
 

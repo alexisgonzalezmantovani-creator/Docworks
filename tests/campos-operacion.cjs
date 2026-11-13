@@ -62,11 +62,11 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
  }
  state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',comprador_telefono:'1122223333',comprador_email:'contacto@example.test',comprador_telefono_en_doc:false,comprador_email_en_doc:false};await a.act(async()=>render(a.StepPersona,{prefix:'comprador',titulo:'Comprador'}));
  check('contactos no tienen bloque separado de switches',()=>assert.equal(document.querySelector('.dw-doc-toggles'),null));
- await click(document.querySelector('[aria-label="Mostrar teléfono en el documento"]'));check('switch de teléfono cambia solo teléfono',()=>{assert.equal(state.comprador_telefono_en_doc,true);assert.equal(state.comprador_email_en_doc,false);});
- await click(document.querySelector('[aria-label="Mostrar correo electrónico en el documento"]'));check('switch de email conserva check del teléfono',()=>{assert.equal(state.comprador_email_en_doc,true);assert.equal(state.comprador_telefono_en_doc,true);});
+ await click(document.querySelector('[aria-label="Incluir teléfono en el documento"]'));check('switch de teléfono cambia solo teléfono',()=>{assert.equal(state.comprador_telefono_en_doc,true);assert.equal(state.comprador_email_en_doc,false);});
+ await click(document.querySelector('[aria-label="Incluir correo electrónico en el documento"]'));check('switch de email conserva check del teléfono',()=>{assert.equal(state.comprador_email_en_doc,true);assert.equal(state.comprador_telefono_en_doc,true);});
  check('los controles son parte de sus propios campos',()=>{for(const el of document.querySelectorAll('.dw-contact-field')){assert.ok(el.querySelector('input'));assert.ok(el.querySelector('[role="switch"]'));}});
  await click([...document.querySelectorAll('button')].find(x=>x.textContent.includes('Agregar otro comprador')));
- const flags=document.querySelectorAll('[aria-label="Mostrar correo electrónico en el documento"]');await click(flags[1]);check('cotitular cambia su switch sin modificar al principal',()=>{assert.equal(state.comprador_email_en_doc,true);assert.equal(state.comprador_cotitulares[0].email_en_doc,false);});
+ const flags=document.querySelectorAll('[aria-label="Incluir correo electrónico en el documento"]');await click(flags[1]);check('cotitular cambia su switch sin modificar al principal',()=>{assert.equal(state.comprador_email_en_doc,true);assert.equal(state.comprador_cotitulares[0].email_en_doc,false);});
  for(const [modo,campo,valor] of [
   ['horas','reserva_aceptacion_horas','0'],
   ['horas','reserva_aceptacion_horas','abc'],

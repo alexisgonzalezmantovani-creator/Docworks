@@ -53,10 +53,12 @@ await fresh();if(width<640)await navOp();assert.ok(await page.evaluate(async()=>
 await add();assert.equal(await page.locator('.fab').count(),0);checks++;await page.getByRole('button',{name:'Volver a operaciones',exact:true}).click();assert.ok(await page.getByRole('heading',{name:'Operaciones de prueba'}).isVisible());checks++;
 await open();await selectStep(3);await page.locator('#dw-field-locatario_nombre').fill('Nombre de prueba');
 assert.equal(await page.locator('.mobile-nav').count(),0);checks++;
-if(width>=1280){assert.ok(await page.locator('.dw-contact-field').first().evaluate(el=>{const input=el.querySelector('input').getBoundingClientRect(),control=el.querySelector('.dw-contact-print').getBoundingClientRect();return control.left>=input.right&&control.top<input.bottom&&control.bottom>=input.top&&control.right<=innerWidth;}));checks++;}
+
 assert.equal(await page.locator('.dw-doc-toggles').count(),0);checks++;
 if(width>=641){assert.ok(await page.locator('#dw-field-locatario_dni').evaluate(el=>Math.abs(el.getBoundingClientRect().top-document.querySelector('#dw-field-locatario_nombre').getBoundingClientRect().top)<2));checks++;}
-await page.locator('#dw-field-locatario_telefono').fill('1122334455');await page.getByRole('switch',{name:'Incluir teléfono en el documento',exact:true}).click();assert.equal(await page.getByRole('switch',{name:'Incluir teléfono en el documento',exact:true}).getAttribute('aria-checked'),'true');checks++;
+await page.locator('#dw-field-locatario_telefono').fill('1122334455');
+if(width>=1280){const contacto=page.locator('.dw-contact-field').filter({has:page.locator('#dw-field-locatario_telefono')});assert.ok(await contacto.evaluate(el=>{const input=el.querySelector('input')?.getBoundingClientRect(),control=el.querySelector('.dw-contact-print')?.getBoundingClientRect();return !!input&&!!control&&control.left>=input.right&&control.top<input.bottom&&control.bottom>=input.top&&control.right<=innerWidth;}));checks++;}
+await page.getByRole('switch',{name:'Incluir teléfono en el documento',exact:true}).click();assert.equal(await page.getByRole('switch',{name:'Incluir teléfono en el documento',exact:true}).getAttribute('aria-checked'),'true');checks++;
 
 assert.equal(await page.getByText('Se detecta automáticamente',{exact:false}).count(),0);assert.equal(await page.getByText('Dato interno de la operación.',{exact:true}).count(),0);checks++;
 assert.ok(await page.locator('.dw-identificacion-heading').evaluate(el=>el.getBoundingClientRect().bottom<=el.parentElement.querySelector('input').getBoundingClientRect().top));checks++;
