@@ -33,7 +33,13 @@ export function insertarDatoAutomatico(texto:string,key:string,inicio:number,fin
     }
   }
   const chip="{{"+key+"}}";
-  return {texto:base.slice(0,desde)+chip+base.slice(hasta),cursor:desde+chip.length};
+  // Los importes y nombres no deben quedar pegados a palabras del Word.
+  // No tocar puntuación ni espacios existentes.
+  const previo=base.slice(0,desde),posterior=base.slice(hasta);
+  const separadorAntes=/[\p{L}\p{N}]/u.test(previo.slice(-1))?" ":"";
+  const separadorDespues=/^[\p{L}\p{N}]/u.test(posterior)?" ":"";
+  const cursor=previo.length+separadorAntes.length+chip.length;
+  return {texto:previo+separadorAntes+chip+separadorDespues+posterior,cursor};
 }
 
 // Un editor de texto plano: el contenido pertenece íntegramente a la inmobiliaria.

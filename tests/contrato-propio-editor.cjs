@@ -34,7 +34,7 @@ check('ignora texto con llaves simples que no representa un chip',()=>{
 });
 check('insertar dato respeta el cursor en el medio de un párrafo',()=>{
  const r=insertar('Antes. Después.','comprador_dni',7,7);
- assert.equal(r.texto,'Antes. {{comprador_dni}}Después.');
+ assert.equal(r.texto,'Antes. {{comprador_dni}} Después.');
  assert.equal(r.cursor,24);
 });
 check('insertar dato reemplaza solo la selección',()=>{
@@ -42,8 +42,8 @@ check('insertar dato reemplaza solo la selección',()=>{
  assert.equal(r.texto,'El {{comprador_nombre}} firma.');
 });
 check('insertar dato tolera posiciones fuera del texto',()=>{
- assert.equal(insertar('abc','precio_letras',999,999).texto,'abc{{precio_letras}}');
- assert.equal(insertar('abc','precio_letras',-2,-1).texto,'{{precio_letras}}abc');
+ assert.equal(insertar('abc','precio_letras',999,999).texto,'abc {{precio_letras}}');
+ assert.equal(insertar('abc','precio_letras',-2,-1).texto,'{{precio_letras}} abc');
 });
 check('cursor dentro de otro dato no rompe las llaves del chip existente',()=>{
  const r=insertar('A {{comprador_nombre}} B','comprador_dni',8,8);
@@ -54,6 +54,10 @@ check('selección parcial de otro chip lo reemplaza entero sin dañarlo',()=>{
  const r=insertar('A {{comprador_nombre}} B','comprador_dni',9,13);
  assert.equal(r.texto,'A {{comprador_dni}} B');
  assert.equal(analizar(r.texto,new Set(['comprador_dni'])).llavesMal,false);
+});
+check('inserción separa las palabras sin alterar signos de puntuación',()=>{
+ assert.equal(insertar('Monto total.','precio_letras',6,6).texto,'Monto {{precio_letras}} total.');
+ assert.equal(insertar('El precio es ().','precio_letras',14,14).texto,'El precio es ({{precio_letras}}).');
 });
 const editor=fs.readFileSync(path.join(dir,'src/DocumentoPropio.tsx'),'utf8');
 check('el guardado exige que no haya duplicados',()=>assert.match(editor,/!repetidos\.length/));
