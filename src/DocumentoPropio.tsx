@@ -23,11 +23,11 @@ const CHIPS = [
   ["comodatario_nombre","Nombre del comodatario"],["comodatario_tratamiento","Tratamiento del comodatario (Sr./Sra.)"],["comodatario_articulo","Artículo del comodatario (el/la)"],["comodatario_dni","DNI del comodatario"],["comodatario_domicilio","Domicilio del comodatario"],
   ["autorizante_nombre","Nombre del autorizante"],["autorizante_tratamiento","Tratamiento del autorizante (Sr./Sra.)"],["autorizante_articulo","Artículo del autorizante (el/la)"],["autorizante_dni","DNI del autorizante"],["autorizante_domicilio","Domicilio del autorizante"],
   ["inmueble_direccion","Dirección completa del inmueble"],["inmueble_partido","Partido / municipio"],
-  ["inmueble_provincia","Provincia"],["precio_letras","Precio en letras"],
-  ["anticipo_letras","Reserva / anticipo en letras"],["saldo_letras","Saldo en letras"],
-  ["alquiler_monto_letras","Alquiler en letras"],
-  ["reserva_alquiler_reserva","Importe de la reserva de alquiler en letras"],
-  ["reserva_alquiler_canon","Alquiler mensual estimado en letras"],
+  ["inmueble_provincia","Provincia"],["precio_letras","Precio completo (moneda, números y letras)"],
+  ["anticipo_letras","Reserva / anticipo completo (moneda, números y letras)"],["saldo_letras","Saldo completo (moneda, números y letras)"],
+  ["alquiler_monto_letras","Alquiler completo (moneda, números y letras)"],
+  ["reserva_alquiler_reserva","Reserva de alquiler (moneda, números y letras)"],
+  ["reserva_alquiler_canon","Alquiler mensual estimado (moneda, números y letras)"],
   ["fecha_operacion_larga","Fecha"],
   ["inmobiliaria_nombre","Inmobiliaria"],["inmobiliaria_matricula","Matrícula"],
   ["reserva_pago_acordado","Condiciones de pago de reserva"],
@@ -115,7 +115,7 @@ export default function DocumentoPropioEditor({
     :(tipo==="reserva"||tipo==="boleto"||tipo==="refuerzo_reserva"||tipo==="devolucion_reserva")?["precio_letras"]:[];
   const importesSinChip=chipsImportesRecomendados.filter(k=>!capturados.includes(k));
   // Accesos rápidos cortos: lo insertado desaparece y queda en el documento.
-  const ordenSugeridos=[...nombres,...rolesPorGrupo[grupo].map(rol=>rol+"_dni"),"inmueble_direccion",...chipsImportesRecomendados,"fecha_operacion_larga","inmobiliaria_nombre"];
+  const ordenSugeridos=[...nombres,"inmueble_direccion",...chipsImportesRecomendados,...rolesPorGrupo[grupo].map(rol=>rol+"_dni"),"fecha_operacion_larga","inmobiliaria_nombre"];
   const chipsSugeridos=disponibles.filter(([key])=>
     nombres.includes(key)||rolesPorGrupo[grupo].some(rol=>key===rol+"_dni")||
     key==="inmueble_direccion"||chipsImportesRecomendados.includes(key)||
@@ -261,7 +261,7 @@ export default function DocumentoPropioEditor({
     {chipsSugeridos.length>0&&<div role="group" aria-label="Datos recomendados para insertar" style={{display:"flex",flexDirection:"column",gap:7}}>
       <div style={{fontSize:12,color:"var(--muted)"}}>Datos más usados: tocá uno para insertarlo donde dejaste el cursor. Para ver los demás, usá el selector por categorías. Cada dato insertado desaparece de las opciones.</div>
       <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
-        {chipsSugeridos.map(([key,label])=><button key={key} type="button" className="btn btn-secondary btn-sm" aria-label={"Insertar "+label} title={"Insertar "+label} disabled={estado==="saving"} style={{minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}} onClick={()=>insertar(key)}>+ {label}</button>)}
+        {chipsSugeridos.map(([key,label])=><button key={key} type="button" className="btn btn-secondary btn-sm dw-auto-data-chip" aria-label={"Insertar "+label} title={"Insertar "+label} disabled={estado==="saving"} style={{minHeight:40,maxWidth:"100%",whiteSpace:"normal",textAlign:"left"}} onClick={()=>insertar(key)}>+ {label}</button>)}
       </div>
     </div>}
     {!chipsSugeridos.length&&capturados.length>0&&<div role="status" style={{fontSize:12,color:"var(--green)"}}>✓ Ya insertaste los datos principales recomendados.</div>}

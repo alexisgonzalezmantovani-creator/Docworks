@@ -1292,7 +1292,7 @@ function TokensProtegidosDocWorks({tokens, compact}){
   if(!lista.length) return null;
   return <div style={{marginTop:7,padding:"8px 9px",borderRadius:8,border:"1px solid var(--border)",background:"rgba(255,255,255,.018)"}}>
     <div style={{fontSize:12,color:"var(--dim)",fontWeight:700,textTransform:"uppercase",letterSpacing:".05em",marginBottom:6}}>Campos automáticos protegidos</div>
-    <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{lista.map(function(k){return <span key={k} title="Este campo se completa automáticamente y no se puede eliminar" style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 7px",borderRadius:999,border:"1px solid rgba(212,168,83,.22)",background:"rgba(212,168,83,.07)",color:"var(--gold)",fontSize:compact?9.5:10}}><b style={{fontWeight:650}}>{tokenLabelDocWorks(k)}</b><span style={{opacity:.7}}>🔒</span></span>;})}</div>
+    <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{lista.map(function(k){return <span key={k} title="Este campo se completa automáticamente y no se puede eliminar" style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 7px",borderRadius:999,border:"1px solid rgba(56,189,248,.30)",background:"rgba(14,165,233,.12)",color:"var(--info,#38bdf8)",fontSize:compact?9.5:10}}><b style={{fontWeight:650}}>{tokenLabelDocWorks(k)}</b><span style={{opacity:.7}}>🔒</span></span>;})}</div>
   </div>;
 }
 
