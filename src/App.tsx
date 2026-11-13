@@ -5112,7 +5112,6 @@ function StepInmueble({data,onChange,faltantes}){
         <Inp id="dw-field-inmueble_provincia" label="Provincia" value={data.inmueble_provincia||""} onChange={function(e){onChange("inmueble_provincia",e.target.value);}} placeholder="Buenos Aires" {...estiloCampoFaltante(faltantes,"inmueble_provincia")}/>
         {(data.tipo==="reserva"||data.tipo==="boleto")&&<div className="col2" style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
           <div style={{fontSize:14,fontWeight:700,color:"var(--text)",marginBottom:5}}>¿Cómo se firmará esta venta?</div>
-          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:10}}>Elegí el documento que las partes prevén firmar. En una cesión, también necesitarás identificar el boleto de origen.</div>
           <div className="grid2">
         <Slt id="dw-field-compra_instrumento" label="Tipo de instrumento de venta" className="col2" value={data.compra_instrumento||"escritura"} onChange={function(e){onChange("compra_instrumento",e.target.value);}}>
           <option value="escritura">Escritura traslativa de dominio</option>
@@ -5161,7 +5160,7 @@ function CompartidaBlock({data,onChange,equipo}){
         </Slt>
       </div>}
       <button type="button" className={"dw-share-toggle"+(conColega?" is-active":"")} aria-expanded={conColega} aria-controls="dw-share-colleague-panel" onClick={function(){onChange("compartida_colega_activo",!conColega);}}>
-        <span>{conColega?"✓ Compartir con un colega de mi inmobiliaria":"+ Compartir con un colega de mi inmobiliaria"}</span>
+        <span>{conColega?"✓ Operación con colega de mi inmobiliaria":"+ Operación con colega de mi inmobiliaria"}</span>
         <span aria-hidden="true">{conColega?"−":"+"}</span>
       </button>
       {conColega&&<div id="dw-share-colleague-panel" className="dw-share-panel">
@@ -5181,7 +5180,6 @@ function CompartidaBlock({data,onChange,equipo}){
             </div>
             <div style={{minWidth:0}}>
               <div style={{fontSize:12,fontWeight:700,color:"var(--text)"}}>Operación compartida con {((miembros.find(function(m){return m.id===data.compartida_colega_id;})||{}).nombre)||"colega"}</div>
-              <div style={{fontSize:12,color:"var(--dim)"}}>La foto de perfil se comparte con el equipo.</div>
             </div>
           </div>
         )}
@@ -5276,11 +5274,11 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
         <Inp id="dw-field-anticipo" label="Seña / Anticipo" value={data.anticipo||""} onChange={function(e){onChange("anticipo",e.target.value);}} placeholder="10.000" money {...estiloCampoFaltante(faltantes,"anticipo")}/>
         <Field label="Saldo restante (calculado)"><div className="val-box" aria-live="polite">{precio>0?fmt$(Math.max(0,precio-anticipo),data.moneda):"—"}</div>{anticipo>precio&&precio>0&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginTop:6}}>La seña o anticipo supera el precio total. Revisá los importes.</div>}</Field>
         {data.tipo==="reserva"&&<div className="col2 dw-economic-refuerzo-toggle">
-          <label className="dw-economic-refuerzo-label">
-            <input id="dw-field-reserva_incluye_refuerzo" type="checkbox" checked={!!data.reserva_incluye_refuerzo} onChange={function(e){onChange("reserva_incluye_refuerzo",e.target.checked);}}/>
-            <span>Refuerzo de reserva</span>
-          </label>
-          {data.reserva_incluye_refuerzo&&<div className="dw-economic-refuerzo-content">
+          <button id="dw-field-reserva_incluye_refuerzo" type="button" className={"dw-share-toggle"+(data.reserva_incluye_refuerzo?" is-active":"")} aria-expanded={!!data.reserva_incluye_refuerzo} aria-controls="dw-refuerzo-reserva-panel" onClick={function(){onChange("reserva_incluye_refuerzo",!data.reserva_incluye_refuerzo);}}>
+            <span>{data.reserva_incluye_refuerzo?"✓ Refuerzo de reserva":"+ Refuerzo de reserva"}</span>
+            <span aria-hidden="true">{data.reserva_incluye_refuerzo?"−":"+"}</span>
+          </button>
+          {data.reserva_incluye_refuerzo&&<div id="dw-refuerzo-reserva-panel" className="dw-share-panel dw-economic-refuerzo-content">
             <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>DocWorks incorpora la cláusula de posible refuerzo de reserva. El refuerzo efectivo se documenta en una operación independiente.</div>
             <Inp id="dw-field-reserva_fecha_refuerzo" label="Fecha límite para tomar refuerzo" value={data.reserva_fecha_refuerzo||""} onChange={function(e){onChange("reserva_fecha_refuerzo",e.target.value);}} type="date" hint="Opcional — si cargás esta fecha, aparecerá en el Calendario."/>
           </div>}
@@ -5528,7 +5526,6 @@ function StepCondicionesReservaAlq({data,onChange,equipo,faltantes}){
   },[data.res_alq_moneda]);
   return(
     <div>
-      <div className="notice notice-gold" style={{marginBottom:12}}>Reserva de alquiler: guardá las condiciones acordadas. Al preparar el contrato definitivo, revisá los datos antes de emitir.</div>
       <div className="grid2">
         <Inp id="dw-field-res_alq_monto_reserva" label="Monto de reserva" value={data.res_alq_monto_reserva||""} onChange={function(e){onChange("res_alq_monto_reserva",e.target.value);}} placeholder="50.000" money {...estiloCampoFaltante(faltantes,"res_alq_monto_reserva")}/>
         <Slt id="dw-field-res_alq_moneda" label="Moneda de la reserva y del canon" value={data.res_alq_moneda||"ARS"} onChange={function(e){onChange("res_alq_moneda",e.target.value);onChange("res_alq_monto_mensual_moneda",e.target.value);}}><option value="ARS">ARS — Pesos argentinos</option><option value="USD">USD — Dólares estadounidenses</option></Slt>
@@ -5548,7 +5545,6 @@ function StepCondicionesReservaAlq({data,onChange,equipo,faltantes}){
           {["3","5","7","10","15","30"].map(function(d){return <option key={d} value={d}>{d} días</option>;})}
         </Slt>
         <div className="col2"><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginBottom:8}}>Comisión inmobiliaria</div>
-          <div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Cada parte puede tener porcentaje o monto fijo.</div>
           <div className="grid2">
             <ComisionEditor data={data} onChange={onChange} prefix="res_alq_comision_locador" legacyKey="res_alq_comision_locador" label="Locador" base={parseMontoAR(data.res_alq_monto_mensual)||0} monedaBase={data.res_alq_monto_mensual_moneda||data.res_alq_moneda||"ARS"} defaultPct={data.res_alq_comision!==undefined && data.res_alq_comision!==null && String(data.res_alq_comision)!=="" ? data.res_alq_comision : "1"}/>
             <ComisionEditor data={data} onChange={onChange} prefix="res_alq_comision_locatario" legacyKey="res_alq_comision_locatario" label="Locatario" base={parseMontoAR(data.res_alq_monto_mensual)||0} monedaBase={data.res_alq_monto_mensual_moneda||data.res_alq_moneda||"ARS"} defaultPct={data.res_alq_comision!==undefined && data.res_alq_comision!==null && String(data.res_alq_comision)!=="" ? data.res_alq_comision : "1"}/>
@@ -5623,7 +5619,6 @@ function StepGarantia({data,onChange,faltantes}){
   ];
   return(
     <div>
-      <p style={{fontSize:13,color:"var(--muted)",marginBottom:12}}>Tipo de garantía que presenta el locatario.</p>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {garantias.map(function(g){
           var sel=data.alquiler_garantia_tipo===g.value;
@@ -5721,11 +5716,10 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   async function completarRedaccionIA(){if(loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
   function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}if(String(contenidoCustom||"").trim()){requestDwConfirm("Ya tenés una cláusula escrita. ¿Reemplazarla por el texto redactado con IA?",function(){void completarRedaccionIA();},"Reemplazar");return;}void completarRedaccionIA();}
   return <div>
-    <p style={{fontSize:14,color:"var(--muted)",lineHeight:1.55,marginBottom:14}}>El documento ya incluye las cláusulas del modelo. Solo elegí una de estas opciones si necesitás agregar algo a esta operación.</p>
     <SeguroOperacion data={data} onChange={onChange} faltantes={faltantes}/>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",margin:"2px 0 8px"}}>
       <span style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Cláusulas adicionales</span>
-      <span role="status" style={{fontSize:12,color:cantidadSeleccionadas?"var(--green)":"var(--dim)"}}>{cantidadSeleccionadas===0?"Ninguna seleccionada":cantidadSeleccionadas===1?"1 seleccionada":cantidadSeleccionadas+" seleccionadas"}</span>
+      <span role="status" style={{fontSize:12,color:cantidadSeleccionadas?"var(--green)":"var(--dim)"}}>{cantidadSeleccionadas===0?"Sin extras":cantidadSeleccionadas===1?"1 agregada":cantidadSeleccionadas+" agregadas"}</span>
     </div>
     {data.tipo==="alquiler"&&(<div className="dw-inventario-existente">
         <label style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,border:"1px solid var(--border)",background:data.alquiler_amoblado?"rgba(212,168,83,0.08)":"transparent",cursor:"pointer",fontSize:12.5,color:"var(--text)",width:"fit-content"}}>
@@ -5735,7 +5729,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
         {data.alquiler_amoblado&&<Txa id="dw-field-alquiler_inventario" label="Inventario de bienes muebles" hint="Detallá los muebles y artefactos que se entregan (uno por línea). Se incorpora como anexo del contrato." value={data.alquiler_inventario||""} onChange={function(e){onChange("alquiler_inventario",e.target.value);}} rows={5} placeholder={"Ej:\nHeladera con freezer\nCocina 4 hornallas\nJuego de living (sofá 3 cuerpos + 2 sillones)\nMesa de comedor + 4 sillas\nCama matrimonial + colchón\n..."} style={{marginTop:8}}/>}
       </div>)}
     {lista.length>6&&<div style={{marginBottom:10}}>
-      <Inp id="dw-buscar-clausula-extra" label="Buscar cláusula" value={buscarClausula} onChange={function(e){setBuscarClausula(e.target.value);}} placeholder="Escribí una palabra del título" autoComplete="off"/>
+      <Inp id="dw-buscar-clausula-extra" label="Buscar cláusula" value={buscarClausula} onChange={function(e){setBuscarClausula(e.target.value);}} placeholder="Buscar por título" autoComplete="off"/>
     </div>}
     {lista.length===0&&<div className="notice" style={{fontSize:13,lineHeight:1.5,marginBottom:10}}>No hay cláusulas adicionales habilitadas. Podés escribir una propia o pedirle al administrador que habilite opciones.</div>}
     {lista.length>0&&listaVisible.length===0&&<div role="status" className="notice" style={{fontSize:13,lineHeight:1.5,marginBottom:10}}>No encontré cláusulas con ese nombre. Podés cambiar la búsqueda o escribir una propia.</div>}
@@ -5753,11 +5747,11 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
         </div>
         {expandida&&<div id={"dw-op-clause-detail-"+c.id} className="dw-op-clause-detail">{mostrarTokensDocWorks(c.contenido)}</div>}
         {sel&&inventarioPrevio&&detalleCfg?.campo==="entrega_muebles_detalle"&&<div role="note" style={{fontSize:12,color:"var(--muted)",padding:"4px 0 10px"}}>El inventario ya se incluye como anexo. Esta cláusula no se repetirá; podés desmarcarla acá.</div>}
-        {sel&&detalleCfg&&!(inventarioPrevio&&detalleCfg.campo==="entrega_muebles_detalle")&&<Txa id={"dw-field-"+detalleCfg.campo} label={detalleCfg.label} hint="Se incorpora al documento de esta operación. Completá el detalle acordado por las partes." value={data[detalleCfg.campo]||""} onChange={function(e){onChange(detalleCfg.campo,e.target.value);onChange(detalleCfg.campo+"_id",c.id);}} rows={4} placeholder={detalleCfg.placeholder}/>}
+        {sel&&detalleCfg&&!(inventarioPrevio&&detalleCfg.campo==="entrega_muebles_detalle")&&<Txa id={"dw-field-"+detalleCfg.campo} label={detalleCfg.label} value={data[detalleCfg.campo]||""} onChange={function(e){onChange(detalleCfg.campo,e.target.value);onChange(detalleCfg.campo+"_id",c.id);}} rows={4} placeholder={detalleCfg.placeholder}/>}
       </div>;})}
     </div>
     <div style={{marginTop:14,paddingTop:12,borderTop:"1px dashed var(--border2)"}}>
-      <button type="button" aria-expanded={showAdd} aria-controls="dw-clausula-personal-editor" onClick={function(){setShowAdd(function(v){return !v;});}} style={{width:"100%",padding:"11px 13px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",cursor:"pointer",textAlign:"left",fontWeight:700}}>{showAdd?"− Ocultar editor de mi cláusula":String(contenidoCustom||"").trim()?"✎ Editar mi cláusula agregada":"＋ Escribir una cláusula propia"}</button>
+      <button type="button" aria-expanded={showAdd} aria-controls="dw-clausula-personal-editor" onClick={function(){setShowAdd(function(v){return !v;});}} style={{width:"100%",padding:"11px 13px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",cursor:"pointer",textAlign:"left",fontWeight:700}}>{showAdd?"− Ocultar editor":String(contenidoCustom||"").trim()?"✎ Editar mi cláusula":"＋ Escribir cláusula propia"}</button>
       {!showAdd&&!!String(contenidoCustom||"").trim()&&<div style={{fontSize:12,color:"var(--green)",marginTop:6}}>Tu cláusula sigue incluida en esta operación aunque el editor esté cerrado.</div>}
       {showAdd&&<div id="dw-clausula-personal-editor" style={{marginTop:9,padding:12,borderRadius:12,border:"1px solid var(--border2)",background:"rgba(212,168,83,.035)"}}>
         <Inp label="Título" value={tituloCustom} onChange={function(e){setTituloCustom(e.target.value);}} placeholder="Ej.: Prohibición de mascotas"/>

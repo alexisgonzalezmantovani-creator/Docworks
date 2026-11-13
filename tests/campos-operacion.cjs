@@ -92,6 +92,26 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
    assert.ok(document.querySelector('#dw-share-colleague-panel'));
    assert.ok(document.querySelector('.dw-colleague-info').textContent.includes('corredor asociado'));
  });
+ state={...a.EMPTY_OP,tipo:'reserva',reserva_incluye_refuerzo:false};
+ await a.act(async()=>render(a.StepEconomicoCompra));
+ check('refuerzo usa el mismo botón accesible que las operaciones compartidas',()=>{
+   const boton=document.getElementById('dw-field-reserva_incluye_refuerzo');
+   assert.ok(boton);assert.equal(boton.tagName,'BUTTON');
+   assert.ok(boton.classList.contains('dw-share-toggle'));
+   assert.equal(boton.getAttribute('aria-expanded'),'false');
+   assert.equal(document.getElementById('dw-refuerzo-reserva-panel'),null);
+ });
+ await click(document.getElementById('dw-field-reserva_incluye_refuerzo'));
+ check('refuerzo abre campos sin salir de Económico',()=>{
+   assert.equal(state.reserva_incluye_refuerzo,true);
+   assert.equal(document.getElementById('dw-field-reserva_incluye_refuerzo').getAttribute('aria-expanded'),'true');
+   assert.ok(document.getElementById('dw-field-reserva_fecha_refuerzo'));
+ });
+ await click(document.getElementById('dw-field-reserva_incluye_refuerzo'));
+ check('refuerzo se cierra sin borrar el resto de la operación',()=>{
+   assert.equal(state.reserva_incluye_refuerzo,false);
+   assert.equal(document.getElementById('dw-refuerzo-reserva-panel'),null);
+ });
  state={...a.EMPTY_OP,tipo:'reserva'};await a.act(async()=>render(a.StepInmueble));
  check('barrio y UF no ocupan campos en una operación nueva sin seleccionar',()=>{assert.equal(document.getElementById('dw-field-inmueble_barrio'),null);assert.equal(document.getElementById('dw-field-inmueble_unidad_funcional'),null);});
  await click(document.querySelector('[aria-label="Barrio cerrado o complejo"]'));
