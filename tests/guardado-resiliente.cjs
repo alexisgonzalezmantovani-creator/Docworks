@@ -1,6 +1,11 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),ts=require('typescript'),{JSDOM}=require('jsdom');
 const dir=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-resiliente-')),dom=new JSDOM('<div id="root"></div>',{url:'http://localhost'});
-for(const k of ['window','document','HTMLElement','HTMLInputElement','CustomEvent','Event','Node','localStorage'])global[k]=dom.window[k];global.IS_REACT_ACT_ENVIRONMENT=true;global.MessageChannel=class{constructor(){this.port1={onmessage:null};this.port2={postMessage:()=>setTimeout(()=>this.port1.onmessage?.({}),0)}}};HTMLElement.prototype.scrollIntoView=()=>{};window.scrollTo=()=>{};
+for(const k of ['window','document','HTMLElement','HTMLInputElement','CustomEvent','Event','Node','localStorage'])global[k]=dom.window[k];global.IS_REACT_ACT_ENVIRONMENT=true;
+let cambioTipoPendiente=null;
+window.addEventListener('dw:confirm',ev=>{
+ if(String(ev.detail?.message||'').includes('Cambiar el tipo de documento'))cambioTipoPendiente=ev.detail.onConfirm;
+});
+global.MessageChannel=class{constructor(){this.port1={onmessage:null};this.port2={postMessage:()=>setTimeout(()=>this.port1.onmessage?.({}),0)}}};HTMLElement.prototype.scrollIntoView=()=>{};window.scrollTo=()=>{};
 Object.defineProperty(global,'navigator',{value:dom.window.navigator,configurable:true});Object.defineProperty(navigator,'onLine',{value:true,configurable:true});
 const source=fs.readFileSync(dir+'/src/App.tsx','utf8'),parsed=ts.createSourceFile('App.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),fns={};(function visit(n){if(ts.isFunctionDeclaration(n)&&n.name)fns[n.name.text]=n.getText(parsed);ts.forEachChild(n,visit)})(parsed);
 const harness=`
@@ -19,7 +24,12 @@ function crearGuardadoPrueba(servidor,inicial={}){
 import {act,createElement} from 'react';import {createRoot} from 'react-dom/client';
 export {crearGuardadoPrueba,act,createElement,createRoot,OperacionForm,EMPTY_OP,SAMPLE_OP_PREVIEW,lsSet,lsGet,contextoBorradorOperacion,draftTieneContenido,buildDocSections,opParaDocumento,docToPlainText};`;
 require('esbuild').buildSync({stdin:{contents:source+'\n'+harness,resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
-const a=require(tmp+'/app.cjs'),root=a.createRoot(document.getElementById('root'));let checks=0,failures=0;async function check(label,fn){try{await fn();checks++;console.log('OK',label)}catch(e){failures++;console.error('FALLA',label,e.message)}}
+const a=require(tmp+'/app.cjs'),root=a.createRoot(document.getElementById('root'));let checks=0,failures=0;
+async function confirmarCambioTipo(){
+ const aceptar=cambioTipoPendiente;cambioTipoPendiente=null;
+ assert.equal(typeof aceptar,'function','Un cambio de documento con datos debe solicitar confirmación');
+ await a.act(async()=>aceptar());
+}async function check(label,fn){try{await fn();checks++;console.log('OK',label)}catch(e){failures++;console.error('FALLA',label,e.message)}}
 const data={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',comprador_nombre:'Compradora de prueba'};
 (async()=>{
 await check('respuesta perdida después de guardar no duplica al reintentar',async()=>{const rows=new Map(),attempts=[];let first=true;const h=a.crearGuardadoPrueba({guardar:async op=>{rows.set(op.id,JSON.parse(JSON.stringify(op)));attempts.push(op.id);if(first){first=false;throw Error('Respuesta perdida después del commit')}return {operacion:op}}});await h.saveOp(data,'guardar','borrador');await h.saveOp({...data,comprador_nombre:'Nombre corregido'},'guardar','borrador');assert.equal(rows.size,1);assert.equal(attempts[0],attempts[1]);assert.equal([...rows.values()][0].comprador_nombre,'Nombre corregido');assert.equal(h.estado().operaciones.length,1)});
@@ -201,8 +211,8 @@ await check('autorización no imprime cotitulares del comprador y al volver cons
  const original={...data,id:'cambio-tipo',tipo:'comodato',comprador_nombre:'Compradora Real',comprador_telefono_en_doc:true,comprador_cotitulares:[{nombre:'Cotitular Real',dni:'30123456'}]};
  await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'cambio-tipo',initial:original,perfil:{rol:'dueno',nombre:'Inmobiliaria Prueba',matricula:'1234',plantillas:{}}})));
  await a.act(async()=>document.querySelector('.step-dot').click());const byText=t=>[...document.querySelectorAll('.dw-grupo-tipo-sections .dw-grupo-card')].find(x=>x.textContent.includes(t));
- await a.act(async()=>byText('Autorización de Venta').click());assert.equal(snapshot.current.data.comprador_nombre,'Inmobiliaria Prueba');assert.deepEqual(snapshot.current.data.comprador_cotitulares,[]);assert.ok(!a.docToPlainText(a.buildDocSections(a.opParaDocumento(snapshot.current.data),[],'exclusividad')).includes('Cotitular Real'));
- await a.act(async()=>byText('Comodato').click());assert.equal(snapshot.current.data.comprador_nombre,original.comprador_nombre);assert.deepEqual(snapshot.current.data.comprador_cotitulares,original.comprador_cotitulares);assert.equal(snapshot.current.data.comprador_telefono_en_doc,true);
+ await a.act(async()=>byText('Autorización de Venta').click());assert.equal(snapshot.current.data.comprador_nombre,original.comprador_nombre,'Antes de confirmar debe conservar los datos del comprador');await confirmarCambioTipo();assert.equal(snapshot.current.data.comprador_nombre,'Inmobiliaria Prueba');assert.deepEqual(snapshot.current.data.comprador_cotitulares,[]);assert.ok(!a.docToPlainText(a.buildDocSections(a.opParaDocumento(snapshot.current.data),[],'exclusividad')).includes('Cotitular Real'));
+ await a.act(async()=>byText('Comodato').click());await confirmarCambioTipo();assert.equal(snapshot.current.data.comprador_nombre,original.comprador_nombre);assert.deepEqual(snapshot.current.data.comprador_cotitulares,original.comprador_cotitulares);assert.equal(snapshot.current.data.comprador_telefono_en_doc,true);
 });
 await check('los datos automáticos de la inmobiliaria no cuentan como una autorización completada',async()=>{
  await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'autorizacion-vacia',initial:{...a.EMPTY_OP,tipo:'exclusividad'},perfil:{rol:'dueno',nombre:'Inmobiliaria Prueba',matricula:'1234',direccion:'Dirección institucional',email:'correo@example.test',telefono:'111111',plantillas:{}}})));
@@ -210,7 +220,7 @@ await check('los datos automáticos de la inmobiliaria no cuentan como una autor
 });
 await check('una autorización recuperada no inventa al comodatario con el nombre de la inmobiliaria',async()=>{
  await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'autorizacion-recuperada',initial:{...data,id:'autorizacion',tipo:'exclusividad',comprador_nombre:'Inmobiliaria Prueba',exclusividad_inmobiliaria_autofill:true},perfil:{rol:'dueno',nombre:'Inmobiliaria Prueba',matricula:'1234',plantillas:{}}})));
- await a.act(async()=>document.querySelector('.step-dot').click());await a.act(async()=>{const comodato=[...document.querySelectorAll('.dw-grupo-tipo-sections .dw-grupo-card')].find(x=>x.textContent.includes('Comodato'));assert.ok(comodato,'El botón Comodato debe aparecer en Otros documentos');comodato.click();});assert.equal(snapshot.current.data.comprador_nombre,'');assert.equal(snapshot.current.data.comprador_dni,'');assert.deepEqual(snapshot.current.data.comprador_cotitulares,[]);
+ await a.act(async()=>document.querySelector('.step-dot').click());await a.act(async()=>{const comodato=[...document.querySelectorAll('.dw-grupo-tipo-sections .dw-grupo-card')].find(x=>x.textContent.includes('Comodato'));assert.ok(comodato,'El botón Comodato debe aparecer en Otros documentos');comodato.click();});await confirmarCambioTipo();assert.equal(snapshot.current.data.comprador_nombre,'');assert.equal(snapshot.current.data.comprador_dni,'');assert.deepEqual(snapshot.current.data.comprador_cotitulares,[]);
 });
 await check('cambiar el tipo al guardar captura el modelo correcto y mantiene el ID',async()=>{let saved;const h=a.crearGuardadoPrueba({guardar:async op=>{saved=op;return {operacion:op}}},{editOp:{...data,id:'existente',tipo:'comodato',plantilla_snapshot:{tipo:'comodato',version:1}}});await h.saveOp({...data,tipo:'exclusividad'},'guardar','borrador');assert.equal(saved.id,'existente');assert.equal(saved.plantilla_snapshot.tipo,'exclusividad')});
 await check('sincronización recuperada agrega la operación aunque el listado aún no la tuviera',async()=>{const h=a.crearGuardadoPrueba({guardar:async op=>({operacion:op})});a.lsSet('draftOperacion',{data:{...data,id:'pendiente'},editId:'pendiente',contexto:a.contextoBorradorOperacion(h.contexto)});await h.sincronizarDraftOffline();assert.equal(h.estado().operaciones.length,1);assert.equal(h.estado().operaciones[0].id,'pendiente');assert.ok(h.estado().operaciones[0].plantilla_snapshot)});

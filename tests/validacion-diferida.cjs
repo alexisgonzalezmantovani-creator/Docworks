@@ -13,10 +13,10 @@ assert.match(form,/const faltantesDetalle = getCamposFaltantesDetalle\(data,perf
 assert.match(form,/step>total&&faltantesDetalle\.length>0/,'Mostrar pendientes solo en resumen');
 assert.match(form,/document\.querySelectorAll\("\[data-falta\]"\)/,'Limpiar marcas heredadas');
 assert.doesNotMatch(form,/setAttribute\("data-falta"/,'No reintroducir bordes rojos vía DOM');
-assert.match(form,/<Btn onClick=\{avanzarConAviso\}>Siguiente →<\/Btn>/,'Siguiente siempre mantiene una sola acción');
+assert.match(form,/<Btn onClick=\{avanzarConAviso\}>Continuar →<\/Btn>/,'Continuar siempre mantiene una sola acción');
 assert.doesNotMatch(form,/Continuar igual →|setAvisoPaso\(true\)/,'No pedir un segundo toque para avanzar');
 assert.match(form,/setStep\(function\(s\)\{return Math\.min\(s\+1,total\+1\);\}\)/,'Avanzar directamente sin bloquear por campos pendientes');
-assert.match(form,/Revisar →/,'Conservar revisión final');
+assert.match(form,/Revisar documento →/,'Conservar revisión final');
 assert.match(form,/draftTieneContenido\(data\) \? \{ data:data/,'No persistir un formulario vacío como borrador');
 assert.match(form,/dw-operation-save-slot/,'Indicador de guardado junto a siguiente');
 assert.match(form,/if\(!initial && !draftTieneContenido\(dataRef\.current\)\) return;/,'Impedir guardar operaciones nuevas vacías');
