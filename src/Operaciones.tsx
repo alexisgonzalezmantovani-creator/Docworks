@@ -3552,7 +3552,7 @@ function ConfiguracionView({ requestedTab, modoAspectoDesdeDocumentos=false, onV
                     <div style={{fontSize:18,fontFamily:"DM Serif Display,serif",color:"var(--text)",lineHeight:1.15}}>Información de la inmobiliaria</div>
                     {perfilSaveStatus==="saved"&&<span className="cuenta-save-pill"><span>✓</span> Guardado</span>}
                   </div>
-                  <div style={{fontSize:12,color:"var(--dim)",marginTop:4,lineHeight:1.5}}>Completá acá la identidad y los datos institucionales que DocWorks utilizará en la aplicación y en todos los documentos.</div>
+                  
                 </div>
 
                 <div className="cuenta-dashboard-stats" aria-label="Resumen de la inmobiliaria">
@@ -3674,7 +3674,7 @@ function ConfiguracionView({ requestedTab, modoAspectoDesdeDocumentos=false, onV
         onContact={function(){setSupportSubject("");setSupportMessage("");setSupportPhoto(null);setShowSupport(true);}}/>}
 
       {showSupport&&<Modal open={true} onClose={function(){setShowSupport(false);}} title="Contactar soporte">
-        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.55,marginBottom:12}}>Completá el motivo y el detalle. Elegí el canal para enviar tu consulta. Agregamos la versión y el dispositivo para facilitar el diagnóstico; no incluimos documentos ni contraseñas.</div>
+        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.55,marginBottom:12}}>Se incluyen la versión y el dispositivo para ayudar al soporte, pero no documentos ni contraseñas.</div>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           <Inp label="Asunto" value={supportSubject} onChange={function(e){setSupportSubject(e.target.value);}}/>
           <Field label="Mensaje"><textarea className="inp" rows={7} value={supportMessage} onChange={function(e){setSupportMessage(e.target.value);}} placeholder="Contanos qué ocurrió, en qué pantalla y qué estabas haciendo…" style={{resize:"vertical",minHeight:140}}/></Field>
@@ -4772,9 +4772,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
           return (
             <div>
               <div style={{padding:"10px 12px",borderRadius:9,background:"rgba(212,168,83,.07)",border:"1px solid rgba(212,168,83,.2)",marginBottom:14,fontSize:13,fontWeight:750,color:sugerencia.tone}}><span style={{marginRight:6}}>{sugerencia.icon}</span>Próximo paso sugerido: {sugerencia.texto}</div>
-              <div style={{fontSize:12.5,color:"var(--dim)",marginBottom:16,lineHeight:1.5}}>
-                Todos los documentos que generes acá quedan agrupados en la <b>carpeta de esta operación</b>, junto a {getName(addDocFor)}.
-              </div>
+              
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 {opts.map(function(o){
                   var existentes=hijosAdd.filter(function(h){return h.tipo===o.tipo;});
