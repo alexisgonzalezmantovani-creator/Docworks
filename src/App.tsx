@@ -3855,17 +3855,39 @@ var DW_IDS_ESTRUCTURA_ESENCIAL = {
   reserva:["reserva.precio","reserva.valor_reserva","reserva.forma_pago"],
   boleto:["boleto.precio","boleto.forma_pago"],
   reserva_alquiler:["reserva_alquiler.objeto","reserva_alquiler.condiciones"],
-  alquiler:["alquiler.objeto","alquiler.plazo","alquiler.canon","alquiler.estado","alquiler.subalquiler","alquiler.obras"],
+  alquiler:["alquiler.objeto","alquiler.plazo","alquiler.canon","alquiler.estado"],
   comodato:["comodato.objeto","comodato.plazo","comodato.uso"],
   exclusividad:["exclusividad.autorizacion","exclusividad.precio","exclusividad.plazo"],
   refuerzo_reserva:["refuerzo.antecedentes","refuerzo.objeto"],
   devolucion_reserva:["devolucion.antecedentes","devolucion.devolucion"]
 };
+// Propuesta reducida de cláusulas de fábrica. No modifica modelos de inmobiliarias
+// hasta que un administrador lo elija expresamente. Las cláusulas desactivadas
+// continúan guardadas en el modelo y son recuperables desde su propio editor.
+var DW_MODELOS_ESENCIALES_IDS = {
+  reserva:["reserva.precio","reserva.valor_reserva","reserva.forma_pago","reserva.honorarios","reserva.vencimiento_aceptacion","reserva.vencimiento_reserva","reserva.incumplimiento","reserva.devolucion_no_conforme","reserva.notificacion_valida"],
+  boleto:["boleto.objeto","boleto.precio","boleto.forma_pago","boleto.posesion","boleto.honorarios_vendedor","boleto.honorarios_comprador","boleto.incumplimiento","boleto.libre"],
+  alquiler:["alquiler.objeto","alquiler.plazo","alquiler.canon","alquiler.gastos","alquiler.estado","alquiler.deposito","alquiler.mora","alquiler.rescision","alquiler.garantia","alquiler.honorarios_locador","alquiler.honorarios_locatario"]
+};
+function prepararModeloEsencial(bloques,tipo){
+  var ids=DW_MODELOS_ESENCIALES_IDS[tipo];
+  if(!Array.isArray(ids))return null;
+  var deFabrica=new Set((BODY_TEMPLATE_PRESETS[tipo]||[]).map(function(x){return x.id;}).concat(bloquesBaseObligatoriosPorTipo(tipo).map(function(x){return x.id;})));
+  return (bloques||[]).map(function(b){
+    if(!deFabrica.has(b.id))return Object.assign({},b); // nunca alterar cláusulas propias
+    if(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")return Object.assign({},b,{activo:true,obligatoria:false});
+    if(esClausulaEsencialModelo(b)||ids.indexOf(b.id)!==-1)return Object.assign({},b,{activo:true,obligatoria:true});
+    return Object.assign({},b,{activo:false,obligatoria:false});
+  });
+}
 function esClausulaEsencialModelo(b){
   var t=String((b&&b.titulo)||"").normalize?String((b&&b.titulo)||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase():String((b&&b.titulo)||"").toLowerCase();
   var id=String((b&&b.id)||"").toLowerCase();
   var esencialEconomica=Object.keys(DW_IDS_ECONOMICOS_ESENCIALES).some(function(tipo){return DW_IDS_ECONOMICOS_ESENCIALES[tipo].indexOf(id)!==-1;});
   var esencialEstructural=Object.keys(DW_IDS_ESTRUCTURA_ESENCIAL).some(function(tipo){return DW_IDS_ESTRUCTURA_ESENCIAL[tipo].indexOf(id)!==-1;});
+  // Honorarios por incumplimiento y gastos notariales son pactos independientes,
+  // no el apartado de honorarios de intermediación que debe conservarse.
+  if(id==="reserva.incumplimiento_honorarios"||id==="reserva.honorarios_impuestos")return false;
   return esencialEconomica||esencialEstructural||/honorarios|comision inmobiliaria|jurisdiccion|partes y firmas|firma de las partes|firmas de las partes/.test(t)||/(^|\.)jurisdiccion$/.test(id)||/(^|\.)honorarios(_esenciales)?$/.test(id)||/(^|\.)firmas?$/.test(id);
 }
 function bloquesBaseObligatoriosPorTipo(tipo) {
@@ -6943,6 +6965,25 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   function addBlock(){if(!puedeEditar||editId||status==="saving")return;var n=draft.length+1;var b=normalizarBodyBlock({id:tipo+".custom."+Date.now(),titulo:"NUEVA CLÁUSULA",contenido:"Escribí acá la redacción de esta cláusula. Podés insertar variables automáticas desde el listado inferior."},n-1);if(editId)return;setDraft(draft.concat([b]));setEditId(b.id);}
   function removeBlock(id){if(editId||status==="saving")return;var b=draft.find(function(x){return x.id===id;});if(!b)return;if(esClausulaEsencialModelo(b)){dwNotify("warning","Este apartado es esencial del modelo. Podés editar su texto, pero no eliminarlo.");return;}requestDwConfirm("¿Eliminar la cláusula “"+(b.titulo||"sin título")+"” de esta plantilla?",function(){persist(draft.filter(function(x){return x.id!==id;}));});}
   function reset(){if(editId||status==="saving")return;requestDwConfirm("¿Restaurar TODAS las cláusulas de "+(TIPOS[tipo]||tipo)+" a la versión de fábrica? Se guardará una copia del modelo actual para poder deshacer esta acción.",function(){var snapshot={fecha:new Date().toISOString(),clausulas:draft.map(function(b,i){return Object.assign({},b,{orden:Number(b.orden)||i+1});})};persist(getDefaultBodyBlocks(tipo),{restauracionAnterior:snapshot});setEditId(null);});}
+  function usarModeloEsencial(){
+    if(!puedeEditar||editId||status==="saving")return;
+    var reducido=prepararModeloEsencial(draft,tipo);
+    if(!reducido){dwNotify("info","Este documento ya utiliza un modelo breve.");return;}
+    var cambiados=reducido.filter(function(b,i){return (b.activo!==false)!==(draft[i].activo!==false)||b.obligatoria!==draft[i].obligatoria;}).length;
+    if(!cambiados){dwNotify("info","El modelo ya está en su versión esencial.");return;}
+    requestDwConfirm("¿Usar el modelo esencial de "+(TIPOS[tipo]||tipo)+"? Se desactivarán "+cambiados+" condiciones de fábrica no necesarias en el modelo simple. Se conservan sus textos, las cláusulas propias y las operaciones anteriores.",function(){
+      var copia={fecha:new Date().toISOString(),clausulas:draft.map(function(b,i){return Object.assign({},b,{orden:Number(b.orden)||i+1});})};
+      void persist(reducido,{copiaAnteriorEsencial:copia});
+    });
+  }
+  function recuperarModeloAnterior(){
+    if(!puedeEditar||editId||status==="saving")return;
+    var copia=perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].copiaAnteriorEsencial;
+    if(!copia||!Array.isArray(copia.clausulas))return;
+    requestDwConfirm("¿Recuperar la versión anterior de este modelo?",function(){
+      void persist(copia.clausulas.map(function(b,i){return normalizarBodyBlock(Object.assign({},b,{orden:i+1}),i);}),{copiaAnteriorEsencial:null});
+    });
+  }
   function deshacerRestauracion(){if(editId||status==="saving")return;var snap=perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior;if(!snap||!Array.isArray(snap.clausulas))return;requestDwConfirm("¿Deshacer la restauración y recuperar el modelo anterior?",function(){persist(snap.clausulas.map(function(b,i){return normalizarBodyBlock(Object.assign({},b,{orden:i+1}),i);}),{restauracionAnterior:null});setEditId(null);});}
   function restaurarBloque(id){
     var def=getDefaultBodyBlocks(tipo).find(function(x){return x.id===id;});
@@ -6977,7 +7018,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     {editId!=null&&<AvisoClausulasPersonalizadas/>}
     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginBottom:12}}>
       <div style={{fontFamily:"DM Serif Display,serif",fontSize:15,color:"var(--text)"}}>Cláusulas del documento · {draft.filter(function(b){return b.activo!==false;}).length} activas</div>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{puedeEditar&&<><button type="button" className="btn btn-secondary btn-sm dw-restore-all-clauses" onClick={reset} disabled={!!editId||status==="saving"} title="Recuperar el modelo original de este documento (con copia para deshacer)">↺ Restaurar todas las cláusulas</button>{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior&&<Btn s="sm" v="secondary" onClick={deshacerRestauracion}>Deshacer restauración</Btn>}<Btn s="sm" onClick={addBlock}>＋ Escribir cláusula del modelo</Btn></>}</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{puedeEditar&&<>{DW_MODELOS_ESENCIALES_IDS[tipo]&&<button type="button" className="btn btn-secondary btn-sm" onClick={usarModeloEsencial} disabled={!!editId||status==="saving"} title="Conservar todas las cláusulas, pero usar solo las esenciales en el documento">✓ Usar modelo esencial</button>}{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].copiaAnteriorEsencial&&<Btn s="sm" v="secondary" onClick={recuperarModeloAnterior}>Recuperar modelo anterior</Btn>}<button type="button" className="btn btn-secondary btn-sm dw-restore-all-clauses" onClick={reset} disabled={!!editId||status==="saving"} title="Recuperar el modelo original de este documento (con copia para deshacer)">↺ Restaurar todas las cláusulas</button>{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior&&<Btn s="sm" v="secondary" onClick={deshacerRestauracion}>Deshacer restauración</Btn>}<Btn s="sm" onClick={addBlock}>＋ Escribir cláusula del modelo</Btn></>}</div>
     </div>
     {previewVisible&&createPortal(<div role="dialog" aria-modal="true" aria-label="Vista previa del modelo" data-testid="dw-fullpage-preview" style={{position:"fixed",inset:0,zIndex:10050,background:"rgba(8,16,30,.88)",overflowY:"auto",overscrollBehavior:"contain",padding:"max(64px,calc(env(safe-area-inset-top) + 52px)) 12px max(20px,env(safe-area-inset-bottom))"}}><button type="button" data-testid="dw-preview-fixed-close" onClick={togglePreview} aria-label="Cerrar vista previa" style={{position:"fixed",top:"max(10px,env(safe-area-inset-top))",right:"max(12px,env(safe-area-inset-right))",zIndex:10052,width:44,height:44,borderRadius:14,border:"1px solid rgba(255,255,255,.28)",background:"#fff",color:"#142a4d",fontSize:25,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 18px rgba(0,0,0,.3)"}}>×</button><div style={{maxWidth:820,margin:"0 auto",background:"#fff",color:"#1f2937",borderRadius:8,boxShadow:"0 18px 65px rgba(0,0,0,.35)",padding:"clamp(18px,5vw,52px)",minHeight:"min(100vh,1050px)",boxSizing:"border-box"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:22,borderBottom:"1px solid #e5e7eb",paddingBottom:12}}><strong style={{fontSize:14}}>Vista previa · Datos de ejemplo</strong><button type="button" className="btn btn-secondary btn-sm" onClick={togglePreview} aria-label="Cerrar desde el documento">✕ Cerrar</button></div>
       <div style={{fontSize:12,fontWeight:800,letterSpacing:".04em",color:"#59c7f3",marginBottom:5}}>VISTA PREVIA CON DATOS DE EJEMPLO · EJEMPLO FICTICIO</div>
