@@ -5733,7 +5733,14 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   var idsObligatorias=Array.isArray(cfgOpcionales.obligatorias_ids)?cfgOpcionales.obligatorias_ids:[];
   // El catálogo que ve el broker contiene solo extras habilitados; los del modelo no se exponen.
   var idsFrecuentes=Array.isArray(cfgOpcionales.frecuentes_ids)?cfgOpcionales.frecuentes_ids:[];
-  var lista=filtrarCatalogoClausulas(clausulas,{tipo:data.tipo,idsProtegidos:idsObligatorias,esTextoBase:clausulaYaEnTextoBase,aplicaTipo:clausulaAplicaTipo}).filter(function(c){return !c.obligatoria&&(idsOpcionales.indexOf(c.id)!==-1||idsFrecuentes.indexOf(c.id)!==-1);});
+  var lista=filtrarCatalogoClausulas(clausulas,{tipo:data.tipo,idsProtegidos:idsObligatorias,esTextoBase:clausulaYaEnTextoBase,aplicaTipo:clausulaAplicaTipo}).filter(function(c){return !c.obligatoria&&(idsOpcionales.indexOf(c.id)!==-1||idsFrecuentes.indexOf(c.id)!==-1||selected.includes(c.id));});
+  // Una cláusula seleccionada en una operación existente debe poder quitarse
+  // aunque el administrador la haya deshabilitado, cambiado de tipo o dejado
+  // fuera del modelo. No ofrecerla para operaciones nuevas ni alterar el snapshot.
+  (clausulas||[]).forEach(function(c){
+    if(!c||!selected.includes(c.id)||c.obligatoria||c.id==="c4"||idsObligatorias.includes(c.id)||clausulaYaEnTextoBase(c)||lista.some(function(item){return item.id===c.id;}))return;
+    lista.push(c);
+  });
   var inventarioPrevio=data.tipo==="alquiler"&&!!data.alquiler_amoblado;
   // Si una cláusula ya estaba seleccionada, debe seguir visible para poder desmarcarla.
   if(inventarioPrevio)lista=lista.filter(function(c){var cfg=configDetalleClausula(c);return !cfg||cfg.campo!=="entrega_muebles_detalle"||selected.includes(c.id);});
@@ -5799,6 +5806,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
             <span className="dw-op-clause-name">{c.titulo}</span>
             {sel&&<span style={{fontSize:10,color:"var(--green)",whiteSpace:"nowrap"}}>Incluida</span>}
             {!sel&&idsFrecuentes.indexOf(c.id)!==-1&&<span style={{fontSize:10,color:"var(--gold)",whiteSpace:"nowrap"}}>Frecuente</span>}
+            {sel&&(c.activo===false||(!idsOpcionales.includes(c.id)&&!idsFrecuentes.includes(c.id)))&&<span style={{fontSize:10,color:"var(--muted)"}}>Anterior</span>}
             {(obligatoria||protegida)&&<span className="badge badge-gold">Obligatoria</span>}
           </button>
           <button type="button" className="dw-op-clause-expand" aria-label={(expandida?"Ocultar detalle de ":"Ver detalle de ")+c.titulo} aria-expanded={expandida} aria-controls={"dw-op-clause-detail-"+c.id} title={expandida?"Ocultar detalle":"Ver detalle"} onClick={function(){setClausulaExpandida(expandida?null:c.id);}}>{expandida?"−":"+"}</button>
