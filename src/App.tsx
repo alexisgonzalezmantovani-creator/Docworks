@@ -1108,7 +1108,7 @@ function crearSnapshotPlantillaOperacion(op,perfil,clausulas,bloquesReserva){
   var idsSnapshot=ids.concat(obligatoriasIds).filter(function(id,i,a){return a.indexOf(id)===i;});
   var intro=(perfil&&perfil.encabezados_custom&&perfil.encabezados_custom[tipo])||DEFAULT_ENCABEZADOS[tipo]||"";
   var body=esPropio?[]:getBodyBlocksConfig(perfil,tipo,bloquesReserva);
-  return {tipo:tipo,version:obtenerVersionPlantilla(perfil,tipo),capturado_en:new Date().toISOString(),introduccion:intro,clausulas_ids:ids,obligatorias_ids:obligatoriasIds,clausulas:(clausulas||[]).filter(function(c){return idsSnapshot.indexOf(c.id)!==-1;}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria,orden:c.orden,aplica_a:c.aplica_a};}),body_blocks:JSON.parse(JSON.stringify(body)),mostrar_introduccion:!(perfil&&perfil.mostrar_introduccion===false),documento_propio:esPropio?String(cfg.documento_propio||""):null,inmobiliaria_nombre:esPropio?String(perfil&&perfil.nombre||""):null,inmobiliaria_matricula:esPropio?String(perfil&&perfil.matricula||""):null};
+  return {tipo:tipo,version:obtenerVersionPlantilla(perfil,tipo),capturado_en:new Date().toISOString(),introduccion:intro,clausulas_ids:ids,obligatorias_ids:obligatoriasIds,clausulas:(clausulas||[]).filter(function(c){return idsSnapshot.indexOf(c.id)!==-1;}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria,orden:c.orden,aplica_a:c.aplica_a,...(Array.isArray(c.tipos)?{tipos:c.tipos.slice()}:{})};}),body_blocks:JSON.parse(JSON.stringify(body)),mostrar_introduccion:!(perfil&&perfil.mostrar_introduccion===false),documento_propio:esPropio?String(cfg.documento_propio||""):null,inmobiliaria_nombre:esPropio?String(perfil&&perfil.nombre||""):null,inmobiliaria_matricula:esPropio?String(perfil&&perfil.matricula||""):null};
 }
 function sellarVersionPlantillaOperacion(op,perfil,forzar,clausulas,bloquesReserva){
   if(!op)return op;
@@ -4507,7 +4507,20 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   if((tipo||op.tipo)==="reserva_alquiler"&&op.res_alq_dia_pago){
     var pago="El pago mensual se efectuará "+periodoPagoMensualTexto(op,"res_alq_dia_pago")+" de cada mes.-";
     var condiciones=doc.secciones.find(function(c){return /CONDICIONES ESTIMADAS DE LOCACI[ÓO]N/i.test(c.titulo);});
-    if(!(doc.secciones||[]).some(function(c){return c.items.some(function(t){return String(t).includes(pago);});})){if(condiciones)condiciones.items.push(pago);else doc.secciones.push({titulo:String(doc.secciones.length+1)+". PERÍODO DE PAGO MENSUAL",items:[pago]});}
+    if(!(doc.secciones||[]).some(function(c){return c.items.some(function(t){return String(t).includes(pago);});})){
+      if(condiciones)condiciones.items.push(pago);
+      else {
+        // Una plantilla personalizada puede no tener el apartado de condiciones.
+        // Si el período se agrega al final, debe preceder a las cláusulas extras
+        // sin reutilizar su número; los títulos históricos permanecen intactos.
+        var ultimoNumero=doc.secciones.reduce(function(m,sec){
+          return Math.max(m,parseTituloClausula(sec&&sec.titulo).num||0);
+        },0);
+        var numeroPago=Math.max(ultimoNumero,doc.secciones.length)+1;
+        doc.secciones.push({titulo:numeroPago+". PERÍODO DE PAGO MENSUAL",items:[pago]});
+        doc.clausulas=(doc.clausulas||[]).map(function(c,i){return Object.assign({},c,{num:numeroPago+i+1});});
+      }
+    }
   }
   return doc;
 }

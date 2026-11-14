@@ -103,6 +103,67 @@ delete global.document;
  check('cláusula propia sin título recibe nombre neutral',()=>{assert.equal(app.normalizarBodyBlock({id:'propia',titulo:'   ',contenido:'Acuerdo particular.'},0).titulo,'CONDICIÓN PARTICULAR');});
  check('Snapshot respeta obligatorias del modelo',()=>{const op={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'boleto',plantilla_snapshot:{tipo:'boleto',body_blocks:app.getDefaultBodyBlocks('boleto'),clausulas:[{id:'extra',titulo:'EXTRA PARTICULAR',contenido:'Texto adicional único',tipos:['boleto'],obligatoria:false}],obligatorias_ids:['extra']}};assert.ok(app.docToPlainText(app.buildDocSections(op,[],'boleto')).includes('Texto adicional único'));});
 
+
+ // Regresión: el modelo esencial debe dejar las cláusulas elegidas al final, una sola vez.
+ // Verificar también las exportaciones reales de una reserva y de una locación.
+ for(const tipo of app.PLANTILLA_TIPOS){
+   const marca="EXTRAUNICATEST"+tipo.replace(/_/g,"").toUpperCase();
+   const extra={id:"qa.adicional."+tipo,titulo:"ACUERDO ADICIONAL",contenido:marca,tipos:[tipo],obligatoria:false};
+   const base={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo,clausulas_ids:[extra.id],alquiler_incluye_seguro:false};
+   const bloques=app.getDefaultBodyBlocks(tipo,true);
+   const documento=app.buildDocSections(app.opParaDocumento(base),[extra],tipo,bloques);
+   check(tipo+" adicional al final y sin duplicar",()=>{
+     assert.equal(documento.clausulas.length,1);
+     assert.equal(documento.clausulas[0].texto,marca);
+     assert.equal(documento.clausulas[0].num,documento.secciones.length+1);
+     assert.equal(app.docToPlainText(documento).split(marca).length-1,1);
+   });
+   const sinSeleccion=app.buildDocSections(app.opParaDocumento({...base,clausulas_ids:[]}),[extra],tipo,bloques);
+   check(tipo+" extra no seleccionado queda fuera",()=>assert.ok(!app.docToPlainText(sinSeleccion).includes(marca)));
+   if(tipo==="reserva"||tipo==="alquiler"){
+     const pdf=await app.generarPDF(documento,null,{}),word=await app.generarDOCX(documento,{});
+     const bytesPdf=Buffer.from(await pdf.blob.arrayBuffer()),bytesWord=Buffer.from(await word.blob.arrayBuffer());
+     let xml="";
+     for(let at=0;at+30<bytesWord.length&&bytesWord.readUInt32LE(at)===0x04034b50;){
+       const method=bytesWord.readUInt16LE(at+8),size=bytesWord.readUInt32LE(at+18),len=bytesWord.readUInt16LE(at+26),extraLen=bytesWord.readUInt16LE(at+28),start=at+30+len+extraLen;
+       let entry=bytesWord.subarray(start,start+size);
+       if(method===8)entry=require("node:zlib").inflateRawSync(entry);
+       xml+=entry.toString("utf8");
+       at=start+size;
+     }
+     check(tipo+" adicional figura en PDF y DOCX",()=>{
+       assert.ok(bytesPdf.toString("latin1").includes(marca),"PDF sin adicional");
+       assert.ok(xml.includes(marca),"DOCX sin adicional");
+     });
+   }
+ }
+ const marcaPlazo="EXTRARESERVAALQUILER";
+ const extraPlazo={id:"qa.periodo",titulo:"PACTO EXTRA",contenido:marcaPlazo,tipos:["reserva_alquiler"],obligatoria:false};
+ const opPlazo={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:"reserva_alquiler",res_alq_dia_pago:"10",clausulas_ids:[extraPlazo.id]};
+ const cuerpoSinCondiciones=app.getDefaultBodyBlocks("reserva_alquiler").filter(b=>b.id!=="reserva_alquiler.condiciones");
+ const docPlazo=app.buildDocSections(app.opParaDocumento(opPlazo),[extraPlazo],"reserva_alquiler",cuerpoSinCondiciones);
+ check("período de pago insertado antes de extra sin repetir número",()=>{
+   const ultimo=docPlazo.secciones.at(-1);
+   assert.ok(ultimo.titulo.includes("PERÍODO DE PAGO MENSUAL"));
+   assert.equal(docPlazo.clausulas.length,1);
+   assert.equal(docPlazo.clausulas[0].num,Number(ultimo.titulo.match(/^\\d+/)[0])+1);
+   assert.equal(docPlazo.clausulas[0].texto,marcaPlazo);
+ });
+ const extraHistorico={id:"qa.historico",titulo:"ACUERDO HISTÓRICO",contenido:"TEXTOANTERIOR",tipos:["reserva"],obligatoria:false};
+ const opHistorico={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:"reserva",clausulas_ids:[extraHistorico.id]};
+ const snapHistorico=app.crearSnapshotPlantillaOperacion(opHistorico,{
+   modelo_inicial_esencial:true,plantillas:{reserva:{clausulas_ids:[extraHistorico.id],obligatorias_ids:[],version:3}}
+ },[extraHistorico],[]);
+ extraHistorico.contenido="TEXTONUEVO";
+ check("snapshot conserva el ámbito y el texto original de una cláusula",()=>{
+   assert.deepEqual(snapHistorico.clausulas[0].tipos,["reserva"]);
+   assert.equal(snapHistorico.clausulas[0].contenido,"TEXTOANTERIOR");
+   const viejo=app.buildDocSections(app.opParaDocumento({...opHistorico,plantilla_snapshot:snapHistorico}),[extraHistorico],"reserva");
+   assert.equal(viejo.clausulas.length,1);
+   assert.equal(viejo.clausulas[0].texto,"TEXTOANTERIOR");
+   assert.ok(!app.docToPlainText(viejo).includes("TEXTONUEVO"));
+ });
+
  const contratoComodato="CONTRATO DE COMODATO\n\nEl COMODANTE {{comodante_nombre}}, DNI {{comodante_dni}}, entrega en uso gratuito a {{comodatario_nombre}}, DNI {{comodatario_dni}}, el inmueble {{inmueble_direccion}}.\n\nFirmas de las partes. Interviene {{inmobiliaria_nombre}}.";
  const perfilPropio={nombre:'Inmobiliaria Prueba',matricula:'CMCPSI 0000',plantillas:{comodato:{
    modo_documento:'propio',documento_propio:contratoComodato,clausulas_ids:['extra-no-debe-verse'],obligatorias_ids:['obligatoria-no-debe-verse'],version:4
