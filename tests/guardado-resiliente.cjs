@@ -225,6 +225,26 @@ await check('la última tecla llega al borrador si el iPhone oculta la app antes
  });
  assert.equal(snapshot.current.data.comprador_nombre,valor);
 });
+await check('recarga tras WhatsApp conserva el paso y la información escrita',async()=>{
+ await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'paso-navegacion'})));
+ const compra=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Compra'));
+ await a.act(async()=>compra.click());
+ await a.act(async()=>document.querySelectorAll('.step-dot')[1].click());
+ const campo=document.querySelector('#dw-field-comprador_nombre');assert.ok(campo);
+ await a.act(async()=>{
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(campo,'Nombre desde WhatsApp');
+  campo.dispatchEvent(new Event('input',{bubbles:true}));
+ });
+ await a.act(async()=>document.querySelectorAll('.step-dot')[3].click());
+ window.dispatchEvent(new Event('pagehide'));
+ const draft=a.lsGet('draftOperacion',null);
+ assert.equal(draft.navigation.step,4);
+ assert.equal(draft.navigation.grupo,'compra');
+ assert.equal(draft.data.comprador_nombre,'Nombre desde WhatsApp');
+ await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'paso-restaurado',initial:draft.data,resumeNavigation:draft.navigation})));
+ assert.equal(document.querySelectorAll('.step-dot')[3].getAttribute('data-active'),'1');
+ assert.equal(snapshot.current.data.comprador_nombre,'Nombre desde WhatsApp');
+});
 await check('identidad técnica no convierte un formulario vacío en una operación',async()=>{await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'vacio'})));assert.ok(snapshot.current.data.id);assert.equal(a.draftTieneContenido(snapshot.current.data),false)});
 await check('autorización no imprime cotitulares del comprador y al volver conserva sus datos',async()=>{
  const original={...data,id:'cambio-tipo',tipo:'comodato',comprador_nombre:'Compradora Real',comprador_telefono_en_doc:true,comprador_cotitulares:[{nombre:'Cotitular Real',dni:'30123456'}]};

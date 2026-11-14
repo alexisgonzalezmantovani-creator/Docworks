@@ -471,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.64";
+var DOCWORKS_VERSION = "6.65";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -8482,11 +8482,12 @@ function DocWorksApp(){
     navegarConProteccionModelo(function(){setViewDirecto(next);});
   }
   useEffect(function(){lsSet("last_view_v1",view||"dashboard");},[view]);
+  const [formResumeNavigation,setFormResumeNavigation]=useState(null);
   const [showFormEstado,setShowFormEstado]=useState(false);
   const [formContexto,setFormContexto]=useState("");
   const showForm=showFormEstado&&formContexto===claveContextoOperaciones(docworksAuth.contexto);
   useOperationPageScroll(showForm);
-  function setShowForm(visible){if(visible)setFormContexto(claveContextoOperaciones(docworksAuth.contexto));setShowFormEstado(visible);}
+  function setShowForm(visible){if(visible)setFormContexto(claveContextoOperaciones(docworksAuth.contexto));else setFormResumeNavigation(null);setShowFormEstado(visible);}
   const [editOp,setEditOp]=useState(null);
   const [formInitialOverride,setFormInitialOverride]=useState(null); // prefill de un borrador recuperado (operación nueva, sin guardar aún)
   const [draftPrompt,setDraftPrompt]=useState(null); // borrador pendiente detectado al abrir la app
@@ -9663,7 +9664,7 @@ function DocWorksApp(){
                     <div><div className="dw-operation-page-breadcrumb">Operaciones</div><h1>{editOp?((formTipo||editOp.tipo)==="alquiler"?"Contrato de locación":TIPOS[formTipo||editOp.tipo]||"Editar operación"):(TITULOS_NUEVA_OPERACION[formTipo]||"Nueva operación")}</h1></div>
                     <button type="button" aria-label="Volver a operaciones" className="btn btn-secondary btn-sm" onClick={cerrarFormularioSeguro}>← Volver</button>
                   </div>
-                  <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
+                  <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} resumeNavigation={formResumeNavigation} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
                 </section>
               ) : (<>
               {ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks-landing.vercel.app/#planes" style={{color:"inherit"}}>Ver planes</a></div>}
@@ -9758,6 +9759,7 @@ function DocWorksApp(){
           if(found){ setEditOp(Object.assign({},found,d.data)); setFormInitialOverride(null); }
           else { setEditOp(null); setFormInitialOverride(Object.assign({},d.data,d.editId?{id:d.editId}:{})); }
           setFormTipo(d.data.tipo||"reserva");
+          setFormResumeNavigation(d.navigation||null);
           setShowForm(true);
           setDraftPrompt(null);
         }}

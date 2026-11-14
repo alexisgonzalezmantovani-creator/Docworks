@@ -5937,13 +5937,17 @@ export function crearOperacionForm(deps){
  const {camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
-function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
+function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeNavigation=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
   const [grupo,setGrupo]=useState(initial ? (
     ["reserva","boleto"].includes(initial.tipo)?"compra":
     ["alquiler","reserva_alquiler"].includes(initial.tipo)?"alquiler":
     ["refuerzo_reserva","devolucion_reserva","comodato","exclusividad"].includes(initial.tipo)?"otros":null
   ) : null);
-  const [step,setStep]=useState(1);
+  // Recuperar la pantalla exacta tras la suspensión o recarga de Safari/iPhone.
+  const pasoRecuperado=resumeNavigation&&Number.isInteger(resumeNavigation.step)&&resumeNavigation.step>=1&&resumeNavigation.step<=8?resumeNavigation.step:null;
+  const grupoRecuperado=resumeNavigation&&Object.prototype.hasOwnProperty.call(resumeNavigation,"grupo")&&
+    (resumeNavigation.grupo===null||["compra","alquiler","otros"].includes(resumeNavigation.grupo))?resumeNavigation.grupo:undefined;
+  const [step,setStep]=useState(pasoRecuperado||1);
   // La identidad nace con el formulario y acompaña al borrador local. Si el
   // servidor guarda pero se pierde su respuesta, reintentar actualiza el mismo registro.
   const [data,setData]=useState(function(){
@@ -5959,8 +5963,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // anteriormente en otro paso.
   useEffect(function(){
     if(initial){
-      setStep(focusCampo ? getPasoDeCampo(focusCampo,initial.tipo) : 2);
-      setGrupo(
+      setStep(focusCampo ? getPasoDeCampo(focusCampo,initial.tipo) : (pasoRecuperado||2));
+      setGrupo(grupoRecuperado!==undefined?grupoRecuperado:
         ["reserva","boleto"].includes(initial.tipo)?"compra":
         ["alquiler","reserva_alquiler"].includes(initial.tipo)?"alquiler":
         ["refuerzo_reserva","devolucion_reserva","comodato","exclusividad"].includes(initial.tipo)?"otros":null
@@ -6051,11 +6055,13 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const guardandoFormRef = useRef(false);
   const dataRef = useRef(data);
   dataRef.current=data;
-  if(snapshotRef)snapshotRef.current={data:data,editId:initialIdRef.current,contexto:contextoBorrador||null};
+  const navigationRef=useRef({step,grupo});
+  navigationRef.current={step,grupo};
+  if(snapshotRef)snapshotRef.current={data:data,editId:initialIdRef.current,contexto:contextoBorrador||null,navigation:{step,grupo}};
   useEffect(function(){return function(){if(snapshotRef&&snapshotRef.current&&snapshotRef.current.data===dataRef.current)snapshotRef.current=null;};},[snapshotRef]);
   const draftPayload = useMemo(function(){
-    return draftTieneContenido(data) ? { data:data, editId:initialIdRef.current, contexto:contextoBorrador||null } : null;
-  }, [data,contextoBorrador&&contextoBorrador.inmobiliariaId,contextoBorrador&&contextoBorrador.usuarioId]);
+    return draftTieneContenido(data) ? { data:data, editId:initialIdRef.current, contexto:contextoBorrador||null, navigation:{step,grupo} } : null;
+  }, [data,step,grupo,contextoBorrador&&contextoBorrador.inmobiliariaId,contextoBorrador&&contextoBorrador.usuarioId]);
   function guardarDraftLocalAhora(){
     var actual=dataRef.current;
     if(!draftTieneContenido(actual)){
@@ -6063,7 +6069,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       lsRemove("draftOperacion");
       return true;
     }
-    return lsSet("draftOperacion", {data:actual, editId:initialIdRef.current, contexto:contextoBorrador||null, ts:Date.now()});
+    return lsSet("draftOperacion", {data:actual, editId:initialIdRef.current, contexto:contextoBorrador||null, navigation:navigationRef.current, ts:Date.now()});
   }
   // En el formulario el guardado es inmediato (sin debounce): cada cambio de un
   // campo se escribe en el navegador antes de seguir con el siguiente paso.
