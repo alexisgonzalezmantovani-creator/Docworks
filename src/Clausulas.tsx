@@ -455,8 +455,8 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         ? <DocumentoPropioEditor key={"contrato-propio-"+tipoDocSel} tipo={tipoDocSel} perfil={perfil} onSavePerfil={guardarPerfil} confirmar={requestDwConfirm} onCancelar={function(){setPegarMiContrato(false);}}/>
         : <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
         <details id="dw-model-clauses" className="card dw-model-disclosure" style={{padding:14}}>
-          <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Cláusulas</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Condiciones incluidas automáticamente</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
-          <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"7px 0 12px"}}>Abrí la cláusula que quieras modificar. Las condiciones esenciales se mantienen protegidas.</div>
+          <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Cláusulas del modelo</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+          
           <div id="dw-model-preview-area">
             {bloquesError&&tipoDocSel==="reserva"&&<div className="notice notice-amber" style={{fontSize:12,marginBottom:10}}>{bloquesError} {onRetryBloques&&<button type="button" onClick={onRetryBloques} className="btn btn-secondary btn-sm">Reintentar</button>}</div>}
             {bloquesLoading&&tipoDocSel==="reserva"&&(!bloquesReserva||bloquesReserva.length===0)&&<div style={{fontSize:12,color:"var(--dim)",marginBottom:9}}>Cargando las cláusulas del modelo de Reserva…</div>}
@@ -464,9 +464,9 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
           </div>
         </details>
       {<details key={"biblioteca-"+tipoDocSel} id="dw-model-extra-clauses" className="card dw-model-disclosure" style={{padding:14,scrollMarginTop:90}} data-step="clausulas">
-        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Cláusulas que puede agregar el asesor ({cantidadAdicionalesDisponibles})</span><span style={{fontSize:11.5,color:"var(--dim)"}}>El asesor elige cuáles necesita</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
-        <div style={{fontSize:13,color:"var(--dim)",lineHeight:1.55,marginTop:5}}>Activá las cláusulas que quieras ofrecerle al asesor para este documento.</div>
-        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>Las disponibles no se incorporan solas. «Siempre (modelo anterior)» conserva una configuración previa.</div>
+        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Agregar cláusulas ({cantidadAdicionalesDisponibles})</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Opcionales para este documento</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+        
+        <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>«El asesor elige» permite sumar la cláusula en cada operación sin agregarla automáticamente. Las condiciones heredadas se conservan.</div>
         {estadoClausulaGuardando!==null&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>Guardando disponibilidad de la cláusula…</div>}
         {estadoClausulaError&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginBottom:10}}>{estadoClausulaError}</div>}
         {clausulasLoading&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>Cargando biblioteca…</div>}
