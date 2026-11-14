@@ -146,7 +146,7 @@ delete global.document;
    const ultimo=docPlazo.secciones.at(-1);
    assert.ok(ultimo.titulo.includes("PERÍODO DE PAGO MENSUAL"));
    assert.equal(docPlazo.clausulas.length,1);
-   assert.equal(docPlazo.clausulas[0].num,Number(ultimo.titulo.match(/^\\d+/)[0])+1);
+   assert.equal(docPlazo.clausulas[0].num,Number(ultimo.titulo.match(/^[0-9]+/)[0])+1);
    assert.equal(docPlazo.clausulas[0].texto,marcaPlazo);
  });
  const extraHistorico={id:"qa.historico",titulo:"ACUERDO HISTÓRICO",contenido:"TEXTOANTERIOR",tipos:["reserva"],obligatoria:false};
