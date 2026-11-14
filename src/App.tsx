@@ -5111,9 +5111,8 @@ function StepInmueble({data,onChange,faltantes}){
         <Inp id="dw-field-inmueble_partido" label="Partido / Municipio" value={data.inmueble_partido||""} onChange={function(e){onChange("inmueble_partido",e.target.value);}} placeholder="Ej.: Pilar" {...estiloCampoFaltante(faltantes,"inmueble_partido")}/>
         <Inp id="dw-field-inmueble_provincia" label="Provincia" value={data.inmueble_provincia||""} onChange={function(e){onChange("inmueble_provincia",e.target.value);}} placeholder="Buenos Aires" {...estiloCampoFaltante(faltantes,"inmueble_provincia")}/>
         {(data.tipo==="reserva"||data.tipo==="boleto")&&<div className="col2" style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
-          <div style={{fontSize:14,fontWeight:700,color:"var(--text)",marginBottom:5}}>¿Cómo se firmará esta venta?</div>
           <div className="grid2">
-        <Slt id="dw-field-compra_instrumento" label="Tipo de instrumento de venta" className="col2" value={data.compra_instrumento||"escritura"} onChange={function(e){onChange("compra_instrumento",e.target.value);}}>
+        <Slt id="dw-field-compra_instrumento" label="Instrumento de venta" className="col2" value={data.compra_instrumento||"escritura"} onChange={function(e){onChange("compra_instrumento",e.target.value);}}>
           <option value="escritura">Escritura traslativa de dominio</option>
           <option value="boleto">Boleto de compraventa</option>
           <option value="cesion_boleto">Cesión de boleto de compraventa</option>
@@ -5914,7 +5913,7 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
               );
             })}
           </div>
-          <div style={{fontSize:12,color:"var(--dim)",marginTop:6}}>{data.tipo==="devolucion_reserva"?"Si no aparece la reserva, podés seleccionarla más adelante y completar los datos manualmente.":"Si el refuerzo no corresponde a ninguna reserva cargada, seguí normalmente y completá los datos manualmente en el paso siguiente."}</div>
+          <div style={{fontSize:12,color:"var(--muted)",marginTop:6}}>Si no aparece la reserva, podés continuar y cargar los datos manualmente.</div>
         </div>
       )}
     </div>
@@ -5923,7 +5922,6 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
 function StepGrupo({onSelect}){
   return (
     <div className="dw-grupo-selector">
-      <p className="dw-grupo-intro">Primero elegí qué tipo de operación vas a preparar.</p>
       <div className="dw-grupo-grid">
         {Object.entries(TIPO_GRUPOS).map(function([key,g]){
           var labels={compra:"Compra",alquiler:"Alquiler",otros:"Otros documentos"};
@@ -6010,11 +6008,10 @@ function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esCo
   var esCesionCompra=(data.tipo==="reserva"||data.tipo==="boleto")&&data.compra_instrumento==="cesion_boleto";
   var requiereContratoCesion=esCesionCompra&&!esContratoPropioOp;
   var [showMenu,setShowMenu]=useState(false);
-  var [menuPaso,setMenuPaso]=useState("estado");
   var [estadoFinal,setEstadoFinal]=useState(data.estado&&ESTADOS[data.estado]?data.estado:"activo");
   function Fila(props){return <div style={{display:"flex",justifyContent:"space-between",gap:10,padding:"6px 0",borderBottom:"1px solid var(--border2)",fontSize:12.5}}><span style={{color:"var(--dim)"}}>{props.k}</span><span style={{color:"var(--text)",fontWeight:500,textAlign:"right"}}>{props.v||"—"}</span></div>;}
   function Tarjeta(props){return <div style={{background:"var(--card)",border:"1px solid var(--border2)",borderRadius:12,padding:"12px 14px",marginBottom:10}}><div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>{props.t}</div>{props.children}</div>;}
-  function abrirMenu(){setEstadoFinal(data.estado&&ESTADOS[data.estado]?data.estado:"activo");setMenuPaso("estado");setShowMenu(true);}
+  function abrirMenu(){setEstadoFinal(data.estado&&ESTADOS[data.estado]?data.estado:"activo");setShowMenu(true);}
   var estados=[
     {id:"borrador",icon:"✎",label:"Borrador",desc:"Queda guardado para seguir editándolo.",tone:"var(--gold)"},
     {id:"activo",icon:"●",label:"Activo",desc:"La operación queda en curso y visible entre las activas.",tone:"var(--green)"},
@@ -6061,24 +6058,20 @@ function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esCo
           <Btn v="success" onClick={abrirMenu}>Guardar o emitir →</Btn>
         </div>
       </div>
-      <Modal open={showMenu} onClose={function(){setShowMenu(false);}} title={menuPaso==="estado"?"¿Cómo querés dejar la operación?":"Documento listo para guardar"}>
-        {menuPaso==="estado" ? <div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:9}}>
-            {estados.map(function(e){var sel=estadoFinal===e.id;return <button type="button" key={e.id} onClick={function(){setEstadoFinal(e.id);setMenuPaso("acciones");}} style={{padding:"14px 12px",borderRadius:12,border:"1px solid "+(sel?e.tone:"var(--border2)"),background:sel?"rgba(212,168,83,.07)":"var(--card)",cursor:"pointer",textAlign:"left",minHeight:118}}>
-              <div style={{fontSize:18,color:e.tone,fontWeight:800,marginBottom:7}}>{e.icon}</div><div style={{fontSize:13,fontWeight:800,color:"var(--text)",marginBottom:4}}>{e.label}</div><div style={{fontSize:12,color:"var(--dim)",lineHeight:1.4}}>{e.desc}</div>
+      <Modal open={showMenu} onClose={function(){setShowMenu(false);}} title="Guardar o emitir">
+        <div role="group" aria-label="Estado de la operación" style={{marginBottom:16}}>
+          <div style={{fontSize:13,fontWeight:700,color:"var(--text)",marginBottom:9}}>Estado</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:7}}>
+            {estados.map(function(e){var sel=estadoFinal===e.id;return <button type="button" key={e.id} aria-label={"Estado: "+e.label} aria-pressed={sel} onClick={function(){setEstadoFinal(e.id);}} style={{padding:"11px 5px",borderRadius:10,border:"1px solid "+(sel?e.tone:"var(--border2)"),background:sel?"rgba(212,168,83,.09)":"var(--card)",color:"var(--text)",cursor:"pointer",textAlign:"center",minWidth:0,minHeight:50,fontSize:12,fontWeight:sel?800:650}}>
+              <span aria-hidden="true" style={{color:e.tone,marginRight:4}}>{e.icon}</span>{e.label}
             </button>;})}
           </div>
-        </div> : <div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 12px",borderRadius:10,background:"rgba(212,168,83,.06)",border:"1px solid rgba(212,168,83,.20)",marginBottom:12}}>
-            <div><div style={{fontSize:12,color:"var(--dim)",textTransform:"uppercase",letterSpacing:".08em"}}>Estado elegido</div><div style={{fontSize:14,fontWeight:800,color:"var(--text)",marginTop:2}}>{ESTADOS[estadoFinal]}</div></div>
-            <button type="button" onClick={function(){setMenuPaso("estado");}} style={{border:"none",background:"transparent",color:"var(--gold)",cursor:"pointer",fontSize:12,fontWeight:700}}>Cambiar</button>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:9}}>
-            <Btn disabled={requiereContratoCesion} onClick={function(){setShowMenu(false);onFinalizarAccion("pdf",estadoFinal);}} className="w-full">📄 Guardar y abrir PDF / Word</Btn>
-            <Btn disabled={requiereContratoCesion} v="secondary" onClick={function(){setShowMenu(false);onFinalizarAccion("whatsapp",estadoFinal);}} className="w-full">💬 Guardar y enviar por WhatsApp</Btn>
-            <Btn v="secondary" onClick={function(){setShowMenu(false);onFinalizarAccion("guardar",estadoFinal);}} className="w-full">💾 Guardar y terminar</Btn>
-          </div>
-        </div>}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:9}}>
+          <Btn disabled={requiereContratoCesion} onClick={function(){setShowMenu(false);onFinalizarAccion("pdf",estadoFinal);}} className="w-full">📄 Guardar y abrir PDF / Word</Btn>
+          <Btn disabled={requiereContratoCesion} v="secondary" onClick={function(){setShowMenu(false);onFinalizarAccion("whatsapp",estadoFinal);}} className="w-full">💬 Guardar y enviar por WhatsApp</Btn>
+          <Btn v="secondary" onClick={function(){setShowMenu(false);onFinalizarAccion("guardar",estadoFinal);}} className="w-full">💾 Guardar y terminar</Btn>
+        </div>
       </Modal>
     </div>
   );
@@ -9552,7 +9545,7 @@ function DocWorksApp(){
               {showForm ? (
                 <section className="dw-operation-page" aria-label={editOp?"Editar operación":"Nueva operación"}>
                   <div className="dw-operation-page-heading">
-                    <div><div className="dw-operation-page-breadcrumb">Operaciones / {editOp?"Editar operación":"Nueva operación"}</div><h1>{editOp?((formTipo||editOp.tipo)==="alquiler"?"Contrato de locación":TIPOS[formTipo||editOp.tipo]||"Editar operación"):(TITULOS_NUEVA_OPERACION[formTipo]||"Nueva operación")}</h1><p>Completá los datos, revisá las cláusulas y guardá la operación.</p></div>
+                    <div><div className="dw-operation-page-breadcrumb">Operaciones</div><h1>{editOp?((formTipo||editOp.tipo)==="alquiler"?"Contrato de locación":TIPOS[formTipo||editOp.tipo]||"Editar operación"):(TITULOS_NUEVA_OPERACION[formTipo]||"Nueva operación")}</h1></div>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={cerrarFormularioSeguro}>Volver a operaciones</button>
                   </div>
                   <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>

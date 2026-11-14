@@ -5841,18 +5841,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       faltantesDetalle.push({campo:prefix+"_tratamiento",label:"Tratamiento de "+prefix+" (Sr. / Sra.)",paso:getPasoDeCampo(prefix+"_tratamiento",data.tipo)});
     }
   });
-  const faltantesPasoActual = faltantesDetalle.filter(function(f){return f.paso===step;});
-  const documentoListo = faltantesDetalle.length===0;
-  // Ayuda contextual breve: el usuario sabe qué cargar, sin añadir pantallas.
-  const nombresPasos=esAlq?["Documento","Locador","Locatario","Inmueble","Condiciones","Garantía","Cláusulas"]:
-    esResAlq?["Documento","Locador","Locatario","Inmueble","Condiciones","Cláusulas"]:
-    esDocSimple?["Documento","Primera parte","Segunda parte","Datos del documento","Cláusulas"]:
-    ["Documento","Comprador","Vendedor","Inmueble","Importes y condiciones","Cláusulas"];
-  if(data.compra_instrumento==="cesion_boleto"&&!esAlq&&!esResAlq&&!esDocSimple){
-    nombresPasos[1]="Cesionario";nombresPasos[2]="Cedente";
-  }
-  if(esExclusividad){nombresPasos[1]="Inmobiliaria autorizada";nombresPasos[2]="Autorizante";}
-  if(esContratoPropioOp)nombresPasos.pop();
   function avanzarConAviso(){
     // El botón Siguiente siempre avanza. Los pendientes se revisan al final.
     setStep(function(s){return Math.min(s+1,total+1);});
@@ -6000,7 +5988,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     }
     cambiar();
   }
-  const tipoElegido=(TIPO_GRUPOS[grupo]&&TIPO_GRUPOS[grupo].tipos.find(function(t){return t.value===data.tipo;}))||null;
 
   // Si el perfil de la inmobiliaria termina de cargar después de abrir el formulario,
   // completamos la parte "Inmobiliaria autorizada" sin pedirle al usuario que vuelva
@@ -6165,7 +6152,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
-          <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.05em"}} title="No se cuentan los datos opcionales.">Datos principales · {camposCompletados} de {totalProgreso}</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.05em"}} title="No se cuentan los datos opcionales.">Datos principales</span>
           <span style={{fontSize:12,fontWeight:700,color:pct===100?"var(--green)":"var(--gold)"}}>{pct}%</span>
         </div>
         <div role="progressbar" aria-label="Datos esenciales completados" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:10,overflow:"hidden"}}>

@@ -24,6 +24,18 @@ if(tipo==='alquiler'&&(paso===0||paso===4)){assert.equal(await page.locator('#dw
 if(tipo==='alquiler'&&paso===6){const seguro=page.getByRole('checkbox',{name:/Incluir cláusula de seguro/});await seguro.uncheck();assert.equal(await page.locator('#dw-field-alquiler_seguro_dias').count(),0);await seguro.check();await page.locator('#dw-field-alquiler_seguro_dias').fill('12');assert.equal(await page.locator('#dw-field-alquiler_seguro_dias').inputValue(),'12');checks+=2;}
 if(paso<total-1){await page.getByRole('button',{name:'Continuar →',exact:true}).click();assert.equal(await page.locator('.step-dot[aria-current="step"]').getAttribute('title'),await page.locator('.step-dot').nth(paso+1).getAttribute('title'));checks++;}}
 await page.getByRole('button',{name:'Revisar documento →',exact:true}).click();await page.getByText('Resumen — revisá antes de emitir',{exact:true}).waitFor();checks++;
+if(i===0){
+ await page.getByRole('button',{name:'Guardar o emitir →',exact:true}).click();
+ const menu=page.getByRole('dialog',{name:'Guardar o emitir'});
+ await menu.waitFor();
+ for(const action of ['Guardar y abrir PDF / Word','Guardar y enviar por WhatsApp','Guardar y terminar']){
+  assert.equal(await menu.getByRole('button',{name:action,exact:false}).count(),1,'Acción inmediata '+action);checks++;
+ }
+ const estado=menu.getByRole('button',{name:'Estado: Cerrado'});
+ await estado.click();
+ assert.equal(await estado.getAttribute('aria-pressed'),'true');checks++;
+ await menu.getByRole('button',{name:'Cerrar',exact:true}).click();
+}
 await page.locator('.step-dot').nth(3).click();const address='DOMICILIO REVISADO '+width+' '+tipo;await page.locator('#dw-field-inmueble_direccion').fill(address);await page.getByRole('button',{name:'💾 Guardar cambios',exact:true}).click();await page.getByText('Operación guardada para volver a abrir.',{exact:true}).waitFor();const saved=JSON.parse(await page.getByTestId('guardado').textContent());assert.equal(saved.inmueble_direccion,address);assert.equal(saved.clausulas_custom,fixtures[i].clausulas_custom);assert.deepEqual(saved.plantilla_snapshot,fixtures[i].plantilla_snapshot);checks+=3;
 await page.getByRole('button',{name:'Reabrir operación guardada',exact:true}).click();await page.locator('.step-dot').nth(3).click();assert.equal(await page.locator('#dw-field-inmueble_direccion').inputValue(),address);checks++;await page.screenshot({path:out+'/'+tipo+'-'+width+'.png',fullPage:true});console.log('OK '+tipo+' '+width+'×'+height+': todos los pasos, edición, guardado y reapertura');}
 assert.deepEqual(errors,[]);checks++;await page.close();}console.log('APROBADAS '+checks+' comprobaciones de recorridos Chromium. Capturas: '+out);}finally{await browser.close();server.close();}})().catch(e=>{console.error(e);server.close();process.exitCode=1});

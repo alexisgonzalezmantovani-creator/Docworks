@@ -24,6 +24,8 @@ assert.match(form,/if\(!initial && !draftTieneContenido\(dataRef\.current\)\) re
 const app=fs.readFileSync(path.join(__dirname,'../src/App.tsx'),'utf8');
 const resumen=app.slice(app.indexOf('function PasoResumenFinal('),app.indexOf('\nfunction ',app.indexOf('function PasoResumenFinal(')+25));
 assert.match(resumen,/aria-label="Datos para completar"/,'Mostrar lista accesible de faltantes solo en revisión');
+assert.doesNotMatch(resumen,/menuPaso|setMenuPaso/,'Guardar y emitir no tiene pantalla intermedia');
+assert.match(resumen,/aria-pressed=\{sel\}/,'Los estados indican la selección activa');
 assert.doesNotMatch(resumen,/Revisar faltantes \(/,'Evitar segundo botón de revisión');
 const clauses=app.slice(app.indexOf('function StepClausulas('),app.indexOf('function StepBar('));
 assert.match(clauses,/if\(activando\)\s*\{\s*if\(cfg\)onChange\(cfg\.campo\+"_id",id\);\s*setClausulaExpandida\(id\);/,'Activar cualquier cláusula abre su detalle');

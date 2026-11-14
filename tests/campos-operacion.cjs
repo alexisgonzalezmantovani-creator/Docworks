@@ -25,6 +25,28 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
  });
  await click(document.querySelector('[aria-label="Datos para completar"] button'));
  check('tocar dato pendiente regresa a su campo sin pérdida de navegación',()=>assert.equal(campoRevision,pendientesRevision[0].campo));
+ let finalizacion=null;
+ await a.act(async()=>render(a.PasoResumenFinal,{clausulas:[],perfil:{},onVolver:()=>{},onFinalizarAccion:(accion,estado)=>{finalizacion={accion,estado};}}));
+ await click([...document.querySelectorAll('button')].find(b=>b.textContent.includes('Guardar o emitir')));
+ check('estado y acciones se ven en el mismo diálogo',()=>{
+  const dialog=document.querySelector('[role="dialog"][aria-label="Guardar o emitir"]');
+  assert.ok(dialog);
+  assert.equal(dialog.querySelectorAll('[role="group"][aria-label="Estado de la operación"] button').length,3);
+  for(const txt of ['Guardar y abrir PDF / Word','Guardar y enviar por WhatsApp','Guardar y terminar'])assert.ok([...dialog.querySelectorAll('button')].some(b=>b.textContent.includes(txt)));
+ });
+ await click(document.querySelector('[aria-label="Estado: Cerrado"]'));
+ check('estado Cerrado marcado por accesibilidad',()=>assert.equal(document.querySelector('[aria-label="Estado: Cerrado"]').getAttribute('aria-pressed'),'true'));
+ await click([...document.querySelectorAll('[role="dialog"] button')].find(b=>b.textContent.includes('Guardar y terminar')));
+ check('guardar conserva el estado elegido sin segunda pantalla',()=>assert.deepEqual(finalizacion,{accion:'guardar',estado:'cerrado'}));
+ state={...a.EMPTY_OP,tipo:'reserva',compra_instrumento:'cesion_boleto'};
+ await a.act(async()=>render(a.PasoResumenFinal,{clausulas:[],perfil:{},onVolver:()=>{},onFinalizarAccion:()=>{}}));
+ await click([...document.querySelectorAll('button')].find(b=>b.textContent.includes('Guardar o emitir')));
+ check('cesión sin contrato propio no puede emitir ni enviar',()=>{
+  const dialog=document.querySelector('[role="dialog"][aria-label="Guardar o emitir"]');
+  for(const txt of ['Guardar y abrir PDF / Word','Guardar y enviar por WhatsApp'])assert.equal([...dialog.querySelectorAll('button')].find(b=>b.textContent.includes(txt)).disabled,true);
+  assert.equal([...dialog.querySelectorAll('button')].find(b=>b.textContent.includes('Guardar y terminar')).disabled,false);
+ });
+ await click(document.querySelector('[role="dialog"] button[aria-label="Cerrar"]'));
  state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler'};
  for(const [tipo,Component,fields] of [
   ['reserva',a.StepEconomicoCompra,['precio','anticipo']],['boleto',a.StepEconomicoCompra,['precio','anticipo']],
