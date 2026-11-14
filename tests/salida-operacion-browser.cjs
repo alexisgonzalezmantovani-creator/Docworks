@@ -13,6 +13,8 @@ import {createRoot} from 'react-dom/client';
 function SalidaHarness(){
  const docworksAuth={contexto:{usuario:{id:'qa',rol_base:'dueno'},inmobiliaria:{id:'qa'},habilitado:true}};
  const [ayuda,setAyuda]=useState(false),[bot,setBot]=useState(false);
+ // Mantener en el harness el estado real que recibe OperacionForm desde 6.65.
+ const [formResumeNavigation,setFormResumeNavigation]=useState(null);
  const [showForm,setShowForm]=useState(new URLSearchParams(location.search).has('editar')),[view,setView]=useState('operaciones'),[editOp,setEditOp]=useState(new URLSearchParams(location.search).has('editar')?{...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'editar-qa',tipo:'alquiler'}:null),[formInitialOverride,setFormInitialOverride]=useState(null),[formTipo,setFormTipo]=useState(null),[formFocusCampo,setFormFocusCampo]=useState(null),[confirmCloseForm,setConfirmCloseForm]=useState(false),[navPendiente,setNavPendiente]=useState(null),[operaciones,setOperaciones]=useState([]),[guardandoSalida,setGuardandoSalida]=useState(false),[errorSalida,setErrorSalida]=useState(''),[draftPrompt,setDraftPrompt]=useState(null),[mode,setMode]=useState('ok'),[calls,setCalls]=useState(0);
  const [saveState,setSaveState]=useState("saved");const saveStatus={state:saveState,ts:1};
  const formSnapshotRef=useRef(null),formSaveIdRef=useRef(null),salidaEnCursoRef=useRef(false),salidaRevisionRef=useRef(0),accionesContextoRef=useRef(crearControlContextoOperaciones(claveContextoOperaciones(docworksAuth.contexto))),resolver=useRef(null);
