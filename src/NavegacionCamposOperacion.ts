@@ -14,7 +14,7 @@ function esCampoDeCarga(nodo: Element): nodo is ElementoCampo {
  return nodo.tagName==="INPUT"&&!TIPOS_EXCLUIDOS.has((nodo as HTMLInputElement).type);
 }
 function campoDisponible(nodo: ElementoCampo): boolean {
- if(nodo.disabled||nodo.readOnly||nodo.closest("[hidden],[inert],[aria-hidden='true']"))return false;
+ if(nodo.disabled||("readOnly" in nodo&&nodo.readOnly)||nodo.closest("[hidden],[inert],[aria-hidden='true']"))return false;
  if(!nodo.getClientRects().length)return false;
  const estilos=window.getComputedStyle(nodo);
  return estilos.display!=="none"&&estilos.visibility!=="hidden";

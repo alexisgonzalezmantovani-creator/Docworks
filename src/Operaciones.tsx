@@ -5973,11 +5973,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   const modoEdicion = !!initial;
   const [revisando,setRevisando]=useState(false);
   const camposTecladoRef=useRef(null);
-  // 6.64: preparar «Siguiente» en los campos de una línea, incluso al editar.
-  // Los textarea de inventario, observaciones y cláusulas conservan Enter normal.
-  useEffect(function(){
-    if(step<=total&&camposTecladoRef.current)prepararTecladoOperacion(camposTecladoRef.current);
-  },[step,data,grupo,total]);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
     if(initial) return;
@@ -6000,6 +5995,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     : !!(perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio");
   const totalNormal=esAlq?7:esResAlq?6:esDocSimple?5:6;
   const total=totalNormal-(esContratoPropioOp?1:0);
+  // 6.64: preparar «Siguiente» en los campos de una línea, incluso al editar.
+  // Los textarea de inventario, observaciones y cláusulas conservan Enter normal.
+  useEffect(function(){
+    if(step<=total&&camposTecladoRef.current)prepararTecladoOperacion(camposTecladoRef.current);
+  },[step,data,grupo,total]);
   const tratamientosEnModelo=camposTratamientoActivos(data,perfil,clausulas);
   const faltantesDetalle = getCamposFaltantesDetalle(data,perfil);
   ["comprador","vendedor","locador","locatario"].forEach(function(prefix){
