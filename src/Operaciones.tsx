@@ -6090,6 +6090,13 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // Si ya se está editando una operación existente, no se tocan sus cláusulas.
   const compradorAnteriorAutorizacionRef=useRef(null);
   const set=useCallback(function(k,v){
+    // La última tecla debe estar en el borrador aunque iOS dispare pagehide
+    // antes de que React confirme el render. Los cambios de tipo, que
+    // transforman varios campos, siguen el flujo de confirmación habitual.
+    if(k!=="tipo"){
+      dataRef.current=Object.assign({},dataRef.current,{[k]:v});
+      guardarDraftLocalAhora();
+    }
     if(k==="tipo"&&onTipoChange)onTipoChange(v);
     setData(function(d){
     var next=Object.assign({},d,{[k]:v});
@@ -6135,7 +6142,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     }
     return next;
   });},[onTipoChange,perfil,clausulas,initial]);
-  const setBulk=useCallback(function(patch){setData(function(d){return Object.assign({},d,patch);});},[]);
+  const setBulk=useCallback(function(patch){
+    // También las cargas agrupadas quedan disponibles para pagehide sin esperar efectos.
+    dataRef.current=Object.assign({},dataRef.current,patch);
+    guardarDraftLocalAhora();
+    setData(function(d){return Object.assign({},d,patch);});
+  },[]);
   // En una operación nueva, tocar el documento alcanza para empezar a cargar.
   // Refuerzo y devolución permanecen en este paso para vincular una reserva anterior.
   function seleccionarTipoDidactico(campo,valor){

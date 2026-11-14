@@ -206,6 +206,25 @@ await check('una respuesta tardía no altera el listado ni el borrador de otra s
 let snapshot={current:null};const formProps={snapshotRef:snapshot,contextoBorrador:{usuarioId:'owner',inmobiliariaId:'tenant-a'},clausulas:[],perfil:{rol:'dueno',plantillas:{}},equipo:[],operaciones:[],onSave:async()=>({}),onCancel:()=>{},reportSave:()=>{}};
 await check('una operación nueva conserva su identidad al editar y recuperar el borrador',async()=>{await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'nuevo'})));const id=snapshot.current.data.id;assert.ok(id);const compra=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Compra'));await a.act(async()=>compra.click());await a.act(async()=>document.querySelectorAll('.step-dot')[1].click());const el=document.querySelector('#dw-field-comprador_nombre');await a.act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'Nombre Escrito');el.dispatchEvent(new Event('input',{bubbles:true}))});assert.equal(snapshot.current.data.id,id);const draft=a.lsGet('draftOperacion',null);assert.equal(draft.editId,id);await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'recuperado',initial:draft.data})));assert.equal(snapshot.current.data.id,id);assert.equal(snapshot.current.data.comprador_nombre,'Nombre Escrito')});
 
+await check('la última tecla llega al borrador si el iPhone oculta la app antes del render',async()=>{
+ await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'pagehide-ultimo-cambio'})));
+ const compra=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Compra'));
+ await a.act(async()=>compra.click());
+ await a.act(async()=>document.querySelectorAll('.step-dot')[1].click());
+ const campo=document.querySelector('#dw-field-comprador_nombre');
+ assert.ok(campo,'El campo de nombre está presente');
+ const valor='Cambio guardado al ocultar la aplicación';
+ await a.act(async()=>{
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(campo,valor);
+  campo.dispatchEvent(new Event('input',{bubbles:true}));
+  // La suspensión ocurre ANTES de resolver la actualización de React.
+  window.dispatchEvent(new Event('pagehide'));
+  const pendiente=a.lsGet('draftOperacion',null);
+  assert.equal(pendiente.data.comprador_nombre,valor);
+  assert.equal(pendiente.editId,pendiente.data.id);
+ });
+ assert.equal(snapshot.current.data.comprador_nombre,valor);
+});
 await check('identidad técnica no convierte un formulario vacío en una operación',async()=>{await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'vacio'})));assert.ok(snapshot.current.data.id);assert.equal(a.draftTieneContenido(snapshot.current.data),false)});
 await check('autorización no imprime cotitulares del comprador y al volver conserva sus datos',async()=>{
  const original={...data,id:'cambio-tipo',tipo:'comodato',comprador_nombre:'Compradora Real',comprador_telefono_en_doc:true,comprador_cotitulares:[{nombre:'Cotitular Real',dni:'30123456'}]};
