@@ -3927,17 +3927,27 @@ function completarClausulasBaseModelo(lista,tipo){
   out=out.map(function(b){return esClausulaEsencialModelo(b)?Object.assign({},b,{activo:true,obligatoria:true}):b;});
   return out.map(function(b,i){return normalizarBodyBlock(Object.assign({},b,{orden:i+1,activo:esClausulaEsencialModelo(b)?true:b.activo!==false,obligatoria:esClausulaEsencialModelo(b)?true:b.obligatoria}),i);});
 }
-function getDefaultBodyBlocks(tipo) {
+function getDefaultBodyBlocks(tipo,esencial=false) {
   var arr = BODY_TEMPLATE_PRESETS[tipo] || [];
-  return completarClausulasBaseModelo(arr,tipo);
+  var completos=completarClausulasBaseModelo(arr,tipo);
+  if(!esencial)return completos;
+  var reducidos=prepararModeloEsencial(completos,tipo);
+  return reducidos?completarClausulasBaseModelo(reducidos,tipo):completos;
 }
 function getBodyBlocksConfig(perfil,tipo,bloquesReserva=undefined) {
   var cfg = perfil && perfil.plantillas && perfil.plantillas[tipo];
   var arr = cfg && Array.isArray(cfg.body_blocks) ? cfg.body_blocks : null;
-  return arr && arr.length ? completarClausulasBaseModelo(arr,tipo) : tipo==="reserva"&&Array.isArray(bloquesReserva)&&bloquesReserva.length ? completarClausulasBaseModelo(bloquesReserva,tipo) : getDefaultBodyBlocks(tipo);
+  // Primero respetar cualquier modelo que la inmobiliaria ya haya guardado.
+  if(arr && arr.length)return completarClausulasBaseModelo(arr,tipo);
+  // Solo una cuenta creada con el nuevo onboarding usa el modelo corto como base.
+  // Los bloques de reserva heredados de Supabase se conservan sin sobrescribirse,
+  // pero no reemplazan el preset esencial de una inmobiliaria nueva.
+  if(perfil&&perfil.modelo_inicial_esencial===true)return getDefaultBodyBlocks(tipo,true);
+  if(tipo==="reserva"&&Array.isArray(bloquesReserva)&&bloquesReserva.length)return completarClausulasBaseModelo(bloquesReserva,tipo);
+  return getDefaultBodyBlocks(tipo);
 }
 function contarBloquesCuerpo(perfil,tipo,bloquesReserva){
-  return getBodyBlocksConfig(perfil,tipo,bloquesReserva).length;
+  return getBodyBlocksConfig(perfil,tipo,bloquesReserva).filter(function(b){return b.activo!==false;}).length;
 }
 function getBodyBlocksForDocument(perfil,tipo,bloquesReserva) {
   var cfg=perfil&&perfil.plantillas&&perfil.plantillas[tipo];
@@ -6965,7 +6975,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   function move(idx,dir){if(editId||status==="saving")return;var to=dir==="up"?idx-1:idx+1;if(to<0||to>=draft.length)return;moverClausulaHasta(draft[idx].id,draft[to].id);}
   function addBlock(){if(!puedeEditar||editId||status==="saving")return;var n=draft.length+1;var b=normalizarBodyBlock({id:tipo+".custom."+Date.now(),titulo:"NUEVA CLÁUSULA",contenido:"Escribí acá la redacción de esta cláusula. Podés insertar variables automáticas desde el listado inferior."},n-1);if(editId)return;setDraft(draft.concat([b]));setEditId(b.id);}
   function removeBlock(id){if(editId||status==="saving")return;var b=draft.find(function(x){return x.id===id;});if(!b)return;if(esClausulaEsencialModelo(b)){dwNotify("warning","Este apartado es esencial del modelo. Podés editar su texto, pero no eliminarlo.");return;}requestDwConfirm("¿Eliminar la cláusula “"+(b.titulo||"sin título")+"” de esta plantilla?",function(){persist(draft.filter(function(x){return x.id!==id;}));});}
-  function reset(){if(editId||status==="saving")return;requestDwConfirm("¿Restaurar TODAS las cláusulas de "+(TIPOS[tipo]||tipo)+" a la versión de fábrica? Se guardará una copia del modelo actual para poder deshacer esta acción.",function(){var snapshot={fecha:new Date().toISOString(),clausulas:draft.map(function(b,i){return Object.assign({},b,{orden:Number(b.orden)||i+1});})};persist(getDefaultBodyBlocks(tipo),{restauracionAnterior:snapshot});setEditId(null);});}
+  function reset(){if(editId||status==="saving")return;requestDwConfirm("¿Restaurar TODAS las cláusulas de "+(TIPOS[tipo]||tipo)+" a la versión de fábrica? Se guardará una copia del modelo actual para poder deshacer esta acción.",function(){var snapshot={fecha:new Date().toISOString(),clausulas:draft.map(function(b,i){return Object.assign({},b,{orden:Number(b.orden)||i+1});})};persist(getDefaultBodyBlocks(tipo,perfil&&perfil.modelo_inicial_esencial===true),{restauracionAnterior:snapshot});setEditId(null);});}
   function usarModeloEsencial(){
     if(!puedeEditar||editId||status==="saving")return;
     var reducido=prepararModeloEsencial(draft,tipo);
@@ -7257,7 +7267,7 @@ function EncabezadoFijadoPanel({perfil,onSavePerfil,clausulas,tipoDocExterno,onT
 }
 
 
-const DEFAULT_PERFIL={nombre:"",nombre_usuario:"",matricula:"",telefono:"",email:"",logoDataUrl:"",logoPosicion:"derecha",logoScale:100,cuit:"",direccion:"",web:"",ubicacion_inmobiliaria_activa:false,ubicacion_inmobiliaria_posicion:"pie",rol:"dueno",pie_pagina_texto:"",pie_pagina_leyenda_activa:true,pie_pagina_logo_debajo:false,pie_pagina_logo_posicion:"centro",pie_pagina_logo_scale:100,pie_pagina_numero_activo:true,pie_pagina_numero_posicion:"derecha",broker_split_pct:50,broker_split_mode:"uniforme",broker_splits:{},broker_fotos:{},broker_perfiles:{},soporte_email:"",ranking_interno_activo:false,clausulas_default_ids:[],plantillas:{},colorPrimario:"#142a4d",colorSecundario:"#c9a227",plantillaEstilo:"corporativo",logo_encabezado_activo:true,encabezados_custom:{}};
+const DEFAULT_PERFIL={nombre:"",nombre_usuario:"",matricula:"",telefono:"",email:"",logoDataUrl:"",logoPosicion:"derecha",logoScale:100,cuit:"",direccion:"",web:"",ubicacion_inmobiliaria_activa:false,ubicacion_inmobiliaria_posicion:"pie",rol:"dueno",pie_pagina_texto:"",pie_pagina_leyenda_activa:true,pie_pagina_logo_debajo:false,pie_pagina_logo_posicion:"centro",pie_pagina_logo_scale:100,pie_pagina_numero_activo:true,pie_pagina_numero_posicion:"derecha",broker_split_pct:50,broker_split_mode:"uniforme",broker_splits:{},broker_fotos:{},broker_perfiles:{},soporte_email:"",ranking_interno_activo:false,clausulas_default_ids:[],plantillas:{},modelo_inicial_esencial:false,colorPrimario:"#142a4d",colorSecundario:"#c9a227",plantillaEstilo:"corporativo",logo_encabezado_activo:true,encabezados_custom:{}};
 
 // ── ESTILOS DE PLANTILLA (personalización por inmobiliaria) ─────────────────
 // 3 estilos posibles para PDF/DOCX: minimalista (sobrio, mucho blanco, acento
@@ -8140,7 +8150,7 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
       // otra sesión/inmobiliaria: podría arrastrar logo, modelos o identidad ajena.
       // Si todavía no existe perfil remoto, partir de defaults limpios.
       setPerfil(Object.assign({}, DEFAULT_PERFIL,
-        data && data._cloud_missing!==true ? data : {nombre_usuario:data&&data.nombre_usuario||""},
+        data && data._cloud_missing!==true ? data : {nombre_usuario:data&&data.nombre_usuario||"",modelo_inicial_esencial:true},
         {rol:data&&data.rol||rolActual||"viewer"}));
       perfilCargado.current=true; setPerfilNubeCargado(true);
     }).catch(function(err){
