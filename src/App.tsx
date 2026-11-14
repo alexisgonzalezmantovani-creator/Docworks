@@ -8149,9 +8149,24 @@ function usePerfilSupabase(ctx, perfil, setPerfil){
       // La nube es la fuente de verdad. No fusionar datos de localStorage de
       // otra sesión/inmobiliaria: podría arrastrar logo, modelos o identidad ajena.
       // Si todavía no existe perfil remoto, partir de defaults limpios.
-      setPerfil(Object.assign({}, DEFAULT_PERFIL,
-        data && data._cloud_missing!==true ? data : {nombre_usuario:data&&data.nombre_usuario||"",modelo_inicial_esencial:true},
-        {rol:data&&data.rol||rolActual||"viewer"}));
+      // El sembrado automático de Biblioteca puede crear la configuración
+      // antes del onboarding; por eso _cloud_missing solo no identifica todas
+      // las inmobiliarias recién creadas. No inferir "nueva" por falta de
+      // modelos: una inmobiliaria histórica podría no tenerlos configurados.
+      var remotoExiste=!!(data&&data._cloud_missing!==true);
+      var llavesAuto=["biblioteca_base_624","plantillas","rol","nombre_usuario","_cloud_missing","_migration_checked"];
+      var soloSembrado=remotoExiste&&data.biblioteca_base_624===true&&
+        Object.keys(data).every(function(k){return llavesAuto.indexOf(k)!==-1;});
+      var inicioPrueba=ctx&&ctx.membresia&&ctx.membresia.fecha_inicio;
+      var fechaInicio=Date.parse(String(inicioPrueba||""));
+      var empresaNueva=Number.isFinite(fechaInicio)&&fechaInicio>=Date.parse("2026-11-14T00:00:00Z");
+      var perfilInicial=remotoExiste?data:{nombre_usuario:data&&data.nombre_usuario||"",modelo_inicial_esencial:true};
+      // Solo el perfil exclusivamente sembrado de una cuenta nueva recibe
+      // automáticamente el modelo esencial. Las personalizaciones siguen intactas.
+      var esencialNuevo=soloSembrado&&empresaNueva&&!Object.prototype.hasOwnProperty.call(data,"modelo_inicial_esencial");
+      setPerfil(Object.assign({}, DEFAULT_PERFIL,perfilInicial,
+        {modelo_inicial_esencial:perfilInicial.modelo_inicial_esencial===true||esencialNuevo,
+         rol:data&&data.rol||rolActual||"viewer"}));
       perfilCargado.current=true; setPerfilNubeCargado(true);
     }).catch(function(err){
       if(contextoActualRef.current !== claveContexto || solicitudPerfilRef.current !== numeroSolicitud) return;
