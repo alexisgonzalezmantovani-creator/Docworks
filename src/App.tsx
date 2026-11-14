@@ -471,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.61";
+var DOCWORKS_VERSION = "6.62";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -5765,8 +5765,11 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   }
   var [clausulaExpandida,setClausulaExpandida]=useState(null);
   var [showAdd,setShowAdd]=useState(!!(data.clausulas_custom||data.clausulas_custom_titulo));
-  var [tituloCustom,setTituloCustom]=useState(data.clausulas_custom_titulo||"");
-  var [contenidoCustom,setContenidoCustom]=useState(data.clausulas_custom||"");
+  // Una sola fuente de verdad: la cláusula propia vive en el borrador de la
+  // operación, no en un segundo estado que se sincroniza después con un efecto.
+  // Así guardar o salir inmediatamente después de escribir no pierde el último cambio.
+  var tituloCustom=String(data.clausulas_custom_titulo||"");
+  var contenidoCustom=String(data.clausulas_custom||"");
   var [ideaIA,setIdeaIA]=useState("");
   var ideaIARef=useRef<HTMLTextAreaElement | null>(null);
   var [loadingIA,setLoadingIA]=useState(false);
@@ -5775,11 +5778,8 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   var busqueda=buscarClausula.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
   var listaVisible=busqueda?lista.filter(function(c){return String(c.titulo||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(busqueda);}):lista;
   // Cerrar el editor es solo una acción visual: no borra la cláusula personal.
-  useEffect(function(){
-    if(String(data.clausulas_custom_titulo||"")!==tituloCustom)onChange("clausulas_custom_titulo",tituloCustom);
-    if(String(data.clausulas_custom||"")!==contenidoCustom)onChange("clausulas_custom",contenidoCustom);
-  },[tituloCustom,contenidoCustom]);
-  async function completarRedaccionIA(){if(loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
+  // No hace falta un efecto de sincronización: los campos escriben en data al editar.
+  async function completarRedaccionIA(){if(loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){onChange("clausulas_custom_titulo",d.titulo||"");onChange("clausulas_custom",d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
   function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}if(String(contenidoCustom||"").trim()){requestDwConfirm("Ya tenés una cláusula escrita. ¿Reemplazarla por el texto redactado con IA?",function(){void completarRedaccionIA();},"Reemplazar");return;}void completarRedaccionIA();}
   return <div>
     <SeguroOperacion data={data} onChange={onChange} faltantes={faltantes} seguroPorDefecto={!seguroSoloSiLoEligen(data,perfil)}/>
@@ -5821,10 +5821,10 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
       <button type="button" aria-expanded={showAdd} aria-controls="dw-clausula-personal-editor" onClick={function(){setShowAdd(function(v){return !v;});}} style={{width:"100%",padding:"11px 13px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",cursor:"pointer",textAlign:"left",fontWeight:700}}>{showAdd?"− Ocultar editor":String(contenidoCustom||"").trim()?"✎ Editar mi cláusula":"＋ Escribir cláusula propia"}</button>
       {!showAdd&&!!String(contenidoCustom||"").trim()&&<div style={{fontSize:12,color:"var(--green)",marginTop:6}}>Tu cláusula sigue incluida en esta operación aunque el editor esté cerrado.</div>}
       {showAdd&&<div id="dw-clausula-personal-editor" style={{marginTop:9,padding:12,borderRadius:12,border:"1px solid var(--border2)",background:"rgba(212,168,83,.035)"}}>
-        <Inp label="Título" value={tituloCustom} onChange={function(e){setTituloCustom(e.target.value);}} placeholder="Ej.: Prohibición de mascotas"/>
+        <Inp label="Título" value={tituloCustom} onChange={function(e){onChange("clausulas_custom_titulo",e.target.value);}} placeholder="Ej.: Prohibición de mascotas"/>
         <AvisoClausulasPersonalizadas/>
-        <Txa label="Texto" value={contenidoCustom} onChange={function(e){setContenidoCustom(e.target.value);}} placeholder="Escribí la cláusula…" rows={4}/>
-        <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){setContenidoCustom(function(v){return (v?v+" ":"")+t;});}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictar texto de la cláusula</span></div>
+        <Txa label="Texto" value={contenidoCustom} onChange={function(e){onChange("clausulas_custom",e.target.value);}} placeholder="Escribí la cláusula…" rows={4}/>
+        <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){onChange("clausulas_custom",(contenidoCustom?contenidoCustom+" ":"")+t);}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictar texto de la cláusula</span></div>
         <details style={{marginTop:14,padding:"12px 13px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
           <summary style={{fontSize:12,fontWeight:750,color:"var(--text)",marginBottom:5,cursor:"pointer",minHeight:26}}>✦ Redactar con IA (opcional)</summary>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:9}}>Describí en pocas palabras la condición que querés agregar. No incluyas nombres, DNI, domicilios ni datos de la operación.</div>
@@ -5837,7 +5837,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
         {errorIA&&<div style={{fontSize:12,color:"var(--red)",marginTop:5}}>{errorIA}</div>}
         <div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Esta cláusula se guarda únicamente en esta operación; no modifica la biblioteca de la inmobiliaria.</div>
         {(!!String(contenidoCustom||"").trim()||!!String(tituloCustom||"").trim())&&<button type="button" onClick={function(){
-          requestDwConfirm("¿Eliminar la cláusula propia de esta operación? Esta acción borra su título y texto.",function(){setTituloCustom("");setContenidoCustom("");setIdeaIA("");setErrorIA("");setShowAdd(false);},"Eliminar");
+          requestDwConfirm("¿Eliminar la cláusula propia de esta operación? Esta acción borra su título y texto.",function(){onChange("clausulas_custom_titulo","");onChange("clausulas_custom","");setIdeaIA("");setErrorIA("");setShowAdd(false);},"Eliminar");
         }} style={{marginTop:12,padding:"8px 10px",border:"1px solid var(--border2)",borderRadius:8,background:"transparent",color:"var(--red)",cursor:"pointer",fontSize:12}}>Eliminar mi cláusula</button>}
       </div>}
     </div>

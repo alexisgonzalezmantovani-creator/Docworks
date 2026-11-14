@@ -39,6 +39,10 @@ assert.match(form,/lsRemove\("draftOperacion"\)/,'Eliminar borrador si se vacía
 assert.match(app,/crearOperacionForm\(\{[^;]*lsRemove, lsSet/,'Inyectar limpieza de borrador desde App');
 assert.match(app,/if\(k==="draftOperacion" && \(!v \|\| !v\.data \|\| !draftTieneContenido\(v\.data\)\)\)/,'Autoguardado limpia borradores vacíos');
 assert.match(app,/Guardando en este dispositivo…/,'Indicar que el guardado en curso es local');
+const stepClause=app.slice(app.indexOf('function StepClausulas('),app.indexOf('function StepBar('));
+assert.match(stepClause,/var tituloCustom=String\(data\.clausulas_custom_titulo\|\|""\)/,'El título propio se lee directamente del borrador');
+assert.match(stepClause,/var contenidoCustom=String\(data\.clausulas_custom\|\|""\)/,'El texto propio se lee directamente del borrador');
+assert.doesNotMatch(stepClause,/setTituloCustom|setContenidoCustom/,'No usar estados paralelos para la cláusula propia');
 assert.match(app,/Borrador guardado en este dispositivo/,'No confundir autoguardado con sincronización');
 assert.match(app,/No se pudo guardar el borrador en este dispositivo/,'Informar el alcance del error de guardado');
 assert.doesNotMatch(source,/className="op-expediente-resumen"/,'No mostrar resumen de expediente en tarjetas');
