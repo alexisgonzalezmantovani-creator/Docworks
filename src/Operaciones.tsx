@@ -2114,6 +2114,17 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
+/* Tarjetas compactas: las acciones no se empujan al pie en teléfonos. */
+.op-doc-label-mobile{display:none}
+.op-missing-role{font-size:11px;font-weight:700;color:#f59e0b}
+@media (max-width:760px), (orientation:landscape) and (max-height:500px) and (hover:none) and (pointer:coarse) and (max-width:1100px){
+  .dw-dashboard-root .op-card-premium .op-doc-label-desktop{display:none!important}
+  .dw-dashboard-root .op-card-premium .op-doc-label-mobile{display:inline!important}
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.op-add-doc-action svg{display:none!important}
+  .dw-dashboard-root .op-card-premium .op-card-side .op-side-progress .op-side-label{display:block!important;font-size:10px!important;letter-spacing:0!important}
+  .dw-dashboard-root .op-card-premium .op-card-side .op-side-progress .op-progress-pct{min-width:32px;font-size:11px!important}
+}
+
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
 .dw-operation-page-heading{z-index:40;isolation:isolate;background-color:var(--bg)!important;background-image:none;backdrop-filter:none;opacity:1;flex-shrink:0;box-shadow:0 7px 0 var(--bg)}
 .dw-operation-page-heading::before{content:"";position:absolute;inset:-30px -28px 0;background:var(--bg);z-index:-1;pointer-events:none}
@@ -4590,7 +4601,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
 
     const acciones=(
       <div className="op-actions" role="group" aria-label="Acciones de la operación" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
-        {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={13}/> <span>{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span></Btn>}
+        {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={13}/> <span className="op-doc-label-desktop">{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span><span className="op-doc-label-mobile">Documento</span></Btn>}
         <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
         {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}
         <Dropdown items={menuItems}/>
@@ -4638,7 +4649,6 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     // En carpetas con varios documentos, mantiene el progreso de documentos vinculados.
     var camposCriticos=CAMPOS_CRITICOS_POR_TIPO[op.tipo]||[];
     var detallePendientes=getCamposFaltantesDetalle(op,perfil);
-    var camposPendientes=detallePendientes.length;
     var pendientesPrincipales=detallePendientes.filter(function(f){return camposCriticos.some(function(c){return c[0]===f.campo;});}).length;
     var progreso=camposCriticos.length>0?Math.max(0,Math.min(100,Math.round((1-pendientesPrincipales/camposCriticos.length)*100))):0;
     var etiquetaProgreso="Datos principales";
@@ -4662,6 +4672,8 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
             <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginTop:8}}>
               <div style={{fontSize:13,color:"var(--text)",fontWeight:650}}>{getName(op)}</div>
               {monto&&<span className="monto-tag">{monto}</span>}
+              {((esResAlq||op.tipo==="alquiler")&&!op.locador_nombre)&&<span className="op-missing-role">⚠ Falta locador</span>}
+              {((esReserva||op.tipo==="boleto")&&!op.vendedor_nombre)&&<span className="op-missing-role">⚠ Falta vendedor</span>}
             </div>
             
 
@@ -4670,7 +4682,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
           <div className="op-card-side">
             <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{haceFecha(ultima)}</div></div>
             <div><div className="op-docs-count">{docsHechos} {docsHechos===1?"documento":"documentos"}</div></div>
-            <div className="op-side-progress"><div className="op-side-label">{etiquetaProgreso}</div><div className="op-progress-row" role="progressbar" aria-label={etiquetaProgreso} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progreso}><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}% completo</span></div>{camposPendientes>0&&<div style={{fontSize:11,color:"var(--muted)",marginTop:4}}>{"Faltan "+camposPendientes+" "+(camposPendientes===1?"dato":"datos")+" para revisar al editar"}</div>}</div>
+            <div className="op-side-progress"><div className="op-side-label">{etiquetaProgreso}</div><div className="op-progress-row" role="progressbar" aria-label={etiquetaProgreso} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progreso}><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}%</span></div></div>
             <div>{acciones}</div>
             {op.broker_nombre||op.broker?<div className="op-side-extra"><div className="op-side-label">Agente</div><div style={{fontSize:12,fontWeight:650,color:"var(--text)",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{op.broker_nombre||op.broker}</div></div>:null}
           </div>
@@ -4682,7 +4694,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   return(
     <div className="dw-dashboard-root">
       <div className="section-header" style={{marginBottom:18}}>
-        <div><div className="section-title">Operaciones</div><div className="section-sub">Tus carpetas de trabajo, con todos sus documentos vinculados en un solo lugar.</div></div>
+        <div><div className="section-title">Operaciones</div></div>
         {!enPapelera&&permisosGenerales.crear&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
       </div>
       <div className="dw-dashboard-overview" aria-label="Resumen de operaciones">
@@ -4700,9 +4712,9 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       <div className="filter-row dw-dashboard-toolbar">
         <div className="search-wrap" style={{flex:1,minWidth:180}}>
           <span className="search-icon"><DWIcon name="search" size={16} strokeWidth={2}/></span>
-          <input className="search-inp" value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Buscar operación…"/>
+          <input className="search-inp" aria-label="Buscar operación" value={search} onChange={function(e){setSearch(e.target.value);}} placeholder="Buscar operación…"/>
         </div>
-        <select className="inp filter-tipo" style={{width:"auto"}} value={filtroTipo} onChange={function(e){setFiltroTipo(e.target.value);}}>
+        <select className="inp filter-tipo" aria-label="Filtrar por tipo de operación" style={{width:"auto"}} value={filtroTipo} onChange={function(e){setFiltroTipo(e.target.value);}}>
           <option value="todos">Todos los tipos</option>
           {Object.entries(TIPOS as Record<string,string>).map(function(e){return <option key={e[0]} value={e[0]}>{e[1]}</option>;})}
         </select>
@@ -4728,7 +4740,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       {!perfil.nombre&&<div className="notice notice-gold" style={{marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}><span>Configurá el perfil de tu inmobiliaria para agregar logo en los PDFs.</span><Btn v="ghost" s="sm" onClick={onPerfil} style={{color:"var(--gold)",flexShrink:0}}>⚙ Configurar</Btn></div>}
       {modoVista==="tabla" ? (
         <div className="op-table-wrap">
-          {filtered.length===0?<div style={{padding:44,textAlign:"center",color:"var(--dim)",fontSize:13}}>{loading?"Cargando operaciones…":"No hay operaciones en esta vista."}</div>:<table className="op-table"><thead><tr><th>Estado</th><th>Operación</th><th>Partes</th><th>Monto</th><th>Fecha</th><th>Agente</th><th></th></tr></thead><tbody>{filtered.map(function(op){return <tr key={op.id}><td><span className={"op-status-badge "+(op.estado||"borrador")}>{ESTADOS[op.estado]||"Borrador"}</span></td><td><div style={{fontWeight:700}}>{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]||op.tipo}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{op.inmueble_direccion||"Sin dirección"}</div><div className="op-table-partes" title={getName(op)}>{getName(op).replace(/\s*\((?:comprador|vendedor|locatario|locador)\)/gi,"")}</div></td><td>{getName(op)}</td><td style={{fontWeight:700,color:"var(--gold)"}}>{getMonto(op)||"—"}</td><td>{new Date(op.created_at).toLocaleDateString("es-AR")}</td><td>{op.broker_nombre||op.broker||"—"}</td><td><Btn v="secondary" s="sm" onClick={function(){onViewDoc(op);}}>Abrir</Btn></td></tr>;})}</tbody></table>}
+          {filtered.length===0?<div style={{padding:44,textAlign:"center",color:"var(--dim)",fontSize:13}}>{loading?"Cargando operaciones…":"No hay operaciones en esta vista."}</div>:<table className="op-table"><thead><tr><th>Estado</th><th>Operación</th><th>Partes</th><th>Monto</th><th>Fecha</th><th>Agente</th><th></th></tr></thead><tbody>{filtered.map(function(op){return <tr key={op.id}><td><span className={"op-status-badge "+(op.estado||"borrador")}>{ESTADOS[op.estado]||"Borrador"}</span></td><td><div style={{fontWeight:700}}>{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]||op.tipo}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{op.inmueble_direccion||"Sin dirección"}</div><div className="op-table-partes" title={getName(op)}>{getName(op).replace(/\s*\((?:comprador|vendedor|locatario|locador)\)/gi,"")}</div></td><td>{getName(op)}</td><td style={{fontWeight:700,color:"var(--gold)"}}>{getMonto(op)||"—"}</td><td>{op.created_at&&Number.isFinite(new Date(op.created_at).getTime())?new Date(op.created_at).toLocaleDateString("es-AR"):"—"}</td><td>{op.broker_nombre||op.broker||"—"}</td><td><Btn v="secondary" s="sm" onClick={function(){onViewDoc(op);}}>Abrir</Btn></td></tr>;})}</tbody></table>}
         </div>
       ) : (
       <div className="op-list" style={{display:"flex",flexDirection:"column",gap:9,paddingBottom:"calc(88px + env(safe-area-inset-bottom, 0px))"}}>
@@ -4765,7 +4777,9 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 {opts.map(function(o){
-                  var creado=hijosAdd.find(function(h){return h.tipo===o.tipo;});
+                  var existentes=hijosAdd.filter(function(h){return h.tipo===o.tipo;});
+                  var varios=o.tipo==="refuerzo_reserva";
+                  var creado=varios?null:existentes[0];
                   return (
                     <div key={o.tipo} style={{border:"1px solid "+(creado?"var(--border)":"rgba(212,168,83,0.25)"),borderRadius:12,padding:14,background:creado?"transparent":"rgba(212,168,83,0.04)"}}>
                       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
@@ -4774,6 +4788,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
                             <span style={{fontSize:16}}>{o.icon}</span>
                             <span style={{fontSize:13.5,fontWeight:600,color:"var(--text)"}}>{o.label}</span>
                             {creado&&<span className="badge badge-activo" style={{fontSize:12}}>✓ Ya creado</span>}
+                            {varios&&existentes.length>0&&<span className="badge badge-activo" style={{fontSize:12}}>{existentes.length} {existentes.length===1?"refuerzo":"refuerzos"} {existentes.length===1?"anterior":"anteriores"}</span>}
                           </div>
                           <div style={{fontSize:12,color:"var(--dim)",marginBottom:6}}>{o.desc}</div>
                           {!creado&&(
@@ -4787,7 +4802,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
                           if(creado){ setAddDocFor(null); if(permisosOperacion(actor,creado).editar)onEdit(creado);else onViewDoc(creado); }
                           else { setAddDocFor(null); o.accion(addDocFor); }
                         }}>
-                          {creado?"Abrir":"Crear"}
+                          {creado?"Abrir":varios&&existentes.length?"Nuevo refuerzo":"Crear"}
                         </Btn>
                       </div>
                     </div>
@@ -6020,7 +6035,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // que ya trae parent_id), se ofrece elegir una reserva abierta reciente para
   // no volver a tipear todos los datos de las partes y el inmueble.
   function elegirReservaParaDevolucion(op){
-    setBulk({...datosCompraCompartidos(op),
+    setBulk({...datosCompraCompartidos(op,false),
       compra_instrumento:op.compra_instrumento||"escritura",
       compra_boleto_origen:op.compra_boleto_origen||"",
       parent_id: op.id,
@@ -6036,7 +6051,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
     setStep(2);
   }
   function elegirReservaParaRefuerzo(op){
-    setBulk({...datosCompraCompartidos(op),
+    setBulk({...datosCompraCompartidos(op,false),
       compra_instrumento:op.compra_instrumento||"escritura",
       compra_boleto_origen:op.compra_boleto_origen||"",
       parent_id: op.id,

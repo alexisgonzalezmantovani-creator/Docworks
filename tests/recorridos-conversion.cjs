@@ -4,9 +4,12 @@ const names=['EMPTY_OP','SAMPLE_OP_PREVIEW','datosCompraCompartidos','plazoReser
 require('esbuild').buildSync({stdin:{contents:source+'\nexport {'+names.join(',')+'};',resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});global.document={querySelector:()=>({}),title:''};const a=require(tmp+'/app.cjs');delete global.document;let checks=0,errors=0;
 function check(label,fn){try{fn();checks++;console.log('OK',label)}catch(e){errors++;console.error('FALLA',label,':',e.message)}}
 function convertir(nombre,op){let resultado;const deps={...a,yaConvertido:()=>false,crearDocumentoConfirmado:(x)=>{resultado=x;return x;}};const soporte=['comisionesContratoDesdeReserva','antecedenteReservaParaRefuerzo'].filter(x=>functions[x]).map(x=>functions[x]).join('\n');new Function('deps','with(deps){'+soporte+';return ('+functions[nombre]+');}')(deps)(op);return resultado;}
+check('un segundo refuerzo no queda bloqueado por el primero',()=>{
+ assert.doesNotMatch(functions.convertirARefuerzo,/yaConvertido\(op\.id,"refuerzo_reserva"\)/);
+});
 const operacionesSource=fs.readFileSync(dir+'/src/Operaciones.tsx','utf8'),operacionesAst=ts.createSourceFile('Operaciones.tsx',operacionesSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),selectores={};
 (function visit(n){if(ts.isFunctionDeclaration(n)&&n.name)selectores[n.name.text]=n.getText(operacionesAst);ts.forEachChild(n,visit)})(operacionesAst);
-function seleccionar(nombre,op){let resultado,paso=1;const deps={...a,setBulk:x=>{resultado=x;},setStep:x=>{paso=x;}};new Function('deps','with(deps){'+functions.antecedenteReservaParaRefuerzo+';return ('+selectores[nombre]+');}')(deps)(op);assert.equal(paso,2,'La selección avanza al paso de datos');return resultado;}
+function seleccionar(nombre,op){let resultado,paso=1;const deps={...a,data:{...a.EMPTY_OP},setBulk:x=>{resultado=x;},setStep:x=>{paso=x;}};new Function('deps','with(deps){'+functions.antecedenteReservaParaRefuerzo+';return ('+selectores[nombre]+');}')(deps)(op);assert.equal(paso,2,'La selección avanza al paso de datos');return resultado;}
 const reserva={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',id:'reserva-origen',created_at:'2026-11-07T01:30:00Z',fecha_documento:'2026-11-06',moneda:'ARS',precio:'123456.78',anticipo:'23456.78',comprador_nombre:'Ana Compradora',vendedor_nombre:'Bruno Vendedor',comision_vendedor_modo:'fijo',comision_vendedor_valor:'1500.25',comision_vendedor_moneda:'ARS',comision_vendedor_ocultar_doc:true,comision_comprador_valor:'0',comision_comprador_valor_editado:true,inmueble_en_barrio_complejo:true,inmueble_barrio:'Complejo de prueba',inmueble_unidad_funcional:'Lote 9',comprador_cotitulares:[{nombre:'Cotitular Uno',dni:'30111222',telefono:'111111',telefono_en_doc:true}],clausulas_custom_titulo:'Acuerdo de prueba',clausulas_custom:'Detalle exclusivo de esta operación.'};
 const alquiler={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,id:'reserva-alquiler-origen',tipo:'reserva_alquiler',res_alq_monto_reserva:'100000',res_alq_moneda:'ARS',res_alq_monto_mensual:'1900.25',res_alq_monto_mensual_moneda:'USD',res_alq_plazo_cantidad:'2',res_alq_plazo_unidad:'años',res_alq_inicio_estimado:'2026-04-01',res_alq_comision_locador_modo:'fijo',res_alq_comision_locador_valor:'125.25',res_alq_comision_locador_moneda:'USD',res_alq_comision_locatario_modo:'porcentaje',res_alq_comision_locatario_valor:'2',res_alq_comision_locador_ocultar_doc:true,clausulas_custom_titulo:'Acuerdo de prueba',clausulas_custom:'Detalle exclusivo de esta operación.'};
 const antes=JSON.stringify([reserva,alquiler]);const boleto=convertir('convertirABoleto',reserva),refuerzo=convertir('convertirARefuerzo',reserva),devolucion=convertir('onConvertirDevolucion',reserva),comodato=convertir('convertirAComodato',reserva),contrato=convertir('convertirAContrato',alquiler);
@@ -16,7 +19,7 @@ check('refuerzo conserva moneda ARS y deja completar el nuevo importe',()=>{asse
 check('refuerzo usa fecha del documento de origen, no una firma inventada',()=>{assert.ok(refuerzo.refuerzo_trayectoria.includes('06/11/2026'));assert.ok(!refuerzo.refuerzo_trayectoria.includes('firmada'))});
 check('refuerzo sin fecha previa no imprime Invalid Date',()=>assert.ok(!convertir('convertirARefuerzo',{...reserva,created_at:'',fecha_documento:''}).refuerzo_trayectoria.includes('Invalid')));
 for(const anticipo of ['',0,'0'])check('devolución con seña '+JSON.stringify(anticipo)+' no toma el precio del inmueble',()=>{const op=convertir('onConvertirDevolucion',{...reserva,anticipo});assert.notEqual(op.precio,reserva.precio);assert.ok(a.getCamposFaltantesDetalle(op).some(f=>f.campo==='precio'))});
-for(const anticipo of ['',0,'0','1234.56'])check('selector de reserva para devolución conserva solo seña '+JSON.stringify(anticipo),()=>{const op=seleccionar('elegirReservaParaDevolucion',{...reserva,anticipo});assert.equal(op.precio,anticipo);assert.equal(op.moneda,'ARS');assert.equal(op.clausulas_custom,reserva.clausulas_custom)});
+for(const anticipo of ['',0,'0','1234.56'])check('selector de reserva para devolución conserva solo seña '+JSON.stringify(anticipo),()=>{const op=seleccionar('elegirReservaParaDevolucion',{...reserva,anticipo});assert.equal(op.precio,anticipo);assert.equal(op.moneda,'ARS');assert.equal(op.clausulas_custom,"");assert.deepEqual(op.clausulas_ids,[])});
 check('selector de reserva para refuerzo conserva moneda y antecedente',()=>{const op=seleccionar('elegirReservaParaRefuerzo',reserva);assert.equal(op.moneda,'ARS');assert.equal(op.refuerzo_trayectoria,refuerzo.refuerzo_trayectoria)});
 check('devolución usa el importe recibido y moneda original',()=>{assert.equal(devolucion.precio,'23456.78');assert.equal(devolucion.moneda,'ARS')});
 check('contrato conserva honorario fijo de la reserva',()=>{const c=a.getComisionComponents(contrato).find(x=>x.rol==='locador');assert.equal(c.monto,125.25);assert.equal(c.moneda,'USD')});
@@ -25,6 +28,18 @@ for(const valor of ['', '0', '-2', 'no válido'])check('contrato no convierte ho
 check('contrato conserva la decisión de no imprimir honorarios',()=>assert.equal(contrato.alquiler_comision_locador_ocultar_doc,true));
 check('porcentaje sin canon no se importa como honorario cero',()=>{const c=convertir('convertirAContrato',{...alquiler,res_alq_monto_mensual:''});assert.equal(c.alquiler_comision_locatario_valor,'')});
 check('contrato conserva plazo, inicio y moneda mensual, sin mezclar seña ARS',()=>{assert.equal(contrato.alquiler_plazo_meses,'24');assert.equal(contrato.alquiler_inicio,'2026-04-01');assert.equal(contrato.alquiler_moneda,'USD')});
+check('refuerzo, devolución y comodato no heredan cláusulas ni comisiones de la reserva',()=>{
+ for(const doc of [refuerzo,devolucion,comodato]){
+   assert.deepEqual(doc.clausulas_ids,[]);
+   assert.equal(doc.clausulas_custom,"");
+   assert.equal(doc.clausulas_custom_titulo,"");
+   assert.equal(doc.comision_vendedor_ocultar_doc,a.EMPTY_OP.comision_vendedor_ocultar_doc);
+ }
+});
+check('boleto y contrato conservan cláusulas pactadas que deben revisarse',()=>{
+ assert.equal(boleto.clausulas_custom,reserva.clausulas_custom);
+ assert.equal(contrato.clausulas_custom,alquiler.clausulas_custom);
+});
 check('convertir no modifica la reserva original',()=>assert.equal(JSON.stringify([reserva,alquiler]),antes));
 for(const op of [boleto,refuerzo,devolucion,comodato])check(op.tipo+' conserva cotitulares sin compartir objetos',()=>{assert.deepEqual(op.comprador_cotitulares,reserva.comprador_cotitulares);op.comprador_cotitulares[0].nombre='Nombre cambiado en el hijo';assert.equal(reserva.comprador_cotitulares[0].nombre,'Cotitular Uno')});
 for(const editable of [false,true])for(const tipo of ['reserva','boleto','exclusividad'])check(tipo+' no imprime honorarios ocultos ni frases sin importe ('+(editable?'modelo':'estándar')+')',()=>{

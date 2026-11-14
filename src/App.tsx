@@ -5946,7 +5946,7 @@ function getResumenPartes(op){
   var roles=(op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto"?["CEDENTE","CESIONARIO"]:rolesPorTipo(op.tipo);
   return prefixes.map(function(prefix,i){return {label:capRol(roles[i]||roles[0]),nombre:op[prefix+"_nombre"]||"",dni:op[prefix+"_dni"]||""};});
 }
-function datosCompraCompartidos(op){
+function datosCompraCompartidos(op,conClausulas=true){
   var datos={compra_instrumento:op.compra_instrumento||"escritura",compra_boleto_origen:op.compra_boleto_origen||"",clausulas_custom:op.clausulas_custom||"",comision_vendedor_valor_editado:op.comision_vendedor_valor_editado,comision_comprador_valor_editado:op.comision_comprador_valor_editado,inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
   ["comprador","vendedor"].forEach(function(prefix){
     datos[prefix+"_telefono"]=op[prefix+"_telefono"]||"";
@@ -5958,6 +5958,16 @@ function datosCompraCompartidos(op){
   ["comision_vendedor","comision_comprador"].forEach(function(prefix){
     ["_ocultar_doc","_texto"].forEach(function(sufijo){if(op[prefix+sufijo]!==undefined)datos[prefix+sufijo]=op[prefix+sufijo];});
   });
+  if(!conClausulas){
+    delete datos.clausulas_ids;
+    delete datos.clausulas_custom;
+    delete datos.clausulas_custom_titulo;
+    ["comision_vendedor","comision_comprador"].forEach(function(prefix){
+      delete datos[prefix+"_valor_editado"];
+      delete datos[prefix+"_ocultar_doc"];
+      delete datos[prefix+"_texto"];
+    });
+  }
   return datos;
 }
 function getResumenMonto(op){
@@ -9263,11 +9273,16 @@ function DocWorksApp(){
     documentosPendientesRef.current.set(claveDocumento,promesa);
     try{return await promesa;}finally{if(documentosPendientesRef.current.get(claveDocumento)===promesa)documentosPendientesRef.current.delete(claveDocumento);}
   }
-  function duplicarOp(op){return crearDocumentoConfirmado(Object.assign({},op),op.tipo,false);}
+  function duplicarOp(op){
+    return crearDocumentoConfirmado(Object.assign({},op,{
+      parent_id:null,historial_operacion:[],negociacion_historial:[],
+      proceso_estado:EMPTY_OP.proceso_estado,reserva_fecha_refuerzo:"",
+      tareas_done:{},tareas_custom:[]
+    }),op.tipo,false);
+  }
 
-  // Una operación sólo puede dar origen a UN documento derivado de cada tipo (un solo
-  // Comodato, un solo Refuerzo, un solo Contrato desde Reserva de Locación). Esto evita
-  // duplicados y mantiene la "carpeta" de la operación prolija.
+  // Boleto, comodato, contrato y devolución son documentos únicos para la carpeta.
+  // Los refuerzos pueden repetirse: cada pago adicional tiene su propio comprobante.
   function yaConvertido(opId, tipoHijo){ return operaciones.some(function(o){return o.parent_id===opId && o.tipo===tipoHijo;}); }
   function convertirAContrato(op){
     if(yaConvertido(op.id,"alquiler")) return;
@@ -9291,7 +9306,6 @@ function DocWorksApp(){
     return crearDocumentoConfirmado(nuevo,"alquiler",true);
   }
   function convertirARefuerzo(op){
-    if(yaConvertido(op.id,"refuerzo_reserva")) return;
     var nuevo=Object.assign({},EMPTY_OP,{
       tipo:"refuerzo_reserva", estado:"borrador", parent_id:op.id,
       comprador_nombre:op.comprador_nombre||"", comprador_dni:op.comprador_dni||"",
@@ -9302,9 +9316,8 @@ function DocWorksApp(){
       inmueble_provincia:op.inmueble_provincia||"", inmueble_tipo:op.inmueble_tipo||"departamento",
       moneda:op.moneda||"USD",
       refuerzo_trayectoria:antecedenteReservaParaRefuerzo(op),
-      clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"",
     });
-    Object.assign(nuevo,datosCompraCompartidos(op));
+    Object.assign(nuevo,datosCompraCompartidos(op,false));
     return crearDocumentoConfirmado(nuevo,"refuerzo_reserva",true);
   }
   async function onUpdateOperationGlobal(next){
@@ -9325,8 +9338,8 @@ function DocWorksApp(){
   }
   function onConvertirDevolucion(op){
     if(yaConvertido(op.id,"devolucion_reserva")) return;
-    var nuevo=Object.assign({},EMPTY_OP,{tipo:"devolucion_reserva",estado:"borrador",parent_id:op.id,proceso_estado:"pendiente_devolucion",comprador_nombre:op.comprador_nombre||"",comprador_dni:op.comprador_dni||"",comprador_domicilio:op.comprador_domicilio||"",vendedor_nombre:op.vendedor_nombre||"",vendedor_dni:op.vendedor_dni||"",vendedor_domicilio:op.vendedor_domicilio||"",inmueble_direccion:op.inmueble_direccion||"",inmueble_partido:op.inmueble_partido||"",inmueble_provincia:op.inmueble_provincia||"",precio:op.anticipo??"",moneda:op.moneda||"USD",devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",negociacion_historial:op.negociacion_historial||[],clausulas_ids:op.clausulas_ids||[]});
-    Object.assign(nuevo,datosCompraCompartidos(op));
+    var nuevo=Object.assign({},EMPTY_OP,{tipo:"devolucion_reserva",estado:"borrador",parent_id:op.id,proceso_estado:"pendiente_devolucion",comprador_nombre:op.comprador_nombre||"",comprador_dni:op.comprador_dni||"",comprador_domicilio:op.comprador_domicilio||"",vendedor_nombre:op.vendedor_nombre||"",vendedor_dni:op.vendedor_dni||"",vendedor_domicilio:op.vendedor_domicilio||"",inmueble_direccion:op.inmueble_direccion||"",inmueble_partido:op.inmueble_partido||"",inmueble_provincia:op.inmueble_provincia||"",precio:op.anticipo??"",moneda:op.moneda||"USD",devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",negociacion_historial:[]});
+    Object.assign(nuevo,datosCompraCompartidos(op,false));
     return crearDocumentoConfirmado(nuevo,"devolucion_reserva",true);
   }
   function convertirABoleto(op){
@@ -9371,9 +9384,8 @@ function DocWorksApp(){
       inmueble_direccion:op.inmueble_direccion||"", inmueble_partido:op.inmueble_partido||"",
       inmueble_provincia:op.inmueble_provincia||"", inmueble_tipo:op.inmueble_tipo||"departamento",
       descripcion_inmueble:op.descripcion_inmueble||"",
-      clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"",
     });
-    Object.assign(nuevo,datosCompraCompartidos(op));
+    Object.assign(nuevo,datosCompraCompartidos(op,false));
     return crearDocumentoConfirmado(nuevo,"comodato",true);
   }
 

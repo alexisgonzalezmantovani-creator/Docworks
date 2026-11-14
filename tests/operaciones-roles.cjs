@@ -161,6 +161,13 @@ const casosPartes=[
  let sent;const sourceOp={...fakeOp,broker_id:'broker',plantilla_snapshot:{version:7},comprador_cotitulares:[{nombre:'[COTITULAR]'}]};
  a=app.crearAccionesPrueba({...initial,operaciones:[sourceOp]},{guardar:op=>{sent=op;return Promise.resolve({operacion:op})}},context('broker','broker'));
  await a.duplicarOp(sourceOp);check('duplicar autorizado conserva snapshot y cotitulares',()=>{assert.deepEqual(sent.plantilla_snapshot,sourceOp.plantilla_snapshot);assert.deepEqual(sent.comprador_cotitulares,sourceOp.comprador_cotitulares);assert.equal(sent.estado,'borrador');assert.notEqual(sent.id,sourceOp.id)});
+ await a.duplicarOp({...sourceOp,parent_id:'reserva-origen',historial_operacion:[{accion:'Previa'}],negociacion_historial:[{accion:'Previa'}],tareas_done:{visita:true}});
+ check('duplicar documento vinculado crea operación independiente sin historial anterior',()=>{
+  assert.equal(sent.parent_id,null);
+  assert.deepEqual(sent.historial_operacion,[]);
+  assert.deepEqual(sent.negociacion_historial,[]);
+  assert.deepEqual(sent.tareas_done,{});
+ });
  a=app.crearAccionesPrueba({...initial,operaciones:[sourceOp]},{guardar:op=>{sent=op;return Promise.resolve({operacion:op})}},context('broker','broker'));await a.convertirABoleto(sourceOp);
  check('conversión confirmada abre el nuevo documento propio',()=>{assert.equal(a.estado().formTipo,'boleto');assert.equal(a.estado().showForm,true);assert.equal(sent.parent_id,'op-own');assert.equal(sent.broker_id,'broker')});
  check('documento vinculado captura su propio modelo antes del primer guardado',()=>{assert.equal(sent.plantilla_snapshot.tipo,'boleto');assert.ok(sent.plantilla_snapshot.body_blocks.length>0);assert.equal(sent.plantilla_version,1)});
