@@ -2125,6 +2125,84 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .dw-dashboard-root .op-card-premium .op-card-side .op-side-progress .op-progress-pct{min-width:32px;font-size:11px!important}
 }
 
+
+/* 6.55 — Operaciones: acciones discretas y progreso superior, sin columnas de botones gigantes. */
+.op-progress-heading{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.op-progress-heading .op-progress-pct{min-width:0;font-size:11px;text-align:right}
+.op-side-progress .op-progress-row{min-width:0;margin-top:5px}
+.op-action-zone{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:6px;min-width:0}
+.op-action-doc{display:flex;align-items:center;justify-content:flex-end;min-width:0}
+.op-action-doc .op-add-doc-action{font-size:11px;min-height:32px;padding:5px 9px}
+@media(min-width:761px){
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions{width:auto!important;flex:0 1 auto!important;margin:0!important;gap:6px!important}
+}
+@media(max-width:760px), (orientation:landscape) and (max-height:500px) and (hover:none) and (pointer:coarse) and (max-width:1100px){
+  .dw-dashboard-root .op-card-premium{padding:11px 12px 10px 15px!important}
+  .dw-dashboard-root .op-card-premium .op-card-inner{
+    display:grid!important;grid-template-columns:minmax(0,1fr) minmax(106px,33%)!important;
+    align-items:start!important;gap:8px 10px!important;padding:0!important;
+    width:100%!important;min-width:0!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-inner>div:first-child{
+    grid-column:1;grid-row:1;min-width:0!important;width:auto!important
+  }
+  .dw-dashboard-root .op-doc-card .op-card-inner>div:first-child{grid-column:1/-1!important}
+  .dw-dashboard-root .op-card-premium .op-card-side{display:contents!important}
+  .dw-dashboard-root .op-card-premium .op-card-side>.op-side-progress{
+    display:block!important;grid-column:2;grid-row:1;min-width:0!important;
+    max-width:100%!important;width:100%!important;align-self:start
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-side-progress .op-side-label{
+    display:inline!important;font-size:10px!important;letter-spacing:0!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-side-progress .op-progress-pct{
+    font-size:10.5px!important;min-width:0!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-side-progress .op-progress-row{
+    min-width:0!important;margin-top:4px!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side>div:has(>.op-action-zone){
+    grid-column:1/-1!important;grid-row:2!important;
+    display:block!important;width:100%!important;min-width:0!important;margin:0!important
+  }
+  .dw-dashboard-root .op-card-premium .op-action-zone{
+    display:flex!important;flex-direction:column!important;align-items:stretch!important;
+    justify-content:flex-end!important;gap:5px!important;width:100%!important
+  }
+  .dw-dashboard-root .op-card-premium .op-action-doc{width:100%!important;justify-content:flex-end!important}
+  .dw-dashboard-root .op-card-premium .op-action-doc .op-add-doc-action{
+    display:inline-flex!important;flex:0 0 auto!important;min-height:30px!important;
+    padding:4px 10px!important;background:transparent!important;border:1px solid var(--border2)!important;
+    color:var(--muted)!important;border-radius:8px!important;
+    font-size:11px!important;gap:4px!important;white-space:nowrap!important
+  }
+  .dw-dashboard-root .op-card-premium .op-action-doc .op-add-doc-action svg{
+    display:inline-block!important;width:11px!important;height:11px!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions{
+    display:flex!important;flex-wrap:nowrap!important;align-items:center!important;
+    justify-content:flex-end!important;align-self:flex-end!important;
+    width:max-content!important;max-width:100%!important;min-width:0!important;
+    margin:0 0 0 auto!important;padding:0!important;gap:5px!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{
+    display:inline-flex!important;flex:0 0 auto!important;
+    width:auto!important;max-width:none!important;min-width:0!important;
+    min-height:38px!important;padding:6px 10px!important;
+    box-sizing:border-box!important;font-size:11.5px!important;gap:5px!important;
+    white-space:nowrap!important;justify-content:center!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>div:last-child{
+    display:block!important;flex:0 0 38px!important;
+    width:38px!important;min-width:38px!important;max-width:38px!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions .op-more{
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    width:38px!important;min-width:38px!important;max-width:38px!important;
+    min-height:38px!important;padding:0!important
+  }
+}
+
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
 .dw-operation-page-heading{z-index:40;isolation:isolate;background-color:var(--bg)!important;background-image:none;backdrop-filter:none;opacity:1;flex-shrink:0;box-shadow:0 7px 0 var(--bg)}
 .dw-operation-page-heading::before{content:"";position:absolute;inset:-30px -28px 0;background:var(--bg);z-index:-1;pointer-events:none}
@@ -4600,11 +4678,13 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     var removiendo = !!removingIds[op.id];
 
     const acciones=(
-      <div className="op-actions" role="group" aria-label="Acciones de la operación" style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,flexWrap:"nowrap"}}>
-        {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={13}/> <span className="op-doc-label-desktop">{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span><span className="op-doc-label-mobile">Documento</span></Btn>}
-        <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} style={{minWidth:94,justifyContent:"center",fontWeight:800,padding:"9px 14px"}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
-        {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} style={{minWidth:88,justifyContent:"center",fontWeight:700,padding:"9px 13px"}}><DWIcon name="edit" size={13}/> Editar</Btn>}
-        <Dropdown items={menuItems}/>
+      <div className="op-action-zone">
+        {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<div className="op-action-doc"><Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={12}/> <span className="op-doc-label-desktop">{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span><span className="op-doc-label-mobile">Documento</span></Btn></div>}
+        <div className="op-actions" role="group" aria-label="Acciones de la operación">
+          <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} className="op-open-action" style={{fontWeight:800}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
+          {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} className="op-edit-action" style={{fontWeight:700}}><DWIcon name="edit" size={13}/> Editar</Btn>}
+          <Dropdown items={menuItems}/>
+        </div>
       </div>
     );
 
@@ -4651,7 +4731,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     var detallePendientes=getCamposFaltantesDetalle(op,perfil);
     var pendientesPrincipales=detallePendientes.filter(function(f){return camposCriticos.some(function(c){return c[0]===f.campo;});}).length;
     var progreso=camposCriticos.length>0?Math.max(0,Math.min(100,Math.round((1-pendientesPrincipales/camposCriticos.length)*100))):0;
-    var etiquetaProgreso="Datos principales";
+    var etiquetaProgreso="Progreso";
     var ultima=op.actualizado_en||op.updated_at||op.created_at;
     function haceFecha(v){if(!v)return "Sin actividad";var d=new Date(v);if(!Number.isFinite(d.getTime()))return "Fecha no disponible";var ms=Math.max(0,Date.now()-d.getTime()),min=Math.floor(ms/60000),hor=Math.floor(min/60),dias=Math.floor(hor/24);if(min<1)return "Ahora";if(min<60)return "Hace "+min+" min";if(hor<24)return "Hace "+hor+" h";if(dias<30)return "Hace "+dias+" día"+(dias===1?"":"s");return d.toLocaleDateString("es-AR");}
     var direccion=op.inmueble_direccion||"";
@@ -4682,7 +4762,10 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
           <div className="op-card-side">
             <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{haceFecha(ultima)}</div></div>
             <div><div className="op-docs-count">{docsHechos} {docsHechos===1?"documento":"documentos"}</div></div>
-            <div className="op-side-progress"><div className="op-side-label">{etiquetaProgreso}</div><div className="op-progress-row" role="progressbar" aria-label={etiquetaProgreso} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progreso}><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}%</span></div></div>
+            <div className="op-side-progress" title="Se calcula según los campos esenciales cargados.">
+              <div className="op-progress-heading"><span className="op-side-label">{etiquetaProgreso}</span><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}%</span></div>
+              <div className="op-progress-row" role="progressbar" aria-label="Progreso de campos esenciales" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progreso}><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div></div>
+            </div>
             <div>{acciones}</div>
             {op.broker_nombre||op.broker?<div className="op-side-extra"><div className="op-side-label">Agente</div><div style={{fontSize:12,fontWeight:650,color:"var(--text)",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{op.broker_nombre||op.broker}</div></div>:null}
           </div>
@@ -6154,7 +6237,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
-          <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.05em"}} title="No se cuentan los datos opcionales.">Datos principales</span>
+          <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.05em"}} title="Se cuentan los campos esenciales completados, no los opcionales.">Progreso</span>
           <span style={{fontSize:12,fontWeight:700,color:pct===100?"var(--green)":"var(--gold)"}}>{pct}%</span>
         </div>
         <div role="progressbar" aria-label="Datos esenciales completados" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:10,overflow:"hidden"}}>
