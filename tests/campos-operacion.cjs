@@ -14,7 +14,7 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
  function render(Component,extra={}){root.render(a.createElement(Component,{data:state,onChange:(k,v)=>{if(Object.is(state[k],v))return;state={...state,[k]:v};render(Component,extra)},equipo:[],faltantes:[],...extra}));}
  let campoRevision=null;
  state={...a.EMPTY_OP,tipo:'reserva'};
- await a.act(async()=>render(a.PasoResumenFinal,{clausulas:[],perfil:{},onVolver:campo=>{campoRevision=campo;},onFinalizarAccion:()=>{}}));
+ await a.act(async()=>render(a.PasoResumenFinal,{clausulas:[],perfil:{},onVolver:campo=>{campoRevision=campo;},onFinalizarAccion:()=>{},puedeGuardar:false}));
  const pendientesRevision=a.getCamposFaltantesDetalle(state,{});
  check('el resumen muestra una única lista de datos pendientes',()=>{
   assert.ok(pendientesRevision.length>0);
@@ -23,9 +23,11 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
   assert.ok(!document.body.textContent.includes('Ficha técnica de todo lo cargado'));
   assert.ok(!document.body.textContent.includes('No agregaste cláusulas adicionales'));
  });
+ check('sin datos, guardar o emitir queda deshabilitado',()=>assert.equal([...document.querySelectorAll('button')].find(b=>b.textContent.includes('Guardar o emitir')).disabled,true));
  await click(document.querySelector('[aria-label="Datos para completar"] button'));
  check('tocar dato pendiente regresa a su campo sin pérdida de navegación',()=>assert.equal(campoRevision,pendientesRevision[0].campo));
  let finalizacion=null;
+ state={...a.EMPTY_OP,tipo:'reserva',comprador_nombre:'Comprador de prueba'};
  await a.act(async()=>render(a.PasoResumenFinal,{clausulas:[],perfil:{},onVolver:()=>{},onFinalizarAccion:(accion,estado)=>{finalizacion={accion,estado};}}));
  await click([...document.querySelectorAll('button')].find(b=>b.textContent.includes('Guardar o emitir')));
  check('estado y acciones se ven en el mismo diálogo',()=>{

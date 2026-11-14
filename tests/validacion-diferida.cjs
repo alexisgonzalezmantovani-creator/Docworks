@@ -12,12 +12,16 @@ assert.match(form,/const camposFaltantes = \[\];/,'No pasar faltantes a campos d
 assert.match(form,/const faltantesDetalle = getCamposFaltantesDetalle\(data,perfil\)/,'Mantener validación documental');
 assert.doesNotMatch(form,/step>total&&<div role="status"/,'Evitar duplicar estado del resumen en el formulario');
 assert.match(form,/<PasoResumenFinal data=\{data\}/,'El resumen es el único responsable de mostrar faltantes');
+assert.match(form,/puedeGuardar=\{modoEdicion\|\|draftTieneContenido\(data\)\}/,'No habilitar guardado de operaciones nuevas sin datos');
+assert.doesNotMatch(form,/inmueble_(?:documentacion_(?:actual|detalle)|ocupacion_(?:actual|detalle)|deudas_(?:estado|detalle))\s*:\s*op\./,'No copiar datos históricos retirados a refuerzos o devoluciones');
+assert.doesNotMatch(form,/clausulas_ids:op\.clausulas_ids/,'No heredar cláusulas de otra clase de documento');
+assert.equal((form.match(/clausulas_ids:Array\.isArray\(data\.clausulas_ids\)\?data\.clausulas_ids:\[\]/g)||[]).length,2,'Refuerzo y devolución respetan sus propias cláusulas');
 assert.match(form,/document\.querySelectorAll\("\[data-falta\]"\)/,'Limpiar marcas heredadas');
 assert.doesNotMatch(form,/setAttribute\("data-falta"/,'No reintroducir bordes rojos vía DOM');
 assert.match(form,/<Btn onClick=\{avanzarConAviso\}>Continuar →<\/Btn>/,'Continuar siempre mantiene una sola acción');
 assert.doesNotMatch(form,/Continuar igual →|setAvisoPaso\(true\)/,'No pedir un segundo toque para avanzar');
 assert.match(form,/setStep\(function\(s\)\{return Math\.min\(s\+1,total\+1\);\}\)/,'Avanzar directamente sin bloquear por campos pendientes');
-assert.match(form,/Revisar documento →/,'Conservar revisión final');
+assert.match(form,/Revisar →/,'Conservar revisión final compacta');
 assert.match(form,/draftTieneContenido\(data\) \? \{ data:data/,'No persistir un formulario vacío como borrador');
 assert.match(form,/dw-operation-save-slot/,'Indicador de guardado junto a siguiente');
 assert.match(form,/if\(!initial && !draftTieneContenido\(dataRef\.current\)\) return;/,'Impedir guardar operaciones nuevas vacías');
@@ -26,6 +30,7 @@ const resumen=app.slice(app.indexOf('function PasoResumenFinal('),app.indexOf('\
 assert.match(resumen,/aria-label="Datos para completar"/,'Mostrar lista accesible de faltantes solo en revisión');
 assert.doesNotMatch(resumen,/menuPaso|setMenuPaso/,'Guardar y emitir no tiene pantalla intermedia');
 assert.match(resumen,/aria-pressed=\{sel\}/,'Los estados indican la selección activa');
+assert.match(resumen,/disabled=\{!puedeGuardar\}/,'El CTA de guardar refleja que la operación tenga datos');
 assert.doesNotMatch(resumen,/Revisar faltantes \(/,'Evitar segundo botón de revisión');
 const clauses=app.slice(app.indexOf('function StepClausulas('),app.indexOf('function StepBar('));
 assert.match(clauses,/if\(activando\)\s*\{\s*if\(cfg\)onChange\(cfg\.campo\+"_id",id\);\s*setClausulaExpandida\(id\);/,'Activar cualquier cláusula abre su detalle');

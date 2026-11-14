@@ -6021,12 +6021,6 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // no volver a tipear todos los datos de las partes y el inmueble.
   function elegirReservaParaDevolucion(op){
     setBulk({...datosCompraCompartidos(op),
-      inmueble_documentacion_actual:op.inmueble_documentacion_actual||"",
-      inmueble_documentacion_detalle:op.inmueble_documentacion_detalle||"",
-      inmueble_ocupacion_actual:op.inmueble_ocupacion_actual||"",
-      inmueble_ocupacion_detalle:op.inmueble_ocupacion_detalle||"",
-      inmueble_deudas_estado:op.inmueble_deudas_estado||"",
-      inmueble_deudas_detalle:op.inmueble_deudas_detalle||"",
       compra_instrumento:op.compra_instrumento||"escritura",
       compra_boleto_origen:op.compra_boleto_origen||"",
       parent_id: op.id,
@@ -6036,18 +6030,13 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       inmueble_tipo:op.inmueble_tipo||"departamento", inmueble_tipo_otro:op.inmueble_tipo_otro||"", inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"", inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",
       precio:op.anticipo??"", moneda:op.moneda||"USD",
       devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",
-      clausulas_ids:op.clausulas_ids||[]
+      clausulas_ids:Array.isArray(data.clausulas_ids)?data.clausulas_ids:[],
+      clausulas_custom:data.clausulas_custom||"", clausulas_custom_titulo:data.clausulas_custom_titulo||""
     });
     setStep(2);
   }
   function elegirReservaParaRefuerzo(op){
     setBulk({...datosCompraCompartidos(op),
-      inmueble_documentacion_actual:op.inmueble_documentacion_actual||"",
-      inmueble_documentacion_detalle:op.inmueble_documentacion_detalle||"",
-      inmueble_ocupacion_actual:op.inmueble_ocupacion_actual||"",
-      inmueble_ocupacion_detalle:op.inmueble_ocupacion_detalle||"",
-      inmueble_deudas_estado:op.inmueble_deudas_estado||"",
-      inmueble_deudas_detalle:op.inmueble_deudas_detalle||"",
       compra_instrumento:op.compra_instrumento||"escritura",
       compra_boleto_origen:op.compra_boleto_origen||"",
       parent_id: op.id,
@@ -6061,7 +6050,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
       inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",
       moneda:op.moneda||"USD",
       refuerzo_trayectoria:antecedenteReservaParaRefuerzo(op),
-      clausulas_ids:op.clausulas_ids||[], clausulas_custom:op.clausulas_custom||"", clausulas_custom_titulo:op.clausulas_custom_titulo||"",
+      clausulas_ids:Array.isArray(data.clausulas_ids)?data.clausulas_ids:[], clausulas_custom:data.clausulas_custom||"", clausulas_custom_titulo:data.clausulas_custom_titulo||"",
     });
     setStep(2);
   }
@@ -6159,7 +6148,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           <div style={{height:"100%",width:pct+"%",background:pct===100?"linear-gradient(90deg,#22c55e,#4ade80)":"linear-gradient(90deg,#c9962a,var(--gold),var(--gold2))",borderRadius:10,transition:"width 0.4s cubic-bezier(0.4,0,0.2,1)"}}/>
         </div>
       </div>
-      <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} perfil={perfil} esContratoPropioOp={esContratoPropioOp} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
+      <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} perfil={perfil} esContratoPropioOp={esContratoPropioOp} puedeGuardar={modoEdicion||draftTieneContenido(data)} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
       {step<=total&&<div className="dw-operation-form-footer">
         <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Volver a opciones":"← Anterior"}</Btn>
         <div className="dw-operation-form-actions">
@@ -6167,7 +6156,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           <div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar documento →</Btn>}
+            {step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
           </div>
         </div>
       </div>}

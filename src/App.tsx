@@ -6000,7 +6000,7 @@ function getProximoPasoOperacion(op, operaciones){
   if(op.proceso_estado==="en_negociacion") return {icon:"↔",texto:"Continuar negociación",tone:"var(--gold)"};
   return {icon:"→",texto:"Continuar documentación / cierre",tone:"var(--teal)"};
 }
-function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esContratoPropioOp=false}){
+function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esContratoPropioOp=false,puedeGuardar=true}){
   var partes=getResumenPartes(data);
   var monto=getResumenMonto(data);
   var faltantes=getCamposFaltantesDetalle(data,perfil);
@@ -6019,7 +6019,7 @@ function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esCo
   ];
   return(
     <div>
-      <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:3}}>Resumen — revisá antes de emitir</div>
+      <div style={{fontSize:15,fontWeight:700,color:"var(--text)",marginBottom:3}}>Revisión final</div>
       <div role="status" style={{fontSize:12.5,fontWeight:700,color:faltantes.length?"var(--gold)":"var(--green)",marginBottom:12}}>
         {faltantes.length?"⚠ "+faltantes.length+" "+(faltantes.length===1?"dato pendiente":"datos pendientes"):"✓ Sin datos pendientes"}
       </div>
@@ -6055,7 +6055,7 @@ function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esCo
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:6}}>
         <Btn v="ghost" className="dw-operation-back" onClick={onVolver}>← Volver a editar</Btn>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
-          <Btn v="success" onClick={abrirMenu}>Guardar o emitir →</Btn>
+          <Btn v="success" disabled={!puedeGuardar} onClick={abrirMenu}>Guardar o emitir →</Btn>
         </div>
       </div>
       <Modal open={showMenu} onClose={function(){setShowMenu(false);}} title="Guardar o emitir">
@@ -9546,7 +9546,7 @@ function DocWorksApp(){
                 <section className="dw-operation-page" aria-label={editOp?"Editar operación":"Nueva operación"}>
                   <div className="dw-operation-page-heading">
                     <div><div className="dw-operation-page-breadcrumb">Operaciones</div><h1>{editOp?((formTipo||editOp.tipo)==="alquiler"?"Contrato de locación":TIPOS[formTipo||editOp.tipo]||"Editar operación"):(TITULOS_NUEVA_OPERACION[formTipo]||"Nueva operación")}</h1></div>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={cerrarFormularioSeguro}>Volver a operaciones</button>
+                    <button type="button" aria-label="Volver a operaciones" className="btn btn-secondary btn-sm" onClick={cerrarFormularioSeguro}>← Volver</button>
                   </div>
                   <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
                 </section>
