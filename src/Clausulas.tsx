@@ -64,7 +64,7 @@ export var DEFAULT_BLOQUES_RESERVA = [
     variables:[], condicion:null, orden:14, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.refuerzo", titulo:"REFUERZO", sinTitulo:false,
     contenido:"El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva dentro de los 7 días corridos a partir de su conformidad, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-",
-    variables:[], condicion:null, orden:15, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
+    variables:[], condicion:"op_refuerzo", orden:15, activo:true, obligatoria:false, proteccion:"C", permisos_excepcion:[] },
 ];
 
 // Catálogo activo único para Biblioteca y las opciones de cada documento.
