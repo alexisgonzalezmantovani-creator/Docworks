@@ -66,7 +66,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    await page.getByTestId('dw-fullpage-preview').waitFor();
    await page.getByRole('button',{name:'Cerrar vista previa'}).click();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' '+tipo+' overflow');checks++;
-   await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
+   await page.getByRole('button',{name:'＋ Escribir cláusula del modelo',exact:true}).click();
    await page.locator('textarea').fill('Texto de prueba móvil.');
    const chips=await page.getByRole('button',{name:/^\+/}).allTextContents();
    assert.equal(new Set(chips).size,chips.length,name+' '+tipo+' etiquetas de chips');checks++;
@@ -74,7 +74,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
 
    await page.getByRole('button',{name:'Guardar cláusula',exact:true}).click();
    await page.locator('textarea').waitFor({state:'detached'});checks++;
-   await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
+   await page.getByRole('button',{name:'＋ Escribir cláusula del modelo',exact:true}).click();
    await page.locator('textarea').fill('Borrador que debe sobrevivir al cancelar la salida.');
    await page.getByRole('button',{name:'Salir del modelo',exact:true}).click();
    await page.getByRole('button',{name:'Cancelar',exact:true}).last().dispatchEvent('click');
@@ -222,7 +222,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
   await nav.getByRole('button',{name:'Modelos de documentos',exact:true}).click();
   await page.locator('#dw-model-clauses > summary').click();
-  await page.getByRole('button',{name:'＋ Agregar cláusula',exact:true}).click();
+  await page.getByRole('button',{name:'＋ Escribir cláusula del modelo',exact:true}).click();
   await page.locator('textarea').fill('Borrador conservado al cambiar de sección.');
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
   await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();

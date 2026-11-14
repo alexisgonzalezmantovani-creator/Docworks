@@ -20,7 +20,7 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
   function render(){root.render(require(path.join(tmp,'ui.cjs')).defaultUI||require('react').createElement(app.CuerpoPlantillaPanel,{perfil:profile,tipo,puedeEditar:true,clausulas:[],onChange:async next=>{saves++;if(fail)return {error:new Error('fallo simulado')};profile=next;render();return {};}}));}
   // Bundle and harness must share React for hooks; createElement only creates data.
   await app.act(async()=>render());
-  await click(button('＋ Agregar cláusula'));
+  await click(button('＋ Escribir cláusula del modelo'));
   check(tipo+' alta no persiste',()=>assert.equal(saves,0));
   check(tipo+' sólo muestra hasta cinco campos sugeridos al abrir',()=>assert.ok(document.querySelectorAll('button[title^="Insertar "]').length<=5));
   check(tipo+' mantiene el catálogo oculto por defecto',()=>assert.equal(document.querySelector('input[aria-label="Buscar entre todos los campos de la cláusula"]'),null));
@@ -52,11 +52,11 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
   await app.act(async()=>app.navegarConProteccionModelo(()=>navigated++));
   await app.act(async()=>pendingConfirm());
   check(tipo+' confirmar navegación descarta sin persistir',()=>{assert.equal(navigated,1);assert.equal(saves,0);assert.equal(document.querySelector('textarea'),null);});
-  autoConfirm=true;await click(button('＋ Agregar cláusula'));
+  autoConfirm=true;await click(button('＋ Escribir cláusula del modelo'));
 
   await click(button('Cancelar'));
   check(tipo+' cancelar confirma y descarta',()=>{assert.equal(document.querySelector('textarea'),null);assert.equal(saves,0);});
-  await click(button('＋ Agregar cláusula'));
+  await click(button('＋ Escribir cláusula del modelo'));
   await fill(document.querySelector('input.inp'),'Cláusula personalizada');
   await fill(document.querySelector('textarea'),'Texto guardado de prueba.');
   fail=true;await click(button('Guardar cláusula'));
@@ -69,7 +69,7 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
   await app.act(async()=>root.unmount());
   const readOnly=app.createRoot(document.getElementById('test'));
   await app.act(async()=>readOnly.render(require('react').createElement(app.CuerpoPlantillaPanel,{perfil:profile,tipo,puedeEditar:false,clausulas:[],onChange:()=>{throw new Error('Solo lectura');}})));
-  check(tipo+' edición protegida',()=>assert.ok(!buttons().some(b=>['Editar','＋ Agregar cláusula'].includes(b.textContent.trim()))));
+  check(tipo+' edición protegida',()=>assert.ok(!buttons().some(b=>['Editar','＋ Escribir cláusula del modelo'].includes(b.textContent.trim()))));
   await app.act(async()=>readOnly.unmount());
  }
  check('confirmación de descarte en ocho documentos',()=>assert.equal(confirmations,24));
