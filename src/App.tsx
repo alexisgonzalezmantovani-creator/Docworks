@@ -3741,7 +3741,7 @@ function normalizarBodyBlock(b, idx) {
 function migrarBloqueLegacy(b){
   // 4.29: bloques opcionales de la base estándar (se activan con un check en la operación).
   if(b.id==="reserva.refuerzo") b=Object.assign({},b,{condicion:"op_refuerzo",obligatoria:false});
-  if(b.id==="alquiler.seguro") b=Object.assign({},b,{condicion:"op_seguro"});
+  if(b.id==="alquiler.seguro"&&b.condicion!=="op_seguro_esencial") b=Object.assign({},b,{condicion:"op_seguro"});
   var c=String(b.contenido||"");
   if(c.indexOf("{{inmueble_provincia}}{{nomenclatura_catastral}}")>=0){
     b=Object.assign({},b,{contenido:c.split("__none__").join("").split("{{inmueble_provincia}}{{nomenclatura_catastral}}").join("{{inmueble_provincia}}{{nomenclatura_catastral_texto}}")}); c=b.contenido;
@@ -3875,7 +3875,8 @@ function prepararModeloEsencial(bloques,tipo){
   var deFabrica=new Set((BODY_TEMPLATE_PRESETS[tipo]||[]).map(function(x){return x.id;}).concat(bloquesBaseObligatoriosPorTipo(tipo).map(function(x){return x.id;})));
   return (bloques||[]).map(function(b){
     if(!deFabrica.has(b.id))return Object.assign({},b); // nunca alterar cláusulas propias
-    if(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")return Object.assign({},b,{activo:true,obligatoria:false});
+    if(b.id==="reserva.refuerzo")return Object.assign({},b,{activo:true,obligatoria:false});
+    if(b.id==="alquiler.seguro")return Object.assign({},b,{activo:true,obligatoria:false,condicion:"op_seguro_esencial"});
     if(esClausulaEsencialModelo(b)||ids.indexOf(b.id)!==-1)return Object.assign({},b,{activo:true,obligatoria:true});
     return Object.assign({},b,{activo:false,obligatoria:false});
   });
@@ -3955,10 +3956,23 @@ function getBodyBlocksForDocument(perfil,tipo,bloquesReserva) {
   if(tipo==="reserva"&&Array.isArray(bloquesReserva)&&bloquesReserva.length)return completarClausulasBaseModelo(bloquesReserva,tipo);
   return null;
 }
+// Una cláusula opcional de seguro solo es automática en modelos históricos.
+function seguroSoloSiLoEligen(op,perfil){
+  var snap=op&&op.plantilla_snapshot&&op.plantilla_snapshot.tipo==="alquiler"&&op.plantilla_snapshot;
+  var cfg=perfil&&perfil.plantillas&&perfil.plantillas.alquiler;
+  var bloques=snap&&Array.isArray(snap.body_blocks)&&snap.body_blocks.length?snap.body_blocks:
+    cfg&&Array.isArray(cfg.body_blocks)&&cfg.body_blocks.length?cfg.body_blocks:null;
+  if(bloques){
+    var seguro=bloques.find(function(b){return b&&b.id==="alquiler.seguro";});
+    return !!(seguro&&seguro.condicion==="op_seguro_esencial");
+  }
+  return !!(perfil&&perfil.modelo_inicial_esencial===true);
+}
 function evalBodyCondition(condicion,op){
   if(!condicion) return true;
   if(condicion === "op_refuerzo") return !!(op&&op.reserva_incluye_refuerzo);
   if(condicion === "op_seguro") return !(op&&op.alquiler_incluye_seguro===false);
+  if(condicion === "op_seguro_esencial") return !!(op&&op.alquiler_incluye_seguro===true);
   if(condicion === "moneda_usd") return (op&&op.moneda)==="USD";
   return true;
 }
@@ -5684,10 +5698,11 @@ function StepGarantia({data,onChange,faltantes}){
   );
 }
 
-function SeguroOperacion({data,onChange,faltantes=[]}){
+function SeguroOperacion({data,onChange,faltantes=[],seguroPorDefecto=true}){
+  var seguroMarcado=typeof data.alquiler_incluye_seguro==="boolean"?data.alquiler_incluye_seguro:seguroPorDefecto;
   var items=[];
   // El refuerzo de reserva se configura en Económico, no entre cláusulas opcionales.
-  if(data.tipo==="alquiler") items.push({campo:"alquiler_incluye_seguro",label:"Incluir cláusula de seguro",desc:"Responsabilidad civil e incendio del inmueble. Se incorpora al contrato cuando está incluida.",def:true});
+  if(data.tipo==="alquiler") items.push({campo:"alquiler_incluye_seguro",label:"Incluir seguro",desc:"Responsabilidad civil e incendio.",def:seguroPorDefecto});
   if(!items.length) return null;
   return <div style={{marginBottom:14,padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"rgba(212,168,83,0.04)"}}>
     <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.06em",marginBottom:8}}>Seguro del inmueble</div>
@@ -5695,7 +5710,7 @@ function SeguroOperacion({data,onChange,faltantes=[]}){
       <input type="checkbox" checked={v} onChange={function(e){onChange(it.campo,e.target.checked);}}/>
       <span><b>{it.label}</b><br/><span style={{color:"var(--muted)",fontSize:12}}>{it.desc}</span></span>
     </label>; })}
-    {data.alquiler_incluye_seguro!==false&&<Inp id="dw-field-alquiler_seguro_dias" label="Plazo para contratar el seguro (días)" value={data.alquiler_seguro_dias??"10"} onChange={function(e){onChange("alquiler_seguro_dias",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_seguro_dias","10");}} placeholder="10" type="number" {...estiloCampoFaltante(faltantes,"alquiler_seguro_dias","Ingresá un número válido igual o mayor a cero.")}/>}
+    {seguroMarcado&&<Inp id="dw-field-alquiler_seguro_dias" label="Plazo para contratar el seguro (días)" value={data.alquiler_seguro_dias??"10"} onChange={function(e){onChange("alquiler_seguro_dias",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_seguro_dias","10");}} placeholder="10" type="number" {...estiloCampoFaltante(faltantes,"alquiler_seguro_dias","Ingresá un número válido igual o mayor a cero.")}/>}
   </div>;
 }
 function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]}){
@@ -5747,7 +5762,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   async function completarRedaccionIA(){if(loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){setTituloCustom(d.titulo||"");setContenidoCustom(d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
   function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}if(String(contenidoCustom||"").trim()){requestDwConfirm("Ya tenés una cláusula escrita. ¿Reemplazarla por el texto redactado con IA?",function(){void completarRedaccionIA();},"Reemplazar");return;}void completarRedaccionIA();}
   return <div>
-    <SeguroOperacion data={data} onChange={onChange} faltantes={faltantes}/>
+    <SeguroOperacion data={data} onChange={onChange} faltantes={faltantes} seguroPorDefecto={!seguroSoloSiLoEligen(data,perfil)}/>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",margin:"2px 0 8px"}}>
       <span style={{fontSize:12,fontWeight:750,color:"var(--text)"}}>Cláusulas adicionales</span>
       <span role="status" style={{fontSize:12,color:cantidadSeleccionadas?"var(--green)":"var(--dim)"}}>{cantidadSeleccionadas===0?"Sin extras":cantidadSeleccionadas===1?"1 agregada":cantidadSeleccionadas+" agregadas"}</span>
@@ -6980,9 +6995,9 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     if(!puedeEditar||editId||status==="saving")return;
     var reducido=prepararModeloEsencial(draft,tipo);
     if(!reducido){dwNotify("info","Este documento ya utiliza un modelo breve.");return;}
-    var cambiados=reducido.filter(function(b,i){return (b.activo!==false)!==(draft[i].activo!==false)||b.obligatoria!==draft[i].obligatoria;}).length;
+    var cambiados=reducido.filter(function(b,i){return (b.activo!==false)!==(draft[i].activo!==false)||b.obligatoria!==draft[i].obligatoria||b.condicion!==draft[i].condicion;}).length;
     if(!cambiados){dwNotify("info","El modelo ya está en su versión esencial.");return;}
-    requestDwConfirm("¿Usar el modelo esencial de "+(TIPOS[tipo]||tipo)+"? Se desactivarán "+cambiados+" condiciones de fábrica no necesarias en el modelo simple. Se conservan sus textos, las cláusulas propias y las operaciones anteriores.",function(){
+    requestDwConfirm("¿Usar el modelo esencial de "+(TIPOS[tipo]||tipo)+"? Se conservarán todas las cláusulas y operaciones anteriores; solo cambiarán las condiciones incluidas automáticamente en este modelo.",function(){
       var copia={fecha:new Date().toISOString(),clausulas:draft.map(function(b,i){return Object.assign({},b,{orden:Number(b.orden)||i+1});})};
       void persist(reducido,{copiaAnteriorEsencial:copia});
     });
