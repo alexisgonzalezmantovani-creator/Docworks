@@ -91,7 +91,7 @@ let checks=0;function check(label,fn){fn();checks++;console.log('OK',label);}
  check('selector con ocho documentos y selección explícita',()=>{assert.equal(document.querySelectorAll('#dw-modelo-documento button').length,8);assert.equal(document.querySelectorAll('#dw-modelo-documento button[aria-pressed=true]').length,1);});
  await click([...document.querySelectorAll('#dw-modelo-documento button')].find(b=>b.textContent===a.TIPOS.reserva_alquiler));
  check('botón cambia el documento',()=>assert.equal(document.querySelector('#dw-modelo-documento [aria-pressed=true]').textContent,a.TIPOS.reserva_alquiler));
- await click(button('Biblioteca de cláusulas'));
+ await click(button('Cláusulas'));
  check('biblioteca tiene Todos los documentos y creación alineada en el mismo selector',()=>{assert.equal(document.querySelectorAll('#dw-biblioteca-documento .dw-document-choice').length,9);assert.equal(document.querySelectorAll('#dw-biblioteca-documento .dw-document-grid button').length,8);assert.ok(document.querySelector('#dw-biblioteca-documento .dw-document-selector-head [data-document-type=todas]'));assert.ok(document.querySelector('#dw-biblioteca-documento .dw-document-selector-head').textContent.includes('Crear cláusula'));assert.ok(!document.body.textContent.includes('Ideas de cláusulas de fábrica'));});
  await a.act(async()=>root.unmount());dom.window.close();console.log('APROBADAS',checks,'verificaciones de la tanda.');
 })().catch(e=>{console.error(e);process.exitCode=1;dom.window.close();});

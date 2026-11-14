@@ -46,14 +46,14 @@ const deps={crear:async c=>{altas++;catalogo.push({...c,id:'nuevo'});return {dat
  async function fill(el,value){assert.ok(el);await a.act(async()=>{const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));})}
  perfil={rol:'dueno',plantillas:{}};catalogo=[existente];altas=0;guardados=0;fallar=true;
  function render(){root.render(a.createElement(a.ClausulasWorkspace,{perfil,clausulas:catalogo,operaciones:[],papeleraClausulas:papelera,onRecargarPapeleraClausulas:()=>{recargas++},onRestaurarClausula:async id=>{restauraciones++;if(fallarRestauracion)return {error:{message:"No se pudo restaurar la condición"}};catalogo=[...catalogo,...papelera.filter(c=>c.id===id)];papelera=papelera.filter(c=>c.id!==id);render();return {}},onAddClausula:async c=>{altas++;const id=altas===1?'uuid-real':'uuid-real-'+altas;catalogo=[...catalogo,{...c,id}];render();return altaPendiente?altaPendiente.promise:{data:id}},onEditClausula:async()=>({}),onSavePerfil:async p=>{guardados++;if(fallar)return {error:{message:'Fallo de red'}};perfil=p;render();return {};} }));}
- await a.act(async()=>render());await click(button('Biblioteca de cláusulas'));await click(button('＋ Crear cláusula para biblioteca'));
+ await a.act(async()=>render());await click(button('Cláusulas'));await click(button('＋ Crear cláusula para biblioteca'));
  check('documentos y disponibilidad se ven sin abrir opciones',()=>{assert.ok(document.querySelector('fieldset').textContent.includes('Aplica a los documentos'));assert.ok([...document.querySelectorAll('input[type=checkbox]')].some(e=>e.checked));assert.ok(!document.body.textContent.includes('Obligatoria en la biblioteca'));});
  await fill(document.querySelector('fieldset input.inp'),nueva.titulo);await fill(document.getElementById('dw-clausula-texto'),nueva.contenido);
  await click(button(a.TIPOS.reserva));
  check('aviso permite comparar el texto original',()=>{assert.ok(document.querySelector('[role=status]').textContent.includes('Podrían tener condiciones o plazos diferentes'));assert.ok(document.querySelector('[role=status] details').textContent.includes('90 días'));});
  await click(button('Guardar y habilitar'));
  check('fallo de habilitación conserva formulario y ofrece reintento',()=>{assert.ok(document.querySelector('fieldset').disabled);assert.equal(document.getElementById('dw-clausula-texto').value,nueva.contenido);assert.ok(document.body.textContent.includes('La cláusula ya está guardada'));assert.ok(button('Reintentar habilitación'));assert.equal(altas,1)});
- await click(button('Modelos de documentos'));
+ await click(button('Documentos'));
  check('salir con habilitación pendiente informa que el texto ya está guardado',()=>{assert.ok(pendingConfirm.message.includes('está guardada en la biblioteca'));assert.ok(pendingConfirm.message.includes('habilitación pendiente'));assert.equal(altas,1);});
  pendingConfirm=null;
  fallar=false;await click(button('Reintentar habilitación'));
@@ -68,13 +68,13 @@ const deps={crear:async c=>{altas++;catalogo.push({...c,id:'nuevo'});return {dat
  await fill(document.querySelector('fieldset input.inp'),'Condición nueva');
  await fill(document.getElementById('dw-clausula-texto'),'Texto de prueba para proteger al salir.');
  const borrador=document.getElementById('dw-clausula-texto').value;
- await click(button('Modelos de documentos'));
+ await click(button('Documentos'));
  check('cambiar de biblioteca a documentos protege el borrador',()=>{assert.ok(pendingConfirm);assert.ok(document.getElementById('dw-clausula-texto'));assert.equal(document.getElementById('dw-clausula-texto').value,borrador);});
  pendingConfirm=null;
  check('cancelar la salida conserva texto sin guardarlo',()=>{assert.equal(altas,2);assert.equal(document.getElementById('dw-clausula-texto').value,borrador);});
- await click(button('Modelos de documentos'));await a.act(async()=>pendingConfirm.onConfirm());pendingConfirm=null;
+ await click(button('Documentos'));await a.act(async()=>pendingConfirm.onConfirm());pendingConfirm=null;
  check('confirmar salida descarta borrador sin crear cláusula',()=>{assert.equal(altas,2);assert.ok(document.getElementById('dw-modelo-documento'));});
- await click(button('Biblioteca de cláusulas'));await click(button('＋ Crear cláusula para biblioteca'));
+ await click(button('Cláusulas'));await click(button('＋ Crear cláusula para biblioteca'));
  await fill(document.querySelector('fieldset input.inp'),'Borrador protegido');await fill(document.getElementById('dw-clausula-texto'),'Texto a conservar si cancelo.');
  const unload=new Event('beforeunload',{cancelable:true});window.dispatchEvent(unload);
  check('recargar la página advierte por borrador pendiente',()=>assert.ok(unload.defaultPrevented));
@@ -97,7 +97,7 @@ const deps={crear:async c=>{altas++;catalogo.push({...c,id:'nuevo'});return {dat
  check('guardar pendiente bloquea la salida sin ofrecer descartar',()=>{assert.equal(fueraDuranteGuardado,0);assert.equal(pendingConfirm,null);assert.equal(document.getElementById('dw-clausula-texto').value,'Texto mientras se espera respuesta.');});
  await a.act(async()=>resolverAlta({data:'uuid-real-3'}));altaPendiente=null;
  check('completar guardado libera el editor normalmente',()=>{assert.equal(document.getElementById('dw-clausula-texto'),null);assert.equal(altas,3);});
- await click(button('Biblioteca de cláusulas'));
+ await click(button('Cláusulas'));
  check('biblioteca activa no mezcla cláusulas eliminadas',()=>{assert.ok(!document.body.textContent.includes('Condición anterior eliminada'));assert.equal(document.getElementById('dw-papelera-titulo'),null);assert.ok(button('Papelera').querySelector('svg'));assert.ok(!button('Papelera').textContent.includes('♻'));});
  await click(button('Papelera'));
  check('papelera abre una sección independiente y recarga',()=>{assert.equal(recargas,1);assert.ok(document.getElementById('dw-papelera-titulo'));assert.equal(document.getElementById('dw-biblioteca-documento'),null);assert.ok(document.body.textContent.includes('Condición anterior eliminada'));assert.ok(document.querySelector('section details').textContent.includes('Texto histórico para recuperar.'));assert.equal([...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Papelera'),false);});
@@ -124,13 +124,13 @@ const deps={crear:async c=>{altas++;catalogo.push({...c,id:'nuevo'});return {dat
  const visibles=()=>[...document.querySelectorAll('[data-clausula-id]')].map(e=>e.dataset.clausulaId);
  async function elegir(id,tipo){await click([...document.getElementById(id).querySelectorAll('button')].find(b=>b.textContent.trim()===(tipo==='todas'?'Todos los documentos':a.TIPOS[tipo])));}
  for(const tipo of a.PLANTILLA_TIPOS){
-  await click(button('Biblioteca de cláusulas'));await elegir('dw-biblioteca-documento',tipo);const idsBiblioteca=visibles();
-  await click(button('Modelos de documentos'));await elegir('dw-modelo-documento',tipo);const idsDocumento=visibles();
+  await click(button('Cláusulas'));await elegir('dw-biblioteca-documento',tipo);const idsBiblioteca=visibles();
+  await click(button('Documentos'));await elegir('dw-modelo-documento',tipo);const idsDocumento=visibles();
   check(tipo+' muestra el mismo catálogo en Biblioteca y Documentos',()=>{assert.deepEqual(idsDocumento,idsBiblioteca);assert.ok(!idsDocumento.includes('uuid-vieja'));assert.ok(!idsDocumento.includes('eliminada-vieja'));assert.ok(!idsDocumento.includes('protegida'));assert.ok(idsDocumento.includes('credito-90'));assert.ok(idsDocumento.includes('credito-sin-plazo'));assert.equal(idsDocumento.includes('solo-boleto'),tipo==='boleto');});
  }
  catalogo=catalogo.filter(c=>c.id!=='credito-90').map(c=>c.id==='credito-sin-plazo'?{...c,titulo:'Crédito hipotecario actualizado'}:c);await a.act(async()=>render());
  check('recargar catálogo actualiza Documentos sin revivir textos anteriores',()=>{assert.ok(!visibles().includes('credito-90'));assert.ok(document.getElementById('dw-model-extra-clauses').textContent.includes('Crédito hipotecario actualizado'));});
- await click(button('Biblioteca de cláusulas'));await elegir('dw-biblioteca-documento','todas');
+ await click(button('Cláusulas'));await elegir('dw-biblioteca-documento','todas');
  check('Biblioteca refleja la misma eliminación y el mismo nombre actualizado',()=>{assert.ok(!visibles().includes('credito-90'));assert.ok(document.body.textContent.includes('Crédito hipotecario actualizado'));});
  perfil={...perfil,rol:'asesor'};await a.act(async()=>render());
  check('asesor no accede a papelera ni a restauración',()=>{assert.ok(![...document.querySelectorAll('button')].some(b=>b.textContent.trim()==='Papelera'));assert.equal(document.getElementById('dw-papelera-titulo'),null);});
