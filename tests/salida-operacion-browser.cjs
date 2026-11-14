@@ -139,7 +139,8 @@ await page.getByRole('switch',{name:'Incluir Entrega amoblada con inventario',ex
 await page.locator('#dw-field-entrega_muebles_detalle').fill('1 mesa y cuatro sillas, buen estado.');assert.equal(await page.locator('#dw-field-entrega_muebles_detalle').count(),1);checks++;
 await page.screenshot({path:out+'/inventario-reserva-alquiler-'+width+'.png'});
 await page.goto(url+'/?editar=1');await page.getByRole('heading',{name:'Contrato de locación',exact:true}).waitFor();checks++;
-assert.equal(await page.locator('.dw-operation-page-breadcrumb').textContent(),'Operaciones / Editar operación');checks++;
+assert.equal(await page.locator('.dw-operation-page-breadcrumb').textContent(),'Operaciones');checks++;
+assert.equal(await page.locator('.dw-operation-page-heading p').count(),0,'No repetir instrucciones debajo del título');checks++;
 assert.equal(await page.getByRole('heading',{name:'Editar operación',exact:true}).count(),0);checks++;
 await page.screenshot({path:out+'/titulo-edicion-'+width+'.png'});
 await page.close();}
