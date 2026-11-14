@@ -249,15 +249,15 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
       </div>}
       {clausulaTab==="biblioteca"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"flex",gap:7,flexWrap:"wrap",alignItems:"center"}}>
-            <input className="inp" style={{flex:"1 1 180px",minWidth:0}} value={filtroTexto} onChange={function(e){setFiltroTexto(e.target.value);}} placeholder="🔎 Buscar por título o texto..."/>
-            <select className="inp" style={{flex:"0 0 auto",width:"auto",minWidth:130}} value={filtroCategoria} onChange={function(e){setFiltroCategoria(e.target.value);}}>
+            <input className="inp" aria-label="Buscar cláusulas por título o texto" style={{flex:"1 1 180px",minWidth:0}} value={filtroTexto} onChange={function(e){setFiltroTexto(e.target.value);}} placeholder="🔎 Buscar por título o texto..."/>
+            <select className="inp" aria-label="Filtrar cláusulas por categoría" style={{flex:"0 0 auto",width:"auto",minWidth:130}} value={filtroCategoria} onChange={function(e){setFiltroCategoria(e.target.value);}}>
               <option value="todas">Todas las categorías</option>
               {CLAUSULA_CATS.map(function(c){return <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>;})}
             </select>
-            <div onClick={function(){setSoloPersonalizadas(function(v){return !v;});}}
-              style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderRadius:10,border:"1px solid "+(soloPersonalizadas?"var(--gold)":"var(--border2)"),background:soloPersonalizadas?"rgba(212,175,55,0.1)":"rgba(255,255,255,0.03)",color:soloPersonalizadas?"var(--gold)":"var(--muted)",fontSize:12,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none"}}>
+            <button type="button" aria-pressed={soloPersonalizadas} onClick={function(){setSoloPersonalizadas(function(v){return !v;});}}
+              style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderRadius:10,border:"1px solid "+(soloPersonalizadas?"var(--gold)":"var(--border2)"),background:soloPersonalizadas?"rgba(212,175,55,0.1)":"rgba(255,255,255,0.03)",color:soloPersonalizadas?"var(--gold)":"var(--muted)",fontSize:12,fontFamily:"inherit",cursor:"pointer",whiteSpace:"nowrap",userSelect:"none"}}>
               {soloPersonalizadas?"✓ ":""}Solo personalizadas
-            </div>
+            </button>
             
           </div>
 
@@ -315,7 +315,8 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   const [seccion,setSeccionDirecto]=useState(perfil&&(perfil.rol==="dueno"||perfil.rol==="admin")?"modelos":"adicionales");
   function setSeccion(next){
     if(next===seccion)return;
-    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setSeccionDirecto(next);if(next==="papelera"){setErrorPapeleraClausulas("");if(onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}}
+    if(seccion==="modelos"&&(opcionalGuardando||estadoClausulaGuardandoRef.current)){setEstadoClausulaError("Terminá de guardar la cláusula antes de salir.");return;}
+    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setBusquedaExtrasModelo("");setSeccionDirecto(next);if(next==="papelera"){setErrorPapeleraClausulas("");if(onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}}
     if(seccion==="adicionales"||verEditorPropio){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando&&next!==seccion)requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",cambiar);else cambiar();
   }
@@ -327,10 +328,10 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var verEditorPropio=modeloPropioActivo||pegarMiContrato;
   const [clausulaEditando,setModeloEditando]=useState(false);
   const [introduccionEditando,setIntroduccionEditando]=useState(false);
-  const modeloEditando=clausulaEditando||introduccionEditando;
   function cambiarDocumento(tipo){
     if(tipo===tipoDocSel)return;
-    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setTipoDocSel(tipo);}
+    if(opcionalGuardando||estadoClausulaGuardandoRef.current){setEstadoClausulaError("Terminá de guardar la cláusula antes de cambiar de documento.");return;}
+    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setOpcionalError("");setBusquedaExtrasModelo("");setTipoDocSel(tipo);}
     if(verEditorPropio){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de cambiar de documento?",cambiar);else cambiar();
   }
@@ -344,11 +345,21 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   const [estadoClausulaError,setEstadoClausulaError]=useState("");
   const [estadoClausulaGuardando,setEstadoClausulaGuardando]=useState(null);
   const estadoClausulaGuardandoRef=useRef(false);
+  const opcionalOriginal=opcionalEditando?(clausulas||[]).find(function(c){return c.id===opcionalEditando;}):null;
+  const opcionalConCambios=!!(opcionalBorrador&&opcionalEditando&&(!opcionalOriginal||
+    opcionalBorrador.titulo!==(opcionalOriginal.titulo||"")||
+    opcionalBorrador.contenido!==(opcionalOriginal.contenido||"")));
+  const modeloEditando=clausulaEditando||introduccionEditando||opcionalConCambios;
   function abrirEdicionOpcional(c){
-    if(!puedeEditar||!c)return;
-    setOpcionalEditando(c.id);
-    setOpcionalBorrador({titulo:c.titulo||"",contenido:c.contenido||"",categoria:c.categoria||"general",tipos:c.tipos||["todos"],obligatoria:!!c.obligatoria});
-    setOpcionalError("");
+    if(!puedeEditar||!c||opcionalGuardando)return;
+    if(opcionalEditando===c.id)return;
+    function abrir(){
+      setOpcionalEditando(c.id);
+      setOpcionalBorrador({titulo:c.titulo||"",contenido:c.contenido||"",categoria:c.categoria||"general",tipos:c.tipos||["todos"],obligatoria:!!c.obligatoria});
+      setOpcionalError("");
+    }
+    if(opcionalConCambios){requestDwConfirm("¿Descartar los cambios sin guardar de esta cláusula antes de editar otra?",abrir);return;}
+    abrir();
   }
   async function guardarEdicionOpcional(){
     if(!opcionalBorrador||!opcionalEditando||opcionalGuardando)return;

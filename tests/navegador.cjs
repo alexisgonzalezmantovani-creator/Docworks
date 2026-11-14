@@ -86,8 +86,9 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    assert.equal(await page.locator('textarea').count(),0);checks++;
    if(tipo==='boleto')await page.screenshot({path:path.join(out,name+'.png'),fullPage:true});
   }
-  // Regression de iPhone/iPad/desktop: botones dentro del sector derecho, sin solaparse.
-  for(const [ancho,alto] of (name==='iphone'?[[320,740],[375,812],[390,844],[430,932]]:[[width,height]])){
+  // Regresión 6.56: barra de progreso y acciones compactas sin solaparse,
+  // tanto con display:contents (iPhone) como con panel lateral (tablet/PC).
+  for(const [ancho,alto] of (name==='iphone'?[[320,740],[375,812],[390,844],[430,932],[844,390]]:[[width,height]])){
    await page.setViewportSize({width:ancho,height:alto});
    await page.goto('http://127.0.0.1:'+server.address().port+'/operaciones');
    await page.locator('.dw-dashboard-root .op-card-premium').first().waitFor();
@@ -97,19 +98,29 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    await page.locator('.op-doc-card').first().waitFor();
    const medidas=await page.locator('.dw-dashboard-root .op-card-premium').evaluateAll(cards=>cards.map(card=>{
     const inner=card.querySelector('.op-card-inner'),izq=inner&&inner.firstElementChild,side=card.querySelector('.op-card-side'),acciones=side&&side.querySelector('.op-actions');
-    const rect=node=>{const r=node.getBoundingClientRect();return {x:r.left,y:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
-    return {izq:rect(izq),side:rect(side),acciones:rect(acciones),card:rect(card),
+    const progreso=side&&side.querySelector('.op-side-progress'),doc=side&&side.querySelector('.op-action-doc button');
+    const rect=node=>{if(!node)return null;const r=node.getBoundingClientRect();return {x:r.left,y:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+    return {izq:rect(izq),side:rect(side),sideDisplay:getComputedStyle(side).display,acciones:rect(acciones),card:rect(card),
+     progreso:rect(progreso),progresoText:progreso&&progreso.querySelector('.op-side-label')?.textContent,doc:rect(doc),docText:doc?.textContent?.trim(),
      buttons:[...acciones.querySelectorAll('button')].filter(b=>getComputedStyle(b).display!=='none').map(rect)};
    }));
    assert.ok(medidas.length>=3,'Se comprueban raíz, carpeta y documento');checks++;
    for(const [i,m] of medidas.entries()){
-    assert.ok(m.side.x>=m.izq.right-2,ancho+' tarjeta '+i+' sector derecho');checks++;
-    assert.ok(m.acciones.x>=m.side.x-2&&m.acciones.right<=m.side.right+2,ancho+' tarjeta '+i+' acciones contenidas');checks++;
+    assert.ok(m.acciones.x>=m.card.x-2&&m.acciones.right<=m.card.right+2,ancho+' tarjeta '+i+' acciones contenidas');checks++;
     assert.ok(m.buttons.length>=3,ancho+' tarjeta '+i+' botones visibles');checks++;
     for(const b of m.buttons)assert.ok(b.width>=30&&b.height>=30&&b.x>=m.card.x-2&&b.right<=m.card.right+2,ancho+' tarjeta '+i+' botón dentro del borde');
     for(let j=0;j<m.buttons.length;j++)for(let k=j+1;k<m.buttons.length;k++){
      const a=m.buttons[j],b=m.buttons[k];
      assert.ok(a.right<=b.x+1||b.right<=a.x+1||a.bottom<=b.y+1||b.bottom<=a.y+1,ancho+' tarjeta '+i+' sin botones superpuestos');
+    }
+    if(m.sideDisplay==='contents'){
+     assert.ok(m.acciones.y>=m.izq.bottom-2,ancho+' tarjeta '+i+' acciones en fila inferior');checks++;
+     assert.ok(m.buttons.every(b=>Math.abs(b.y-m.buttons[0].y)<3),ancho+' tarjeta '+i+' abrir editar y menú juntos');checks++;
+     if(m.progreso){assert.equal(m.progresoText,'Progreso');assert.ok(m.progreso.x>=m.izq.right-3,ancho+' tarjeta '+i+' progreso arriba a la derecha');checks++;}
+     if(m.doc){assert.match(m.docText,/Documento/);assert.ok(m.doc.bottom<=m.acciones.y+2,ancho+' tarjeta '+i+' documento discreto arriba');assert.ok(m.doc.height<=36,ancho+' tarjeta '+i+' documento no gigantesco');checks++;}
+    }else{
+     assert.ok(m.side.x>=m.izq.right-2,ancho+' tarjeta '+i+' sector derecho');checks++;
+     assert.ok(m.acciones.x>=m.side.x-2&&m.acciones.right<=m.side.right+2,ancho+' tarjeta '+i+' acciones contenidas en sector');checks++;
     }
     checks++;
    }
@@ -216,6 +227,18 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   assert.ok((await extras.locator('summary').textContent()).trim().startsWith('Agregar cláusulas ('),'Cantidad visible de cláusulas para el asesor');checks++;
   assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' workspace overflow');checks++;
+  // Una edición de cláusula extra no se pierde al cambiar de documento.
+  const filaExtra=extras.locator('[data-clausula-id="ejemplo-opcional"]');
+  await filaExtra.getByRole('button',{name:'Editar',exact:true}).click();
+  await filaExtra.getByRole('textbox',{name:'Título'}).fill('Edición sin guardar QA');
+  await page.locator('#dw-modelo-documento').getByRole('button',{name:'Boleto de Compraventa',exact:true}).click();
+  await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
+  assert.equal(await page.locator('#dw-modelo-documento [aria-pressed=true]').getAttribute('data-document-type'),'reserva');checks++;
+  assert.equal(await filaExtra.getByRole('textbox',{name:'Título'}).inputValue(),'Edición sin guardar QA');checks++;
+  await page.locator('#dw-modelo-documento').getByRole('button',{name:'Boleto de Compraventa',exact:true}).click();
+  await page.getByRole('button',{name:'Confirmar',exact:true}).click();
+  assert.equal(await page.locator('#dw-modelo-documento [aria-pressed=true]').getAttribute('data-document-type'),'boleto');checks++;
+  await page.locator('#dw-modelo-documento').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
   await page.screenshot({path:path.join(out,'documentos-'+name+'.png'),fullPage:true});
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
   await page.locator('#dw-biblioteca-documento').getByRole('button',{name:'Todos los documentos',exact:true}).click();

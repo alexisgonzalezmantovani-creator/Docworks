@@ -120,7 +120,7 @@ delete global.document;
    });
    const sinSeleccion=app.buildDocSections(app.opParaDocumento({...base,clausulas_ids:[]}),[extra],tipo,bloques);
    check(tipo+" extra no seleccionado queda fuera",()=>assert.ok(!app.docToPlainText(sinSeleccion).includes(marca)));
-   if(tipo==="reserva"||tipo==="alquiler"){
+   { // Verificar que las cláusulas adicionales llegan a PDF y Word en los ocho tipos.
      const pdf=await app.generarPDF(documento,null,{}),word=await app.generarDOCX(documento,{});
      const bytesPdf=Buffer.from(await pdf.blob.arrayBuffer()),bytesWord=Buffer.from(await word.blob.arrayBuffer());
      let xml="";

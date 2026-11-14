@@ -2148,6 +2148,10 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
   .dw-dashboard-root .op-doc-card .op-card-inner>div:first-child{grid-column:1/-1!important}
   .dw-dashboard-root .op-card-premium .op-card-side{display:contents!important}
+  /* Los rótulos de actividad y agente pertenecen a la vista amplia.
+     En móvil no deben ocupar celdas ocultas y romper la fila de acciones. */
+  .dw-dashboard-root .op-card-premium .op-card-side>.op-side-extra:first-child,
+  .dw-dashboard-root .op-card-premium .op-card-side>.op-side-extra:last-child{display:none!important}
   .dw-dashboard-root .op-card-premium .op-card-side>.op-side-progress{
     display:block!important;grid-column:2;grid-row:1;min-width:0!important;
     max-width:100%!important;width:100%!important;align-self:start
@@ -2201,6 +2205,10 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     width:38px!important;min-width:38px!important;max-width:38px!important;
     min-height:38px!important;padding:0!important
   }
+  /* La versión 6.54 forzaba botones grandes: prevalece el tamaño compacto actual. */
+  .dw-dashboard-root .op-card-premium .op-action-zone .op-actions>.btn,
+  .dw-dashboard-root .op-card-premium .op-action-zone .op-actions .op-more{box-shadow:none!important}
+  .dw-dashboard-root .op-card-premium .op-progress-heading{line-height:1.2}
 }
 
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
