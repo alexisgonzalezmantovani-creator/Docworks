@@ -65,11 +65,13 @@ export function resumenPartesOperacion(op,nombreConSufijo){
     var nombre=String(d[campo+"_nombre"]||"").trim();
     return nombre?nombreConSufijo(d,campo,nombre)+" ("+rol+")":"—";
   }
-  if(tipo==="alquiler"||tipo==="reserva_alquiler")return parte("locatario","locatario")+" · "+parte("locador","locador");
-  if(tipo==="comodato")return parte("comprador","comodatario")+" · "+parte("vendedor","comodante");
-  if(tipo==="exclusividad")return parte("vendedor","autorizante")+" · "+parte("comprador","inmobiliaria");
+  // Si ambas partes están vacías mostrar un solo guion; conservar el rol de cada parte que sí tenga nombre.
+  function unirPartes(primera,segunda){return primera==="—"&&segunda==="—"?"—":primera+" · "+segunda;}
+  if(tipo==="alquiler"||tipo==="reserva_alquiler")return unirPartes(parte("locatario","locatario"),parte("locador","locador"));
+  if(tipo==="comodato")return unirPartes(parte("comprador","comodatario"),parte("vendedor","comodante"));
+  if(tipo==="exclusividad")return unirPartes(parte("vendedor","autorizante"),parte("comprador","inmobiliaria"));
   var cesion=(tipo==="reserva"||tipo==="boleto")&&d.compra_instrumento==="cesion_boleto";
-  return parte("comprador",cesion?"cesionario":"comprador")+" · "+parte("vendedor",cesion?"cedente":"vendedor");
+  return unirPartes(parte("comprador",cesion?"cesionario":"comprador"),parte("vendedor",cesion?"cedente":"vendedor"));
 }
 export var CAMPOS_CRITICOS_POR_TIPO = {
   reserva: [["comprador_nombre","Nombre del comprador"],["comprador_dni","DNI del comprador"],["comprador_domicilio","Domicilio del comprador"],["vendedor_nombre","Nombre del vendedor"],["vendedor_dni","DNI del vendedor"],["vendedor_domicilio","Domicilio del vendedor"],["inmueble_direccion","Dirección del inmueble"],["precio","Precio de la operación"],["anticipo","Seña / anticipo (debe ser mayor a 0)"],["reserva_aceptacion_dias","Plazo de aceptación de la reserva"]],

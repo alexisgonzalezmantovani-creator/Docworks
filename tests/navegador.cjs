@@ -38,7 +38,8 @@ function OperacionesHarness(){
  const operaciones=[
   {...EMPTY_OP,id:'reserva-qa',tipo:'reserva',estado:'activo',inmueble_direccion:'Casa modelo en barrio privado',comprador_nombre:'Comprador de prueba',vendedor_nombre:'Vendedor de prueba',precio:'180000',moneda:'USD',created_at:fecha},
   {...EMPTY_OP,id:'carpeta-qa',tipo:'reserva_alquiler',estado:'activo',inmueble_direccion:'Departamento de prueba',locador_nombre:'Locador de prueba',locatario_nombre:'Locatario de prueba',created_at:fecha},
-  {...EMPTY_OP,id:'contrato-qa',tipo:'alquiler',estado:'activo',parent_id:'carpeta-qa',inmueble_direccion:'Departamento de prueba',locador_nombre:'Locador de prueba',locatario_nombre:'Locatario de prueba',created_at:fecha}
+  {...EMPTY_OP,id:'contrato-qa',tipo:'alquiler',estado:'activo',parent_id:'carpeta-qa',inmueble_direccion:'Departamento de prueba',locador_nombre:'Locador de prueba',locatario_nombre:'Locatario de prueba',created_at:fecha},
+  {...EMPTY_OP,id:'sin-datos-qa',tipo:'boleto',estado:'borrador',inmueble_direccion:'',comprador_nombre:'',vendedor_nombre:'',created_at:fecha}
  ];
  return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><main style={{maxWidth:1200,margin:'0 auto',padding:12,boxSizing:'border-box'}}>
  <DashboardView usuarioActual={{id:'qa-dueno',rol_base:'dueno'}} operaciones={operaciones} clausulas={[]} perfil={org} bloquesReserva={[]} papelera={[]}
@@ -92,6 +93,10 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    await page.setViewportSize({width:ancho,height:alto});
    await page.goto('http://127.0.0.1:'+server.address().port+'/operaciones');
    await page.locator('.dw-dashboard-root .op-card-premium').first().waitFor();
+   const vacia=page.locator('.dw-dashboard-root .op-card-premium').filter({has:page.locator('.op-address-missing')}).first();
+   const resumenVacio=await vacia.textContent();
+   assert.ok(resumenVacio.includes('⚠ Falta vendedor'),ancho+' se avisa la parte faltante');checks++;
+   assert.ok(!resumenVacio.includes('— · —'),ancho+' las partes vacías muestran un solo guion');checks++;
    const carpeta=page.locator('.op-folder-chip').first();
    assert.equal(await carpeta.count(),1,'Carpeta visible en QA');checks++;
    await carpeta.click();
