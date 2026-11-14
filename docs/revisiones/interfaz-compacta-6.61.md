@@ -7,3 +7,7 @@
 - Se agregaron regresiones en anchos de 320, 375 y 430 px, además de tablet y escritorio: alineación, tamaño y ausencia de scroll lateral.
 - No se modifican operaciones, cláusulas, configuración de cada inmobiliaria ni contratos exportados.
 - Quedan pendientes activaciones reales de proveedor de correo, CAPTCHA Turnstile y Mercado Pago, más validaciones físicas de Safari.
+
+## Ajuste de regresión
+
+Se mantiene el nombre accesible completo de las pestañas, mientras el texto visible es breve. El título interno de la Papelera pasa a «Cláusulas eliminadas» para que no duplique «Papelera de cláusulas». Las comprobaciones DOM y de navegador se adaptan a esos textos, sin relajar las validaciones de navegación.

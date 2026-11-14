@@ -5,7 +5,7 @@ require(dir+'/node_modules/esbuild').buildSync({stdin:{contents:fs.readFileSync(
 await selectDoc('reserva');
 const modeloAntes=perfil.plantillas.reserva.body_blocks[1].contenido;
 const otraAntes=perfil.plantillas.boleto.body_blocks[1].contenido;
-assert.ok([...document.querySelectorAll('nav button')].some(b=>b.textContent==='Modelos de documentos'),'Nombre claro de la sección');
+assert.ok([...document.querySelectorAll('nav button')].some(b=>b.getAttribute('aria-label')==='Modelos de documentos'&&b.textContent==='Documentos'),'Nombre claro y compacto de la sección');
 assert.equal(document.querySelector('#dw-modelo-documento .dw-document-selector-title').textContent.trim(),'Elegí el documento','Selector sin título confuso');
 const niveles=['#dw-config-introduccion','#dw-model-clauses','#dw-model-extra-clauses','[data-testid=dw-model-actions]','#dw-model-source-switch'].map(selector=>document.querySelector(selector));
 assert.ok(niveles.every(Boolean),'Cinco zonas útiles del editor');
