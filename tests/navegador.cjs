@@ -39,7 +39,7 @@ function OperacionesHarness(){
   {...EMPTY_OP,id:'reserva-qa',tipo:'reserva',estado:'activo',inmueble_direccion:'Casa modelo en barrio privado',comprador_nombre:'Comprador de prueba',vendedor_nombre:'Vendedor de prueba',precio:'180000',moneda:'USD',created_at:fecha},
   {...EMPTY_OP,id:'carpeta-qa',tipo:'reserva_alquiler',estado:'activo',inmueble_direccion:'Departamento de prueba',locador_nombre:'Locador de prueba',locatario_nombre:'Locatario de prueba',created_at:fecha},
   {...EMPTY_OP,id:'contrato-qa',tipo:'alquiler',estado:'activo',parent_id:'carpeta-qa',inmueble_direccion:'Departamento de prueba',locador_nombre:'Locador de prueba',locatario_nombre:'Locatario de prueba',created_at:fecha},
-  {...EMPTY_OP,id:'sin-datos-qa',tipo:'boleto',estado:'borrador',inmueble_direccion:'',comprador_nombre:'',vendedor_nombre:'',created_at:fecha}
+  {...EMPTY_OP,id:'sin-datos-qa',tipo:'boleto',estado:'activo',inmueble_direccion:'',comprador_nombre:'',vendedor_nombre:'',created_at:fecha}
  ];
  return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><main style={{maxWidth:1200,margin:'0 auto',padding:12,boxSizing:'border-box'}}>
  <DashboardView usuarioActual={{id:'qa-dueno',rol_base:'dueno'}} operaciones={operaciones} clausulas={[]} perfil={org} bloquesReserva={[]} papelera={[]}

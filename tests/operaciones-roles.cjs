@@ -58,7 +58,7 @@ const casosPartes=[
  {tipo:'boleto',compra_instrumento:'cesion_boleto',comprador_nombre:'Sofía',vendedor_nombre:'Lucas',esperado:'Sofía (cesionario) · Lucas (cedente)'},
  {tipo:'comodato',comprador_nombre:'Mario',vendedor_nombre:'Rosa',esperado:'Mario (comodatario) · Rosa (comodante)'},
  {tipo:'exclusividad',comprador_nombre:'Bayugar Propiedades',vendedor_nombre:'Julia',esperado:'Julia (autorizante) · Bayugar Propiedades (inmobiliaria)'},
- {tipo:'reserva',comprador_nombre:'',vendedor_nombre:'',esperado:'— · —'}
+ {tipo:'reserva',comprador_nombre:'',vendedor_nombre:'',esperado:'—'}
 ];
 (async()=>{try{
  for(const caso of casosEstadoCarpeta){
