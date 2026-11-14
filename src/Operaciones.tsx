@@ -2205,10 +2205,63 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     width:38px!important;min-width:38px!important;max-width:38px!important;
     min-height:38px!important;padding:0!important
   }
-  /* La versión 6.54 forzaba botones grandes: prevalece el tamaño compacto actual. */
-  .dw-dashboard-root .op-card-premium .op-action-zone .op-actions>.btn,
-  .dw-dashboard-root .op-card-premium .op-action-zone .op-actions .op-more{box-shadow:none!important}
+  /* 6.57: controles de una sola línea. Documento queda a la izquierda como acción
+     secundaria; Abrir, Editar y ⋯ alineados a la derecha, incluso en iPhone SE. */
+  .dw-dashboard-root .op-card-premium .op-action-zone{
+    flex-direction:row!important;flex-wrap:nowrap!important;
+    align-items:center!important;justify-content:space-between!important;
+    border-top:1px solid var(--border)!important;
+    padding-top:7px!important;margin-top:2px!important;gap:4px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-action-doc{
+    flex:0 1 auto!important;min-width:0!important;width:auto!important;
+    justify-content:flex-start!important
+  }
+  .dw-dashboard-root .op-card-premium .op-action-doc .op-add-doc-action{
+    min-height:32px!important;height:32px!important;
+    max-width:100%!important;padding:4px 7px!important;
+    font-size:10.5px!important;font-weight:650!important;
+    border-color:var(--border2)!important;box-shadow:none!important;
+    overflow:hidden!important;white-space:nowrap!important
+  }
+  .dw-dashboard-root .op-card-premium .op-action-doc .op-add-doc-action svg{
+    width:10px!important;height:10px!important;flex-shrink:0!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions{
+    flex:0 0 auto!important;align-self:center!important;gap:4px!important;
+    width:auto!important;max-width:100%!important;margin:0 0 0 auto!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{
+    height:36px!important;min-height:36px!important;
+    padding:5px 8px!important;font-size:11.5px!important;
+    font-weight:700!important;border-radius:8px!important;
+    line-height:1.1!important;box-shadow:none!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.op-open-action{
+    background:rgba(212,168,83,.10)!important;
+    border:1px solid rgba(212,168,83,.38)!important;color:var(--gold)!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.op-edit-action{
+    background:transparent!important;
+    border:1px solid var(--border2)!important;color:var(--text)!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>div:last-child{
+    flex:0 0 36px!important;width:36px!important;min-width:36px!important;max-width:36px!important
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions .op-more{
+    height:36px!important;min-height:36px!important;
+    width:36px!important;min-width:36px!important;max-width:36px!important;
+    border-radius:8px!important;background:transparent!important;
+    border:1px solid var(--border2)!important;color:var(--muted)!important;
+    box-shadow:none!important;font-size:18px!important
+  }
   .dw-dashboard-root .op-card-premium .op-progress-heading{line-height:1.2}
+}
+@media(max-width:355px){
+  .dw-dashboard-root .op-card-premium .op-action-zone{gap:3px!important}
+  .dw-dashboard-root .op-card-premium .op-action-doc .op-add-doc-action{padding:4px 5px!important;font-size:10px!important}
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions{gap:3px!important}
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{padding:5px 6px!important;font-size:11px!important}
 }
 
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */

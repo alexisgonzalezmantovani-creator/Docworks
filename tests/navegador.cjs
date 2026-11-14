@@ -115,9 +115,9 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
     }
     if(m.sideDisplay==='contents'){
      assert.ok(m.acciones.y>=m.izq.bottom-2,ancho+' tarjeta '+i+' acciones en fila inferior');checks++;
-     assert.ok(m.buttons.every(b=>Math.abs(b.y-m.buttons[0].y)<3),ancho+' tarjeta '+i+' abrir editar y menú juntos');checks++;
+     assert.ok(m.buttons.every(b=>Math.abs(b.y-m.buttons[0].y)<3&&b.height<=38),ancho+' tarjeta '+i+' abrir editar y menú compactos');checks++;
      if(m.progreso){assert.equal(m.progresoText,'Progreso');assert.ok(m.progreso.x>=m.izq.right-3,ancho+' tarjeta '+i+' progreso arriba a la derecha');checks++;}
-     if(m.doc){assert.match(m.docText,/Documento/);assert.ok(m.doc.bottom<=m.acciones.y+2,ancho+' tarjeta '+i+' documento discreto arriba');assert.ok(m.doc.height<=36,ancho+' tarjeta '+i+' documento no gigantesco');checks++;}
+     if(m.doc){assert.match(m.docText,/Documento/);assert.ok(Math.abs(m.doc.y-m.acciones.y)<=5,ancho+' tarjeta '+i+' documento y acciones en una sola fila');assert.ok(m.doc.right<=m.acciones.x+1,ancho+' tarjeta '+i+' documento no pisa Abrir');assert.ok(m.doc.height<=36,ancho+' tarjeta '+i+' documento no gigantesco');checks++;}
     }else{
      assert.ok(m.side.x>=m.izq.right-2,ancho+' tarjeta '+i+' sector derecho');checks++;
      assert.ok(m.acciones.x>=m.side.x-2&&m.acciones.right<=m.side.right+2,ancho+' tarjeta '+i+' acciones contenidas en sector');checks++;
