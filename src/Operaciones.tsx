@@ -5,6 +5,7 @@ import { VistaPreviaAspecto } from './VistaPreviaAspecto';
 import { mostrarUbicacionDocumento } from './Exportaciones';
 import { permisosOperacion } from './AccionesOperaciones';
 import { CentroAyuda } from './PrimerosPasos';
+import { prepararTecladoOperacion, avanzarConEnterOperacion } from './NavegacionCamposOperacion';
 // Módulo extraído sin modificar las declaraciones originales.
 export const EMPTY_OP = {
   tipo:"reserva", estado:"borrador", proceso_estado:"pendiente_aceptacion", reserva_aceptacion_dias:"5", reserva_aceptacion_vencimiento:"", negociacion_historial:[],
@@ -5971,6 +5972,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
   // una operación nueva no se muestra nada en rojo hasta que se guarde.
   const modoEdicion = !!initial;
   const [revisando,setRevisando]=useState(false);
+  const camposTecladoRef=useRef(null);
+  // 6.64: preparar «Siguiente» en los campos de una línea, incluso al editar.
+  // Los textarea de inventario, observaciones y cláusulas conservan Enter normal.
+  useEffect(function(){
+    if(step<=total&&camposTecladoRef.current)prepararTecladoOperacion(camposTecladoRef.current);
+  },[step,data,grupo,total]);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
     if(initial) return;
@@ -6319,7 +6326,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,initial
           <div style={{height:"100%",width:pct+"%",background:pct===100?"linear-gradient(90deg,#22c55e,#4ade80)":"linear-gradient(90deg,#c9962a,var(--gold),var(--gold2))",borderRadius:10,transition:"width 0.4s cubic-bezier(0.4,0,0.2,1)"}}/>
         </div>
       </div>
-      <div style={{minHeight:260}}>{step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} perfil={perfil} esContratoPropioOp={esContratoPropioOp} puedeGuardar={modoEdicion||draftTieneContenido(data)} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}</div>
+      <div ref={camposTecladoRef} data-dw-operation-fields style={{minHeight:260}}
+        onFocusCapture={function(e){prepararTecladoOperacion(e.currentTarget);}}
+        onKeyDown={function(e){avanzarConEnterOperacion(e,e.currentTarget);}}>
+        {step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} perfil={perfil} esContratoPropioOp={esContratoPropioOp} puedeGuardar={modoEdicion||draftTieneContenido(data)} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}
+      </div>
       {step<=total&&<div className="dw-operation-form-footer">
         <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Volver a opciones":"← Anterior"}</Btn>
         <div className="dw-operation-form-actions">
