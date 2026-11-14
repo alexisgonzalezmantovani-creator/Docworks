@@ -201,6 +201,20 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await primeraClausula.locator('.dw-clause-toggle').click();
   const nav=page.getByRole('navigation',{name:'Cláusulas y documentos'});
   assert.equal(await nav.getByRole('button').count(),2,'Documentos y Biblioteca de cláusulas');checks++;
+  // DocWorks 6.61: pestañas juntas y legibles también en iPhones angostos.
+  for(const ancho of (name==='iphone'?[320,375,430]:[width])){
+    await page.setViewportSize({width:ancho,height});
+    const navRects=await nav.getByRole('button').evaluateAll(nodes=>nodes.map(node=>{
+      const rect=node.getBoundingClientRect();
+      return {x:rect.x,y:rect.y,right:rect.right,width:rect.width,height:rect.height};
+    }));
+    assert.equal(navRects.length,2);checks++;
+    assert.ok(Math.abs(navRects[0].y-navRects[1].y)<=2,ancho+' pestañas de Cláusulas y Documentos en la misma fila');checks++;
+    assert.ok(navRects[0].right<=navRects[1].x+2,ancho+' pestañas sin superposición');checks++;
+    assert.ok(navRects.every(rect=>rect.width>=100&&rect.height>=40&&rect.height<=56),ancho+' pestañas compactas y cómodas');checks++;
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),ancho+' sin scroll horizontal');checks++;
+  }
+  await page.setViewportSize({width,height});
   await page.getByRole('button',{name:'Desplegar introducción'}).click();
   await page.getByRole('button',{name:'Editar introducción',exact:true}).waitFor();
   assert.equal(await page.locator('#dw-model-preview-area').count(),1);checks++;
@@ -246,6 +260,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.locator('#dw-modelo-documento').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
   await page.screenshot({path:path.join(out,'documentos-'+name+'.png'),fullPage:true});
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+  assert.equal(await page.getByRole('heading',{name:'Biblioteca de cláusulas',exact:true}).count(),1,name+' biblioteca con un título, sin repetición');checks++;
   await page.locator('#dw-biblioteca-documento').getByRole('button',{name:'Todos los documentos',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
   await nav.getByRole('button',{name:'Modelos de documentos',exact:true}).click();
