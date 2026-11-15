@@ -2,7 +2,7 @@ import React, {useCallback, useEffect, useRef, useState} from 'react';
 
 const PDF_ASSETS='/pdfjs-6.5.438/';
 
-function HojaPDF({documento,pagina,ampliada=false,onRendered=undefined}){
+function HojaPDF({documento,pagina,ampliada=false,onRendered=undefined,onFailed=undefined}){
   const caja=useRef(null),canvas=useRef(null);
   const [error,setError]=useState('');
   useEffect(function(){
@@ -26,8 +26,8 @@ function HojaPDF({documento,pagina,ampliada=false,onRendered=undefined}){
         elemento.width=Math.ceil(viewport.width*pixelRatio);elemento.height=Math.ceil(viewport.height*pixelRatio);
         elemento.style.width=viewport.width+'px';elemento.style.height=viewport.height+'px';
         render=hoja.render({canvas:elemento,canvasContext:elemento.getContext('2d'),viewport,transform:pixelRatio===1?null:[pixelRatio,0,0,pixelRatio,0,0]});
-        try{await render.promise;if(vigente){setError('');onRendered?.(documento);}}catch(e){if(vigente&&e.name!=='RenderingCancelledException'){setError('No se pudo dibujar la hoja. Intentá nuevamente.');onRendered?.(documento);}}
-      }).catch(function(e){if(vigente&&e.name!=='RenderingCancelledException'){setError('No se pudo dibujar la hoja. Intentá nuevamente.');onRendered?.(documento);}});
+        try{await render.promise;if(vigente){setError('');onRendered?.(documento);}}catch(e){if(vigente&&e.name!=='RenderingCancelledException'){setError('No se pudo dibujar la hoja. Intentá nuevamente.');onFailed?.(documento);}}
+      }).catch(function(e){if(vigente&&e.name!=='RenderingCancelledException'){setError('No se pudo dibujar la hoja. Intentá nuevamente.');onFailed?.(documento);}});
     }
     // El canvas cambia la altura observada. Dibujar dentro de la notificación
     // dispara un ciclo de ResizeObserver en WebKit; medir una vez por frame y
@@ -44,7 +44,7 @@ function HojaPDF({documento,pagina,ampliada=false,onRendered=undefined}){
     const observer=typeof ResizeObserver!=='undefined'?new ResizeObserver(solicitarDibujo):null;
     observer?.observe(caja.current);window.addEventListener('resize',solicitarDibujo);solicitarDibujo();
     return function(){vigente=false;if(frame)cancelAnimationFrame(frame);observer?.disconnect();window.removeEventListener('resize',solicitarDibujo);if(render)render.cancel();};
-  },[documento,pagina,ampliada,onRendered]);
+  },[documento,pagina,ampliada,onRendered,onFailed]);
   return <div ref={caja} className="dw-pdf-sheet">{error&&<p role="alert">{error}</p>}<canvas ref={canvas} aria-label={'Vista previa del PDF, página '+pagina} role="img"/></div>;
 }
 
@@ -57,9 +57,15 @@ export function VistaPreviaAspecto({perfil,generarPDF}){
     if(/^(nombre|matricula|direccion|web|telefono|email|plantillaEstilo|mostrar_introduccion)$/.test(key)||/^(logo|color|encabezado|pie_pagina|ubicacion)/.test(key))visual[key]=perfil[key];
   });
   const perfilJSON=JSON.stringify(visual);
+  const alFallar=useCallback(function(pdf){
+    if(mostradaRef.current?.pdf!==pdf||mostradaRef.current?.solicitud!==solicitudRef.current)return;
+    setCargando(false);
+    setError('No se pudo mostrar esta página. Reintentá la vista previa.');
+  },[]);
   const alDibujar=useCallback(function(pdf){
     if(mostradaRef.current?.pdf!==pdf||mostradaRef.current?.solicitud!==solicitudRef.current)return;
     setCargando(false);
+    setError('');
     retiradasRef.current.splice(0).forEach(function(tarea){tareasRef.current.delete(tarea);tarea.destroy().catch(function(){});});
   },[]);
   useEffect(function(){return function(){
@@ -90,7 +96,14 @@ export function VistaPreviaAspecto({perfil,generarPDF}){
         if(mostradaRef.current)retiradasRef.current.push(mostradaRef.current.tarea);
         mostradaRef.current={pdf:pdf,tarea:tarea,solicitud:solicitud};
         setDocumento(pdf);setPagina(function(p){return Math.min(p,pdf.numPages);});
-      }catch(e){if(vigente){setError('No se pudo generar la vista previa. Volvé a intentar.');setCargando(false);}}
+      }catch(e){
+        // Liberar tareas fallidas sin tocar la última página válida.
+        if(tarea&&mostradaRef.current?.tarea!==tarea){
+          tareasRef.current.delete(tarea);
+          try{await tarea.destroy();}catch(_error){}
+        }
+        if(vigente){setError('No se pudo generar la vista previa. Volvé a intentar.');setCargando(false);}
+      }
     },mostradaRef.current?160:0);
     return function(){
       vigente=false;clearTimeout(timer);
@@ -109,7 +122,7 @@ export function VistaPreviaAspecto({perfil,generarPDF}){
     <div className="dw-pdf-toolbar"><strong>Vista previa {documento&&cargando&&<span role="status" aria-label="Actualizando vista previa" className="dw-pdf-updating"/>}</strong><button type="button" className="btn btn-secondary btn-sm" disabled={!documento} onClick={function(){setAmpliada(true);}}>Ampliar ↗</button></div>
     {cargando&&!documento&&<div role="status" className="dw-pdf-status">Preparando vista previa…</div>}
     {error&&<div role="alert" className="dw-pdf-status">{error}<button type="button" className="btn btn-secondary btn-sm" onClick={function(){setIntento(intento+1);}}>Reintentar</button></div>}
-    {documento&&<><HojaPDF documento={documento} pagina={pagina} onRendered={alDibujar}/><div className="dw-pdf-pagination"><button type="button" className="btn btn-ghost btn-sm" aria-label="Página anterior" disabled={pagina<=1} onClick={function(){setPagina(pagina-1);}}>‹</button><span>Página {pagina} de {documento.numPages}</span><button type="button" className="btn btn-ghost btn-sm" aria-label="Página siguiente" disabled={pagina>=documento.numPages} onClick={function(){setPagina(pagina+1);}}>›</button></div></>}
+    {documento&&<><HojaPDF documento={documento} pagina={pagina} onRendered={alDibujar} onFailed={alFallar}/><div className="dw-pdf-pagination"><button type="button" className="btn btn-ghost btn-sm" aria-label="Página anterior" disabled={pagina<=1} onClick={function(){setPagina(pagina-1);}}>‹</button><span>Página {pagina} de {documento.numPages}</span><button type="button" className="btn btn-ghost btn-sm" aria-label="Página siguiente" disabled={pagina>=documento.numPages} onClick={function(){setPagina(pagina+1);}}>›</button></div></>}
     {ampliada&&<div className="dw-pdf-overlay" role="dialog" aria-modal="true" aria-label="Documento ampliado"><div className="dw-pdf-expanded"><div className="dw-pdf-toolbar"><strong>Vista previa · página {pagina}</strong><button ref={cerrarRef} type="button" className="btn btn-secondary btn-sm" onClick={function(){setAmpliada(false);}}>Cerrar ✕</button></div>{documento?<HojaPDF documento={documento} pagina={pagina} ampliada/>:<p role="status">Actualizando vista previa…</p>}</div></div>}
   </section>;
 }
