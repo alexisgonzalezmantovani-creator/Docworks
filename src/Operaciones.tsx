@@ -2267,39 +2267,64 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{padding:5px 6px!important;font-size:11px!important}
 }
 
-/* 6.68 — iPhone: vista del documento separada del encabezado y lectura sin
-   doble scroll ni franja inferior sobre el texto. Sólo afecta al visor móvil. */
+/* 6.69 — visor iPhone: una sola superficie desplazable. La barra estilo Mac
+   era sticky y terminaba tapando cláusulas; el padding seguro estaba duplicado
+   entre modal-body y doc-reading-scroll, dejando una franja en blanco abajo. */
 @media (max-width:640px){
-  .modal-overlay-viewer .viewer-modal,
+  .modal-overlay-viewer .viewer-modal{
+    background:var(--card)!important;
+  }
+  /* El área segura inferior debe estar dentro del scroll, no como pie fijo. */
   .modal-overlay-viewer .viewer-modal .modal-body{
+    min-height:0!important;
+    padding:12px 12px 0!important;
     background:var(--card)!important;
   }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
     display:block!important;
-    flex:1 1 auto!important;
+    flex:1 1 0%!important;
     min-height:0!important;
     overflow-y:auto!important;
     overflow-x:hidden!important;
-    padding-top:18px!important;
-    padding-bottom:calc(26px + env(safe-area-inset-bottom,0px))!important;
+    padding:18px 0 calc(20px + env(safe-area-inset-bottom,0px))!important;
     scroll-padding-top:18px;
-    scroll-padding-bottom:26px;
-    background:var(--card)!important;
+    scroll-padding-bottom:20px;
+    background:transparent!important;
+    overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch;
   }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
-    height:auto!important;
-    min-height:0!important;
-    margin-bottom:0!important;
-    flex:0 0 auto!important;
-  }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview>.pdf-content{
+    display:block!important;
     height:auto!important;
     max-height:none!important;
     min-height:0!important;
     overflow:visible!important;
-    flex:0 0 auto!important;
-    padding-bottom:20px!important;
+    padding:0!important;
+    margin:0!important;
+    border:0!important;
+    background:transparent!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+  /* La etiqueta de "Vista previa" ya existe arriba: esta segunda barra flotante
+     con tres círculos no aporta y era la que se superponía al texto al leer. */
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{
+    display:none!important;
+    position:static!important;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview>.pdf-content{
+    display:block!important;
+    flex:none!important;
+    height:auto!important;
+    max-height:none!important;
+    min-height:0!important;
+    overflow:visible!important;
+    margin:0!important;
+    padding:20px 16px 24px!important;
+    border:1px solid #d7dfe8!important;
+    border-radius:10px!important;
+    background:#fff!important;
+    box-shadow:0 2px 12px rgba(12,31,58,.08)!important;
   }
 }
 

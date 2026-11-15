@@ -61,26 +61,40 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   const page=await browser.newPage(),errors=[];await page.setViewportSize({width,height});page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.text().includes('same key'))errors.push(m.text());});
   await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1')?r.continue():r.abort());
   await page.goto('http://127.0.0.1:'+server.address().port);
-  // Regresión 6.68: verificar geometría de lectura real, no sólo el valor
-  // computado de overflow (en algunos motores 'visible' se normaliza a 'auto').
+  // Regresión 6.69: reproduce la jerarquía real del visor (pestañas,
+  // tarjetas/ajustes y hoja extensa) para evitar overlays y pie blanco fijo.
   if(name==='iphone'){
-   await page.waitForFunction(()=>[...document.querySelectorAll('style')].some(s=>s.textContent?.includes('6.68')));
+   await page.waitForFunction(()=>[...document.querySelectorAll('style')].some(s=>s.textContent?.includes('6.69')));
    const estilos=await page.evaluate(()=>{
     const overlay=document.createElement('div');
     overlay.className='modal-overlay modal-overlay-viewer';
-    overlay.innerHTML='<div class="modal-box viewer-modal"><div class="modal-head">Documento</div><div class="modal-body"><div class="doc-viewer-shell"><div class="doc-viewer-tabs">Reserva</div><div class="doc-viewer-tab-content"><div class="doc-reading-scroll"><div class="pdf-preview"><div class="pdf-chrome">Vista</div><div class="pdf-content pdf-content-lg"><div class="pdf-text"></div></div></div></div></div></div></div></div>';
-    overlay.querySelector('.pdf-text').innerHTML=Array.from({length:120},(_,i)=>'<p>Línea de documento de prueba '+i+'. Contenido de ejemplo para verificar el desplazamiento en pantalla angosta.</p>').join('');
+    overlay.innerHTML='<div class="modal-box viewer-modal"><div class="modal-head">Reserva de Compra</div><div class="modal-body"><div class="doc-viewer-shell"><div class="doc-viewer-tabs">Ficha completa · Centro de tareas · Vista previa</div><div class="doc-viewer-tab-content"><div style="padding:18px;border:1px solid #ddd">Datos críticos: Faltan 8 datos</div><div style="padding:18px">Reserva de Compra creada</div><details style="padding:20px;border:1px solid #ddd"><summary>Hacer ajustes manuales</summary></details><div class="doc-reading-scroll"><div class="pdf-preview"><div class="pdf-chrome">Vista previa — Reserva de Compra</div><div class="pdf-content pdf-content-lg"><div class="pdf-text"></div></div></div></div></div></div></div></div>';
+    overlay.querySelector('.pdf-text').innerHTML=Array.from({length:120},(_,i)=>'<p>CLÁUSULA '+(i+1)+'. Texto ficticio de prueba para verificar que la lectura en el teléfono no se recorte ni quede tapada al desplazarse.</p>').join('');
     document.body.appendChild(overlay);
-    const lectura=overlay.querySelector('.doc-reading-scroll'),texto=overlay.querySelector('.pdf-content'),body=overlay.querySelector('.modal-body');
-    const out={overflowLectura:getComputedStyle(lectura).overflowY,arriba:parseFloat(getComputedStyle(lectura).paddingTop),abajo:parseFloat(getComputedStyle(lectura).paddingBottom),fondo:getComputedStyle(lectura).backgroundColor,fondoContenedor:getComputedStyle(body).backgroundColor,scrollExterior:lectura.scrollHeight>lectura.clientHeight+20,scrollInterior:texto.scrollHeight>texto.clientHeight+2,alturaTexto:texto.getBoundingClientRect().height};
+    const lectura=overlay.querySelector('.doc-reading-scroll'),contenido=overlay.querySelector('.pdf-content'),chrome=overlay.querySelector('.pdf-chrome'),body=overlay.querySelector('.modal-body'),ultimo=overlay.querySelector('.pdf-text p:last-child');
+    const puedeDesplazar=lectura.scrollHeight>lectura.clientHeight+20;
+    lectura.scrollTop=lectura.scrollHeight;
+    const le=lectura.getBoundingClientRect(), fin=ultimo.getBoundingClientRect();
+    const out={
+      overflowLectura:getComputedStyle(lectura).overflowY,
+      barra:getComputedStyle(chrome).display,
+      paddingSuperior:parseFloat(getComputedStyle(lectura).paddingTop),
+      paddingInferiorModal:parseFloat(getComputedStyle(body).paddingBottom),
+      scrollExterior:puedeDesplazar,
+      scrollInterior:contenido.scrollHeight>contenido.clientHeight+2,
+      ultimoVisible:fin.top>=le.top-2 && fin.bottom<=le.bottom-2,
+      margenFinal:Math.round(le.bottom-fin.bottom)
+    };
     overlay.remove();return out;
    });
-   assert.equal(estilos.overflowLectura,'auto','visor iPhone: desplazamiento exterior');checks++;
-   assert.equal(estilos.scrollInterior,false,'visor iPhone: el texto no crea un segundo scroll');checks++;
-   assert.ok(estilos.scrollExterior,'visor iPhone: documento largo se desplaza');checks++;
-   assert.ok(estilos.arriba>=16,'visor iPhone: vista previa más abajo');checks++;
-   assert.ok(estilos.abajo>=24,'visor iPhone: últimas líneas protegidas');checks++;
-   assert.equal(estilos.fondo,estilos.fondoContenedor,'visor iPhone: fondo continuo, sin franja inferior');checks++;
+   assert.equal(estilos.barra,'none','visor iPhone: sin barra flotante sobre cláusulas');checks++;
+   assert.equal(estilos.paddingInferiorModal,0,'visor iPhone: sin banda blanca fija debajo del scroll');checks++;
+   assert.equal(estilos.overflowLectura,'auto','visor iPhone: scroll sobre la zona de lectura');checks++;
+   assert.equal(estilos.scrollInterior,false,'visor iPhone: ninguna segunda zona scroll en la hoja');checks++;
+   assert.equal(estilos.scrollExterior,true,'visor iPhone: cláusulas largas son desplazables');checks++;
+   assert.equal(estilos.ultimoVisible,true,'visor iPhone: última cláusula llega completamente visible');checks++;
+   assert.ok(estilos.margenFinal>=10,'visor iPhone: margen de lectura final');checks++;
+   assert.ok(estilos.paddingSuperior>=16,'visor iPhone: hoja separada del bloque superior');checks++;
   }
   for(const tipo of ['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva']){
    await page.getByLabel('Documento de prueba').selectOption(tipo);
