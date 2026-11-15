@@ -14,7 +14,7 @@ function esCampoDeCarga(nodo: Element): nodo is ElementoCampo {
  return nodo.tagName==="INPUT"&&!TIPOS_EXCLUIDOS.has((nodo as HTMLInputElement).type);
 }
 function campoDisponible(nodo: ElementoCampo): boolean {
- if(nodo.disabled||("readOnly" in nodo&&nodo.readOnly)||nodo.closest("[hidden],[inert],[aria-hidden='true']"))return false;
+ if(nodo.disabled||nodo.matches(":disabled")||("readOnly" in nodo&&nodo.readOnly)||nodo.closest("[hidden],[inert],[aria-hidden='true'],[aria-disabled='true']"))return false;
  if(!nodo.getClientRects().length)return false;
  const estilos=window.getComputedStyle(nodo);
  return estilos.display!=="none"&&estilos.visibility!=="hidden";
@@ -23,7 +23,7 @@ function esFuenteEnter(nodo: Element): nodo is HTMLInputElement {
  if(nodo.tagName!=="INPUT")return false;
  const input=nodo as HTMLInputElement;
  return !TIPOS_EXCLUIDOS.has(input.type)&&!TIPOS_ENTER_NATIVO.has(input.type)&&
-  input.getAttribute("role")!=="combobox"&&!input.hasAttribute("aria-autocomplete");
+  input.getAttribute("role")!=="combobox"&&!input.hasAttribute("aria-autocomplete")&&!input.hasAttribute("list");
 }
 function camposDelPaso(contenedor: HTMLElement): ElementoCampo[] {
  return Array.from(contenedor.querySelectorAll("input, textarea, select")).filter(

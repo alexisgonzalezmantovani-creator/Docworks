@@ -25,4 +25,37 @@ ok('El último input cierra el teclado sin enviar',()=>{find('final').focus();co
 ok('Composición IME, Shift+Enter y teclas diferentes se respetan',()=>{find('nombre').focus();assert.equal(enter('nombre',{isComposing:true}).handled,false);assert.equal(enter('nombre',{shiftKey:true}).handled,false);assert.equal(enter('nombre',{key:' '}).handled,false);assert.equal(document.activeElement.id,'nombre');});
 ok('Campos fecha usan Enter nativo',()=>{const fecha=document.createElement('input');fecha.type='date';fecha.getClientRects=()=>[{width:100,height:32}];form.appendChild(fecha);prepararTecladoOperacion(form);fecha.focus();const e={key:'Enter',target:fecha,defaultPrevented:false,shiftKey:false,ctrlKey:false,altKey:false,metaKey:false,preventDefault(){throw Error('No debe interceptar');}};assert.equal(avanzarConEnterOperacion(e,form),false);});
 ok('Combobox mantiene Enter para seleccionar su sugerencia',()=>{find('domicilio').setAttribute('role','combobox');find('domicilio').focus();assert.equal(enter('domicilio').handled,false);});
+ok('Los controles de un fieldset deshabilitado no reciben foco',()=>{
+ const grupo=document.createElement('fieldset');grupo.disabled=true;
+ const campo=document.createElement('input');campo.id='campo-en-grupo-inactivo';campo.getClientRects=()=>[{width:100,height:32}];
+ grupo.appendChild(campo);form.insertBefore(grupo,find('dni'));
+ prepararTecladoOperacion(form);find('nombre').focus();enter('nombre');
+ assert.equal(document.activeElement.id,'dni');assert.equal(campo.hasAttribute('enterkeyhint'),false);
+ grupo.remove();
+});
+ok('Las secciones aria-disabled no se usan como próximo campo',()=>{
+ const grupo=document.createElement('div');grupo.setAttribute('aria-disabled','true');
+ const campo=document.createElement('input');campo.id='campo-aria-inactivo';campo.getClientRects=()=>[{width:100,height:32}];
+ grupo.appendChild(campo);form.insertBefore(grupo,find('dni'));
+ prepararTecladoOperacion(form);find('nombre').focus();enter('nombre');
+ assert.equal(document.activeElement.id,'dni');assert.equal(campo.hasAttribute('enterkeyhint'),false);
+ grupo.remove();
+});
+ok('Enter en un input con datalist permite elegir sugerencias',()=>{
+ const campo=document.createElement('input');campo.id='campo-con-sugerencias';campo.setAttribute('list','sugerencias-qa');campo.getClientRects=()=>[{width:100,height:32}];
+ const lista=document.createElement('datalist');lista.id='sugerencias-qa';lista.innerHTML='<option value="Pilar">';
+ form.insertBefore(campo,find('dni'));form.appendChild(lista);
+ prepararTecladoOperacion(form);campo.focus();
+ assert.equal(enter('campo-con-sugerencias').handled,false);
+ assert.equal(document.activeElement.id,'campo-con-sugerencias');
+ assert.equal(campo.hasAttribute('enterkeyhint'),false);
+ campo.remove();lista.remove();
+});
+ok('Campos de solo lectura no interrumpen el avance',()=>{
+ const campo=document.createElement('input');campo.id='campo-solo-lectura';campo.readOnly=true;campo.getClientRects=()=>[{width:100,height:32}];
+ form.insertBefore(campo,find('dni'));prepararTecladoOperacion(form);
+ find('nombre').focus();enter('nombre');
+ assert.equal(document.activeElement.id,'dni');assert.equal(campo.hasAttribute('enterkeyhint'),false);
+ campo.remove();
+});
 dom.window.close();fs.rmSync(tmp,{recursive:true,force:true});console.log('APROBADOS '+checks+' casos de navegación Enter de operaciones.');
