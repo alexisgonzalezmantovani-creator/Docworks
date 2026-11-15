@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {version as pdfjsVersion} from 'pdfjs-dist/package.json';
 
-const PDF_ASSETS='/pdfjs-6.5.438/';
+const PDF_ASSETS='/pdfjs-'+pdfjsVersion+'/';
 
 function HojaPDF({documento,pagina,ampliada=false,onRendered=undefined,onFailed=undefined}){
   const caja=useRef(null),canvas=useRef(null);
