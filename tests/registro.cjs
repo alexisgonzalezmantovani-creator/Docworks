@@ -1,6 +1,10 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {JSDOM}=require('jsdom');
 (async()=>{
+ const migracion=fs.readFileSync(path.resolve(__dirname,'../supabase/migrations/20261115035201_cerrar_registro_legacy_publico_667.sql'),'utf8');
+ assert.match(migracion,/revoke all privileges on table public\\.solicitudes_registro from anon, authenticated/i);
+ assert.match(migracion,/revoke execute on function public\\.fn_solicitar_registro_publico\\(text,text,text,text\\) from public, anon, authenticated/i);
+ console.log('OK permisos de registro legacy revocados, sin alterar Supabase Auth');
  const html=fs.readFileSync(path.resolve(__dirname,'../landing/index.html'),'utf8');
  assert.ok(!html.includes('14 días'));assert.ok(html.includes('Probá gratis 1 mes'));assert.ok(html.includes('Un mes gratis. Sin tarjeta. Sin cobro automático.'));
  const dom=new JSDOM(html,{url:'https://docworks.ia',runScripts:'outside-only'});
