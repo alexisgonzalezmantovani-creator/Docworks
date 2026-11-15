@@ -10,7 +10,7 @@ function Harness(){
  const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[tipo,setTipo]=useState('reserva'),[abierto,setAbierto]=useState(true),[confirmacion,setConfirmacion]=useState(null);
  const [preview,setPreview]=useState(false);
  useEffect(()=>{const listener=e=>setConfirmacion(e.detail);window.addEventListener('dw:confirm',listener);return ()=>window.removeEventListener('dw:confirm',listener);},[]);
- return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><select aria-label="Documento de prueba" value={tipo} onChange={e=>setTipo(e.target.value)}>{PLANTILLA_TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select><button onClick={()=>navegarConProteccionModelo(()=>setAbierto(false))}>Salir del modelo</button><button onClick={()=>setAbierto(true)}>Abrir modelo</button><button onClick={()=>setPreview(true)}>Abrir vista previa de prueba</button>{abierto&&<CuerpoPlantillaPanel key={tipo} perfil={perfil} tipo={tipo} puedeEditar={true} previewOpen={preview} onPreviewChange={setPreview} clausulas={[]} onChange={async p=>{setPerfil(p);return {};}}/>}<ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
+ return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><select aria-label="Documento de prueba" value={tipo} onChange={e=>setTipo(e.target.value)}>{PLANTILLA_TIPOS.map(t=><option key={t} value={t}>{t}</option>)}</select><button onClick={()=>navegarConProteccionModelo(()=>setAbierto(false))}>Salir del modelo</button><button onClick={()=>setAbierto(true)}>Abrir modelo</button><button onClick={()=>setPreview(true)}>Abrir vista previa de prueba</button>{abierto&&<CuerpoPlantillaPanel key={tipo} perfil={perfil} tipo={tipo} puedeEditar={true} previewOpen={preview} onPreviewChange={setPreview} clausulas={[]} onChange={async p=>{setPerfil(p);return {};}}/>}<ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
 }
 function WorkspaceHarness(){
  const [perfil,setPerfil]=useState({rol:'dueno',plantillas:{}}),[confirmacion,setConfirmacion]=useState(null),[guardados,setGuardados]=useState(0);
@@ -64,7 +64,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   // Regresión 6.68: verificar geometría de lectura real, no sólo el valor
   // computado de overflow (en algunos motores 'visible' se normaliza a 'auto').
   if(name==='iphone'){
-   await page.waitForFunction(()=>document.getElementById('dci-styles')?.textContent?.includes('6.68'));
+   await page.waitForFunction(()=>[...document.querySelectorAll('style')].some(s=>s.textContent?.includes('6.68')));
    const estilos=await page.evaluate(()=>{
     const overlay=document.createElement('div');
     overlay.className='modal-overlay modal-overlay-viewer';
