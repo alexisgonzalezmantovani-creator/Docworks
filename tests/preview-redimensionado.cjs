@@ -16,5 +16,34 @@ async function frame(){await a.act(async()=>{const items=[...frames.values()];fr
  await a.act(async()=>{resize();resize();resize();});check('agrupa notificaciones en un frame',()=>assert.equal(frames.size,1));await frame();check('altura del canvas no provoca otro dibujo',()=>assert.equal(renders,1));
  width=520;await a.act(async()=>resize());await frame();check('nuevo ancho vuelve a dibujar',()=>assert.equal(renders,2));
  await a.act(async()=>{resize();root.unmount()});check('desmontar cancela callbacks pendientes y observer',()=>{assert.equal(frames.size,0);assert.equal(desconectado,true);assert.ok(cancelados>0)});
- dom.window.close();console.log('APROBADAS '+n+' comprobaciones de redimensionado sin ciclos.');process.exit(0);
+ // Un error de canvas no puede comunicarse como dibujo correcto.
+ const nodo=document.createElement('div');document.body.appendChild(nodo);
+ const raizError=a.createRoot(nodo);
+ let aciertos=0,fallos=0;
+ const pdfError={getPage:async()=>({
+   getViewport:({scale})=>({width:595*scale,height:842*scale}),
+   render:()=>({promise:Promise.reject(new Error('Canvas no disponible')),cancel(){}})
+ })};
+ await a.act(async()=>raizError.render(a.createElement(a.HojaPDF,{
+   documento:pdfError,pagina:1,onRendered:()=>aciertos++,onFailed:()=>fallos++
+ })));
+ await frame();
+ check('un error de canvas se informa como fallo, nunca como éxito',()=>{
+   assert.equal(aciertos,0);assert.equal(fallos,1);
+   assert.match(nodo.textContent,/No se pudo dibujar la hoja/);
+ });
+ const pdfRecuperado={getPage:async()=>({
+   getViewport:({scale})=>({width:595*scale,height:842*scale}),
+   render:()=>({promise:Promise.resolve(),cancel(){}})
+ })};
+ await a.act(async()=>raizError.render(a.createElement(a.HojaPDF,{
+   documento:pdfRecuperado,pagina:1,onRendered:()=>aciertos++,onFailed:()=>fallos++
+ })));
+ await frame();
+ check('una página válida puede dibujarse después del fallo',()=>{
+   assert.equal(aciertos,1);assert.equal(fallos,1);
+   assert.doesNotMatch(nodo.textContent,/No se pudo dibujar la hoja/);
+ });
+ await a.act(async()=>raizError.unmount());
+ dom.window.close();console.log('APROBADAS '+n+' comprobaciones de redimensionado y errores PDF.');process.exit(0);
 })().catch(e=>{console.error(e);process.exit(1)});
