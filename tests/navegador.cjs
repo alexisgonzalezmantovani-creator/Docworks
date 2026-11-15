@@ -1,6 +1,8 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),http=require('node:http'),assert=require('node:assert/strict');
 const engine=process.argv.includes('--webkit')?'webkit':'chromium';
 const browserType=require('playwright')[engine];
+// Preparar los recursos locales del visor antes de servir el harness (también en ejecuciones directas del test).
+require('../scripts/copiar-pdf-preview.cjs');
 const root=path.resolve(__dirname,'..'),out=process.env.DOCWORKS_BROWSER_OUTPUT||fs.mkdtempSync(path.join(os.tmpdir(),'docworks-browser-'));
 fs.mkdirSync(out,{recursive:true});
 const harness=`
