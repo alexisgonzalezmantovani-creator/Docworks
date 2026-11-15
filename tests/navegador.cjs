@@ -185,7 +185,15 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   assert.equal(await page.getByLabel('Mostrar ubicación',{exact:true}).isChecked(),true);checks++;
   if(width<600)await page.getByRole('group',{name:'Vista del aspecto del documento'}).getByRole('button',{name:'Vista previa',exact:true}).click();
   await page.getByRole('button',{name:'Ampliar ↗'}).click();
-  await page.getByRole('dialog',{name:'Documento ampliado'}).waitFor();
+  const ampliado=page.getByRole('dialog',{name:'Documento ampliado'});
+  await ampliado.waitFor();
+  const paginaInicial=await ampliado.locator('.dw-pdf-pagination span').innerText();
+  assert.match(paginaInicial,/Página 1 de [2-9]/);checks++;
+  await ampliado.getByRole('button',{name:'Página siguiente'}).click();
+  await page.waitForFunction(()=>document.querySelector('[role="dialog"][aria-label="Documento ampliado"] .dw-pdf-pagination span')?.textContent?.includes('Página 2 de'));
+  assert.match(await ampliado.locator('.dw-pdf-pagination span').innerText(),/Página 2 de/);checks++;
+  await ampliado.getByRole('button',{name:'Página anterior'}).click();
+  assert.match(await ampliado.locator('.dw-pdf-pagination span').innerText(),/Página 1 de/);checks++;
   await page.keyboard.press('Escape');
   await page.getByRole('dialog',{name:'Documento ampliado'}).waitFor({state:'detached'});checks++;
   if(width>=600)await page.getByRole('tab',{name:'Encabezado'}).click();
