@@ -2267,64 +2267,82 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{padding:5px 6px!important;font-size:11px!important}
 }
 
-/* 6.69 — visor iPhone: una sola superficie desplazable. La barra estilo Mac
-   era sticky y terminaba tapando cláusulas; el padding seguro estaba duplicado
-   entre modal-body y doc-reading-scroll, dejando una franja en blanco abajo. */
+/* 6.70 — visor iPhone: ventana de lectura con borde y scroll propio.
+   La operación conserva su flujo; al abrir Ajustes, el listado puede
+   desplazarse sin tapar el documento ni perder la terminación inferior. */
 @media (max-width:640px){
-  .modal-overlay-viewer .viewer-modal{
-    background:var(--card)!important;
-  }
-  /* El área segura inferior debe estar dentro del scroll, no como pie fijo. */
   .modal-overlay-viewer .viewer-modal .modal-body{
     min-height:0!important;
-    padding:12px 12px 0!important;
+    padding:12px 12px calc(14px + env(safe-area-inset-bottom,0px))!important;
     background:var(--card)!important;
   }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
-    display:block!important;
-    flex:1 1 0%!important;
+  .modal-overlay-viewer .viewer-modal .doc-viewer-tab-content:not(.doc-tab-static){
+    flex:1 1 auto!important;
     min-height:0!important;
     overflow-y:auto!important;
     overflow-x:hidden!important;
-    padding:18px 0 calc(20px + env(safe-area-inset-bottom,0px))!important;
-    scroll-padding-top:18px;
-    scroll-padding-bottom:20px;
-    background:transparent!important;
+    padding:0 2px 8px!important;
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][open]{
+    flex:0 1 auto!important;
+    max-height:min(31dvh,270px)!important;
+    min-height:72px;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
     overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch;
   }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
-    display:block!important;
-    height:auto!important;
-    max-height:none!important;
-    min-height:0!important;
-    overflow:visible!important;
-    padding:0!important;
-    margin:0!important;
-    border:0!important;
-    background:transparent!important;
-    border-radius:0!important;
-    box-shadow:none!important;
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
+    display:flex!important;
+    flex:1 0 205px!important;
+    min-height:190px!important;
+    max-height:min(50dvh,460px)!important;
+    margin:14px 0 6px!important;
+    padding:6px!important;
+    border:1px solid var(--border2)!important;
+    border-radius:16px!important;
+    background:var(--surface2)!important;
+    box-shadow:0 6px 22px rgba(15,35,60,.10)!important;
+    overflow:hidden!important;
+    overscroll-behavior:contain;
   }
-  /* La etiqueta de "Vista previa" ya existe arriba: esta segunda barra flotante
-     con tres círculos no aporta y era la que se superponía al texto al leer. */
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
+    display:flex!important;
+    flex:1 1 auto!important;
+    flex-direction:column!important;
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:10px!important;
+    background:#fff!important;
+    box-shadow:none!important;
+    overflow:hidden!important;
+  }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{
     display:none!important;
     position:static!important;
   }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview>.pdf-content{
     display:block!important;
-    flex:none!important;
+    flex:1 1 auto!important;
     height:auto!important;
     max-height:none!important;
     min-height:0!important;
-    overflow:visible!important;
     margin:0!important;
-    padding:20px 16px 24px!important;
-    border:1px solid #d7dfe8!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    border:0!important;
     border-radius:10px!important;
+    padding:20px 14px 32px!important;
     background:#fff!important;
-    box-shadow:0 2px 12px rgba(12,31,58,.08)!important;
+    box-shadow:none!important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
   }
 }
 
@@ -5434,7 +5452,7 @@ function CalendarioView({operaciones,onViewOp}){
 }
 
 export function crearDocumentViewer(deps){
- const {ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
+ const {ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
 
 
 function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggleTarea,onUpdateOperation,onActionWorkflow,onCompleteData,onSavePerfil,onAuditExport,onUpdateBloqueReserva,tab,onChangeTab,autoAction,onAutoActionDone}){
@@ -5496,11 +5514,17 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   },[ajusteEditando,partesAjuste,guardandoAjuste]);
   // Una operación nueva nunca debe heredar el borrador visual de otra.
   useEffect(function(){cerrarEdicionAjuste();ajusteOriginalRef.current="";},[op&&op.id]);
+  function canonizarMarcadoresAjuste(texto){
+    return String(texto||"")
+      .replace(/\[\s*precio(?:\s+de\s+venta)?\s+en\s+letras\s*\]/gi,"{{precio_letras}}")
+      .replace(/\[\s*(?:anticipo|seña)\s+en\s+letras\s*\]/gi,"{{anticipo_letras}}")
+      .replace(/\[\s*saldo\s+en\s+letras\s*\]/gi,"{{saldo_letras}}");
+  }
   function abrirAjuste(b){
     var guardado=op&&op.ajustes_manuales&&op.ajustes_manuales[tab]&&op.ajustes_manuales[tab][b.id];
-    var contenido=typeof guardado==="string"?guardado:String(b.contenido||"");
-    setPartesAjuste(contenido.split(/(\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\})/g).map(function(p){
-      return /^\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}$/.test(p)?{chip:p}:{texto:p};
+    var contenido=canonizarMarcadoresAjuste(typeof guardado==="string"?guardado:String(b.contenido||""));
+    setPartesAjuste(contenido.split(/(\{\{\s*[a-zA-Z0-9_]+\s*\}\})/g).map(function(p){
+      return /^\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(p)?{chip:p}:{texto:p};
     }));
     ajusteOriginalRef.current=contenido;
     setAjusteEditando(b.id);setErrorAjuste("");
@@ -5511,7 +5535,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     if(!contenido.trim()||partesAjuste.some(function(p){return p.texto&&/\\{\\{|\\}\\}/.test(p.texto);})){
       setErrorAjuste("Revisá el texto: no debe estar vacío ni contener chips escritos manualmente.");return;
     }
-    var esperado=(String(b.contenido||"").match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(t){return t.replace(/\\s+/g,"");});
+    var esperado=(canonizarMarcadoresAjuste(b.contenido||"").match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(t){return t.replace(/\\s+/g,"");});
     var actual=(contenido.match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(t){return t.replace(/\\s+/g,"");});
     if(JSON.stringify(esperado)!==JSON.stringify(actual)){setErrorAjuste("Los chips originales deben mantenerse intactos.");return;}
     var previo=op.ajustes_manuales&&op.ajustes_manuales[tab]&&op.ajustes_manuales[tab][b.id];
@@ -5828,7 +5852,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
               ✎ Hacer ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
             </summary>
             <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"8px 0 12px"}}>
-              Cambiá palabras o párrafos de esta operación sin alterar el modelo de la inmobiliaria. Los chips quedan bloqueados. Guardá cada cláusula para actualizar la vista previa, el PDF y el Word.
+              Cambiá palabras o párrafos de esta operación sin alterar el modelo de la inmobiliaria. Los chips azules son datos automáticos protegidos. Guardá cada cláusula para actualizar la vista previa, el PDF y el Word.{" · "+bloquesParaAjustes().length+" cláusulas disponibles"}
             </div>
             {bloquesParaAjustes().map(function(b){
               var vigente=op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.prototype.hasOwnProperty.call(op.ajustes_manuales[tab],b.id);
@@ -5843,7 +5867,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                 {ajusteEditando===b.id&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
                     {partesAjuste.map(function(p,i){return p.chip
-                      ?<span key={i} title="Campo automático protegido" style={{borderRadius:6,padding:"6px 9px",fontSize:11,fontWeight:700,background:"rgba(89,199,243,.13)",color:"var(--text)",border:"1px solid var(--border)"}}>🔒 {p.chip.replace(/[{}]/g,"").replace(/_/g," ")}</span>
+                      ?<span key={i} data-testid="dw-ajuste-chip" data-token={p.chip.replace(/[{}]/g,"").trim()} title="Campo automático protegido: se completa con los datos de esta operación" style={{display:"inline-flex",alignItems:"center",gap:5,borderRadius:999,padding:"7px 10px",fontSize:11.5,fontWeight:750,background:"rgba(14,165,233,.13)",color:"var(--text)",border:"1px solid rgba(14,165,233,.35)",maxWidth:"100%",overflowWrap:"anywhere"}}><span aria-hidden="true">🔒</span>{tokenLabelDocWorks(p.chip.replace(/[{}]/g,"").trim())}</span>
                       :<textarea key={i} className="inp" aria-label={"Editar "+(b.titulo||"cláusula")+" · fragmento "+(i+1)} rows={Math.max(2,Math.min(7,String(p.texto||"").split("\n").length+1))} style={{flex:"1 1 230px",minWidth:0,maxWidth:"100%",resize:"vertical",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/>;})}
                   </div>
                   {errorAjuste&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorAjuste}</div>}

@@ -8,7 +8,7 @@ const perfil={rol:'dueno',nombre:'Inmobiliaria de ejemplo',matricula:'Matrícula
 const base={...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'ejemplo-reserva',tipo:'reserva',estado:'activo',created_at:'2026-11-07T12:00:00Z',comprador_nombre:'Comprador de ejemplo',vendedor_nombre:'Vendedor de ejemplo',inmueble_direccion:'Calle de Ejemplo 123',reserva_vigencia_dias:'30',reserva_aceptacion_dias:'5',reserva_aceptacion_modo:'dias',clausulas_custom:'',comprador_email:'comprador@example.invalid',vendedor_email:'vendedor@example.invalid'};
 const ops=[base,{...base,id:'ejemplo-alquiler',tipo:'alquiler',inmueble_direccion:'Departamento de ejemplo · Pilar',locador_nombre:'Locador de ejemplo',locatario_nombre:'Locatario de ejemplo'},{...base,id:'ejemplo-exclusividad',tipo:'exclusividad',inmueble_direccion:'Casa de ejemplo · Manzanares'}];
 function Galeria(){const [tab,setTab]=useState('reserva');const screen=location.pathname;
-return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><div className="app-wrap"><header style={{position:'fixed',top:0,left:0,right:0,zIndex:400,height:68,background:'#142a4d',padding:'0 32px',display:'flex',alignItems:'center',justifyContent:'space-between',color:'white'}}><strong style={{fontSize:24,fontFamily:'DM Serif Display,serif'}}>DocWorks<span style={{color:'#d4a853'}}>.</span></strong><span style={{fontSize:13}}>Inmobiliaria de ejemplo</span></header><main className={screen==='/formulario'?'dw-operation-page':undefined} style={{padding:28,maxWidth:1320,margin:'auto',width:'100%',boxSizing:'border-box'}}>{screen==='/operaciones'?<><DashboardView usuarioActual={{id:'ejemplo',rol_base:'dueno'}} operaciones={ops} clausulas={[]} perfil={perfil} bloquesReserva={[]} papelera={[]} onNew={()=>{}} onEdit={()=>{}} onViewDoc={()=>{}} onDelete={()=>{}}/></>:screen==='/formulario'?<><h1 style={{fontSize:28,margin:'0 0 20px'}}>Reserva de compra</h1><OperacionForm initial={base} perfil={perfil} clausulas={CLAUSULAS_DEFAULT} bloquesReserva={DEFAULT_BLOQUES_RESERVA} equipo={[]} operaciones={ops} saveStatus={{state:'saved'}} reportSave={()=>{}} onCancel={()=>{}} onSave={async()=>({})}/></>:<Modal open wide viewerMode onClose={()=>{}} title={<OperationViewerHeading op={base}/>} headerRight={<DocumentHeaderActions onEdit={()=>{}} onShare={()=>{}} onPDF={()=>{}} onDOCX={()=>{}}/>}><DocumentViewer op={base} operaciones={ops} perfil={perfil} clausulas={CLAUSULAS_DEFAULT} bloquesReserva={DEFAULT_BLOQUES_RESERVA} tab={tab} onChangeTab={setTab}/></Modal>}</main></div></>;
+return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><div className="app-wrap"><header style={{position:'fixed',top:0,left:0,right:0,zIndex:400,height:68,background:'#142a4d',padding:'0 32px',display:'flex',alignItems:'center',justifyContent:'space-between',color:'white'}}><strong style={{fontSize:24,fontFamily:'DM Serif Display,serif'}}>DocWorks<span style={{color:'#d4a853'}}>.</span></strong><span style={{fontSize:13}}>Inmobiliaria de ejemplo</span></header><main className={screen==='/formulario'?'dw-operation-page':undefined} style={{padding:28,maxWidth:1320,margin:'auto',width:'100%',boxSizing:'border-box'}}>{screen==='/operaciones'?<><DashboardView usuarioActual={{id:'ejemplo',rol_base:'dueno'}} operaciones={ops} clausulas={[]} perfil={perfil} bloquesReserva={[]} papelera={[]} onNew={()=>{}} onEdit={()=>{}} onViewDoc={()=>{}} onDelete={()=>{}}/></>:screen==='/formulario'?<><h1 style={{fontSize:28,margin:'0 0 20px'}}>Reserva de compra</h1><OperacionForm initial={base} perfil={perfil} clausulas={CLAUSULAS_DEFAULT} bloquesReserva={DEFAULT_BLOQUES_RESERVA} equipo={[]} operaciones={ops} saveStatus={{state:'saved'}} reportSave={()=>{}} onCancel={()=>{}} onSave={async()=>({})}/></>:<Modal open wide viewerMode onClose={()=>{}} title={<OperationViewerHeading op={base}/>} headerRight={<DocumentHeaderActions onEdit={()=>{}} onShare={()=>{}} onPDF={()=>{}} onDOCX={()=>{}}/>}><DocumentViewer op={base} operaciones={ops} perfil={perfil} clausulas={CLAUSULAS_DEFAULT} bloquesReserva={DEFAULT_BLOQUES_RESERVA} onUpdateOperation={async()=>({})} tab={tab} onChangeTab={setTab}/></Modal>}</main></div></>;
 }
 createRoot(document.getElementById('root')).render(<Galeria/>);`;
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(root+'/src/App.tsx','utf8')+harness,resolveDir:root+'/src',loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:tmp+'/app.js'});
@@ -22,32 +22,36 @@ await page.locator('.viewer-modal .doc-reading-scroll .pdf-text').waitFor();
 await page.evaluate(()=>document.fonts.ready);
 await page.screenshot({path:out+'/documento-iphone-inicio.png',animations:'disabled'});
 const mobileReading=await page.evaluate(()=>{
- const modal=document.querySelector('.viewer-modal'),lector=modal?.querySelector('.doc-reading-scroll'),contenido=lector?.querySelector('.pdf-content'),barra=lector?.querySelector('.pdf-chrome'),last=contenido?.querySelector('.pdf-text')?.lastElementChild,cuerpo=modal?.querySelector('.modal-body');
- if(!modal||!lector||!contenido||!barra||!last||!cuerpo)return {error:'No se encontró la estructura real completa del documento'};
- const puedeScroll=lector.scrollHeight>lector.clientHeight+20;
- lector.scrollTop=lector.scrollHeight;
- const rectL=lector.getBoundingClientRect(),rectLast=last.getBoundingClientRect();
- return {
-  barra:getComputedStyle(barra).display,
-  paddingPie:parseFloat(getComputedStyle(cuerpo).paddingBottom),
-  overflowLector:getComputedStyle(lector).overflowY,
-  segundoScroll:contenido.scrollHeight>contenido.clientHeight+2,
-  puedeScroll,
-  ultimaVisible:rectLast.top>=rectL.top-2&&rectLast.bottom<=rectL.bottom-2,
-  distanciaFinal:Math.round(rectL.bottom-rectLast.bottom),
-  scrollTop:lector.scrollTop,
-  total:lector.scrollHeight,visible:lector.clientHeight
- };
+ const modal=document.querySelector('.viewer-modal'),marco=modal?.querySelector('.doc-reading-scroll'),hoja=marco?.querySelector('.pdf-content'),barra=marco?.querySelector('.pdf-chrome'),last=hoja?.querySelector('.pdf-text')?.lastElementChild;
+ if(!modal||!marco||!hoja||!barra||!last)return {error:'Falta estructura real del visor'};
+ const puedeScroll=hoja.scrollHeight>hoja.clientHeight+20;
+ hoja.scrollTop=hoja.scrollHeight;
+ const rc=hoja.getBoundingClientRect(),rf=last.getBoundingClientRect();
+ return {barra:getComputedStyle(barra).display,borde:getComputedStyle(marco).borderBottomWidth,redondeo:parseFloat(getComputedStyle(marco).borderBottomLeftRadius),overflowMarco:getComputedStyle(marco).overflowY,overflowHoja:getComputedStyle(hoja).overflowY,puedeScroll,ultimoVisible:rf.top>=rc.top-2&&rf.bottom<=rc.bottom+2,margenFinal:Math.round(rc.bottom-rf.bottom),scrollTop:hoja.scrollTop};
 });
-assert.ok(!mobileReading.error,'Visor iPhone real: '+JSON.stringify(mobileReading));
-assert.equal(mobileReading.barra,'none','Visor iPhone real: barra con puntos no superpuesta');
-assert.equal(mobileReading.paddingPie,0,'Visor iPhone real: sin franja blanca fija en el pie');
-assert.equal(mobileReading.overflowLector,'auto','Visor iPhone real: desplazamiento exterior');
-assert.equal(mobileReading.segundoScroll,false,'Visor iPhone real: hoja sin scroll anidado');
-assert.ok(mobileReading.puedeScroll,'Visor iPhone real: documento largo desplaza');
-assert.equal(mobileReading.ultimaVisible,true,'Visor iPhone real: última cláusula completamente visible al final, '+JSON.stringify(mobileReading));
-assert.ok(mobileReading.distanciaFinal>=8,'Visor iPhone real: margen inferior para leer');
+assert.ok(!mobileReading.error,'Estructura iPhone: '+JSON.stringify(mobileReading));
+assert.equal(mobileReading.barra,'none','No debe aparecer la barra Mac');
+assert.ok(mobileReading.redondeo>=12,'La ventanita debe terminar redondeada abajo');
+assert.equal(mobileReading.overflowMarco,'hidden','El marco no debe ser un scroll adicional');
+assert.equal(mobileReading.overflowHoja,'auto','Scroll sólo dentro de la hoja');
+assert.ok(mobileReading.puedeScroll&&mobileReading.scrollTop>0,'Se puede leer el documento hacia abajo');
+assert.equal(mobileReading.ultimoVisible,true,'La última línea debe ser legible: '+JSON.stringify(mobileReading));
+assert.ok(mobileReading.margenFinal>=12,'Margen inferior antes del borde');
 await page.screenshot({path:out+'/documento-iphone-final.png',animations:'disabled'});
-console.log('OK visor REAL iPhone 390x844, sin barra superpuesta y última cláusula visible',mobileReading);
+const ajustes=page.getByTestId('dw-ajustes-manuales');
+assert.equal(await ajustes.count(),1,'Ajustes manuales visibles en un documento con modelo');
+await ajustes.locator('summary').click();
+const cantidad=await ajustes.getByRole('button',{name:'Editar',exact:true}).count();
+assert.ok(cantidad>=2,'Ajustes deben mostrar las cláusulas del modelo, no sólo la primera');
+const listado=await ajustes.evaluate(el=>{const antes=el.scrollTop;el.scrollTop=el.scrollHeight;return {puede:el.scrollHeight>el.clientHeight+10,despues:el.scrollTop,antes};});
+assert.ok(listado.puede&&listado.despues>listado.antes,'La lista de ajustes tiene scroll al abrirla');
+await ajustes.getByRole('button',{name:'Editar',exact:true}).first().click();
+const chips=await ajustes.locator('[data-testid="dw-ajuste-chip"]').allTextContents();
+assert.ok(chips.length>0,'Los campos insertados tienen chips protegidos');
+assert.ok(chips.some(s=>/Precio en letras|Moneda/i.test(s)),'El precio se muestra como chip con nombre legible: '+chips.join(', '));
+const textos=await ajustes.locator('textarea').allInputValues();
+assert.ok(textos.every(s=>!s.includes('{{precio_letras}}')&&!/\[\s*precio en letras\s*\]/i.test(s)),'El precio automático no aparece como texto editable entre corchetes');
+await page.screenshot({path:out+'/documento-iphone-ajustes.png',animations:'disabled'});
+console.log('OK iPhone real: recuadro con scroll propio, margen inferior, '+cantidad+' cláusulas y chips de precio',mobileReading);
 assert.deepEqual(errors,[]);fs.writeFileSync(out+'/origen.json',JSON.stringify({version:'6.37',commit:process.env.GITHUB_SHA||null,datos:'Ficticios, sin backend',componentes:['DashboardView','OperacionForm','DocumentViewer']},null,2));
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));fs.rmSync(tmp,{recursive:true,force:true});}})().catch(e=>{console.error(e);server.close();process.exitCode=1;});
