@@ -49,7 +49,7 @@ await ajustes.getByRole('button',{name:'Editar',exact:true}).first().click();
 const chips=await ajustes.locator('[data-testid="dw-ajuste-chip"]').allTextContents();
 assert.ok(chips.length>0,'Los campos insertados tienen chips protegidos');
 assert.ok(chips.some(s=>/Precio en letras|Moneda/i.test(s)),'El precio se muestra como chip con nombre legible: '+chips.join(', '));
-const textos=await ajustes.locator('textarea').allInputValues();
+const textos=await ajustes.locator('textarea').evaluateAll(elements=>elements.map(el=>el.value));
 assert.ok(textos.every(s=>!s.includes('{{precio_letras}}')&&!/\[\s*precio en letras\s*\]/i.test(s)),'El precio automático no aparece como texto editable entre corchetes');
 await page.screenshot({path:out+'/documento-iphone-ajustes.png',animations:'disabled'});
 console.log('OK iPhone real: recuadro con scroll propio, margen inferior, '+cantidad+' cláusulas y chips de precio',mobileReading);
