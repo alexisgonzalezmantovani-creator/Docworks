@@ -104,6 +104,29 @@ delete global.document;
  check('Snapshot respeta obligatorias del modelo',()=>{const op={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'boleto',plantilla_snapshot:{tipo:'boleto',body_blocks:app.getDefaultBodyBlocks('boleto'),clausulas:[{id:'extra',titulo:'EXTRA PARTICULAR',contenido:'Texto adicional único',tipos:['boleto'],obligatoria:false}],obligatorias_ids:['extra']}};assert.ok(app.docToPlainText(app.buildDocSections(op,[],'boleto')).includes('Texto adicional único'));});
 
 
+ check('modelo antiguo con precio entre corchetes resuelve el chip sin reescribir el snapshot',()=>{
+   const bloque={id:'reserva.precio',titulo:'PRECIO',orden:1,activo:true,contenido:'El Oferente ofrece la suma de [precio en letras] para la compra del inmueble.'};
+   const base={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:[bloque]}};
+   const original=JSON.stringify(base.plantilla_snapshot);
+   const doc=app.buildDocSections(app.opParaDocumento(base),[],'reserva');
+   const texto=app.docToPlainText(doc);
+   assert.equal(texto.includes('[precio en letras]'),false);
+   assert.ok(texto.includes('El Oferente ofrece la suma de'));
+   assert.ok(texto.includes('150.000')||/ciento cincuenta mil/i.test(texto),'el precio debe resolverse con los datos de la operación');
+   assert.equal(JSON.stringify(base.plantilla_snapshot),original,'no muta el modelo guardado');
+ });
+ check('ajuste manual sobre marcador antiguo se aplica, conserva el precio y rechaza quitar el chip',()=>{
+   const bloque={id:'reserva.precio',titulo:'PRECIO',orden:1,activo:true,contenido:'El Oferente ofrece la suma de [precio en letras] para la compra del inmueble.'};
+   const base={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:[bloque]}};
+   const modificado={...base,ajustes_manuales:{reserva:{'reserva.precio':'En esta operación, el Oferente ofrece la suma de {{precio_letras}} por la compra del inmueble.'}}};
+   const txt=app.docToPlainText(app.buildDocSections(app.opParaDocumento(modificado),[],'reserva'));
+   assert.ok(txt.includes('En esta operación, el Oferente ofrece la suma de'),'el ajuste guardado realmente aparece');
+   assert.ok(!txt.includes('[precio en letras]') && !txt.includes('{{precio_letras}}'),'el chip se resolvió');
+   const malicioso={...base,ajustes_manuales:{reserva:{'reserva.precio':'En esta operación, el oferente ofrece un monto sin dato automático.'}}};
+   const rechazado=app.docToPlainText(app.buildDocSections(app.opParaDocumento(malicioso),[],'reserva'));
+   assert.ok(!rechazado.includes('un monto sin dato automático'),'no se admite un ajuste que elimina el token');
+ });
+
  // Regresión: el modelo esencial debe dejar las cláusulas elegidas al final, una sola vez.
  // Verificar también las exportaciones reales de una reserva y de una locación.
  for(const tipo of app.PLANTILLA_TIPOS){

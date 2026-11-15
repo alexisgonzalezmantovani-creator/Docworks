@@ -471,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.70";
+var DOCWORKS_VERSION = "6.71";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -4428,6 +4428,13 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
 }
 
 
+function canonizarMarcadoresAjuste(texto){
+  return String(texto||"")
+    .replace(/\[\s*precio(?:\s+de\s+venta)?\s+en\s+letras\s*\]/gi,"{{precio_letras}}")
+    .replace(/\[\s*(?:anticipo|seña)\s+en\s+letras\s*\]/gi,"{{anticipo_letras}}")
+    .replace(/\[\s*saldo\s+en\s+letras\s*\]/gi,"{{saldo_letras}}");
+}
+
 function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   // Las operaciones nuevas renderizan desde su snapshot; las históricas sin snapshot
   // conservan exactamente el comportamiento anterior.
@@ -4471,6 +4478,16 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
     clausulasLib=actuales;
     if(Array.isArray(snap.body_blocks)&&snap.body_blocks.length)bloquesPlantilla=snap.body_blocks;
   }
+  // 6.71: algunos modelos antiguos usan [precio en letras]. Convertir sólo
+  // estos marcadores conocidos ANTES de validar los ajustes: el mismo chip
+  // debe imprimirse, editarse y exportarse sin modificar la plantilla guardada.
+  if(Array.isArray(bloquesPlantilla)){
+    bloquesPlantilla=bloquesPlantilla.map(function(b){
+      if(!b || typeof b.contenido!=="string")return b;
+      var contenido=canonizarMarcadoresAjuste(b.contenido);
+      return contenido===b.contenido?b:Object.assign({},b,{contenido:contenido});
+    });
+  }
   // Ajustes manuales por operación: se aplican sobre copias de los bloques,
   // nunca sobre la plantilla maestra ni sobre su snapshot. Los chips {{...}}
   // siguen resolviéndose con los datos vigentes al generar el documento.
@@ -4479,6 +4496,7 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
     bloquesPlantilla=bloquesPlantilla.map(function(b){
       var ajuste=Object.prototype.hasOwnProperty.call(ajustesTipo,b.id)?ajustesTipo[b.id]:undefined;
       if(typeof ajuste!=="string"||!ajuste.trim())return b;
+      ajuste=canonizarMarcadoresAjuste(ajuste);
       var chips=function(t){return (String(t||"").match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(x){return x.replace(/\\s+/g,"");});};
       // Validar de nuevo al exportar: una operación antigua o alterada nunca
       // puede eliminar, reordenar ni sustituir los campos automáticos.
@@ -8279,7 +8297,7 @@ const TareasChecklist = crearTareasPanel({Btn, genId, getTareasDeOp, useState});
 function TareasPanel(props){return <><TareasChecklist {...props}/><RecordatoriosPanel key={String(props.op?.id||"")} op={props.op} loadClient={loadSupabaseJs}/></>;}
 const NegociacionPanel = crearNegociacionPanel({Btn, Inp, Slt, Txa, fechaHoyISO, fmt$, fmtD, genId, useState});
 const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
-const DocumentViewer = crearDocumentViewer({ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
+const DocumentViewer = crearDocumentViewer({canonizarMarcadoresAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
 const OperacionForm = crearOperacionForm({camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});

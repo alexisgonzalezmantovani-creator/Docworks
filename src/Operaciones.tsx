@@ -5452,7 +5452,7 @@ function CalendarioView({operaciones,onViewOp}){
 }
 
 export function crearDocumentViewer(deps){
- const {ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
+ const {canonizarMarcadoresAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
 
 
 function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggleTarea,onUpdateOperation,onActionWorkflow,onCompleteData,onSavePerfil,onAuditExport,onUpdateBloqueReserva,tab,onChangeTab,autoAction,onAutoActionDone}){
@@ -5514,12 +5514,6 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   },[ajusteEditando,partesAjuste,guardandoAjuste]);
   // Una operación nueva nunca debe heredar el borrador visual de otra.
   useEffect(function(){cerrarEdicionAjuste();ajusteOriginalRef.current="";},[op&&op.id]);
-  function canonizarMarcadoresAjuste(texto){
-    return String(texto||"")
-      .replace(/\[\s*precio(?:\s+de\s+venta)?\s+en\s+letras\s*\]/gi,"{{precio_letras}}")
-      .replace(/\[\s*(?:anticipo|seña)\s+en\s+letras\s*\]/gi,"{{anticipo_letras}}")
-      .replace(/\[\s*saldo\s+en\s+letras\s*\]/gi,"{{saldo_letras}}");
-  }
   function abrirAjuste(b){
     var guardado=op&&op.ajustes_manuales&&op.ajustes_manuales[tab]&&op.ajustes_manuales[tab][b.id];
     var contenido=canonizarMarcadoresAjuste(typeof guardado==="string"?guardado:String(b.contenido||""));
