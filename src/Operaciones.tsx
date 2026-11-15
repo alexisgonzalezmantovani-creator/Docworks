@@ -5452,7 +5452,7 @@ function CalendarioView({operaciones,onViewOp}){
 }
 
 export function crearDocumentViewer(deps){
- const {canonizarMarcadoresAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
+ const {canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
 
 
 function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggleTarea,onUpdateOperation,onActionWorkflow,onCompleteData,onSavePerfil,onAuditExport,onUpdateBloqueReserva,tab,onChangeTab,autoAction,onAutoActionDone}){
@@ -5526,12 +5526,14 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   async function guardarAjuste(b){
     if(!onUpdateOperation||guardandoAjuste)return;
     var contenido=partesAjuste.map(function(p){return p.chip||p.texto||"";}).join("");
-    if(!contenido.trim()||partesAjuste.some(function(p){return p.texto&&/\\{\\{|\\}\\}/.test(p.texto);})){
+    if(!contenido.trim()||partesAjuste.some(function(p){
+      return typeof p.texto==="string"&&(p.texto.includes("{{")||p.texto.includes("}}"));
+    })){
       setErrorAjuste("Revisá el texto: no debe estar vacío ni contener chips escritos manualmente.");return;
     }
-    var esperado=(canonizarMarcadoresAjuste(b.contenido||"").match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(t){return t.replace(/\\s+/g,"");});
-    var actual=(contenido.match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(t){return t.replace(/\\s+/g,"");});
-    if(JSON.stringify(esperado)!==JSON.stringify(actual)){setErrorAjuste("Los chips originales deben mantenerse intactos.");return;}
+    if(!conservaChipsAjuste(b.contenido,contenido)){
+      setErrorAjuste("Los campos automáticos son obligatorios: no se pueden eliminar, cambiar de orden ni reemplazar.");return;
+    }
     var previo=op.ajustes_manuales&&op.ajustes_manuales[tab]&&op.ajustes_manuales[tab][b.id];
     if(contenido===String(b.contenido||"")&&typeof previo!=="string"){cerrarEdicionAjuste();dwNotify("info","No hay cambios para guardar.");return;}
     if(typeof previo==="string"&&contenido===previo){cerrarEdicionAjuste();dwNotify("info","Esta cláusula ya estaba guardada.");return;}

@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const esbuild=require('esbuild');
 const root=path.resolve(__dirname,'..');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-test-'));
-const exportsList=['camposTratamientoActivos','textoTratamientoPersona','sustituirTokens','resolveVars','tokensEncabezadoParaTipo','PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion','datosCompraCompartidos','getResumenPartes'];
+const exportsList=['camposTratamientoActivos','textoTratamientoPersona','sustituirTokens','resolveVars','tokensEncabezadoParaTipo','PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','conservaChipsAjuste','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion','datosCompraCompartidos','getResumenPartes'];
 esbuild.buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+'\nexport { '+exportsList.join(',')+' };',resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs')});
 global.document={querySelector:()=>({}),title:''};
 const app=require(path.join(tmp,'app.cjs'));
@@ -104,6 +104,15 @@ delete global.document;
  check('Snapshot respeta obligatorias del modelo',()=>{const op={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'boleto',plantilla_snapshot:{tipo:'boleto',body_blocks:app.getDefaultBodyBlocks('boleto'),clausulas:[{id:'extra',titulo:'EXTRA PARTICULAR',contenido:'Texto adicional único',tipos:['boleto'],obligatoria:false}],obligatorias_ids:['extra']}};assert.ok(app.docToPlainText(app.buildDocSections(op,[],'boleto')).includes('Texto adicional único'));});
 
 
+ check('validación real bloquea quitar, reemplazar, agregar y reordenar chips',()=>{
+   const texto='Importe {{precio_letras}} en {{moneda_txt}}.';
+   assert.equal(app.conservaChipsAjuste(texto,'Importe {{ precio_letras }} en {{moneda_txt}}.'),true);
+   assert.equal(app.conservaChipsAjuste(texto,'Importe sin precio en {{moneda_txt}}.'),false);
+   assert.equal(app.conservaChipsAjuste(texto,'Importe {{anticipo_letras}} en {{moneda_txt}}.'),false);
+   assert.equal(app.conservaChipsAjuste(texto,'Importe {{precio_letras}} en {{moneda_txt}} y {{saldo_letras}}.'),false);
+   assert.equal(app.conservaChipsAjuste(texto,'Moneda {{moneda_txt}} y {{precio_letras}}.'),false);
+   assert.equal(app.conservaChipsAjuste('Importe [precio en letras].','Importe {{precio_letras}}.'),true);
+ });
  check('modelo antiguo con precio entre corchetes resuelve el chip sin reescribir el snapshot',()=>{
    const bloque={id:'reserva.precio',titulo:'PRECIO',orden:1,activo:true,contenido:'El Oferente ofrece la suma de [precio en letras] para la compra del inmueble.'};
    const base={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:[bloque]}};

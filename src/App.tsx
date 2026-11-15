@@ -471,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.71";
+var DOCWORKS_VERSION = "6.72";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -4435,6 +4435,17 @@ function canonizarMarcadoresAjuste(texto){
     .replace(/\[\s*saldo\s+en\s+letras\s*\]/gi,"{{saldo_letras}}");
 }
 
+function tokensProtegidosAjuste(texto){
+  return (String(texto||"").match(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g)||[])
+    .map(function(token){return token.replace(/\s+/g,"");});
+}
+function conservaChipsAjuste(original,nuevo){
+  // El precio y los demás campos automáticos son inmutables: no se pueden
+  // quitar, sustituir, duplicar ni reordenar mediante ajustes manuales.
+  return JSON.stringify(tokensProtegidosAjuste(canonizarMarcadoresAjuste(original)))===
+    JSON.stringify(tokensProtegidosAjuste(canonizarMarcadoresAjuste(nuevo)));
+}
+
 function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
   // Las operaciones nuevas renderizan desde su snapshot; las históricas sin snapshot
   // conservan exactamente el comportamiento anterior.
@@ -4497,10 +4508,8 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
       var ajuste=Object.prototype.hasOwnProperty.call(ajustesTipo,b.id)?ajustesTipo[b.id]:undefined;
       if(typeof ajuste!=="string"||!ajuste.trim())return b;
       ajuste=canonizarMarcadoresAjuste(ajuste);
-      var chips=function(t){return (String(t||"").match(/\\{\\{\\s*[a-zA-Z0-9_]+\\s*\\}\\}/g)||[]).map(function(x){return x.replace(/\\s+/g,"");});};
-      // Validar de nuevo al exportar: una operación antigua o alterada nunca
-      // puede eliminar, reordenar ni sustituir los campos automáticos.
-      if(JSON.stringify(chips(ajuste))!==JSON.stringify(chips(b.contenido)))return b;
+      // Segunda barrera, también para operaciones antiguas y datos manipulados.
+      if(!conservaChipsAjuste(b.contenido,ajuste))return b;
       return Object.assign({},b,{contenido:ajuste});
     });
   }
@@ -8297,7 +8306,7 @@ const TareasChecklist = crearTareasPanel({Btn, genId, getTareasDeOp, useState});
 function TareasPanel(props){return <><TareasChecklist {...props}/><RecordatoriosPanel key={String(props.op?.id||"")} op={props.op} loadClient={loadSupabaseJs}/></>;}
 const NegociacionPanel = crearNegociacionPanel({Btn, Inp, Slt, Txa, fechaHoyISO, fmt$, fmtD, genId, useState});
 const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
-const DocumentViewer = crearDocumentViewer({canonizarMarcadoresAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
+const DocumentViewer = crearDocumentViewer({canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
 const OperacionForm = crearOperacionForm({camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
