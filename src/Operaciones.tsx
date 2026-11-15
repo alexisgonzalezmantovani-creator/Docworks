@@ -2267,6 +2267,42 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{padding:5px 6px!important;font-size:11px!important}
 }
 
+/* 6.68 — iPhone: vista del documento separada del encabezado y lectura sin
+   doble scroll ni franja inferior sobre el texto. Sólo afecta al visor móvil. */
+@media (max-width:640px){
+  .modal-overlay-viewer .viewer-modal,
+  .modal-overlay-viewer .viewer-modal .modal-body{
+    background:var(--card)!important;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
+    display:block!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    padding-top:18px!important;
+    padding-bottom:calc(26px + env(safe-area-inset-bottom,0px))!important;
+    scroll-padding-top:18px;
+    scroll-padding-bottom:26px;
+    background:var(--card)!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
+    height:auto!important;
+    min-height:0!important;
+    margin-bottom:0!important;
+    flex:0 0 auto!important;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview>.pdf-content{
+    height:auto!important;
+    max-height:none!important;
+    min-height:0!important;
+    overflow:visible!important;
+    flex:0 0 auto!important;
+    padding-bottom:20px!important;
+  }
+}
+
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
 .dw-operation-page-heading{z-index:40;isolation:isolate;background-color:var(--bg)!important;background-image:none;backdrop-filter:none;opacity:1;flex-shrink:0;box-shadow:0 7px 0 var(--bg)}
 .dw-operation-page-heading::before{content:"";position:absolute;inset:-30px -28px 0;background:var(--bg);z-index:-1;pointer-events:none}

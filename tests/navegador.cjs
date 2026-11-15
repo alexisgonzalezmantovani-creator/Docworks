@@ -61,6 +61,24 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   const page=await browser.newPage(),errors=[];await page.setViewportSize({width,height});page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.text().includes('same key'))errors.push(m.text());});
   await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1')?r.continue():r.abort());
   await page.goto('http://127.0.0.1:'+server.address().port);
+  // Regresión 6.68: el visor de documento en iPhone tiene un único scroll,
+  // arranca algo más abajo y no deja un contenedor blanco fijo tapando la lectura.
+  if(name==='iphone'){
+   const estilos=await page.evaluate(()=>{
+    const overlay=document.createElement('div');
+    overlay.className='modal-overlay modal-overlay-viewer';
+    overlay.innerHTML='<div class="modal-box viewer-modal"><div class="modal-head">Documento</div><div class="modal-body"><div class="doc-viewer-shell"><div class="doc-viewer-tabs">Reserva</div><div class="doc-viewer-tab-content"><div class="doc-reading-scroll"><div class="pdf-preview"><div class="pdf-chrome">Vista</div><div class="pdf-content pdf-content-lg"><div class="pdf-text">Texto de ejemplo</div></div></div></div></div></div></div></div>';
+    document.body.appendChild(overlay);
+    const lectura=overlay.querySelector('.doc-reading-scroll'),hoja=overlay.querySelector('.pdf-preview'),texto=overlay.querySelector('.pdf-content');
+    const out={overflowLectura:getComputedStyle(lectura).overflowY,arriba:parseFloat(getComputedStyle(lectura).paddingTop),abajo:parseFloat(getComputedStyle(lectura).paddingBottom),altoHoja:getComputedStyle(hoja).height,overflowTexto:getComputedStyle(texto).overflowY,fondo:getComputedStyle(lectura).backgroundColor};
+    overlay.remove();return out;
+   });
+   assert.equal(estilos.overflowLectura,'auto','visor iPhone: desplazamiento exterior único');checks++;
+   assert.equal(estilos.overflowTexto,'visible','visor iPhone: hoja sin segundo scroll');checks++;
+   assert.ok(estilos.arriba>=16,'visor iPhone: vista previa más abajo');checks++;
+   assert.ok(estilos.abajo>=24,'visor iPhone: últimas líneas protegidas');checks++;
+   assert.notEqual(estilos.fondo,'rgb(255, 255, 255)','visor iPhone: sin fondo blanco en el pie');checks++;
+  }
   for(const tipo of ['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva']){
    await page.getByLabel('Documento de prueba').selectOption(tipo);
    await page.getByRole('button',{name:'Abrir vista previa de prueba'}).click();
