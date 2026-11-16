@@ -251,6 +251,8 @@ await check('autorización no imprime cotitulares del comprador y al volver cons
  await a.act(async()=>root.render(a.createElement(a.OperacionForm,{...formProps,key:'cambio-tipo',initial:original,perfil:{rol:'dueno',nombre:'Inmobiliaria Prueba',matricula:'1234',plantillas:{}}})));
  await a.act(async()=>document.querySelector('.step-dot').click());const byText=t=>[...document.querySelectorAll('.dw-grupo-tipo-sections .dw-grupo-card')].find(x=>x.textContent.includes(t));
  await a.act(async()=>byText('Autorización de Venta').click());assert.equal(snapshot.current.data.comprador_nombre,original.comprador_nombre,'Antes de confirmar debe conservar los datos del comprador');await confirmarCambioTipo();assert.equal(snapshot.current.data.comprador_nombre,'Inmobiliaria Prueba');assert.deepEqual(snapshot.current.data.comprador_cotitulares,[]);assert.ok(!a.docToPlainText(a.buildDocSections(a.opParaDocumento(snapshot.current.data),[],'exclusividad')).includes('Cotitular Real'));
+ // Después de elegir Autorización se avanza al paso 2; para volver a Comodato se abre Tipo.
+ await a.act(async()=>document.querySelector('.step-dot').click());
  await a.act(async()=>byText('Comodato').click());await confirmarCambioTipo();assert.equal(snapshot.current.data.comprador_nombre,original.comprador_nombre);assert.deepEqual(snapshot.current.data.comprador_cotitulares,original.comprador_cotitulares);assert.equal(snapshot.current.data.comprador_telefono_en_doc,true);
 });
 await check('los datos automáticos de la inmobiliaria no cuentan como una autorización completada',async()=>{

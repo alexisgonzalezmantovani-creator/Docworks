@@ -101,9 +101,24 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    const limite=scroll.getBoundingClientRect(),ultimo=hoja.querySelector('.pdf-text').lastElementChild.getBoundingClientRect();
    return {alto:scroll.clientHeight,scroll:scroll.scrollTop,finalVisible:ultimo.top>=limite.top-2&&ultimo.bottom<=limite.bottom+2};
   });
-  const lecturaInicial=await leerHastaFinal();
+  let lecturaInicial=await leerHastaFinal();
+  if(!lecturaInicial.finalVisible){
+   // Safari/WebKit puede terminar de medir el visor tras el primer desplazamiento.
+   // Reintentar mientras termina el layout; si no se puede leer el final, falla igualmente.
+   await page.waitForFunction(()=>{
+    const marco=document.querySelector('.viewer-modal .doc-reading-scroll');
+    if(!marco)return false;
+    const hoja=marco.querySelector('.pdf-content'),ultimo=hoja?.querySelector('.pdf-text')?.lastElementChild;
+    if(!hoja||!ultimo)return false;
+    const scroll=getComputedStyle(hoja).overflowY==='auto'?hoja:marco;
+    scroll.scrollTop=scroll.scrollHeight;
+    const limite=scroll.getBoundingClientRect(),r=ultimo.getBoundingClientRect();
+    return scroll.clientHeight>80&&scroll.scrollTop>0&&r.top>=limite.top-2&&r.bottom<=limite.bottom+2;
+   },null,{timeout:5000}).catch(()=>{});
+   lecturaInicial=await leerHastaFinal();
+  }
   await page.screenshot({path:path.join(out,'preview-largo-'+name+'.png')});
-  assert.ok(lecturaInicial.alto>80&&lecturaInicial.scroll>0&&lecturaInicial.finalVisible,name+' visor real: última línea legible');checks++;
+  assert.ok(lecturaInicial.alto>80&&lecturaInicial.scroll>0&&lecturaInicial.finalVisible,name+' visor real: última línea legible '+JSON.stringify(lecturaInicial));checks++;
   const listaAjustes=page.getByTestId('dw-ajustes-manuales');
   await listaAjustes.locator('summary').click();
   assert.equal(await listaAjustes.getByRole('button',{name:'Editar',exact:true}).count(),18,name+' conserva las 18 cláusulas');checks++;
