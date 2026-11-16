@@ -471,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.74";
+var DOCWORKS_VERSION = "6.75";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -488,12 +488,12 @@ var DOCWORKS_VERSION = "6.74";
 // 3.13: estabilización — errores de auth, cleanup de suscripción, rollback de operaciones y estados de devolución.
 
 // Logo público usado por la app y por el favicon.
-const LOGO_B64 = "/docworks-startup-logo.png?v=638";
+const LOGO_B64 = "/docworks-startup-logo.png?v=675";
 
 // Título visible de la web: siempre refleja la versión del documento.
 if (typeof document !== "undefined") document.title = "DocWorks v" + DOCWORKS_VERSION;
 function dwIrPasoModelo(setPaso,n){setPaso(n);}
-if(typeof document!=="undefined"){var dwThemeMeta=document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');if(!dwThemeMeta){dwThemeMeta=document.createElement("meta");dwThemeMeta.name="theme-color";document.head.appendChild(dwThemeMeta);}dwThemeMeta.content="#102653";}
+if(typeof document!=="undefined"){var dwThemeMeta=document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');if(!dwThemeMeta){dwThemeMeta=document.createElement("meta");dwThemeMeta.name="theme-color";document.head.appendChild(dwThemeMeta);}dwThemeMeta.content="#0b1730";}
   // Favicon de DocWorks: se muestra en la pestaña del navegador.
   try {
     var fav = document.querySelector<HTMLLinkElement>("#docworks-favicon");
@@ -522,8 +522,8 @@ var PWA_MANIFEST = {
   theme_color: "#0b1730",
   orientation: "any",
   icons: [
-    { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-    { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    { src: "/icon-192.png?v=675", sizes: "192x192", type: "image/png" },
+    { src: "/icon-512.png?v=675", sizes: "512x512", type: "image/png" },
   ],
 };
 function initPWA() {
@@ -8975,7 +8975,18 @@ function DocWorksApp(){
     // 4.16: sin este atributo las reglas [data-theme="dark"] del CSS nunca se activaban.
     r.setAttribute("data-theme",dark?"dark":"light");
     r.style.colorScheme=dark?"dark":"light";
-    try{ var tcm=document.querySelector<HTMLMetaElement>('meta[name="theme-color"]'); if(tcm) tcm.setAttribute("content","#0b1730"); }catch(e){ console.debug("DocWorks: no se pudo actualizar theme-color",e); }
+    try{
+      // Arranque: el manifiesto y el HTML mantienen #0b1730. Sólo con la sesión lista
+      // Android acompaña el fondo del tema en sus barras del sistema.
+      // iOS conserva el azul fijo de la barra superior ya corregida.
+      var esIOS=esDispositivoIOS();
+      var tcm=document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+      if(tcm) tcm.setAttribute("content",esIOS?"#0b1730":dark?"#0a0f1a":"#eef2f7");
+      if(!esIOS){
+        var csm=document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]');
+        if(csm)csm.setAttribute("content",dark?"dark":"light");
+      }
+    }catch(e){ console.debug("DocWorks: no se pudo actualizar theme-color",e); }
     if(dark){
       r.style.setProperty("--bg","#0a0f1a");
       r.style.setProperty("--surface","#111827");
