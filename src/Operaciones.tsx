@@ -5455,7 +5455,7 @@ export function crearDocumentViewer(deps){
  const {canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
 
 
-function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggleTarea,onUpdateOperation,onActionWorkflow,onCompleteData,onSavePerfil,onAuditExport,onUpdateBloqueReserva,tab,onChangeTab,autoAction,onAutoActionDone}){
+function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggleTarea,onUpdateOperation,onActionWorkflow,onCompleteData,onSavePerfil,onAuditExport,onUpdateBloqueReserva,tab,onChangeTab,autoAction,onAutoActionDone,salidaGuardRef=undefined}){
   var docTabs=getDocTabs(op);
   var TABS=docTabs.TABS, TAB_RESUMEN=docTabs.TAB_RESUMEN, TABS_ALL=docTabs.TABS_ALL;
 
@@ -5505,6 +5505,13 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     if(guardandoAjuste){dwNotify("info","Primero debe finalizar el guardado de la cláusula.");return false;}
     return !hayCambiosAjuste()||window.confirm("Hay cambios manuales sin guardar. ¿Descartarlos?");
   }
+  // El cierre del modal y el acceso al formulario ocurren en App. Compartir
+  // el mismo control evita desmontar este editor y perder el texto pendiente.
+  useEffect(function(){
+    if(!salidaGuardRef)return;
+    salidaGuardRef.current=permitirDescartarAjuste;
+    return function(){salidaGuardRef.current=null;};
+  },[salidaGuardRef,ajusteEditando,partesAjuste,guardandoAjuste]);
   // Evitar perder cambios al recargar o cerrar la pestaña.
   useEffect(function(){
     if(!hayCambiosAjuste()&&!guardandoAjuste)return;

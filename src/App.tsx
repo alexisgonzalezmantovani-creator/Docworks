@@ -471,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.72";
+var DOCWORKS_VERSION = "6.73";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -8525,6 +8525,13 @@ function DocWorksApp(){
   const [viewDocContexto,setViewDocContexto]=useState("");
   const viewDoc=viewDocContexto===claveContextoOperaciones(docworksAuth.contexto)?viewDocEstado:null;
   function setViewDoc(valor){if(valor&&typeof valor!=="function")setViewDocContexto(claveContextoOperaciones(docworksAuth.contexto));setViewDocEstado(valor);}
+  const salidaVisorRef=useRef(null);
+  function cerrarVisorSeguro(continuar=undefined){
+    if(salidaVisorRef.current&&salidaVisorRef.current()===false)return false;
+    setViewDoc(null);setDocAutoAction(null);
+    if(typeof continuar==="function")continuar();
+    return true;
+  }
   const [docTab,setDocTab]=useState("resumen");
   const [docAutoAction,setDocAutoAction]=useState(null); // "pdf"|"docx"|"whatsapp"|null — acción a disparar automáticamente al abrir el visor (menú "Finalizar")
   // En Android, el botón Atrás debe cerrar primero la capa interna abierta.
@@ -8542,7 +8549,12 @@ function DocWorksApp(){
       if(dwConfirm){ setDwConfirm(null); return; }
       if(confirmCloseForm){ cancelarSalidaFormulario(); return; }
       if(draftPrompt){ setDraftPrompt(null); return; }
-      if(viewDoc){ setViewDoc(null); return; }
+      if(viewDoc){
+        if(!cerrarVisorSeguro()){
+          try{window.history.pushState({docworksBackTrap:true},"",window.location.href);backTrapRef.current=true;}catch(_e){}
+        }
+        return;
+      }
       if(showForm){ cerrarFormularioSeguro(); return; }
       if(view!=="dashboard"){ setView("dashboard"); return; }
     }
@@ -9761,15 +9773,15 @@ function DocWorksApp(){
         onClose={cerrarOnboarding}
         onCreate={function(tipo){setView("dashboard");setFormFocusCampo(null);setEditOp(null);setFormTipo(tipo);setFormInitialOverride(Object.assign({},EMPTY_OP,{tipo:tipo}));setShowForm(true);}}/>}
 
-      <Modal open={!!viewDoc} onClose={function(){setViewDoc(null);setDocAutoAction(null);}} title={viewDoc?<OperationViewerHeading op={viewDoc}/>:"DocWorks"} wide={true} viewerMode={true}
+      <Modal open={!!viewDoc} onClose={function(){cerrarVisorSeguro();}} title={viewDoc?<OperationViewerHeading op={viewDoc}/>:"DocWorks"} wide={true} viewerMode={true}
         headerExtra={null}
         headerRight={viewDoc?<DocumentHeaderActions
-          onEdit={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(){var op=viewDoc;setViewDoc(null);setDocAutoAction(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}:undefined}
+          onEdit={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(){var op=viewDoc;cerrarVisorSeguro(function(){setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);});}:undefined}
           onPDF={function(){setDocAutoAction("pdf");}}
           onDOCX={function(){setDocAutoAction("docx");}}
           onShare={function(){setDocAutoAction("whatsapp");}}
         />:null}>
-        {viewDoc&&<DocumentViewer op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?toggleTarea:undefined} onUpdateOperation={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?onUpdateOperationGlobal:undefined} onActionWorkflow={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}:undefined} onCompleteData={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(op,campo){setViewDoc(null);setDocAutoAction(null);setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}:undefined} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
+        {viewDoc&&<DocumentViewer salidaGuardRef={salidaVisorRef} op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?toggleTarea:undefined} onUpdateOperation={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?onUpdateOperationGlobal:undefined} onActionWorkflow={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}:undefined} onCompleteData={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(op,campo){cerrarVisorSeguro(function(){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);});}:undefined} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
       </Modal>
       <ConfirmModal open={confirmCloseForm} actionsClassName="dw-operation-exit-actions" title="Salir de la operación" message={guardandoSalida?"Guardando el borrador…":"¿Querés guardar el borrador antes de salir?"} confirmLabel={guardandoSalida?"Guardando…":"Guardar borrador"} confirmDisabled={guardandoSalida} cancelLabel="Seguir editando" onCancel={cancelarSalidaFormulario} secondaryLabel="Salir sin guardar" onSecondary={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}>
         {errorSalida&&<p role="alert" style={{fontSize:13,color:"var(--red)",lineHeight:1.5}}>{errorSalida}</p>}

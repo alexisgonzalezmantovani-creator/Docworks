@@ -39,12 +39,18 @@ function ViewerHeaderHarness(){
  const [abierto,setAbierto]=useState(true),[accion,setAccion]=useState('');
  return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><output data-testid="accion-visormovil">{accion}</output><Modal open={abierto} onClose={()=>setAbierto(false)} title={<OperationViewerHeading op={{tipo:"reserva_alquiler",estado:"borrador",inmueble_direccion:"Operación ficticia · Departamento de ejemplo en Pilar"}}/>} wide viewerMode headerRight={<DocumentHeaderActions onEdit={()=>{setAccion('editar');setAbierto(false);}} onShare={()=>setAccion('compartir')} onPDF={()=>setAccion('pdf')} onDOCX={()=>setAccion('docx')}/>}><div style={{padding:20}}>Documento ficticio para revisar los controles del encabezado.</div></Modal></>;
 }
+function ManualViewerHarness(){
+ const [viewDoc,setViewDoc]=useState({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'qa-manual',tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:[{id:'reserva.qa',titulo:'Texto de prueba',contenido:'Texto original de prueba.',activo:true,orden:1}]}}),[tab,setTab]=useState('reserva'),[destino,setDestino]=useState('visor');
+ const salidaVisorRef=useRef(null),setDocAutoAction=()=>{};
+ ${fns.cerrarVisorSeguro}
+ return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><output data-testid="destino-manual">{destino}</output><Modal open={!!viewDoc} onClose={()=>cerrarVisorSeguro()} wide viewerMode title="Documento de prueba" headerRight={<DocumentHeaderActions onEdit={()=>cerrarVisorSeguro(()=>setDestino('formulario'))}/>}>{viewDoc&&<DocumentViewer op={viewDoc} perfil={{nombre:'Ejemplo',plantillas:{}}} clausulas={[]} operaciones={[viewDoc]} bloquesReserva={[]} tab={tab} onChangeTab={setTab} salidaGuardRef={salidaVisorRef} onUpdateOperation={async next=>{setViewDoc(next);return {operacion:next};}}/>}</Modal></>;
+}
 function FullViewerHarness(){
  const [tab,setTab]=useState('resumen');
  const op={...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'qa-reserva',tipo:'reserva_alquiler',estado:'borrador',created_at:'2026-11-05T12:00:00Z'};
  return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><Modal open onClose={()=>{}} wide viewerMode title={<OperationViewerHeading op={op}/>}><DocumentViewer op={op} operaciones={[op]} perfil={{nombre:'Ejemplo',plantillas:{}}} clausulas={[]} bloquesReserva={[]} tab={tab} onChangeTab={setTab}/></Modal></>;
 }
-createRoot(document.getElementById('root')).render(new URLSearchParams(location.search).has('fullviewer')?<FullViewerHarness/>:new URLSearchParams(location.search).has('viewer')?<ViewerHeaderHarness/>:new URLSearchParams(location.search).has('docs')?<DocumentosVinculadosHarness/>:<SalidaHarness/>);
+createRoot(document.getElementById('root')).render(new URLSearchParams(location.search).has('manualviewer')?<ManualViewerHarness/>:new URLSearchParams(location.search).has('fullviewer')?<FullViewerHarness/>:new URLSearchParams(location.search).has('viewer')?<ViewerHeaderHarness/>:new URLSearchParams(location.search).has('docs')?<DocumentosVinculadosHarness/>:<SalidaHarness/>);
 `;
 require('esbuild').buildSync({stdin:{contents:source+harness,resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:out+'/qa.js'});
 const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.woff2'){res.setHeader('Content-Type','font/woff2');res.end(fs.readFileSync(path.join(dir,'public/fonts/dm-sans-latin.woff2')));}else if(req.url==='/qa.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(out+'/qa.js'));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/qa.js"></script></body></html>')}});
@@ -124,6 +130,14 @@ await page.getByRole('button',{name:'Compartir',exact:true}).click();assert.equa
 await page.getByRole('button',{name:/Descargar/}).click();await page.getByRole('menuitem',{name:/PDF/}).click();assert.equal(await page.getByTestId('accion-visormovil').textContent(),'pdf');checks++;
 await page.locator('.modal-head').screenshot({path:out+'/editar-'+width+'.png'});await editar.click();assert.equal(await page.getByTestId('accion-visormovil').textContent(),'editar');assert.equal(await page.getByRole('dialog').count(),0);checks++;
 
+// Regresión: el cierre real del modal y Editar deben conservar ajustes cancelados.
+await page.goto(url+'/?manualviewer=1');
+const ajustes=page.getByTestId('dw-ajustes-manuales');await ajustes.locator('summary').click();await ajustes.getByRole('button',{name:'Editar',exact:true}).click();
+await ajustes.locator('textarea').first().fill('Texto manual conservado QA.');
+page.once('dialog',d=>d.dismiss());await page.locator('.modal-head .modal-close').click();assert.equal(await ajustes.locator('textarea').first().inputValue(),'Texto manual conservado QA.');checks++;
+page.once('dialog',d=>d.dismiss());await page.locator('.modal-head').getByRole('button',{name:'Editar',exact:true}).click();assert.equal(await page.getByTestId('destino-manual').textContent(),'visor');assert.ok(await ajustes.locator('textarea').first().isVisible());checks++;
+await ajustes.getByRole('button',{name:'Guardar ajuste',exact:true}).click();await ajustes.locator('textarea').waitFor({state:'detached'});assert.ok((await page.locator('.pdf-text').textContent()).includes('Texto manual conservado QA.'));checks++;
+await page.locator('.modal-head .modal-close').click();await page.getByRole('dialog').waitFor({state:'detached'});checks++;
 await page.goto(url+'/?fullviewer=1');
 assert.equal(await page.getByRole('button',{name:/Ficha completa/}).count(),1);checks++;
 assert.equal(await page.getByRole('button',{name:'Resumen',exact:true}).count(),1);checks++;
