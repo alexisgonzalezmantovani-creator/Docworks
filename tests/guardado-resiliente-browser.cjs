@@ -33,7 +33,9 @@ assert.equal(await page.evaluate(()=>typeof window.qaTipoConfirm),'function','De
 await page.evaluate(()=>{const aprobar=window.qaTipoConfirm;window.qaTipoConfirm=null;aprobar();});
 await page.waitForFunction(()=>window.qaSnapshot().data.tipo==='exclusividad');
 assert.deepEqual(await page.evaluate(()=>window.qaSnapshot().data.comprador_cotitulares),[]);await page.getByRole('button',{name:'Ver documento de prueba',exact:true}).click();assert.ok(!(await page.getByTestId('texto').textContent()).includes('Cotitular Real'));checks+=2;
-await page.getByRole('button',{name:/Comodato Préstamo de uso gratuito/}).click();
+// Tras elegir Autorización, la pantalla Tipo se cierra automáticamente.
+ await page.locator('.step-dot').first().click();
+ await page.getByRole('button',{name:/Comodato Préstamo de uso gratuito/}).click();
 assert.equal(await page.evaluate(()=>typeof window.qaTipoConfirm),'function','Volver a comodato también necesita confirmación');
 await page.evaluate(()=>{const aprobar=window.qaTipoConfirm;window.qaTipoConfirm=null;aprobar();});
 await page.waitForFunction(()=>window.qaSnapshot().data.tipo==='comodato');
