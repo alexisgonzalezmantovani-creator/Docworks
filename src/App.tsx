@@ -548,7 +548,7 @@ function initPWA() {
       document.head.appendChild(meta);
     }
     // 4.08 — Modo app: barra de estado azul integrada (iPhone) y rotación libre de pantalla.
-    [["apple-mobile-web-app-capable","yes"],["mobile-web-app-capable","yes"],["apple-mobile-web-app-status-bar-style","black-translucent"],["apple-mobile-web-app-title","DocWorks"]].forEach(function(par){
+    [["apple-mobile-web-app-capable","yes"],["mobile-web-app-capable","yes"],["apple-mobile-web-app-status-bar-style","black"],["apple-mobile-web-app-title","DocWorks"]].forEach(function(par){
       var mm=document.querySelector('meta[name="'+par[0]+'"]');
       if(!mm){ mm=document.createElement("meta"); mm.setAttribute("name",par[0]); document.head.appendChild(mm); }
       mm.setAttribute("content",par[1]);
