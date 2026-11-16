@@ -62,6 +62,30 @@ delete global.document;
    assert.ok(!doc.textoOriginal.includes('Pilar, Buenos Aires, Pilar'));
  });
 
+ check('la entrega libre de ocupantes es categórica y concisa',()=>{
+   for(const [tipo,id] of [['reserva','reserva.libre_ocupantes'],['boleto','boleto.libre']]){
+     const clause=app.getDefaultBodyBlocks(tipo).find(b=>b.id===id);
+     assert.ok(clause);
+     assert.match(clause.contenido,/libre de ocupantes/);
+     assert.doesNotMatch(clause.contenido,/salvo|excepci[oó]n|si las partes|si correspondiera/i);
+   }
+ });
+ check('el texto estándar de la versión anterior se actualiza sin modificar el guardado',()=>{
+   const previous=[
+     ['reserva','reserva.libre_ocupantes',"La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes, salvo que las partes acuerden expresamente por escrito una situación distinta.","El inmueble deberá entregarse libre de ocupantes al momento de la posesión."],
+     ['boleto','boleto.libre',"El VENDEDOR entregará el inmueble libre de ocupantes, cargas y gravámenes de cualquier naturaleza a la fecha de posesión pactada. Cualquier excepción deberá quedar expresamente individualizada y aceptada por escrito por el COMPRADOR.-","El VENDEDOR entregará el inmueble libre de ocupantes, cargas y gravámenes de cualquier naturaleza a la fecha de posesión pactada.-"]
+   ];
+   for(const [tipo,id,original,expected] of previous){
+     const blocks=[{id,titulo:'ENTREGA LIBRE DE OCUPANTES',contenido:original,activo:true,orden:1}];
+     const op={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo};
+     const rendered=app.buildDocSections(app.opParaDocumento(op),[],tipo,blocks);
+     assert.ok(rendered.secciones.some(s=>s.items.some(x=>x.includes(expected))));
+     assert.equal(blocks[0].contenido,original);
+     const custom=[{...blocks[0],contenido:original+' Acuerdo personalizado.'}];
+     const customDoc=app.buildDocSections(app.opParaDocumento(op),[],tipo,custom);
+     assert.ok(customDoc.secciones.some(s=>s.items.some(x=>x.includes('Acuerdo personalizado.'))));
+   }
+ });
  check('modelo de reserva separa expensas de entrega libre de ocupantes',()=>{
   const bloques=app.getDefaultBodyBlocks('reserva');
   const e=bloques.find(b=>b.id==='reserva.expensas_servicios'),l=bloques.find(b=>b.id==='reserva.libre_ocupantes');

@@ -3777,9 +3777,11 @@ function migrarBloqueLegacy(b){
 const DW_EXPENSAS_BASE_ORIGINAL = "Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario.";
  const DW_EXPENSAS_BASE_CLARO = "Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario. Las deudas pendientes por estos conceptos a la fecha de entrega deberán identificarse y regularizarse conforme a lo acordado por las partes.";
  const DW_ENTREGA_RESERVA_ORIGINAL = "La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes y con la situación de deudas, expensas y servicios regularizada según lo pactado por las partes y la normativa aplicable.";
- const DW_ENTREGA_RESERVA_CLARA = "La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes, salvo que las partes acuerden expresamente por escrito una situación distinta.";
+ const DW_ENTREGA_RESERVA_ANTERIOR = "La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes, salvo que las partes acuerden expresamente por escrito una situación distinta.";
+ const DW_ENTREGA_RESERVA_CLARA = "El inmueble deberá entregarse libre de ocupantes al momento de la posesión.";
  const DW_ENTREGA_BOLETO_ORIGINAL = "El VENDEDOR entregará el inmueble libre de ocupantes, deudas y gravámenes de cualquier naturaleza a la fecha de posesión pactada, siendo a su cargo los impuestos y expensas devengados hasta dicha fecha, y a cargo del COMPRADOR a partir de entonces.-";
- const DW_ENTREGA_BOLETO_CLARA = "El VENDEDOR entregará el inmueble libre de ocupantes, cargas y gravámenes de cualquier naturaleza a la fecha de posesión pactada. Cualquier excepción deberá quedar expresamente individualizada y aceptada por escrito por el COMPRADOR.-";
+ const DW_ENTREGA_BOLETO_ANTERIOR = "El VENDEDOR entregará el inmueble libre de ocupantes, cargas y gravámenes de cualquier naturaleza a la fecha de posesión pactada. Cualquier excepción deberá quedar expresamente individualizada y aceptada por escrito por el COMPRADOR.-";
+ const DW_ENTREGA_BOLETO_CLARA = "El VENDEDOR entregará el inmueble libre de ocupantes, cargas y gravámenes de cualquier naturaleza a la fecha de posesión pactada.-";
 
 var BODY_TEMPLATE_PRESETS = {
   reserva: (typeof DEFAULT_BLOQUES_RESERVA!=="undefined" ? DEFAULT_BLOQUES_RESERVA : []).map(function(b){ return Object.assign({}, b); }),
@@ -3903,17 +3905,18 @@ function esClausulaEsencialModelo(b){
  // Estos textos son para modelos de fábrica; nunca sobreescribir cláusulas personalizadas.
  function armonizarClausulasPosesionDeFabrica(bloques,tipo){
    if(!Array.isArray(bloques)||(tipo!=="reserva"&&tipo!=="boleto"))return bloques;
-   var exp=bloques.find(function(b){return b&&b.id===tipo+".expensas_servicios";});
    var entregaId=tipo==="reserva"?"reserva.libre_ocupantes":"boleto.libre";
-   var entrega=bloques.find(function(b){return b&&b.id===entregaId;});
    var entregaOriginal=tipo==="reserva"?DW_ENTREGA_RESERVA_ORIGINAL:DW_ENTREGA_BOLETO_ORIGINAL;
+   var entregaAnterior=tipo==="reserva"?DW_ENTREGA_RESERVA_ANTERIOR:DW_ENTREGA_BOLETO_ANTERIOR;
    var entregaNueva=tipo==="reserva"?DW_ENTREGA_RESERVA_CLARA:DW_ENTREGA_BOLETO_CLARA;
-   // Migración de lectura no destructiva: solo si AMBOS párrafos son exactamente
-   // los de fábrica. Si alguien editó uno, respetamos sus condiciones particulares.
-   if(!exp||!entrega||String(exp.contenido||"")!==DW_EXPENSAS_BASE_ORIGINAL||String(entrega.contenido||"")!==entregaOriginal)return bloques;
+   // Sólo se modernizan frases idénticas a versiones de fábrica, incluso en
+   // snapshots de operaciones anteriores. Nunca reescribir textos editados.
    return bloques.map(function(b){
-     if(b===exp)return Object.assign({},b,{contenido:DW_EXPENSAS_BASE_CLARO});
-     if(b===entrega)return Object.assign({},b,{contenido:entregaNueva});
+     if(!b)return b;
+     if(b.id===tipo+".expensas_servicios"&&b.contenido===DW_EXPENSAS_BASE_ORIGINAL)
+       return Object.assign({},b,{contenido:DW_EXPENSAS_BASE_CLARO});
+     if(b.id===entregaId&&(b.contenido===entregaOriginal||b.contenido===entregaAnterior))
+       return Object.assign({},b,{contenido:entregaNueva});
      return b;
    });
  }
