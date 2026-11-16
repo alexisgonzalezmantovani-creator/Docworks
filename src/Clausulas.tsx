@@ -36,16 +36,16 @@ export var DEFAULT_BLOQUES_RESERVA = [
     contenido:"El vencimiento de la aceptación de la presente Reserva caducará irrevocablemente {{reserva_aceptacion_plazo_texto}}, salvo prórroga expresa acordada por escrito entre las partes.-",
     variables:["reserva_aceptacion_plazo_texto","reserva_aceptacion_vencimiento"], condicion:null, orden:5, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.vencimiento_reserva", titulo:"VIGENCIA DE LA RESERVA", sinTitulo:false,
-    contenido:"La presente Reserva, y su conversión a Seña una vez conformada la misma, tendrá una vigencia de {{reserva_vigencia_texto}}, plazo dentro del cual deberá suscribirse el Boleto de Compraventa y/o la Escritura Traslativa de Dominio. Vencido dicho plazo sin que se hubiera concretado, la Reserva caducará de pleno derecho, salvo prórroga expresa acordada por escrito entre las partes.-",
+    contenido:"La presente Reserva, y su conversión a Seña una vez conformada la misma, tendrá una vigencia de {{reserva_vigencia_texto}}, plazo dentro del cual deberá suscribirse {{compra_instrumento_firma}}. Vencido dicho plazo sin que se hubiera concretado, la Reserva caducará de pleno derecho, salvo prórroga expresa acordada por escrito entre las partes.-",
     variables:["reserva_vigencia_texto","reserva_vigencia_dias"], condicion:null, orden:6, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.incumplimiento", titulo:"SEÑA Y CONSECUENCIAS DEL INCUMPLIMIENTO", sinTitulo:false,
-    contenido:"Conformada esta Reserva por el Vendedor, la presente tendrá carácter de SEÑA con los efectos y alcances del art. 1059 del Código Civil y Comercial de la Nación. Si el Oferente no se presentara a la firma de la Escritura Traslativa de Dominio y/o el Boleto de Compraventa, lo que ocurra primero, perderá automáticamente y de pleno derecho la suma entregada en este acto, sin necesidad de que se practique interpelación judicial o extrajudicial alguna, quedando constituido en mora por el mero vencimiento del plazo; mientras que si no se presentara el Vendedor a la firma en el plazo establecido, quedará obligado a reintegrar al Oferente, dentro de las 48 horas de producido el incumplimiento, la suma recibida como Reserva, más otro tanto igual en concepto de única y total indemnización.-\n\nEn caso de que el incumplimiento aludido en el párrafo anterior se deba a Caso Fortuito o Fuerza Mayor según arts. 955 y 1730 del Código Civil y Comercial de la Nación, ajeno a la voluntad de las partes, los plazos se suspenden automáticamente, sin consecuencias para éstas, hasta tanto lo determine el Escribano Interviniente.-",
+    contenido:"Conformada esta Reserva por el Vendedor, la presente tendrá carácter de SEÑA con los efectos y alcances del art. 1059 del Código Civil y Comercial de la Nación. Si el Oferente no se presentara a la firma {{compra_instrumento_de_firma}}, perderá automáticamente y de pleno derecho la suma entregada en este acto, sin necesidad de que se practique interpelación judicial o extrajudicial alguna, quedando constituido en mora por el mero vencimiento del plazo; mientras que si no se presentara el Vendedor a la firma en el plazo establecido, quedará obligado a reintegrar al Oferente, dentro de las 48 horas de producido el incumplimiento, la suma recibida como Reserva, más otro tanto igual en concepto de única y total indemnización.-\n\nEn caso de que el incumplimiento aludido en el párrafo anterior se deba a Caso Fortuito o Fuerza Mayor según arts. 955 y 1730 del Código Civil y Comercial de la Nación, ajeno a la voluntad de las partes, los plazos se suspenden automáticamente, sin consecuencias para éstas, hasta tanto lo determine el Escribano Interviniente.-",
     variables:[], condicion:null, orden:7, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.escribano", titulo:"ESCRIBANO INTERVINIENTE", sinTitulo:false,
     contenido:"{{escribania_clausula}} debiendo ser notificado formalmente al Vendedor con todos los datos de contacto correspondientes dentro de la semana de haber sido conformada la presente Reserva Ad Referéndum. La notificación del Escribano Interviniente respecto de la fecha y hora para la firma de la Escritura Traslativa de Dominio tendrá carácter constitutivo.-",
     variables:["escribania_clausula"], condicion:null, orden:8, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.honorarios_impuestos", titulo:"GASTOS, IMPUESTOS Y ESCRITURACIÓN", sinTitulo:false,
-    contenido:"Los gastos notariales, registrales, impuestos, tasas y sellos vinculados a la firma e inscripción de la Escritura Traslativa de Dominio y/o al Boleto de Compraventa se distribuirán conforme a lo expresamente acordado por las partes y a la normativa aplicable. Los honorarios de intermediación inmobiliaria se regulan exclusivamente por la cláusula específica de HONORARIOS de este instrumento.-",
+    contenido:"Los gastos notariales, registrales, impuestos, tasas y sellos vinculados a la firma e inscripción {{compra_instrumento_de_firma}} se distribuirán conforme a lo expresamente acordado por las partes y a la normativa aplicable. Los honorarios de intermediación inmobiliaria se regulan exclusivamente por la cláusula específica de HONORARIOS de este instrumento.-",
     variables:[], condicion:null, orden:9, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.moneda_condicion_esencial", titulo:"MONEDA DE PAGO Y CONDICIÓN ESENCIAL", sinTitulo:false,
     contenido:"Queda expresamente establecido que la moneda de pago ofrecida y acordada en los puntos 1, 2 y 3 precedentes constituye condición y elemento esencial de la presente. El Oferente declara poseer los Dólares Billete Estadounidenses y se compromete a entregarlos por el precio estipulado en caso de aceptación, así como para cancelar los honorarios convenidos, renunciando a invocar imprevisión, caso fortuito, fuerza mayor, enriquecimiento sin causa o cualquier otra defensa relacionada a una eventual imposibilidad de pago en la moneda pactada o a variaciones en su cotización, resultando condición esencial que el pago sea efectuado única y exclusivamente en Dólares Billete Estadounidenses.-",
@@ -311,6 +311,8 @@ export function crearClausulasWorkspace(deps){
 
 function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClausula,onEditClausula,onDeleteClausula,papeleraClausulas,papeleraClausulasLoading,papeleraClausulasError,onRecargarPapeleraClausulas,onRestaurarClausula,bloquesReserva,onUpdateBloqueReserva,onMoveBloqueReserva,bloquesError,bloquesLoading,onRetryBloques,clausulasError,clausulasLoading,onRetryClausulas,usuarioActual,onAbrirAspecto}) {
   const [restaurandoClausula,setRestaurandoClausula]=useState(null);
+  const [modoConformidadGuardando,setModoConformidadGuardando]=useState(false);
+  const [modoConformidadError,setModoConformidadError]=useState("");
   const [errorPapeleraClausulas,setErrorPapeleraClausulas]=useState("");
   const [seccion,setSeccionDirecto]=useState(perfil&&(perfil.rol==="dueno"||perfil.rol==="admin")?"modelos":"adicionales");
   function setSeccion(next){
@@ -462,6 +464,32 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         </div>
         {onAbrirAspecto&&<button type="button" className="btn btn-secondary btn-sm" title="Configurar aspecto del documento" aria-label="Configurar aspecto del documento" style={{minHeight:40,marginLeft:"auto",padding:"8px 12px",fontWeight:700,flex:"0 0 auto"}} onClick={function(){if(verEditorPropio)navegarConProteccionModelo(onAbrirAspecto);else if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Aspecto</button>}
       </div>
+      {tipoDocSel==="reserva"&&!verEditorPropio&&<div className="card" data-testid="dw-reserva-conformidad-modo" style={{padding:14}}>
+        <div style={{fontWeight:750,fontSize:14,color:"var(--text)",marginBottom:4}}>Firmas y conformidad del vendedor</div>
+        <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:10}}>Elegí cómo generar la reserva. Esta preferencia se guarda para toda la inmobiliaria; los datos se cargan una sola vez.</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(175px,1fr))",gap:8}}>
+          {[{id:"unificada",nombre:"Un solo documento",detalle:"Reserva y conformidad juntas"},{id:"separada",nombre:"Dos documentos",detalle:"Reserva y acta de conformidad"}].map(function(x){
+            var activo=(perfil&&perfil.plantillas&&perfil.plantillas.reserva&&perfil.plantillas.reserva.conformidad_modo||"unificada")===x.id;
+            return <button type="button" key={x.id} disabled={modoConformidadGuardando} aria-pressed={activo} onClick={async function(){
+              if(modoConformidadGuardando||activo)return;
+              setModoConformidadError("");setModoConformidadGuardando(true);
+              try{
+                var actual=perfilActualRef.current||perfil;
+                var mapa=Object.assign({},actual&&actual.plantillas||{});
+                mapa.reserva=Object.assign({},mapa.reserva||{},{conformidad_modo:x.id});
+                var resultado=await guardarPerfil(Object.assign({},actual,{plantillas:mapa}));
+                if(resultado&&resultado.error)throw resultado.error;
+              }catch(err){setModoConformidadError(err&&err.message?err.message:"No se pudo guardar la modalidad de conformidad.");}
+              finally{setModoConformidadGuardando(false);}
+            }} style={{display:"flex",alignItems:"center",gap:10,textAlign:"left",padding:12,borderRadius:10,cursor:modoConformidadGuardando?"wait":"pointer",border:"1px solid "+(activo?"rgba(56,189,248,.7)":"var(--border2)"),background:activo?"rgba(56,189,248,.12)":"var(--surface2)",color:"var(--text)"}}>
+              <span aria-hidden="true" style={{color:activo?"#0284c7":"var(--dim)",fontSize:16}}>{activo?"●":"○"}</span>
+              <span><strong style={{display:"block",fontSize:12.5}}>{x.nombre}</strong><small style={{color:"var(--muted)",display:"block",fontSize:11.5,marginTop:2}}>{x.detalle}</small></span>
+            </button>;
+          })}
+        </div>
+        {modoConformidadGuardando&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginTop:6}}>Guardando modalidad…</div>}
+        {modoConformidadError&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginTop:6}}>{modoConformidadError}</div>}
+      </div>}
       {verEditorPropio
         ? <DocumentoPropioEditor key={"contrato-propio-"+tipoDocSel} tipo={tipoDocSel} perfil={perfil} onSavePerfil={guardarPerfil} confirmar={requestDwConfirm} onCancelar={function(){setPegarMiContrato(false);}}/>
         : <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>

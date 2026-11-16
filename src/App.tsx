@@ -471,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.75";
+var DOCWORKS_VERSION = "6.76";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -859,6 +859,9 @@ function derivedTokensGenerales(op) {
     reserva_alquiler_comision_locador_texto: textoComision(op,"res_alq_comision_locador","LOCADOR","canon mensual",parseMontoAR(op.res_alq_monto_mensual||0),op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS","res_alq_comision_locador",valorComisionPredeterminado(op.res_alq_comision,"1")),
     reserva_alquiler_comision_locatario_texto: textoComision(op,"res_alq_comision_locatario","LOCATARIO","canon mensual",parseMontoAR(op.res_alq_monto_mensual||0),op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS","res_alq_comision_locatario",valorComisionPredeterminado(op.res_alq_comision,"1")),
     compra_instrumento_nombre:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).nombre,
+    compra_instrumento_firma:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).firma,
+    compra_instrumento_de_firma:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).firma.replace(/^el /,"del ").replace(/^la /,"de la "),
+    compra_instrumento_a_firma:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).firma.replace(/^el /,"al ").replace(/^la /,"a la "),
     compra_boleto_origen:String(op.compra_boleto_origen||"").trim(),
     compra_posesion_texto:textoPosesionBoletoCompra(op),
     exclusividad_modalidad_texto: exclModalidad,
@@ -1108,7 +1111,7 @@ function crearSnapshotPlantillaOperacion(op,perfil,clausulas,bloquesReserva){
   var idsSnapshot=ids.concat(obligatoriasIds).filter(function(id,i,a){return a.indexOf(id)===i;});
   var intro=(perfil&&perfil.encabezados_custom&&perfil.encabezados_custom[tipo])||DEFAULT_ENCABEZADOS[tipo]||"";
   var body=esPropio?[]:getBodyBlocksConfig(perfil,tipo,bloquesReserva);
-  return {tipo:tipo,version:obtenerVersionPlantilla(perfil,tipo),capturado_en:new Date().toISOString(),introduccion:intro,clausulas_ids:ids,obligatorias_ids:obligatoriasIds,clausulas:(clausulas||[]).filter(function(c){return idsSnapshot.indexOf(c.id)!==-1;}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria,orden:c.orden,aplica_a:c.aplica_a,...(Array.isArray(c.tipos)?{tipos:c.tipos.slice()}:{})};}),body_blocks:JSON.parse(JSON.stringify(body)),mostrar_introduccion:!(perfil&&perfil.mostrar_introduccion===false),documento_propio:esPropio?String(cfg.documento_propio||""):null,inmobiliaria_nombre:esPropio?String(perfil&&perfil.nombre||""):null,inmobiliaria_matricula:esPropio?String(perfil&&perfil.matricula||""):null};
+  return {tipo:tipo,version:obtenerVersionPlantilla(perfil,tipo),capturado_en:new Date().toISOString(),introduccion:intro,clausulas_ids:ids,obligatorias_ids:obligatoriasIds,clausulas:(clausulas||[]).filter(function(c){return idsSnapshot.indexOf(c.id)!==-1;}).map(function(c){return {id:c.id,titulo:c.titulo,contenido:c.contenido,obligatoria:!!c.obligatoria,categoria:c.categoria,orden:c.orden,aplica_a:c.aplica_a,...(Array.isArray(c.tipos)?{tipos:c.tipos.slice()}:{})};}),body_blocks:JSON.parse(JSON.stringify(body)),conformidad_modo:tipo==="reserva"&&cfg.conformidad_modo==="separada"?"separada":"unificada",mostrar_introduccion:!(perfil&&perfil.mostrar_introduccion===false),documento_propio:esPropio?String(cfg.documento_propio||""):null,inmobiliaria_nombre:esPropio?String(perfil&&perfil.nombre||""):null,inmobiliaria_matricula:esPropio?String(perfil&&perfil.matricula||""):null};
 }
 function sellarVersionPlantillaOperacion(op,perfil,forzar,clausulas,bloquesReserva){
   if(!op)return op;
@@ -1275,7 +1278,7 @@ var TOKEN_LABELS_DOCWORKS = {
   comprador_nombre:"Nombre del comprador / oferente", comprador_dni:"DNI / CUIT del comprador", comprador_domicilio:"Domicilio del comprador", comprador_email:"Correo electrónico del comprador", comprador_telefono:"Teléfono del comprador",
   vendedor_nombre:"Nombre del vendedor / titular", vendedor_dni:"DNI / CUIT del vendedor", vendedor_domicilio:"Domicilio del vendedor", vendedor_email:"Correo electrónico del vendedor", vendedor_telefono:"Teléfono del vendedor",
   locador_nombre:"Nombre del locador", locador_dni:"DNI / CUIT del locador", locador_domicilio:"Domicilio del locador", locatario_nombre:"Nombre del locatario", locatario_dni:"DNI / CUIT del locatario", locatario_domicilio:"Domicilio del locatario",
-  inmueble_barrio:"Barrio / complejo", inmueble_unidad_funcional:"Unidad funcional / lote", inmueble_direccion:"Dirección del inmueble", inmueble_partido:"Partido / Municipio", inmueble_provincia:"Provincia", nomenclatura_catastral:"Nomenclatura catastral", descripcion_inmueble:"Detalles adicionales del inmueble", inmueble_documentacion_actual_texto:"Documentación actual (declarada)", compra_instrumento_nombre:"Instrumentación prevista (escritura, boleto o cesión)", compra_boleto_origen:"Boleto antecedente de la cesión",
+  inmueble_barrio:"Barrio / complejo", inmueble_unidad_funcional:"Unidad funcional / lote", inmueble_direccion:"Dirección del inmueble", inmueble_partido:"Partido / Municipio", inmueble_provincia:"Provincia", nomenclatura_catastral:"Nomenclatura catastral", descripcion_inmueble:"Detalles adicionales del inmueble", inmueble_documentacion_actual_texto:"Documentación actual (declarada)", compra_instrumento_nombre:"Instrumentación prevista (escritura, boleto o cesión)", compra_instrumento_firma:"Instrumento de firma", compra_instrumento_de_firma:"Firma del instrumento", compra_instrumento_a_firma:"Firma del instrumento", compra_boleto_origen:"Boleto antecedente de la cesión",
   fecha_operacion_larga:"Fecha de la operación", inmobiliaria_nombre:"Nombre de la inmobiliaria", inmobiliaria_matricula:"Matrícula de la inmobiliaria", alquiler_monto_letras:"Canon mensual en letras", comision_porcentaje:"Porcentaje de comisión"
 };
 function tokensDeTextoDocWorks(texto){
@@ -3410,7 +3413,7 @@ var ENCABEZADO_TOKENS_INFO = [
   ["locatario_nombre","Nombre del locatario"],["locatario_dni","DNI/CUIT del locatario"],["locatario_domicilio","Domicilio del locatario"],
   ["inmueble_direccion","Dirección del inmueble"],["inmueble_partido","Partido/Municipio"],["inmueble_provincia","Provincia"],["nomenclatura_catastral","Nomenclatura catastral (con coma inicial, o vacío)"],
   ["precio_letras","Precio de venta en letras"],["anticipo_letras","Anticipo/seña en letras"],["saldo_letras","Saldo en letras"],["alquiler_monto_letras","Canon mensual en letras"],
-  ["fecha_operacion_larga","Fecha de la operación en formato largo"],["inmobiliaria_nombre","Nombre de la inmobiliaria"],["inmobiliaria_matricula","Matrícula de la inmobiliaria"],
+  ["compra_instrumento_firma","Instrumento de firma"],["compra_instrumento_de_firma","Firma del instrumento"],["compra_instrumento_a_firma","Firma del instrumento"],["fecha_operacion_larga","Fecha de la operación en formato largo"],["inmobiliaria_nombre","Nombre de la inmobiliaria"],["inmobiliaria_matricula","Matrícula de la inmobiliaria"],
 ];
 function sustituirTokens(tpl, op, perfil, tipo) {
   var esAlq = tipo==="alquiler"||tipo==="reserva_alquiler";
@@ -3421,6 +3424,9 @@ function sustituirTokens(tpl, op, perfil, tipo) {
     locatario_nombre:op.locatario_nombre||"___", locatario_dni:op.locatario_dni||"___", locatario_domicilio:op.locatario_domicilio||"___",
     inmueble_direccion:op.inmueble_direccion||"___", inmueble_partido:op.inmueble_partido||"___", inmueble_provincia:op.inmueble_provincia||"___",
     compra_instrumento_nombre:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).nombre,
+    compra_instrumento_firma:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).firma,
+    compra_instrumento_de_firma:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).firma.replace(/^el /,"del ").replace(/^la /,"de la "),
+    compra_instrumento_a_firma:(instrumentoCompraConfig(op)||INSTRUMENTOS_COMPRA.escritura).firma.replace(/^el /,"al ").replace(/^la /,"a la "),
     compra_boleto_origen:String(op.compra_boleto_origen||"").trim(),
     ...datosAdicionalesInmueble(op),
     nomenclatura_catastral: op.nomenclatura_catastral ? (", Nomenclatura Catastral "+op.nomenclatura_catastral) : "",
@@ -4460,11 +4466,28 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
 }
 
 
-function canonizarMarcadoresAjuste(texto){
+// Convertir referencias heredadas a chips protegidos. Los textos legales
+// personalizados sin estas coincidencias permanecen intactos.
+function normalizarInstrumentoAChips(texto){
   return String(texto||"")
+    .replace(/\bde\s+la\s+Escritura\s+Traslativa\s+de\s+Dominio\s+y\s*\/\s*o\s+(?:el|del)\s+Boleto\s+de\s+Compraventa\b/gi,"{{compra_instrumento_de_firma}}")
+    .replace(/\bde\s+la\s+Escritura\s+Traslativa\s+de\s+Dominio\s+y\s*\/\s*o\s+(?:al|a\s+la)\s+Boleto\s+de\s+Compraventa\b/gi,"{{compra_instrumento_de_firma}}")
+    .replace(/\bel\s+Boleto\s+de\s+Compraventa\s+y\s*\/\s*o\s+la\s+Escritura\s+Traslativa\s+de\s+Dominio\b/gi,"{{compra_instrumento_firma}}")
+    .replace(/\b(?:de\s+el|del)\s+Boleto\s+de\s+Compraventa\s+y\s*\/\s*o\s+(?:la|de\s+la)\s+Escritura\s+Traslativa\s+de\s+Dominio\b/gi,"{{compra_instrumento_de_firma}}")
+    .replace(/\b(?:la\s+)?Escritura\s+Traslativa\s+de\s+Dominio\s+y\s*\/\s*o\s+(?:el\s+)?Boleto\s+de\s+Compraventa\b/gi,"{{compra_instrumento_firma}}")
+    .replace(/\b(?:el\s+)?Boleto\s+de\s+Compraventa\s+y\s*\/\s*o\s+(?:la\s+)?Escritura\s+Traslativa\s+de\s+Dominio\b/gi,"{{compra_instrumento_firma}}")
+    .replace(/\b(?:al\s+)?(?:momento\s+de\s+)?(?:la\s+)?firma\s+{{compra_instrumento_de_firma}}\s*,?\s*lo\s+que\s+ocurra\s+primero/gi,function(m){return m.replace(/,?\s*lo\s+que\s+ocurra\s+primero/i,"");})
+    .replace(/(\{\{compra_instrumento_(?:firma|de_firma|a_firma)\}\})\s*,?\s*lo\s+que\s+ocurra\s+primero/gi,"$1");
+}
+function canonizarMarcadoresAjuste(texto){
+  var normal=String(texto||"")
     .replace(/\[\s*precio(?:\s+de\s+venta)?\s+en\s+letras\s*\]/gi,"{{precio_letras}}")
-    .replace(/\[\s*(?:anticipo|seña)\s+en\s+letras\s*\]/gi,"{{anticipo_letras}}")
-    .replace(/\[\s*saldo\s+en\s+letras\s*\]/gi,"{{saldo_letras}}");
+    .replace(/\[\s*(?:anticipo|seña|reserva)\s+en\s+letras\s*\]/gi,"{{anticipo_letras}}")
+    .replace(/\[\s*saldo\s+en\s+letras\s*\]/gi,"{{saldo_letras}}")
+    .replace(/\[\s*(?:precio|importe\s+de\s+venta)\s*\]/gi,"{{precio_letras}}")
+    .replace(/\[\s*(?:importe|monto)\s+de\s+(?:la\s+)?reserva\s*\]/gi,"{{anticipo_letras}}")
+    .replace(/\[\s*(?:instrumento(?:\s+de\s+firma)?|escritura\s+o\s+boleto)\s*\]/gi,"{{compra_instrumento_firma}}");
+  return normalizarInstrumentoAChips(normal);
 }
 
 function tokensProtegidosAjuste(texto){
@@ -4581,10 +4604,48 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
       }
     }
   }
+  // Las redacciones antiguas con «y/o» se transforman al instrumento elegido
+  // también en operaciones que conservan un snapshot de fábrica.
+  if((tipo||op.tipo)==="reserva"||(tipo||op.tipo)==="boleto"){
+    var normalizarLegal=function(x){return resolveVars(canonizarMarcadoresAjuste(x),op,derivedTokensGenerales(op));};
+    doc=Object.assign({},doc,{
+      secciones:(doc.secciones||[]).map(function(sec){return Object.assign({},sec,{items:(sec.items||[]).map(normalizarLegal)});}),
+      conformidad:doc.conformidad?Object.assign({},doc.conformidad,{items:(doc.conformidad.items||[]).map(normalizarLegal)}):doc.conformidad,
+      clausulas:(doc.clausulas||[]).map(function(c){return Object.assign({},c,{texto:normalizarLegal(c.texto||"")});})
+    });
+  }
   return doc;
 }
 
 // ── RECIBO DE HONORARIOS ───────────────────────────────────────────────────────
+function construirDocumentoConformidadReserva(reserva,op){
+  if(!reserva||!reserva.conformidad)return null;
+  var aceptacion=reserva.conformidad;
+  var firmantes=Array.isArray(aceptacion.firmantes)&&aceptacion.firmantes.length?aceptacion.firmantes:
+    [{nombre:aceptacion.firmante||op.vendedor_nombre||"",dni:aceptacion.dni||op.vendedor_dni||"",rol:"VENDEDOR"}];
+  return {
+    tipoDocumento:"conformidad_vendedor",
+    titulo:"CONFORMIDAD DEL VENDEDOR",
+    subtitulo:"Acta de conformidad de la Reserva Ad Referéndum",
+    ciudad:reserva.ciudad,fecha:reserva.fecha,
+    encabezado:"En relación con la Reserva Ad Referéndum presentada por "+(op.comprador_nombre||"___")+
+      " respecto del inmueble ubicado en "+(op.inmueble_direccion||"___")+
+      ", "+(op.inmueble_partido||"___")+", Provincia de "+(op.inmueble_provincia||"___")+
+      ", el VENDEDOR manifiesta su conformidad en los siguientes términos:",
+    partes:[],ocultarPartesEnCuerpo:true,
+    secciones:[{titulo:"1. PRESTA CONFORMIDAD",items:(aceptacion.items||[]).slice()}],
+    firmas:firmantes.map(function(f){return {rol:"VENDEDOR",nombre:f.nombre||"",dni:f.dni||""};}),
+    clausulas:[],conformidad:null
+  };
+}
+function modoConformidadReserva(perfil,op){
+  if(op&&op.tipo!=="reserva")return "unificada";
+  var snap=op&&op.plantilla_snapshot;
+  var guardado=snap&&snap.tipo==="reserva"?snap.conformidad_modo:null;
+  var cfg=perfil&&perfil.plantillas&&perfil.plantillas.reserva;
+  return (guardado||cfg&&cfg.conformidad_modo)==="separada"?"separada":"unificada";
+}
+
 function buildReciboSections(op, perfil, destinatario) {
   // destinatario: "parte1" | "parte2"
   var esAlq = op.tipo === "alquiler";
@@ -8336,7 +8397,7 @@ const TareasChecklist = crearTareasPanel({Btn, genId, getTareasDeOp, useState});
 function TareasPanel(props){return <><TareasChecklist {...props}/><RecordatoriosPanel key={String(props.op?.id||"")} op={props.op} loadClient={loadSupabaseJs}/></>;}
 const NegociacionPanel = crearNegociacionPanel({Btn, Inp, Slt, Txa, fechaHoyISO, fmt$, fmtD, genId, useState});
 const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
-const DocumentViewer = crearDocumentViewer({canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
+const DocumentViewer = crearDocumentViewer({construirDocumentoConformidadReserva, modoConformidadReserva, canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
 const OperacionForm = crearOperacionForm({camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});

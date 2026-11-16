@@ -5480,7 +5480,7 @@ function CalendarioView({operaciones,onViewOp}){
 }
 
 export function crearDocumentViewer(deps){
- const {canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
+ const {construirDocumentoConformidadReserva, modoConformidadReserva, canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
 
 
 function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggleTarea,onUpdateOperation,onActionWorkflow,onCompleteData,onSavePerfil,onAuditExport,onUpdateBloqueReserva,tab,onChangeTab,autoAction,onAutoActionDone,salidaGuardRef=undefined}){
@@ -5488,6 +5488,11 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   var TABS=docTabs.TABS, TAB_RESUMEN=docTabs.TAB_RESUMEN, TABS_ALL=docTabs.TABS_ALL;
 
   function setTab(id){ if(id===tab)return true;if(!permitirDescartarAjuste())return false;cerrarEdicionAjuste();onChangeTab(id);return true; }
+  const [vistaConformidadSeparada,setVistaConformidadSeparada]=useState(false);
+  useEffect(function(){setVistaConformidadSeparada(false);},[op&&op.id,tab]);
+  const modoSeparadoReserva=op.tipo==="reserva"&&modoConformidadReserva(perfil,op)==="separada";
+  const disponeConformidadSeparada=modoSeparadoReserva&&!(op.plantilla_snapshot&&typeof op.plantilla_snapshot.documento_propio==="string")&&
+    !(perfil&&perfil.plantillas&&perfil.plantillas.reserva&&perfil.plantillas.reserva.modo_documento==="propio");
   const [busy,setBusy]=useState({pdf:false,docx:false,share:false});
   const [err,setErr]=useState("");
   const [lastAction,setLastAction]=useState(null); // "pdf" | "docx" | "share"
@@ -5637,7 +5642,12 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     }
     if(tabActual.esRecibo) return buildReciboSections(opParaDocumento(Object.assign({},op,{inmobiliaria_nombre:(perfil&&perfil.nombre)||op.inmobiliaria_nombre,inmobiliaria_matricula:(perfil&&perfil.matricula)||op.inmobiliaria_matricula,inmobiliaria_domicilio:(perfil&&perfil.direccion)||op.inmobiliaria_domicilio,inmobiliaria_email:(perfil&&perfil.email)||op.inmobiliaria_email,inmobiliaria_telefono:(perfil&&perfil.telefono)||op.inmobiliaria_telefono})), perfil, tabActual.dest);
     var cuerpo = getBodyBlocksForDocument(perfil, tab, bloquesReserva);
-    return aplicarEncabezadoPersonalizado(buildDocSections(opParaDocumento(Object.assign({},op,{inmobiliaria_nombre:(perfil&&perfil.nombre)||op.inmobiliaria_nombre,inmobiliaria_matricula:(perfil&&perfil.matricula)||op.inmobiliaria_matricula,inmobiliaria_domicilio:(perfil&&perfil.direccion)||op.inmobiliaria_domicilio,inmobiliaria_email:(perfil&&perfil.email)||op.inmobiliaria_email,inmobiliaria_telefono:(perfil&&perfil.telefono)||op.inmobiliaria_telefono})), clausulas, tab, cuerpo), op, tab, perfil);
+    var documento=aplicarEncabezadoPersonalizado(buildDocSections(opParaDocumento(Object.assign({},op,{inmobiliaria_nombre:(perfil&&perfil.nombre)||op.inmobiliaria_nombre,inmobiliaria_matricula:(perfil&&perfil.matricula)||op.inmobiliaria_matricula,inmobiliaria_domicilio:(perfil&&perfil.direccion)||op.inmobiliaria_domicilio,inmobiliaria_email:(perfil&&perfil.email)||op.inmobiliaria_email,inmobiliaria_telefono:(perfil&&perfil.telefono)||op.inmobiliaria_telefono})), clausulas, tab, cuerpo), op, tab, perfil);
+    if(tab==="reserva"&&disponeConformidadSeparada&&documento.conformidad){
+      if(vistaConformidadSeparada)return construirDocumentoConformidadReserva(documento,op);
+      return Object.assign({},documento,{conformidad:null});
+    }
+    return documento;
   }
 
   useEffect(function(){ setAiReview(null); }, [op&&op.id]);
@@ -5690,7 +5700,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     // Word se genera a demanda y se reutiliza si el usuario vuelve a descargarlo.
     return function(){ cancelado=true; };
     // eslint-disable-next-line
-  }, [tab, op, perfil, clausulas, bloquesReserva]);
+  }, [tab, op, perfil, clausulas, bloquesReserva, vistaConformidadSeparada]);
 
   // Dispara automáticamente la acción pedida desde el menú "Finalizar" del
   // formulario (por ahora solo "whatsapp": el envío por PDF necesita que el
@@ -5868,6 +5878,14 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       ) : (
       <>
         {tabActual.id==="reserva"&&<ReservaCompactSummary op={op} operaciones={operaciones}/>}
+        {disponeConformidadSeparada&&tabActual.id==="reserva"&&<div className="card" style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",padding:10,marginBottom:12}}>
+          <span style={{fontSize:12,color:"var(--muted)",fontWeight:650,marginRight:5}}>Documento</span>
+          {[{key:false,label:"Reserva de Compra"},{key:true,label:"Conformidad del vendedor"}].map(function(o){
+            var activo=vistaConformidadSeparada===o.key;
+            return <button type="button" key={o.label} aria-pressed={activo} onClick={function(){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaConformidadSeparada(o.key);setErr("");}} style={{padding:"9px 12px",borderRadius:9,border:"1px solid "+(activo?"rgba(56,189,248,.6)":"var(--border2)"),background:activo?"rgba(56,189,248,.12)":"transparent",color:activo?"var(--text)":"var(--muted)",fontSize:12.5,fontWeight:activo?750:550,cursor:"pointer"}}>{o.label}</button>;
+          })}
+          <span style={{fontSize:11,color:"var(--dim)",width:"100%"}}>Descargá o compartí cada archivo por separado desde sus botones PDF, Word o Compartir.</span>
+        </div>}
         {err&&<div style={{padding:"9px 12px",borderRadius:8,background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.2)",color:"var(--red)",fontSize:12.5,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flex:"0 0 auto"}}>
           <span>{err}</span>
           {lastAction&&<button onClick={function(){
@@ -5877,7 +5895,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           }} style={{flexShrink:0,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(248,113,113,0.35)",background:"rgba(248,113,113,0.12)",color:"var(--red)",fontSize:12,fontWeight:600,cursor:"pointer"}}>↻ Reintentar</button>}
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
-        {onUpdateOperation&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
+        {onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
           <details className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
               ✎ Ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
@@ -5898,7 +5916,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                 {ajusteEditando===b.id&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
                     {partesAjuste.map(function(p,i){return p.chip
-                      ?<span key={i} data-testid="dw-ajuste-chip" data-token={p.chip.replace(/[{}]/g,"").trim()} title="Campo automático protegido: se completa con los datos de esta operación" style={{display:"inline-flex",alignItems:"center",gap:5,borderRadius:999,padding:"7px 10px",fontSize:11.5,fontWeight:750,background:"rgba(14,165,233,.13)",color:"var(--text)",border:"1px solid rgba(14,165,233,.35)",maxWidth:"100%",overflowWrap:"anywhere"}}><span aria-hidden="true">🔒</span>{tokenLabelDocWorks(p.chip.replace(/[{}]/g,"").trim())}</span>
+                      ?<span key={i} data-testid="dw-ajuste-chip" data-token={p.chip.replace(/[{}]/g,"").trim()} title="Campo automático protegido: se completa con los datos de esta operación" style={{display:"inline-flex",alignItems:"center",gap:5,borderRadius:999,padding:"7px 10px",fontSize:11.5,fontWeight:750,background:"rgba(56,189,248,.16)",color:"#0284c7",border:"1px solid rgba(56,189,248,.55)",maxWidth:"100%",overflowWrap:"anywhere"}}><span aria-hidden="true">🔒</span>{tokenLabelDocWorks(p.chip.replace(/[{}]/g,"").trim())}</span>
                       :<textarea key={i} className="inp" aria-label={"Editar "+(b.titulo||"cláusula")+" · fragmento "+(i+1)} rows={Math.max(2,Math.min(7,String(p.texto||"").split("\n").length+1))} style={{flex:"1 1 230px",minWidth:0,maxWidth:"100%",resize:"vertical",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/>;})}
                   </div>
                   {errorAjuste&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorAjuste}</div>}
@@ -5915,7 +5933,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           <div className="pdf-preview" style={{marginBottom:14}}>
             <div className="pdf-chrome">
               <div className="pdf-dot" style={{background:"#ff5f57"}}/><div className="pdf-dot" style={{background:"#ffbd2e"}}/><div className="pdf-dot" style={{background:"#28c840"}}/>
-              <span style={{fontSize:12,color:"var(--dim)",marginLeft:7,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tabActual.icon} {tabActual.label}{tabActual.id&&TIPOS[tabActual.id]?" — "+TIPOS[tabActual.id]:""}</span>
+              <span style={{fontSize:12,color:"var(--dim)",marginLeft:7,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tabActual.icon} {vistaConformidadSeparada&&disponeConformidadSeparada?"Conformidad del vendedor":tabActual.label}{tabActual.id&&TIPOS[tabActual.id]&&!vistaConformidadSeparada?" — "+TIPOS[tabActual.id]:""}</span>
               {tabActual.esRecibo&&<span style={{marginLeft:"auto",fontSize:12,padding:"2px 8px",borderRadius:10,background:"rgba(74,222,128,0.1)",color:"var(--green)",border:"1px solid rgba(74,222,128,0.2)"}}>Recibo de honorarios</span>}
             </div>
             <div className="pdf-content pdf-content-lg">
