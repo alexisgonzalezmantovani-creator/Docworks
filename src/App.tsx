@@ -3774,6 +3774,13 @@ function migrarBloqueLegacy(b){
   return b;
 }
 
+const DW_EXPENSAS_BASE_ORIGINAL = "Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario.";
+ const DW_EXPENSAS_BASE_CLARO = "Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario. Las deudas pendientes por estos conceptos a la fecha de entrega deberán identificarse y regularizarse conforme a lo acordado por las partes.";
+ const DW_ENTREGA_RESERVA_ORIGINAL = "La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes y con la situación de deudas, expensas y servicios regularizada según lo pactado por las partes y la normativa aplicable.";
+ const DW_ENTREGA_RESERVA_CLARA = "La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes, salvo que las partes acuerden expresamente por escrito una situación distinta.";
+ const DW_ENTREGA_BOLETO_ORIGINAL = "El VENDEDOR entregará el inmueble libre de ocupantes, deudas y gravámenes de cualquier naturaleza a la fecha de posesión pactada, siendo a su cargo los impuestos y expensas devengados hasta dicha fecha, y a cargo del COMPRADOR a partir de entonces.-";
+ const DW_ENTREGA_BOLETO_CLARA = "El VENDEDOR entregará el inmueble libre de ocupantes, cargas y gravámenes de cualquier naturaleza a la fecha de posesión pactada. Cualquier excepción deberá quedar expresamente individualizada y aceptada por escrito por el COMPRADOR.-";
+
 var BODY_TEMPLATE_PRESETS = {
   reserva: (typeof DEFAULT_BLOQUES_RESERVA!=="undefined" ? DEFAULT_BLOQUES_RESERVA : []).map(function(b){ return Object.assign({}, b); }),
   boleto: [
@@ -3894,12 +3901,6 @@ function esClausulaEsencialModelo(b){
 // La distribución de impuestos/servicios corresponde únicamente al apartado de EXPENSAS.
  // La condición de desocupación y los gravámenes se regulan en ENTREGА.
  // Estos textos son para modelos de fábrica; nunca sobreescribir cláusulas personalizadas.
- const DW_EXPENSAS_BASE_ORIGINAL = "Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario.";
- const DW_EXPENSAS_BASE_CLARO = "Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario. Las deudas pendientes por estos conceptos a la fecha de entrega deberán identificarse y regularizarse conforme a lo acordado por las partes.";
- const DW_ENTREGA_RESERVA_ORIGINAL = "La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes y con la situación de deudas, expensas y servicios regularizada según lo pactado por las partes y la normativa aplicable.";
- const DW_ENTREGA_RESERVA_CLARA = "La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes, salvo que las partes acuerden expresamente por escrito una situación distinta.";
- const DW_ENTREGA_BOLETO_ORIGINAL = "El VENDEDOR entregará el inmueble libre de ocupantes, deudas y gravámenes de cualquier naturaleza a la fecha de posesión pactada, siendo a su cargo los impuestos y expensas devengados hasta dicha fecha, y a cargo del COMPRADOR a partir de entonces.-";
- const DW_ENTREGA_BOLETO_CLARA = "El VENDEDOR entregará el inmueble libre de ocupantes, cargas y gravámenes de cualquier naturaleza a la fecha de posesión pactada. Cualquier excepción deberá quedar expresamente individualizada y aceptada por escrito por el COMPRADOR.-";
  function armonizarClausulasPosesionDeFabrica(bloques,tipo){
    if(!Array.isArray(bloques)||(tipo!=="reserva"&&tipo!=="boleto"))return bloques;
    var exp=bloques.find(function(b){return b&&b.id===tipo+".expensas_servicios";});
