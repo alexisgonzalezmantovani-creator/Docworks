@@ -63,8 +63,8 @@ export var DEFAULT_BLOQUES_RESERVA = [
     contenido:RECOMENDACION_ASESORAMIENTO,
     variables:[], condicion:null, orden:14, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.refuerzo", titulo:"REFUERZO", sinTitulo:false,
-    contenido:"El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva dentro de los 7 días corridos a partir de su conformidad, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-",
-    variables:[], condicion:"op_refuerzo", orden:15, activo:true, obligatoria:false, proteccion:"C", permisos_excepcion:[] },
+    contenido:"El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva {{reserva_refuerzo_plazo}}, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-",
+    variables:["reserva_refuerzo_plazo"], condicion:"op_refuerzo", orden:15, activo:true, obligatoria:false, proteccion:"C", permisos_excepcion:[] },
 ];
 
 // Catálogo activo único para Biblioteca y las opciones de cada documento.
@@ -462,7 +462,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
           <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{modeloPropioActivo?"Modelo activo: contrato propio":"Modelo activo: DocWorks"}</div>
           <div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>{modeloPropioActivo?"El modelo DocWorks se conserva.":pegarMiContrato?"Preparando contrato propio. Se activará cuando guardes.":contarModelo(tipoDocSel)+" cláusulas en el modelo base."}</div>
         </div>
-        {onAbrirAspecto&&<button type="button" className="btn btn-secondary btn-sm" title="Configurar aspecto del documento" aria-label="Configurar aspecto del documento" style={{minHeight:40,marginLeft:"auto",padding:"8px 12px",fontWeight:700,flex:"0 0 auto"}} onClick={function(){if(verEditorPropio)navegarConProteccionModelo(onAbrirAspecto);else if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Aspecto</button>}
+        
       </div>
       {tipoDocSel==="reserva"&&!verEditorPropio&&<div className="card" data-testid="dw-reserva-conformidad-modo" style={{padding:14}}>
         <div style={{fontWeight:750,fontSize:14,color:"var(--text)",marginBottom:4}}>Firmas y conformidad del vendedor</div>
@@ -538,6 +538,10 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
           {errorModeloPropio&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorModeloPropio}</div>}
         </div>
       </details>
+      {onAbrirAspecto&&<div className="card" data-testid="dw-aspecto-al-final" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",padding:"12px 14px"}}>
+        <div><div style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>Aspecto del documento</div><div style={{fontSize:11.5,color:"var(--dim)",marginTop:3}}>Logo, tipografía, encabezado y márgenes.</div></div>
+        {onAbrirAspecto&&<button type="button" className="btn btn-secondary btn-sm" title="Configurar aspecto del documento" aria-label="Configurar aspecto del documento" style={{minHeight:40,marginLeft:"auto",padding:"8px 12px",fontWeight:700,flex:"0 0 auto"}} onClick={function(){if(verEditorPropio)navegarConProteccionModelo(onAbrirAspecto);else if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Aspecto</button>}
+      </div>}
     </div>}
     {seccion==="modelos"&&!puedeEditar&&<div className="notice" style={{fontSize:12}}>Los modelos de los documentos están disponibles únicamente para Dueño y Administrador.</div>}
   </div>;

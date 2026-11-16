@@ -45,7 +45,7 @@ export const EMPTY_OP = {
   compartida:false, compartida_inmobiliaria:"", compartida_matricula:"", compartida_alcance:"completa",
   compartida_colega_activo:false, compartida_colega:"",
   alquiler_amoblado:false, alquiler_inventario:"",
-  reserva_fecha_refuerzo:"",
+  reserva_fecha_refuerzo:"", reserva_refuerzo_modo:"dias", reserva_refuerzo_dias:"7",
   reserva_vigencia_dias:"30",
   tareas_done:{},
   tareas_custom:[],
@@ -5410,7 +5410,7 @@ function CalendarioView({operaciones,onViewOp}){
       var diasA=Math.ceil((vencA.getTime()-now.getTime())/86400000);
       eventos.push(Object.assign({},base,{id:op.id+"_aceptacion",tipo:"aceptacion",fecha:op.reserva_aceptacion_vencimiento,titulo:"Vencimiento de aceptación de reserva",diasRestantes:diasA,urgente:diasA<=2&&diasA>=0,color:diasA<0?"#64748b":diasA<=2?"#ef4444":"#d4a853"}));
     }
-    if(op.tipo==="reserva"&&op.reserva_fecha_refuerzo){
+    if(op.tipo==="reserva"&&op.reserva_fecha_refuerzo&&(op.reserva_refuerzo_modo==="fecha"||!op.reserva_refuerzo_modo)){
       var diasRef=Math.ceil((new Date(op.reserva_fecha_refuerzo).getTime()-now.getTime())/86400000);
       eventos.push(Object.assign({},base,{id:op.id+"_refuerzo",tipo:"refuerzo",fecha:op.reserva_fecha_refuerzo,titulo:"Tomar refuerzo de reserva",diasRestantes:diasRef,urgente:diasRef<=7&&diasRef>=0,color:diasRef<0?"#64748b":diasRef<=7?"#ef4444":diasRef<=15?"#f97316":"#a78bfa"}));
     }

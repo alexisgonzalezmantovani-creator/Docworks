@@ -471,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.76";
+var DOCWORKS_VERSION = "6.77";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -776,6 +776,22 @@ function datosAdicionalesInmueble(op){
   };
 }
 
+// El refuerzo puede pactarse por días corridos desde la conformidad o por fecha
+// exacta. Las operaciones históricas con fecha cargada conservan esa modalidad.
+function modoPlazoRefuerzoReserva(op){
+  return op&&op.reserva_refuerzo_modo==="fecha"?"fecha":
+    op&&op.reserva_refuerzo_modo==="dias"?"dias":
+    op&&String(op.reserva_fecha_refuerzo||"").trim()?"fecha":"dias";
+}
+function textoPlazoRefuerzoReserva(op){
+  if(modoPlazoRefuerzoReserva(op)==="fecha")
+    return "hasta el "+fmtD(op&&op.reserva_fecha_refuerzo);
+  op=op||{};
+  var dias=Number(op.reserva_refuerzo_dias==null?"7":op.reserva_refuerzo_dias);
+  if(!Number.isInteger(dias)||dias<1||dias>3650)dias=7;
+  return "dentro de "+dias+(dias===1?" día corrido":" días corridos")+" desde la conformidad del Vendedor";
+}
+
 function derivedTokensGenerales(op) {
   op = op || {};
   var plazoReserva=plazoReservaAlquiler(op);
@@ -866,6 +882,7 @@ function derivedTokensGenerales(op) {
     compra_posesion_texto:textoPosesionBoletoCompra(op),
     exclusividad_modalidad_texto: exclModalidad,
     refuerzo_trayectoria: antecedentesRefuerzo(op),
+    reserva_refuerzo_plazo:textoPlazoRefuerzoReserva(op),
     devolucion_motivo_texto: op.devolucion_motivo || "Por mutuo acuerdo entre las partes, y ante la no concreción de la operación, se procede a la devolución íntegra del monto de reserva oportunamente entregado.-"
   };
   Object.assign(__tg,datosAdicionalesInmueble(op));
@@ -1279,7 +1296,7 @@ var TOKEN_LABELS_DOCWORKS = {
   vendedor_nombre:"Nombre del vendedor / titular", vendedor_dni:"DNI / CUIT del vendedor", vendedor_domicilio:"Domicilio del vendedor", vendedor_email:"Correo electrónico del vendedor", vendedor_telefono:"Teléfono del vendedor",
   locador_nombre:"Nombre del locador", locador_dni:"DNI / CUIT del locador", locador_domicilio:"Domicilio del locador", locatario_nombre:"Nombre del locatario", locatario_dni:"DNI / CUIT del locatario", locatario_domicilio:"Domicilio del locatario",
   inmueble_barrio:"Barrio / complejo", inmueble_unidad_funcional:"Unidad funcional / lote", inmueble_direccion:"Dirección del inmueble", inmueble_partido:"Partido / Municipio", inmueble_provincia:"Provincia", nomenclatura_catastral:"Nomenclatura catastral", descripcion_inmueble:"Detalles adicionales del inmueble", inmueble_documentacion_actual_texto:"Documentación actual (declarada)", compra_instrumento_nombre:"Instrumentación prevista (escritura, boleto o cesión)", compra_instrumento_firma:"Instrumento de firma", compra_instrumento_de_firma:"Firma del instrumento", compra_instrumento_a_firma:"Firma del instrumento", compra_boleto_origen:"Boleto antecedente de la cesión",
-  fecha_operacion_larga:"Fecha de la operación", inmobiliaria_nombre:"Nombre de la inmobiliaria", inmobiliaria_matricula:"Matrícula de la inmobiliaria", alquiler_monto_letras:"Canon mensual en letras", comision_porcentaje:"Porcentaje de comisión"
+  reserva_refuerzo_plazo:"Plazo del refuerzo", fecha_operacion_larga:"Fecha de la operación", inmobiliaria_nombre:"Nombre de la inmobiliaria", inmobiliaria_matricula:"Matrícula de la inmobiliaria", alquiler_monto_letras:"Canon mensual en letras", comision_porcentaje:"Porcentaje de comisión"
 };
 function tokensDeTextoDocWorks(texto){
   var out=[]; var seen={};
@@ -1971,7 +1988,17 @@ function getInconsistenciasCamposOperacion(op){
   var fechas=[["fecha_documento","Fecha del documento"]];
   if(compra)fechas.push(["fecha_posesion","Fecha de posesión"]);
   if(op.tipo==="reserva"){
-    if(op.reserva_incluye_refuerzo)fechas.push(["reserva_fecha_refuerzo","Fecha del refuerzo"]);
+    if(op.reserva_incluye_refuerzo){
+      if(modoPlazoRefuerzoReserva(op)==="fecha"){
+        fechas.push(["reserva_fecha_refuerzo","Fecha límite del refuerzo"]);
+        if(!informado(op.reserva_fecha_refuerzo))
+          add("reserva_fecha_refuerzo","Fecha límite del refuerzo","Elegí la fecha exacta del refuerzo o cambiá a días corridos.");
+      }else{
+        entero("reserva_refuerzo_dias","Plazo del refuerzo en días",1);
+        if(op.reserva_refuerzo_dias!==undefined&&(!informado(op.reserva_refuerzo_dias)||Number(op.reserva_refuerzo_dias)>3650))
+          add("reserva_refuerzo_dias","Plazo del refuerzo en días","Indicá una cantidad de días corridos entre 1 y 3650.");
+      }
+    }
     if(op.reserva_aceptacion_modo==="fecha")fechas.push(["reserva_aceptacion_vencimiento","Vencimiento para la aceptación"]);
     entero("reserva_vigencia_dias","Vigencia de la reserva",1);
     if(op.reserva_aceptacion_modo==="horas")entero("reserva_aceptacion_horas","Plazo de aceptación en horas",1);
@@ -3746,7 +3773,12 @@ function normalizarBodyBlock(b, idx) {
 // (ni la plantilla de cada inmobiliaria) siga generando datos sin resolver ni plazos inconsistentes.
 function migrarBloqueLegacy(b){
   // 4.29: bloques opcionales de la base estándar (se activan con un check en la operación).
-  if(b.id==="reserva.refuerzo") b=Object.assign({},b,{condicion:"op_refuerzo",obligatoria:false});
+  if(b.id==="reserva.refuerzo"){
+    b=Object.assign({},b,{condicion:"op_refuerzo",obligatoria:false});
+    // Solo el texto idéntico al modelo anterior: nunca alterar una cláusula propia.
+    if(String(b.contenido||"")==="El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva dentro de los 7 días corridos a partir de su conformidad, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-")
+      b=Object.assign({},b,{contenido:"El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva {{reserva_refuerzo_plazo}}, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-"});
+  }
   if(b.id==="alquiler.seguro"&&b.condicion!=="op_seguro_esencial") b=Object.assign({},b,{condicion:"op_seguro"});
   var c=String(b.contenido||"");
   if(c.indexOf("{{inmueble_provincia}}{{nomenclatura_catastral}}")>=0){
@@ -4196,7 +4228,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
       // 14. Asesoramiento individual
       {titulo:esUSD?"14. ASESORAMIENTO LEGAL E IMPOSITIVO":"13. ASESORAMIENTO LEGAL E IMPOSITIVO", items:[RECOMENDACION_ASESORAMIENTO]},
       // 15. Refuerzo
-      (!op.reserva_incluye_refuerzo?null:{titulo:esUSD?"15. REFUERZO":"14. REFUERZO", items:["El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva dentro de los 7 días corridos a partir de su conformidad, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-"]}),
+      (!op.reserva_incluye_refuerzo?null:{titulo:esUSD?"15. REFUERZO":"14. REFUERZO", items:["El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva "+textoPlazoRefuerzoReserva(op)+", cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-"]}),
     ].filter(Boolean);
     var numIncumplimiento = 7;
 
@@ -5457,8 +5489,16 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
             <span aria-hidden="true">{data.reserva_incluye_refuerzo?"−":"+"}</span>
           </button>
           {data.reserva_incluye_refuerzo&&<div id="dw-refuerzo-reserva-panel" className="dw-share-panel dw-economic-refuerzo-content">
-            <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>DocWorks incorpora la cláusula de posible refuerzo de reserva. El refuerzo efectivo se documenta en una operación independiente.</div>
-            <Inp id="dw-field-reserva_fecha_refuerzo" label="Fecha límite para tomar refuerzo" value={data.reserva_fecha_refuerzo||""} onChange={function(e){onChange("reserva_fecha_refuerzo",e.target.value);}} type="date" hint="Opcional — si cargás esta fecha, aparecerá en el Calendario."/>
+            <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>El plazo elegido se incorpora automáticamente a la cláusula. El refuerzo efectivo se documenta por separado.</div>
+            <div role="group" aria-label="Cómo definir el plazo del refuerzo" style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:10}}>
+              {[{value:"dias",label:"Días corridos"},{value:"fecha",label:"Fecha exacta"}].map(function(m){
+                var marcado=modoPlazoRefuerzoReserva(data)===m.value;
+                return <button key={m.value} type="button" aria-pressed={marcado} onClick={function(){onChange("reserva_refuerzo_modo",m.value);}} style={{padding:"8px 11px",fontSize:12,borderRadius:8,border:"1px solid "+(marcado?"rgba(56,189,248,.65)":"var(--border2)"),background:marcado?"rgba(56,189,248,.12)":"var(--card)",color:"var(--text)",fontWeight:marcado?700:500,cursor:"pointer"}}>{m.label}</button>;
+              })}
+            </div>
+            {modoPlazoRefuerzoReserva(data)==="fecha"
+              ?<Inp id="dw-field-reserva_fecha_refuerzo" label="Fecha límite del refuerzo" value={data.reserva_fecha_refuerzo||""} onChange={function(e){onChange("reserva_fecha_refuerzo",e.target.value);}} type="date" hint="La fecha aparecerá en la cláusula y en el Calendario."/>
+              :<Inp id="dw-field-reserva_refuerzo_dias" label="Plazo desde la conformidad (días corridos)" type="number" min="1" max="3650" step="1" value={data.reserva_refuerzo_dias??"7"} onChange={function(e){onChange("reserva_refuerzo_dias",e.target.value);}} placeholder="7" hint="Sugerido: 7 días corridos desde la conformidad del vendedor. Podés modificarlo."/>}
           </div>}
         </div>}
         {data.tipo==="reserva"&&<div className="col2 dw-economic-term">
@@ -7158,7 +7198,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
   var tokensBase=[
     ["comprador_nombre","Comprador"],["comprador_dni","DNI/CUIT comprador"],["vendedor_nombre","Vendedor"],["vendedor_dni","DNI/CUIT vendedor"],["locador_nombre","Locador"],["locatario_nombre","Locatario / Inquilino"],
     ["inmueble_direccion","Dirección"],["inmueble_partido","Partido / localidad"],["inmueble_provincia","Provincia"],
-    ...(["reserva","boleto"].includes(tipo)?[["compra_instrumento_nombre","Tipo de instrumento de venta"],["compra_boleto_origen","Boleto antecedente (si corresponde)"]]:[]),
+    ...(["reserva","boleto"].includes(tipo)?[["compra_instrumento_nombre","Tipo de instrumento de venta"],["compra_boleto_origen","Boleto antecedente (si corresponde)"],["reserva_refuerzo_plazo","Plazo del refuerzo"]]:[]),
     ["precio_letras","Precio en letras"],["moneda_txt","Moneda"],["anticipo_letras","Anticipo en letras"],["saldo_letras","Saldo en letras"],["fecha_posesion","Fecha de posesión"],
     ["comision_porcentaje","Comisión"],["comision_vendedor","Comisión vendedor"],["comision_comprador","Comisión comprador"],["alquiler_monto_inicial","Canon inicial"],["alquiler_inicio","Inicio"],["alquiler_fin","Vencimiento"],
     ["res_alq_monto_reserva","Reserva alquiler · importe numérico"],["res_alq_monto_mensual","Alquiler mensual · importe numérico"],["res_alq_inicio_estimado","Inicio estimado"],["devolucion_motivo","Motivo devolución · texto cargado"],["comodato_plazo","Plazo comodato"],["comodato_uso","Destino comodato"],
@@ -7183,7 +7223,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     {editId!=null&&<AvisoClausulasPersonalizadas/>}
     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginBottom:12}}>
       <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><div style={{fontFamily:"DM Serif Display,serif",fontSize:15,color:"var(--text)"}}>Cláusulas del documento · {draft.filter(function(b){return b.activo!==false;}).length} activas</div>{draft.some(function(b){return b.activo===false;})&&<button type="button" className="btn btn-secondary btn-sm" aria-expanded={mostrarInactivas} onClick={function(){setMostrarInactivas(function(v){return !v;});}}>{mostrarInactivas?"Ocultar inactivas":"Ver inactivas ("+draft.filter(function(b){return b.activo===false;}).length+")"}</button>}</div>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{puedeEditar&&<>{DW_MODELOS_ESENCIALES_IDS[tipo]&&<button type="button" className="btn btn-secondary btn-sm" onClick={usarModeloEsencial} disabled={!!editId||status==="saving"} title="Conservar todas las cláusulas, pero usar solo las esenciales en el documento">✓ Usar modelo esencial</button>}{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].copiaAnteriorEsencial&&<Btn s="sm" v="secondary" onClick={recuperarModeloAnterior}>Recuperar modelo anterior</Btn>}<button type="button" className="btn btn-secondary btn-sm dw-restore-all-clauses" onClick={reset} disabled={!!editId||status==="saving"} title="Recuperar el modelo original de este documento (con copia para deshacer)">↺ Restaurar todas las cláusulas</button>{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior&&<Btn s="sm" v="secondary" onClick={deshacerRestauracion}>Deshacer restauración</Btn>}<Btn s="sm" onClick={addBlock}>＋ Escribir cláusula del modelo</Btn></>}</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{puedeEditar&&<>{DW_MODELOS_ESENCIALES_IDS[tipo]&&<button type="button" className="btn btn-secondary btn-sm" onClick={usarModeloEsencial} disabled={!!editId||status==="saving"} title="Conservar todas las cláusulas, pero usar solo las esenciales en el documento">✓ Usar modelo esencial</button>}{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].copiaAnteriorEsencial&&<Btn s="sm" v="secondary" onClick={recuperarModeloAnterior}>Recuperar modelo anterior</Btn>}<button type="button" className="btn btn-secondary btn-sm dw-restore-all-clauses" onClick={reset} disabled={!!editId||status==="saving"} title="Recuperar el modelo original de este documento (con copia para deshacer)">↺ Restaurar todas las cláusulas</button>{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior&&<Btn s="sm" v="secondary" onClick={deshacerRestauracion}>Deshacer restauración</Btn>}</>}</div>
     </div>
     {previewVisible&&createPortal(<div role="dialog" aria-modal="true" aria-label="Vista previa del modelo" data-testid="dw-fullpage-preview" style={{position:"fixed",inset:0,zIndex:10050,background:"rgba(8,16,30,.88)",overflowY:"auto",overscrollBehavior:"contain",padding:"max(64px,calc(env(safe-area-inset-top) + 52px)) 12px max(20px,env(safe-area-inset-bottom))"}}><button type="button" data-testid="dw-preview-fixed-close" onClick={togglePreview} aria-label="Cerrar vista previa" style={{position:"fixed",top:"max(10px,env(safe-area-inset-top))",right:"max(12px,env(safe-area-inset-right))",zIndex:10052,width:44,height:44,borderRadius:14,border:"1px solid rgba(255,255,255,.28)",background:"#fff",color:"#142a4d",fontSize:25,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 18px rgba(0,0,0,.3)"}}>×</button><div style={{maxWidth:820,margin:"0 auto",background:"#fff",color:"#1f2937",borderRadius:8,boxShadow:"0 18px 65px rgba(0,0,0,.35)",padding:"clamp(18px,5vw,52px)",minHeight:"min(100vh,1050px)",boxSizing:"border-box"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:22,borderBottom:"1px solid #e5e7eb",paddingBottom:12}}><strong style={{fontSize:14}}>Vista previa · Datos de ejemplo</strong><button type="button" className="btn btn-secondary btn-sm" onClick={togglePreview} aria-label="Cerrar desde el documento">✕ Cerrar</button></div>
       <div style={{fontSize:12,fontWeight:800,letterSpacing:".04em",color:"#59c7f3",marginBottom:5}}>VISTA PREVIA CON DATOS DE EJEMPLO · EJEMPLO FICTICIO</div>
@@ -7214,6 +7254,9 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
         </div>
       </div>;})}
       {draft.length===0&&<div style={{padding:18,textAlign:"center",border:"1px dashed var(--border)",borderRadius:10,color:"var(--dim)",fontSize:12}}>No hay cláusulas. Agregá una para comenzar.</div>}
+      {puedeEditar&&<div data-testid="dw-add-model-clause-end" style={{display:"flex",justifyContent:"flex-end",paddingTop:11,marginTop:6,borderTop:"1px solid var(--border)"}}>
+        <Btn s="sm" onClick={addBlock} disabled={!!editId||status==="saving"}>＋ Escribir cláusula del modelo</Btn>
+      </div>}
     </div>
     {draft.some(function(b){return b.condicion||b.condicional;})&&<div style={{fontSize:11.5,color:"var(--dim)",padding:"8px 10px",borderRadius:8,background:"rgba(212,168,83,.06)",border:"1px solid rgba(212,168,83,.18)"}}>El número en el documento final puede cambiar si una cláusula condicional no aplica.</div>}
     <div style={{display:"flex",flexWrap:"wrap",gap:12,marginTop:7,marginBottom:5}}>
