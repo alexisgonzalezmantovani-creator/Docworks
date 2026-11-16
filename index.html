@@ -16,8 +16,10 @@
           content: ""; position: fixed; left: 0; right: 0;
           pointer-events: none; z-index: 2147483640;
         }
-        body::before { top: 0; height: env(safe-area-inset-top, 0px); background: #0b1730; }
-        body::after { bottom: 0; height: env(safe-area-inset-bottom, 0px); background: #0b1730; }
+        body::before { top: 0; height: env(safe-area-inset-top, 0px); background: linear-gradient(120deg,#091222 0%,#122a58 48%,#0c1c3d 100%); }
+        body::after { bottom: 0; height: env(safe-area-inset-bottom, 0px); background: var(--surface, #0b1730); }
+        /* El splash ocupa toda la pantalla: no superponerle bandas opacas en las áreas seguras. */
+        body:has(.dw-startup)::before, body:has(.dw-startup)::after { display: none; }
         /* Solo después del arranque se aplica el color del tema de DocWorks. */
         html[data-theme="light"]:not(:has(.dw-startup)),
         html[data-theme="light"]:not(:has(.dw-startup)) body,

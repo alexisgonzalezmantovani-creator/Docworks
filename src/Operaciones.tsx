@@ -2379,6 +2379,34 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .dw-operation-page-heading::before{content:"";position:absolute;inset:-30px -28px 0;background:var(--bg);z-index:-1;pointer-events:none}
 @media(max-width:640px){.dw-operation-page-heading::before{left:-16px;right:-16px}}
 
+/* 6.78 — iPhone vertical: una sola geometría para las áreas seguras.
+   El menú cubre hasta el borde físico y el listado conserva scroll por encima. */
+@media (max-width:640px) and (orientation:portrait){
+  .mobile-topbar{
+    box-sizing:border-box!important;
+    height:calc(56px + env(safe-area-inset-top,0px))!important;
+    min-height:calc(56px + env(safe-area-inset-top,0px))!important;
+    padding-top:env(safe-area-inset-top,0px)!important;
+  }
+  .app-wrap{padding-top:calc(56px + env(safe-area-inset-top,0px))!important;}
+  body::before{
+    background:linear-gradient(120deg,#091222 0%,#122a58 48%,#0c1c3d 100%)!important;
+  }
+  .mobile-nav{
+    --mobile-nav-h:54px;
+    --mobile-nav-pad:env(safe-area-inset-bottom,0px);
+    box-sizing:border-box!important;
+    height:calc(var(--mobile-nav-h) + var(--mobile-nav-pad))!important;
+    padding-bottom:var(--mobile-nav-pad)!important;
+  }
+  .mobile-nav-inner{height:var(--mobile-nav-h)!important;}
+  .app-wrap .content:not(.dw-operation-page-content){
+    padding-bottom:calc(54px + env(safe-area-inset-bottom,0px) + 28px)!important;
+    scroll-padding-bottom:calc(54px + env(safe-area-inset-bottom,0px) + 28px);
+  }
+  .fab{bottom:calc(54px + env(safe-area-inset-bottom,0px) + 14px)!important;}
+  .ia-fab{bottom:calc(54px + env(safe-area-inset-bottom,0px) + 82px)!important;}
+}
 `;
 
 // Panel Superadmin: extracción funcional con dependencias explícitas.
