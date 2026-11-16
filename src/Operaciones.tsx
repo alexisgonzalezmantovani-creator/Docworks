@@ -2272,6 +2272,29 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{padding:5px 6px!important;font-size:11px!important}
 }
 
+/* Listados largos de ajustes: conservar acceso a todas las cláusulas y a la
+   hoja en tablet/PC, incluso cuando el alto disponible es reducido. */
+@media (min-width:641px){
+  .modal-overlay-viewer .viewer-modal .doc-viewer-tab-content:not(.doc-tab-static){
+    overflow-y:auto;
+    overflow-x:hidden;
+  }
+  .modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][open]{
+    flex:0 0 auto!important;
+    max-height:min(38dvh,340px);
+    min-height:72px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
+    flex-basis:160px;
+    flex-shrink:0;
+    min-height:160px;
+  }
+}
+
 /* 6.70 — visor iPhone: ventana de lectura con borde y scroll propio.
    La operación conserva su flujo; al abrir Ajustes, el listado puede
    desplazarse sin tapar el documento ni perder la terminación inferior. */

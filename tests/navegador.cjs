@@ -102,6 +102,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    return {alto:scroll.clientHeight,scroll:scroll.scrollTop,finalVisible:ultimo.top>=limite.top-2&&ultimo.bottom<=limite.bottom+2};
   });
   const lecturaInicial=await leerHastaFinal();
+  await page.screenshot({path:path.join(out,'preview-largo-'+name+'.png')});
   assert.ok(lecturaInicial.alto>80&&lecturaInicial.scroll>0&&lecturaInicial.finalVisible,name+' visor real: última línea legible');checks++;
   const listaAjustes=page.getByTestId('dw-ajustes-manuales');
   await listaAjustes.locator('summary').click();
@@ -112,6 +113,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    const r=el.getBoundingClientRect(),b=last.getBoundingClientRect(),tab=el.closest('.doc-viewer-tab-content').getBoundingClientRect();
    return {overflow:getComputedStyle(el).overflowY,alto:el.clientHeight,total:el.scrollHeight,scroll:el.scrollTop,ultimoVisible:b.top>=Math.max(r.top,tab.top)-2&&b.bottom<=Math.min(r.bottom,tab.bottom)+2};
   });
+  await page.screenshot({path:path.join(out,'ajustes-largos-'+name+'.png')});
   assert.ok(['auto','scroll'].includes(listaMedidas.overflow)&&listaMedidas.total>listaMedidas.alto+10&&listaMedidas.scroll>0,name+' listado largo tiene scroll utilizable: '+JSON.stringify(listaMedidas));checks++;
   assert.ok(listaMedidas.ultimoVisible,name+' último botón Editar alcanzable: '+JSON.stringify(listaMedidas));checks++;
   await listaAjustes.getByRole('button',{name:'Editar',exact:true}).last().click();
