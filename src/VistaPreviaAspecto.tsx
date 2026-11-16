@@ -115,7 +115,16 @@ export function VistaPreviaAspecto({perfil,generarPDF}){
   useEffect(function(){
     if(!ampliada)return;
     const anterior=document.activeElement;const overflow=document.body.style.overflow;document.body.style.overflow='hidden';cerrarRef.current?.focus();
-    function teclado(e){if(e.key==='Escape')setAmpliada(false);if(e.key==='Tab'){e.preventDefault();cerrarRef.current?.focus();}}
+    function teclado(e){
+      if(e.key==='Escape'){setAmpliada(false);return;}
+      if(e.key!=='Tab')return;
+      const dialogo=cerrarRef.current?.closest('[role="dialog"]');
+      const controles=Array.from(dialogo?.querySelectorAll('button:not(:disabled)')||[]);
+      if(!controles.length)return;
+      const primero=controles[0],ultimo=controles[controles.length-1];
+      if(e.shiftKey&&(document.activeElement===primero||!dialogo.contains(document.activeElement))){e.preventDefault();ultimo.focus();}
+      else if(!e.shiftKey&&(document.activeElement===ultimo||!dialogo.contains(document.activeElement))){e.preventDefault();primero.focus();}
+    }
     window.addEventListener('keydown',teclado);
     return function(){document.body.style.overflow=overflow;window.removeEventListener('keydown',teclado);if(anterior instanceof HTMLElement)anterior.focus();};
   },[ampliada]);
