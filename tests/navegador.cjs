@@ -194,6 +194,13 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   assert.match(await ampliado.locator('.dw-pdf-pagination span').innerText(),/Página 2 de/);checks++;
   await ampliado.getByRole('button',{name:'Página anterior'}).click();
   assert.match(await ampliado.locator('.dw-pdf-pagination span').innerText(),/Página 1 de/);checks++;
+  await ampliado.getByRole('button',{name:'Cerrar ✕'}).focus();
+  await page.keyboard.press('Tab');
+  assert.equal(await ampliado.getByRole('button',{name:'Página siguiente'}).evaluate(el=>document.activeElement===el),true);checks++;
+  await page.keyboard.press('Tab');
+  assert.equal(await ampliado.getByRole('button',{name:'Cerrar ✕'}).evaluate(el=>document.activeElement===el),true);checks++;
+  await page.keyboard.press('Shift+Tab');
+  assert.equal(await ampliado.getByRole('button',{name:'Página siguiente'}).evaluate(el=>document.activeElement===el),true);checks++;
   await page.keyboard.press('Escape');
   await page.getByRole('dialog',{name:'Documento ampliado'}).waitFor({state:'detached'});checks++;
   if(width>=600)await page.getByRole('tab',{name:'Encabezado'}).click();
