@@ -457,8 +457,8 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       </div>}
       <div data-testid="dw-model-source" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",padding:"5px 2px 0"}}>
         <div style={{minWidth:0}}>
-          <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Modelo del documento</div>
-          <div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>{verEditorPropio?"Estás usando tu contrato. El modelo DocWorks se conserva.":contarModelo(tipoDocSel)+" cláusulas incluidas · Abrí una sección cuando quieras modificarla."}</div>
+          <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{modeloPropioActivo?"Modelo activo: contrato propio":"Modelo activo: DocWorks"}</div>
+          <div style={{fontSize:12,color:"var(--dim)",marginTop:3}}>{modeloPropioActivo?"El modelo DocWorks se conserva.":pegarMiContrato?"Preparando contrato propio. Se activará cuando guardes.":contarModelo(tipoDocSel)+" cláusulas en el modelo base."}</div>
         </div>
         {onAbrirAspecto&&<button type="button" className="btn btn-secondary btn-sm" title="Configurar aspecto del documento" aria-label="Configurar aspecto del documento" style={{minHeight:40,marginLeft:"auto",padding:"8px 12px",fontWeight:700,flex:"0 0 auto"}} onClick={function(){if(verEditorPropio)navegarConProteccionModelo(onAbrirAspecto);else if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Aspecto</button>}
       </div>
@@ -466,7 +466,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         ? <DocumentoPropioEditor key={"contrato-propio-"+tipoDocSel} tipo={tipoDocSel} perfil={perfil} onSavePerfil={guardarPerfil} confirmar={requestDwConfirm} onCancelar={function(){setPegarMiContrato(false);}}/>
         : <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
         <details id="dw-model-clauses" className="card dw-model-disclosure" style={{padding:14}}>
-          <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Cláusulas del modelo</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+          <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Cláusulas del modelo</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Incluidas automáticamente</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
           
           <div id="dw-model-preview-area">
             {bloquesError&&tipoDocSel==="reserva"&&<div className="notice notice-amber" style={{fontSize:12,marginBottom:10}}>{bloquesError} {onRetryBloques&&<button type="button" onClick={onRetryBloques} className="btn btn-secondary btn-sm">Reintentar</button>}</div>}
@@ -475,7 +475,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
           </div>
         </details>
       {<details key={"biblioteca-"+tipoDocSel} id="dw-model-extra-clauses" className="card dw-model-disclosure" style={{padding:14,scrollMarginTop:90}} data-step="clausulas">
-        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Agregar cláusulas ({cantidadAdicionalesDisponibles})</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Opcionales para este documento</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Agregar cláusulas ({cantidadAdicionalesDisponibles})</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Opciones de la biblioteca</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
         
         <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>«El asesor elige» permite sumar la cláusula en cada operación sin agregarla automáticamente. Las condiciones heredadas se conservan.</div>
         {estadoClausulaGuardando!==null&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>Guardando disponibilidad de la cláusula…</div>}

@@ -5857,10 +5857,10 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         {onUpdateOperation&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
           <details className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
-              ✎ Hacer ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
+              ✎ Ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
             </summary>
             <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"8px 0 12px"}}>
-              Cambiá palabras o párrafos de esta operación sin alterar el modelo de la inmobiliaria. Los chips azules son datos automáticos protegidos. Guardá cada cláusula para actualizar la vista previa, el PDF y el Word.{" · "+bloquesParaAjustes().length+" cláusulas disponibles"}
+              Los ajustes se guardan solo en esta operación; el modelo no cambia. Los chips azules son datos automáticos protegidos. Guardá cada cláusula para actualizar el documento.{" · "+bloquesParaAjustes().length+" cláusulas disponibles"}
             </div>
             {bloquesParaAjustes().map(function(b){
               var vigente=op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.prototype.hasOwnProperty.call(op.ajustes_manuales[tab],b.id);
@@ -5868,7 +5868,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
                   <span style={{fontSize:13,fontWeight:650,color:"var(--text)"}}>{b.titulo||"Cláusula"}</span>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                    {vigente&&<span style={{fontSize:10,color:"var(--green)"}}>Personalizada</span>}
+                    {vigente&&<span style={{fontSize:10,color:"var(--green)"}}>Ajuste guardado</span>}
                     <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(ajusteEditando===b.id){if(permitirDescartarAjuste())cerrarEdicionAjuste();}else if(permitirDescartarAjuste())abrirAjuste(b);}}>{ajusteEditando===b.id?"Cerrar":"Editar"}</button>
                   </div>
                 </div>

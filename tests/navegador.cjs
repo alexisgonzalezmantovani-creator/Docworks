@@ -52,7 +52,12 @@ function OperacionesHarness(){
   onRestore={()=>{}} onDeletePermanente={()=>{}} onVaciarPapelera={()=>{}} onRestoreVersion={()=>{}} />
  </main></>;
 }
-createRoot(document.getElementById('root')).render(location.pathname==='/operaciones'?<OperacionesHarness/>:location.pathname==='/superadmin'?<><GStyles/><PanelSuperadminPrueba contexto={{usuario:{nombre:'Administración de prueba'}}} onLogout={()=>{}}/></>:location.pathname==='/aspecto'?<AspectoHarness/>:location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
+// Documento real con una lista larga: no depende de los modelos configurados ni del backend.
+function AjustesLargosHarness(){
+ const [op,setOp]=useState({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'qa-ajustes-largos',tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:Array.from({length:18},(_,i)=>({id:'reserva.qa-larga-'+i,titulo:'Cláusula ficticia '+(i+1),contenido:'Cláusula ficticia '+(i+1)+': Importe {{precio_letras}}. Texto de prueba para verificar lectura y ajustes.',activo:true,orden:i+1}))}}),[tab,setTab]=useState('reserva');
+ return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><Modal open wide viewerMode onClose={()=>{}} title="Documento de prueba"><DocumentViewer op={op} perfil={{nombre:'Ejemplo',plantillas:{}}} clausulas={[]} operaciones={[op]} bloquesReserva={[]} tab={tab} onChangeTab={setTab} onUpdateOperation={async next=>{setOp(next);return {operacion:next};}}/></Modal></>;
+}
+createRoot(document.getElementById('root')).render(location.pathname==='/ajustes-largos'?<AjustesLargosHarness/>:location.pathname==='/operaciones'?<OperacionesHarness/>:location.pathname==='/superadmin'?<><GStyles/><PanelSuperadminPrueba contexto={{usuario:{nombre:'Administración de prueba'}}} onLogout={()=>{}}/></>:location.pathname==='/aspecto'?<AspectoHarness/>:location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
 `;
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+harness,resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:path.join(out,'harness.js')});
 const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.woff2'){res.setHeader('Content-Type','font/woff2');res.end(fs.readFileSync(path.join(root,'public/fonts/dm-sans-latin.woff2')));}else if(req.url.startsWith(pdfjsPrefix)){const target=path.join(root,'public',req.url);if(!fs.existsSync(target)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',target.endsWith('.mjs')?'text/javascript':target.endsWith('.wasm')?'application/wasm':'application/octet-stream');res.end(fs.readFileSync(target));}else if(req.url==='/docworks-header-logo.png'){res.setHeader('Content-Type','image/png');res.end(fs.readFileSync(path.join(root,'public/docworks-header-logo.png')));}else if(req.url==='/harness.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(path.join(out,'harness.js')));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/harness.js"></script></body></html>');}});
@@ -85,6 +90,45 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    assert.equal(estilos.hoja,'auto','hoja con scroll independiente');checks++;
    assert.ok(estilos.puedeScroll&&estilos.ultimoVisible&&estilos.final>=12,'se puede leer hasta la última línea');checks++;
   }
+  // Abrir 18 cláusulas en el visor REAL debe permitir llegar al último ajuste
+  // y seguir leyendo la hoja en iPhone, tablet y PC.
+  await page.goto('http://127.0.0.1:'+server.address().port+'/ajustes-largos');
+  await page.locator('.viewer-modal .pdf-text').waitFor();
+  const leerHastaFinal=()=>page.evaluate(()=>{
+   const marco=document.querySelector('.viewer-modal .doc-reading-scroll'),hoja=marco.querySelector('.pdf-content');
+   const scroll=getComputedStyle(hoja).overflowY==='auto'?hoja:marco;
+   scroll.scrollTop=scroll.scrollHeight;
+   const limite=scroll.getBoundingClientRect(),ultimo=hoja.querySelector('.pdf-text').lastElementChild.getBoundingClientRect();
+   return {alto:scroll.clientHeight,scroll:scroll.scrollTop,finalVisible:ultimo.top>=limite.top-2&&ultimo.bottom<=limite.bottom+2};
+  });
+  const lecturaInicial=await leerHastaFinal();
+  assert.ok(lecturaInicial.alto>80&&lecturaInicial.scroll>0&&lecturaInicial.finalVisible,name+' visor real: última línea legible');checks++;
+  const listaAjustes=page.getByTestId('dw-ajustes-manuales');
+  await listaAjustes.locator('summary').click();
+  assert.equal(await listaAjustes.getByRole('button',{name:'Editar',exact:true}).count(),18,name+' conserva las 18 cláusulas');checks++;
+  const listaMedidas=await listaAjustes.evaluate(el=>{
+   el.scrollTop=el.scrollHeight;
+   const botones=[...el.querySelectorAll('button')],last=botones[botones.length-1];
+   const r=el.getBoundingClientRect(),b=last.getBoundingClientRect(),tab=el.closest('.doc-viewer-tab-content').getBoundingClientRect();
+   return {overflow:getComputedStyle(el).overflowY,alto:el.clientHeight,total:el.scrollHeight,scroll:el.scrollTop,ultimoVisible:b.top>=Math.max(r.top,tab.top)-2&&b.bottom<=Math.min(r.bottom,tab.bottom)+2};
+  });
+  assert.ok(['auto','scroll'].includes(listaMedidas.overflow)&&listaMedidas.total>listaMedidas.alto+10&&listaMedidas.scroll>0,name+' listado largo tiene scroll utilizable: '+JSON.stringify(listaMedidas));checks++;
+  assert.ok(listaMedidas.ultimoVisible,name+' último botón Editar alcanzable: '+JSON.stringify(listaMedidas));checks++;
+  await listaAjustes.getByRole('button',{name:'Editar',exact:true}).last().click();
+  const fragmentos=listaAjustes.locator('textarea');
+  await fragmentos.first().fill('Texto ajustado QA. Importe ');
+  assert.equal(await listaAjustes.getByTestId('dw-ajuste-chip').count(),1,name+' chip automático conservado al editar');checks++;
+  await listaAjustes.getByRole('button',{name:'Guardar ajuste',exact:true}).click();
+  await fragmentos.first().waitFor({state:'detached'});
+  assert.ok((await page.locator('.pdf-text').textContent()).includes('Texto ajustado QA.'),name+' guardar actualiza el documento');checks++;
+  await listaAjustes.getByRole('button',{name:'Editar',exact:true}).last().click();
+  assert.equal(await listaAjustes.locator('textarea').first().inputValue(),'Texto ajustado QA. Importe ',name+' reabrir conserva el ajuste guardado');checks++;
+  await listaAjustes.getByRole('button',{name:'Cancelar',exact:true}).click();
+  await listaAjustes.locator('summary').click();
+  const lecturaFinal=await leerHastaFinal();
+  assert.ok(lecturaFinal.alto>80&&lecturaFinal.finalVisible,name+' documento completo después de ajustar');checks++;
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' visor largo sin desborde horizontal');checks++;
+  await page.goto('http://127.0.0.1:'+server.address().port);
   for(const tipo of ['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva']){
    await page.getByLabel('Documento de prueba').selectOption(tipo);
    await page.getByRole('button',{name:'Abrir vista previa de prueba'}).click();
