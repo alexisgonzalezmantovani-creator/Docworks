@@ -8338,7 +8338,9 @@ function DocWorksApp(){
   useEffect(function(){ lsSet("top_search_v1",topSearch||""); },[topSearch]);
   useEffect(function(){ lsSet("recent_searches_v1",recentSearches||[]); },[recentSearches]);
   useEffect(function(){ lsSet("recent_operation_ids_v1",recentOperationIds||[]); },[recentOperationIds]);
-  useEffect(function(){injectFonts();applyTheme(darkMode);initPWA();if(!document.getElementById("dw-mobile-stability-css")){var st=document.createElement("style");st.id="dw-mobile-stability-css";st.textContent=MOBILE_STABILITY_CSS;document.head.appendChild(st);}},[darkMode]);
+  useEffect(function(){injectFonts();initPWA();if(!document.getElementById("dw-mobile-stability-css")){var st=document.createElement("style");st.id="dw-mobile-stability-css";st.textContent=MOBILE_STABILITY_CSS;document.head.appendChild(st);}},[]);
+  // Mantener el arranque oscuro hasta que termine de cargarse la sesión.
+  useEffect(function(){if(!docworksAuth.ready||docworksAuth.contextoLoading)return;applyTheme(darkMode);},[darkMode,docworksAuth.ready,docworksAuth.contextoLoading]);
   // iOS puede restaurar una posición intermedia mientras la barra fija y el contenido terminan de medir su altura.
   // Normalizamos una sola vez al montar la app; navegar entre vistas no vuelve a desplazar al usuario.
   useEffect(function(){

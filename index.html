@@ -9,7 +9,23 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="color-scheme" content="dark" />
 
-    <style id="dw-ios-safe-areas">@media (display-mode: standalone){html,body,#root{background-color:#0b1730!important}body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:#0b1730;pointer-events:none;z-index:2147483640}body::after{content:"";position:fixed;bottom:0;left:0;right:0;height:env(safe-area-inset-bottom,0px);background:#fff;pointer-events:none;z-index:2147483640}}</style>
+    <style id="dw-ios-safe-areas">
+      @media (display-mode: standalone) {
+        html, body, #root { background-color: #0b1730 !important; }
+        body::before, body::after {
+          content: ""; position: fixed; left: 0; right: 0;
+          pointer-events: none; z-index: 2147483640;
+        }
+        body::before { top: 0; height: env(safe-area-inset-top, 0px); background: #0b1730; }
+        body::after { bottom: 0; height: env(safe-area-inset-bottom, 0px); background: #0b1730; }
+        /* Solo después del arranque se aplica el color del tema de DocWorks. */
+        html[data-theme="light"]:not(:has(.dw-startup)),
+        html[data-theme="light"]:not(:has(.dw-startup)) body,
+        html[data-theme="light"]:not(:has(.dw-startup)) #root { background-color: #eef2f7 !important; }
+        html[data-theme="light"]:not(:has(.dw-startup)) body::after { background: #fff; }
+        html:has(.dw-startup) { color-scheme: dark !important; }
+      }
+    </style>
     <link rel="icon" type="image/svg+xml" href="/docworks-favicon-mark.svg?v=5" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <style id="dw-startup-critical">html,body,#root{margin:0;min-height:100%;background:#0b1730;color-scheme:dark}html{background-color:#0b1730!important}body{min-height:100vh;min-height:100dvh}.dw-startup{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#0b1730;color:#e8edf6}.dw-startup-logo{width:min(80vw,400px);height:auto;max-height:48vh;object-fit:contain}.dw-startup-status{font:600 13px system-ui,sans-serif}</style>
