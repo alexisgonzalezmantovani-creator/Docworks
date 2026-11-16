@@ -61,6 +61,44 @@ delete global.document;
    assert.match(doc.textoOriginal,/Calle 1, Pilar, Buenos Aires/);
    assert.ok(!doc.textoOriginal.includes('Pilar, Buenos Aires, Pilar'));
  });
+
+ check('modelo de reserva separa expensas de entrega libre de ocupantes',()=>{
+  const bloques=app.getDefaultBodyBlocks('reserva');
+  const e=bloques.find(b=>b.id==='reserva.expensas_servicios'),l=bloques.find(b=>b.id==='reserva.libre_ocupantes');
+  assert.ok(e&&l);assert.match(e.contenido,/deudas pendientes/);
+  assert.doesNotMatch(l.contenido,/expensas|impuestos|servicios|deudas/i);
+ });
+ check('modelo de boleto separa expensas de ocupantes y gravámenes',()=>{
+  const bloques=app.getDefaultBodyBlocks('boleto');
+  const e=bloques.find(b=>b.id==='boleto.expensas_servicios'),l=bloques.find(b=>b.id==='boleto.libre');
+  assert.ok(e&&l);assert.match(e.contenido,/deudas pendientes/);
+  assert.doesNotMatch(l.contenido,/expensas|impuestos|servicios|deudas/i);
+ });
+ check('modelos históricos exactos se armonizan sin alterar los originales guardados',()=>{
+  for(const [tipo,libreId,libreOld] of [
+   ['reserva','reserva.libre_ocupantes',"La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes y con la situación de deudas, expensas y servicios regularizada según lo pactado por las partes y la normativa aplicable."],
+   ['boleto','boleto.libre',"El VENDEDOR entregará el inmueble libre de ocupantes, deudas y gravámenes de cualquier naturaleza a la fecha de posesión pactada, siendo a su cargo los impuestos y expensas devengados hasta dicha fecha, y a cargo del COMPRADOR a partir de entonces.-"]
+  ]){
+   const original=[
+    {id:tipo+'.expensas_servicios',titulo:'EXPENSAS, IMPUESTOS Y SERVICIOS',contenido:"Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario.",activo:true,orden:1},
+    {id:libreId,titulo:'ENTREGA LIBRE DE OCUPANTES',contenido:libreOld,activo:true,orden:2}
+   ];
+   const op={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo};
+   const doc=app.buildDocSections(app.opParaDocumento(op),[],tipo,original);
+   const exp=doc.secciones.find(s=>/EXPENSAS/.test(s.titulo));
+   const libre=doc.secciones.find(s=>/OCUPANTES/.test(s.titulo));
+   assert.ok(exp&&libre);
+   assert.match(exp.items.join(' '),/deudas pendientes/);
+   assert.doesNotMatch(libre.items.join(' '),/expensas|impuestos|servicios|deudas/i);
+   assert.equal(original[0].contenido,"Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario.");
+   assert.equal(original[1].contenido,libreOld);
+   const custom=original.map(x=>({...x}));
+   custom[1].contenido='Entrega según acuerdo particular. '+libreOld;
+   const personalizado=app.buildDocSections(app.opParaDocumento(op),[],tipo,custom);
+   assert.ok(personalizado.secciones.some(s=>s.items.join(' ').includes('Entrega según acuerdo particular')));
+   assert.ok(personalizado.secciones.some(s=>s.items.join(' ').includes('con la situación de deudas') || s.items.join(' ').includes('impuestos y expensas devengados') ));
+  }
+ });
  check('legacy obligatoria por defecto',()=>assert.equal(app.normalizarBodyBlock({id:'x'},0).obligatoria,true));
  check('legacy condicional opcional',()=>assert.equal(app.normalizarBodyBlock({id:'alquiler.seguro'},0).obligatoria,false));
  check('undefined de Supabase usa valor por defecto',()=>assert.equal(app.normalizarBodyBlock({id:'x',obligatoria:undefined},0).obligatoria,true));

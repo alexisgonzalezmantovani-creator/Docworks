@@ -3784,7 +3784,7 @@ var BODY_TEMPLATE_PRESETS = {
     {id:"boleto.honorarios_vendedor",titulo:"HONORARIOS DEL VENDEDOR",contenido:"{{comision_vendedor_texto}}"},
     {id:"boleto.honorarios_comprador",titulo:"HONORARIOS DEL COMPRADOR",contenido:"{{comision_comprador_texto}}"},
     {id:"boleto.incumplimiento",titulo:"INCUMPLIMIENTO",contenido:"Ante el incumplimiento de las obligaciones asumidas por cualquiera de las partes, se aplicarán las consecuencias expresamente pactadas en este instrumento y las disposiciones legales pertinentes. La existencia, cuantía y destino de cualquier seña o penalidad dependerán de las entregas efectivamente realizadas y de lo convenido por las partes; no se presumirá la entrega de sumas no percibidas.-"},
-    {id:"boleto.libre",titulo:"INMUEBLE LIBRE DE OCUPANTES Y GRAVÁMENES",contenido:"El VENDEDOR entregará el inmueble libre de ocupantes, deudas y gravámenes de cualquier naturaleza a la fecha de posesión pactada, siendo a su cargo los impuestos y expensas devengados hasta dicha fecha, y a cargo del COMPRADOR a partir de entonces.-"},
+    {id:"boleto.libre",titulo:"INMUEBLE LIBRE DE OCUPANTES Y GRAVÁMENES",contenido:DW_ENTREGA_BOLETO_CLARA},
   ],
   reserva_alquiler: [
     {id:"reserva_alquiler.objeto",titulo:"OBJETO",contenido:"El LOCATARIO / OFERENTE entrega en este acto, en concepto de Reserva de Locación sujeta a la conformidad del LOCADOR, la suma de {{reserva_alquiler_reserva}}, para la locación del inmueble ubicado en {{inmueble_direccion}}, {{inmueble_partido}}, Provincia de {{inmueble_provincia}}.-"},
@@ -3891,10 +3891,36 @@ function esClausulaEsencialModelo(b){
   if(id==="reserva.incumplimiento_honorarios"||id==="reserva.honorarios_impuestos")return false;
   return esencialEconomica||esencialEstructural||/honorarios|comision inmobiliaria|jurisdiccion|partes y firmas|firma de las partes|firmas de las partes/.test(t)||/(^|\.)jurisdiccion$/.test(id)||/(^|\.)honorarios(_esenciales)?$/.test(id)||/(^|\.)firmas?$/.test(id);
 }
+// La distribución de impuestos/servicios corresponde únicamente al apartado de EXPENSAS.
+ // La condición de desocupación y los gravámenes se regulan en ENTREGА.
+ // Estos textos son para modelos de fábrica; nunca sobreescribir cláusulas personalizadas.
+ const DW_EXPENSAS_BASE_ORIGINAL = "Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario.";
+ const DW_EXPENSAS_BASE_CLARO = "Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario. Las deudas pendientes por estos conceptos a la fecha de entrega deberán identificarse y regularizarse conforme a lo acordado por las partes.";
+ const DW_ENTREGA_RESERVA_ORIGINAL = "La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes y con la situación de deudas, expensas y servicios regularizada según lo pactado por las partes y la normativa aplicable.";
+ const DW_ENTREGA_RESERVA_CLARA = "La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes, salvo que las partes acuerden expresamente por escrito una situación distinta.";
+ const DW_ENTREGA_BOLETO_ORIGINAL = "El VENDEDOR entregará el inmueble libre de ocupantes, deudas y gravámenes de cualquier naturaleza a la fecha de posesión pactada, siendo a su cargo los impuestos y expensas devengados hasta dicha fecha, y a cargo del COMPRADOR a partir de entonces.-";
+ const DW_ENTREGA_BOLETO_CLARA = "El VENDEDOR entregará el inmueble libre de ocupantes, cargas y gravámenes de cualquier naturaleza a la fecha de posesión pactada. Cualquier excepción deberá quedar expresamente individualizada y aceptada por escrito por el COMPRADOR.-";
+ function armonizarClausulasPosesionDeFabrica(bloques,tipo){
+   if(!Array.isArray(bloques)||(tipo!=="reserva"&&tipo!=="boleto"))return bloques;
+   var exp=bloques.find(function(b){return b&&b.id===tipo+".expensas_servicios";});
+   var entregaId=tipo==="reserva"?"reserva.libre_ocupantes":"boleto.libre";
+   var entrega=bloques.find(function(b){return b&&b.id===entregaId;});
+   var entregaOriginal=tipo==="reserva"?DW_ENTREGA_RESERVA_ORIGINAL:DW_ENTREGA_BOLETO_ORIGINAL;
+   var entregaNueva=tipo==="reserva"?DW_ENTREGA_RESERVA_CLARA:DW_ENTREGA_BOLETO_CLARA;
+   // Migración de lectura no destructiva: solo si AMBOS párrafos son exactamente
+   // los de fábrica. Si alguien editó uno, respetamos sus condiciones particulares.
+   if(!exp||!entrega||String(exp.contenido||"")!==DW_EXPENSAS_BASE_ORIGINAL||String(entrega.contenido||"")!==entregaOriginal)return bloques;
+   return bloques.map(function(b){
+     if(b===exp)return Object.assign({},b,{contenido:DW_EXPENSAS_BASE_CLARO});
+     if(b===entrega)return Object.assign({},b,{contenido:entregaNueva});
+     return b;
+   });
+ }
+ 
 function bloquesBaseObligatoriosPorTipo(tipo) {
   var comunes=[{id:tipo+".jurisdiccion",titulo:"JURISDICCIÓN",contenido:"Para las cuestiones derivadas del presente instrumento, las partes se someten a la jurisdicción de los tribunales ordinarios competentes que correspondan conforme a la normativa aplicable, sin perjuicio de las normas de competencia inderogable."}];
-  if(tipo==="reserva"||tipo==="boleto") comunes.push({id:tipo+".expensas_servicios",titulo:"EXPENSAS, IMPUESTOS Y SERVICIOS",contenido:"Los impuestos, tasas, expensas y servicios devengados hasta la fecha de entrega de la posesión estarán a cargo de quien corresponda según lo pactado por las partes y la normativa aplicable. Desde la entrega de la posesión, su pago estará a cargo de quien la recibe, salvo pacto expreso en contrario."});
-  if(tipo==="reserva") comunes.push({id:"reserva.libre_ocupantes",titulo:"ENTREGA LIBRE DE OCUPANTES",contenido:"La entrega de la posesión del inmueble, si correspondiera conforme a la operación y al instrumento definitivo, deberá efectuarse libre de ocupantes y con la situación de deudas, expensas y servicios regularizada según lo pactado por las partes y la normativa aplicable."});
+  if(tipo==="reserva"||tipo==="boleto") comunes.push({id:tipo+".expensas_servicios",titulo:"EXPENSAS, IMPUESTOS Y SERVICIOS",contenido:DW_EXPENSAS_BASE_CLARO});
+  if(tipo==="reserva") comunes.push({id:"reserva.libre_ocupantes",titulo:"ENTREGA LIBRE DE OCUPANTES",contenido:DW_ENTREGA_RESERVA_CLARA});
   if(tipo==="reserva_alquiler") comunes.push({id:"reserva_alquiler.incumplimiento",titulo:"SEÑA Y CONSECUENCIAS DEL INCUMPLIMIENTO",contenido:"Si la reserva fuera aceptada, las consecuencias de un eventual incumplimiento o desistimiento serán las que las partes hayan pactado expresamente en este instrumento y las que resulten aplicables conforme a la normativa vigente. Antes de firmar, deberá completarse cualquier condición particular de devolución, retención o penalidad acordada."});
   if(tipo==="comodato") comunes.push({id:"comodato.libre_ocupantes",titulo:"ENTREGA Y RESTITUCIÓN DEL INMUEBLE",contenido:"El COMODANTE declara entregar el inmueble en condiciones de uso y el COMODATARIO se obliga a restituirlo al finalizar el comodato, libre de personas y bienes propios, salvo lo expresamente convenido por las partes."});
   if(tipo==="reserva_alquiler") comunes.push({id:"reserva_alquiler.expensas_servicios",titulo:"EXPENSAS Y SERVICIOS",contenido:"Las expensas, impuestos y servicios correspondientes al inmueble serán asumidos por las partes según lo acordado para la futura locación y la normativa aplicable; su distribución definitiva deberá quedar expresamente establecida en el contrato de locación."});
@@ -3924,6 +3950,8 @@ function completarClausulasBaseModelo(lista,tipo){
   // Si un tipo todavía no tiene una cláusula propia, agrega una redacción neutral editable.
   var tieneHonorarios=out.some(function(b){return /honorarios|comision inmobiliaria|comisión inmobiliaria/i.test(String(b.titulo||""))||/honorarios|comision inmobiliaria|comisión inmobiliaria/i.test(String(b.id||""));});
   if(!tieneHonorarios&&["reserva","boleto","reserva_alquiler","alquiler","exclusividad"].indexOf(tipo)!==-1){out.push(normalizarBodyBlock({id:tipo+".honorarios_esenciales",titulo:"HONORARIOS DE INTERMEDIACIÓN",contenido:"Las partes reconocen la intervención de la inmobiliaria. El obligado al pago, el monto o porcentaje, la base de cálculo y la oportunidad de pago de los honorarios por intermediación deberán quedar expresamente pactados por las partes y consignados en este instrumento o en un anexo firmado que forme parte integrante del mismo.",orden:out.length+1,activo:true,obligatoria:true},out.length));}
+  // Separar gastos y entrega también en modelos antiguos que siguen sin editar.
+  out=armonizarClausulasPosesionDeFabrica(out,tipo);
   // No se permite apagar los apartados esenciales desde el modelo, ni siquiera a un Dueño.
   out=out.map(function(b){return esClausulaEsencialModelo(b)?Object.assign({},b,{activo:true,obligatoria:true}):b;});
   return out.map(function(b,i){return normalizarBodyBlock(Object.assign({},b,{orden:i+1,activo:esClausulaEsencialModelo(b)?true:b.activo!==false,obligatoria:esClausulaEsencialModelo(b)?true:b.obligatoria}),i);});
@@ -4065,7 +4093,7 @@ function bloqueComisionOculto(b,op){
 function buildDocSectionsFromEditableBody(op, clausulasLib, tipo, bloquesPlantilla) {
   var doc = buildDocSectionsStandard(op, clausulasLib, tipo);
   if(!Array.isArray(bloquesPlantilla) || !bloquesPlantilla.length) return doc;
-  var sorted=bloquesPlantilla.map(normalizarBodyBlock).filter(function(b){return b.activo!==false&&evalBodyCondition(b.condicion,op)&&!bloqueComisionOculto(b,op);}).sort(function(a,b){return a.orden-b.orden;});
+  var sorted=armonizarClausulasPosesionDeFabrica(bloquesPlantilla.map(normalizarBodyBlock),tipo).filter(function(b){return b.activo!==false&&evalBodyCondition(b.condicion,op)&&!bloqueComisionOculto(b,op);}).sort(function(a,b){return a.orden-b.orden;});
   var extras=tokensPagoCompra(op);
   sorted.forEach(function(b,i){extras[tokenNumeroBloque(b.id)]=String(i+1);});
   var secciones=sorted.map(function(b,i){
@@ -4216,7 +4244,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
         {titulo:"5. HONORARIOS DEL VENDEDOR", items:[textoComision(op,"comision_vendedor","VENDEDOR","Precio total",parseMontoAR(op.precio||0),op.moneda||"USD","comision_vendedor","")]},
         {titulo:"6. HONORARIOS DEL COMPRADOR", items:[textoComision(op,"comision_comprador","COMPRADOR","Precio total",parseMontoAR(op.precio||0),op.moneda||"USD","comision_comprador","")]},
         {titulo:"7. INCUMPLIMIENTO", items:["Ante el incumplimiento de las obligaciones asumidas por cualquiera de las partes, se aplicarán las consecuencias expresamente pactadas en este instrumento y las disposiciones legales pertinentes. La existencia, cuantía y destino de cualquier seña o penalidad dependerán de las entregas efectivamente realizadas y de lo convenido por las partes; no se presumirá la entrega de sumas no percibidas.-"]},
-        {titulo:"8. INMUEBLE LIBRE DE OCUPANTES Y GRAVÁMENES", items:["El VENDEDOR entregará el inmueble libre de ocupantes, deudas y gravámenes de cualquier naturaleza a la fecha de posesión pactada, siendo a su cargo los impuestos y expensas devengados hasta dicha fecha, y a cargo del COMPRADOR a partir de entonces.-"]},
+        {titulo:"8. INMUEBLE LIBRE DE OCUPANTES Y GRAVÁMENES", items:[DW_ENTREGA_BOLETO_CLARA]},
       ],
       firmas:[
         {rol:"VENDEDOR", nombre:op.vendedor_nombre||"", dni:op.vendedor_dni||""},
