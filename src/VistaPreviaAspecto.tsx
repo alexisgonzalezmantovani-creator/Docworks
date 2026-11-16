@@ -119,7 +119,7 @@ export function VistaPreviaAspecto({perfil,generarPDF}){
       if(e.key==='Escape'){setAmpliada(false);return;}
       if(e.key!=='Tab')return;
       const dialogo=cerrarRef.current?.closest('[role="dialog"]');
-      const controles=Array.from(dialogo?.querySelectorAll('button:not(:disabled)')||[]);
+      const controles=Array.from(dialogo?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')||[]);
       if(!controles.length)return;
       const primero=controles[0],ultimo=controles[controles.length-1];
       if(e.shiftKey&&(document.activeElement===primero||!dialogo.contains(document.activeElement))){e.preventDefault();ultimo.focus();}
