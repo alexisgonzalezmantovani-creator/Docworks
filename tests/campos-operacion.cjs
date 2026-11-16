@@ -143,7 +143,25 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
  check('refuerzo abre campos sin salir de Económico',()=>{
    assert.equal(state.reserva_incluye_refuerzo,true);
    assert.equal(document.getElementById('dw-field-reserva_incluye_refuerzo').getAttribute('aria-expanded'),'true');
+   assert.ok(document.getElementById('dw-refuerzo-reserva-panel'));
+   assert.ok(document.getElementById('dw-field-reserva_refuerzo_dias'));
+   assert.equal(document.getElementById('dw-field-reserva_fecha_refuerzo'),null);
+   assert.equal(document.querySelector('[aria-label="Cómo definir el plazo del refuerzo"] button[aria-pressed="true"]').textContent,'Días corridos');
+ });
+ await click([...document.querySelectorAll('[aria-label="Cómo definir el plazo del refuerzo"] button')].find(b=>b.textContent==='Fecha exacta'));
+ check('refuerzo por fecha muestra solo la fecha exacta',()=>{
+   assert.equal(state.reserva_refuerzo_modo,'fecha');
    assert.ok(document.getElementById('dw-field-reserva_fecha_refuerzo'));
+   assert.equal(document.getElementById('dw-field-reserva_refuerzo_dias'),null);
+ });
+ await fill(document.getElementById('dw-field-reserva_fecha_refuerzo'),'2026-12-22');
+ check('refuerzo guarda la fecha elegida',()=>assert.equal(state.reserva_fecha_refuerzo,'2026-12-22'));
+ await click([...document.querySelectorAll('[aria-label="Cómo definir el plazo del refuerzo"] button')].find(b=>b.textContent==='Días corridos'));
+ check('volver a días respeta el plazo y conserva la fecha histórica sin mostrarla',()=>{
+   assert.equal(state.reserva_refuerzo_modo,'dias');
+   assert.ok(document.getElementById('dw-field-reserva_refuerzo_dias'));
+   assert.equal(document.getElementById('dw-field-reserva_fecha_refuerzo'),null);
+   assert.equal(state.reserva_fecha_refuerzo,'2026-12-22');
  });
  await click(document.getElementById('dw-field-reserva_incluye_refuerzo'));
  check('refuerzo se cierra sin borrar el resto de la operación',()=>{

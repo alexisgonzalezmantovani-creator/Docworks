@@ -23,7 +23,18 @@ for(let paso=0;paso<total;paso++){await page.locator('.step-dot').nth(paso).clic
 assert.equal(await page.locator('.dw-rol-ayuda').count(),0);checks++;
 if(tipo==='alquiler'&&(paso===0||paso===4)){assert.equal(await page.locator('#dw-field-alquiler_seguro_dias').count(),0);assert.equal(await page.getByRole('checkbox',{name:/Incluir seguro/}).count(),0);checks+=2;}
 if(tipo==='alquiler'&&paso===6){const seguro=page.getByRole('checkbox',{name:/Incluir seguro/});await seguro.uncheck();assert.equal(await page.locator('#dw-field-alquiler_seguro_dias').count(),0);await seguro.check();await page.locator('#dw-field-alquiler_seguro_dias').fill('12');assert.equal(await page.locator('#dw-field-alquiler_seguro_dias').inputValue(),'12');checks+=2;}
-if(paso<total-1){await page.getByRole('button',{name:'Continuar →',exact:true}).click();assert.equal(await page.locator('.step-dot[aria-current="step"]').getAttribute('title'),await page.locator('.step-dot').nth(paso+1).getAttribute('title'));checks++;}}
+if(paso<total-1){
+  if(paso===0){
+   // Seleccionar un documento abre directamente sus datos, sin botón redundante Continuar.
+   const indicePorTipo={reserva:0,boleto:1,reserva_alquiler:0,alquiler:1,comodato:0,exclusividad:1,refuerzo_reserva:2,devolucion_reserva:3};
+   assert.ok(Object.hasOwn(indicePorTipo,tipo),'Tipo de recorrido conocido: '+tipo);
+   await page.locator('.dw-grupo-tipo-sections .dw-grupo-card').nth(indicePorTipo[tipo]).click();
+  }else{
+   await page.getByRole('button',{name:'Continuar →',exact:true}).click();
+  }
+  assert.equal(await page.locator('.step-dot[aria-current="step"]').getAttribute('title'),await page.locator('.step-dot').nth(paso+1).getAttribute('title'));
+  checks++;
+ }}
 await page.getByRole('button',{name:'Revisar →',exact:true}).click();await page.getByText('Revisión final',{exact:true}).waitFor();checks++;
 if(i===0){
  await page.getByRole('button',{name:'Guardar o emitir →',exact:true}).click();
