@@ -6277,11 +6277,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     guardarDraftLocalAhora();
     setData(function(d){return Object.assign({},d,patch);});
   },[]);
-  // En una operación nueva, tocar el documento alcanza para empezar a cargar.
-  // Refuerzo y devolución permanecen en este paso para vincular una reserva anterior.
+  // Tocar cualquier documento abre directamente sus datos.
+  // En refuerzo y devolución, las reservas vinculables se ofrecen en el paso siguiente.
   function seleccionarTipoDidactico(campo,valor){
     if(campo!=="tipo"){set(campo,valor);return;}
-    function cambiar(){set("tipo",valor);if(!initial&&valor!=="refuerzo_reserva"&&valor!=="devolucion_reserva")setStep(2);}
+    function cambiar(){set("tipo",valor);setStep(2);}
     if(valor!==data.tipo&&(initial||draftTieneContenido(data))){
       requestDwConfirm("¿Cambiar el tipo de documento? Los datos que ya cargaste se conservarán; revisalos antes de generar el documento.",cambiar,"Cambiar documento");
       return;
@@ -6396,7 +6396,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     if(esDocSimple){
       var grupoReal=grupo||"otros";
       if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo={grupoReal} operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} onSelectReservaDevolucion={elegirReservaParaDevolucion}/>;
-      if(step===2)return data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.comprador}/>;
+      if(step===2)return <>
+        {(esRefuerzo||esDevolucion)&&<StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="otros" operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} onSelectReservaDevolucion={elegirReservaParaDevolucion} soloReservas/>}
+        {data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.comprador}/>}
+      </>;
       if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.vendedor}/>;
       if(step===4)return <StepDocSimple data={data} onChange={set}/>;
       if(step===5)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
@@ -6458,10 +6461,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
         <div className="dw-operation-form-actions">
           {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
-          <div className="dw-operation-next-action">
+          {step>1&&<div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
             {step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
-          </div>
+          </div>}
         </div>
       </div>}
     </div>

@@ -5974,7 +5974,7 @@ const TIPO_GRUPOS = {
   },
 };
 
-function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSelectReservaDevolucion}){
+function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSelectReservaDevolucion,soloReservas=false}){
   // Only show the group that was selected in StepGrupo
   // TIPO_GRUPOS keys: compra, alquiler, otros
   var gruposToShow = Object.entries(TIPO_GRUPOS).filter(function(e){
@@ -5998,7 +5998,7 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
   return(
     <div>
       
-      <div className="dw-grupo-tipo-sections">
+      {!soloReservas&&<div className="dw-grupo-tipo-sections">
         {gruposToShow.map(function(entry){
           var key=entry[0],g=entry[1];
           return(
@@ -6006,15 +6006,13 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
               {!grupo&&<div className="dw-grupo-tipo-heading">{g.label}</div>}
               <div className={"dw-grupo-tipo-grid dw-grupo-tipo-"+key}>
                 {g.tipos.map(function(t){
-                  var sel=data.tipo===t.value;
                   return(
                     <button type="button" key={t.value}
-                      className={"dw-grupo-card dw-grupo-"+key+(sel?" is-selected":"")}
-                      aria-pressed={sel}
+                      className={"dw-grupo-card dw-grupo-"+key}
                       onClick={function(){onChange("tipo",t.value);}}>
                       <span className="dw-grupo-icon" aria-hidden="true">{t.icon}</span>
                       <span className="dw-grupo-text"><strong>{t.label}</strong><small>{t.desc}</small></span>
-                      <span className="dw-grupo-chevron" aria-hidden="true">{sel?"✓":"›"}</span>
+                      <span className="dw-grupo-chevron" aria-hidden="true">›</span>
                     </button>
                   );
                 })}
@@ -6022,7 +6020,7 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
             </div>
           );
         })}
-      </div>
+      </div>}
       {reservasSugeridas.length>0&&(
         <div style={{marginTop:18,paddingTop:16,borderTop:"1px dashed var(--border2)"}}>
           <div style={{fontSize:12,fontWeight:700,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{data.tipo==="devolucion_reserva"?"Reservas en curso — seleccioná la que querés devolver":"Reservas abiertas recientes — seleccioná la reserva sobre la que querés hacer el refuerzo"}</div>
@@ -6040,7 +6038,7 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
               );
             })}
           </div>
-          <div style={{fontSize:12,color:"var(--muted)",marginTop:6}}>Si no aparece la reserva, podés continuar y cargar los datos manualmente.</div>
+          <div style={{fontSize:12,color:"var(--muted)",marginTop:6}}>Si no aparece la reserva, completá los datos manualmente.</div>
         </div>
       )}
     </div>

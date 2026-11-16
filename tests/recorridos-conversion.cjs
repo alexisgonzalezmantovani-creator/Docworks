@@ -10,6 +10,46 @@ check('un segundo refuerzo no queda bloqueado por el primero',()=>{
 const operacionesSource=fs.readFileSync(dir+'/src/Operaciones.tsx','utf8'),operacionesAst=ts.createSourceFile('Operaciones.tsx',operacionesSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),selectores={};
 (function visit(n){if(ts.isFunctionDeclaration(n)&&n.name)selectores[n.name.text]=n.getText(operacionesAst);ts.forEachChild(n,visit)})(operacionesAst);
 function seleccionar(nombre,op){let resultado,paso=1;const deps={...a,data:{...a.EMPTY_OP},setBulk:x=>{resultado=x;},setStep:x=>{paso=x;}};new Function('deps','with(deps){'+functions.antecedenteReservaParaRefuerzo+';return ('+selectores[nombre]+');}')(deps)(op);assert.equal(paso,2,'La selección avanza al paso de datos');return resultado;}
+
+const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+const srcApp=source;
+const {StepTipo}=(()=>{const file=tmp+'/selector.cjs';require('esbuild').buildSync({stdin:{contents:srcApp+'\nexport {StepTipo};',resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:file});global.document={querySelector:()=>({}),title:''};const v=require(file);delete global.document;return v;})();
+for(const [categoria,tipo,labels] of [
+ ['compra','reserva',['Reserva de Compra','Boleto de Compraventa']],
+ ['alquiler','reserva_alquiler',['Reserva de Alquiler','Contrato de Alquiler']],
+ ['otros','comodato',['Comodato','Autorización de Venta','Refuerzo de Reserva','Devolución de Reserva']]
+]){
+ check(categoria+' presenta todos los documentos sin tildes previos',()=>{
+   const html=renderToStaticMarkup(React.createElement(StepTipo,{data:{tipo},grupo:categoria,onChange:()=>{}}));
+   assert.doesNotMatch(html,/aria-pressed="true"|is-selected|✓/);
+   assert.equal((html.match(/class="dw-grupo-chevron"/g)||[]).length,labels.length);
+   assert.equal((html.match(/class="dw-grupo-card /g)||[]).length,labels.length);
+   for(const label of labels)assert.ok(html.includes(label),label);
+ });
+}
+check('las reservas vinculadas no se pierden al entrar directamente a Refuerzo',()=>{
+ const html=renderToStaticMarkup(React.createElement(StepTipo,{soloReservas:true,grupo:'otros',data:{tipo:'refuerzo_reserva'},operaciones:[{id:'reserva-1',tipo:'reserva',estado:'activo',created_at:'2026-11-16',comprador_nombre:'Comprador QA'}],onChange:()=>{}}));
+ assert.match(html,/Reservas abiertas recientes/);
+ assert.match(html,/Comprador QA/);
+ assert.doesNotMatch(html,/dw-grupo-card/);
+});
+{
+ const form=selectores.seleccionarTipoDidactico;
+ assert.ok(form,'seleccionarTipoDidactico presente');
+ for(const tipo of ['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva']){
+   check(tipo+' inicia al hacer clic sin pulsar Continuar',()=>{
+     let paso=1,seleccion='',confirmations=0;
+     const deps={data:{tipo:'reserva'},initial:null,set:(k,v)=>{if(k==='tipo')seleccion=v;},setStep:n=>{paso=n;},draftTieneContenido:()=>false,requestDwConfirm:()=>{confirmations++;}};
+     new Function('deps','with(deps){return ('+form+');}')(deps)('tipo',tipo);
+     assert.equal(paso,2);assert.equal(seleccion,tipo);assert.equal(confirmations,0);
+   });
+ }
+}
+check('el selector no muestra el botón redundante del paso 1',()=>{
+ assert.match(operacionesSource,/\{step>1&&<div className="dw-operation-next-action">/);
+ assert.match(operacionesSource,/\{step<total\?<Btn onClick=\{avanzarConAviso\}>Continuar/);
+});
+
 const reserva={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',id:'reserva-origen',created_at:'2026-11-07T01:30:00Z',fecha_documento:'2026-11-06',moneda:'ARS',precio:'123456.78',anticipo:'23456.78',comprador_nombre:'Ana Compradora',vendedor_nombre:'Bruno Vendedor',comision_vendedor_modo:'fijo',comision_vendedor_valor:'1500.25',comision_vendedor_moneda:'ARS',comision_vendedor_ocultar_doc:true,comision_comprador_valor:'0',comision_comprador_valor_editado:true,inmueble_en_barrio_complejo:true,inmueble_barrio:'Complejo de prueba',inmueble_unidad_funcional:'Lote 9',comprador_cotitulares:[{nombre:'Cotitular Uno',dni:'30111222',telefono:'111111',telefono_en_doc:true}],clausulas_custom_titulo:'Acuerdo de prueba',clausulas_custom:'Detalle exclusivo de esta operación.'};
 const alquiler={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,id:'reserva-alquiler-origen',tipo:'reserva_alquiler',res_alq_monto_reserva:'100000',res_alq_moneda:'ARS',res_alq_monto_mensual:'1900.25',res_alq_monto_mensual_moneda:'USD',res_alq_plazo_cantidad:'2',res_alq_plazo_unidad:'años',res_alq_inicio_estimado:'2026-04-01',res_alq_comision_locador_modo:'fijo',res_alq_comision_locador_valor:'125.25',res_alq_comision_locador_moneda:'USD',res_alq_comision_locatario_modo:'porcentaje',res_alq_comision_locatario_valor:'2',res_alq_comision_locador_ocultar_doc:true,clausulas_custom_titulo:'Acuerdo de prueba',clausulas_custom:'Detalle exclusivo de esta operación.'};
 const antes=JSON.stringify([reserva,alquiler]);const boleto=convertir('convertirABoleto',reserva),refuerzo=convertir('convertirARefuerzo',reserva),devolucion=convertir('onConvertirDevolucion',reserva),comodato=convertir('convertirAComodato',reserva),contrato=convertir('convertirAContrato',alquiler);
