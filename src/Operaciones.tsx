@@ -1861,14 +1861,19 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     padding:7px 8px!important;font-size:12px!important;
   }
 }
-/* iPhone apaisado: conservar Ayuda en la barra superior; evitar sidebar recortada por altura. */
+/* iPhone horizontal: los cinco accesos pasan de la barra inferior al panel lateral.
+   La regla previa ocultaba ambos menús; permitir scroll lateral vertical cuando no cabe. */
 @media (orientation:landscape) and (max-height:500px) and (max-width:1100px) and (hover:none) and (pointer:coarse){
-  .app-wrap .sidebar{display:none!important;}
-  .app-wrap .mobile-topbar{display:flex!important;position:relative!important;top:auto!important;left:auto!important;right:auto!important;z-index:550!important;width:100%!important;min-height:44px!important;height:calc(44px + env(safe-area-inset-top,0px))!important;padding:env(safe-area-inset-top,0px) max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px))!important;box-sizing:border-box!important;overflow:visible!important;}
-  .app-wrap{padding-top:0!important;}
-  .app-wrap .app-body{display:flex!important;flex-direction:column!important;min-width:0!important;}
+  :root{--dw-sidebar-w:56px;--dw-topbar-h:calc(64px + env(safe-area-inset-top,0px));}
+  .mobile-topbar{display:none!important;}
+  .app-wrap{padding-top:var(--dw-topbar-h)!important;}
+  .app-wrap .topbar{display:flex!important;position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:60!important;height:var(--dw-topbar-h)!important;padding-top:env(safe-area-inset-top,0px)!important;}
+  .app-wrap .app-body{display:flex!important;flex-direction:row!important;min-width:0!important;padding-left:var(--dw-sidebar-w)!important;}
+  .app-wrap .sidebar{display:flex!important;flex-direction:column!important;position:fixed!important;left:env(safe-area-inset-left,0px)!important;top:var(--dw-topbar-h)!important;bottom:0!important;width:var(--dw-sidebar-w)!important;height:auto!important;padding:5px 0 max(6px,env(safe-area-inset-bottom,0px))!important;gap:2px!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;z-index:45!important;}
+  .app-wrap .sidebar .nav-item{width:calc(100% - 8px)!important;height:40px!important;min-height:40px;margin:1px 4px!important;flex-shrink:0!important;}
+  .app-wrap .sidebar .sidebar-bottom-icon{width:40px;height:40px;min-height:40px;flex-shrink:0;}
+  .app-wrap .sidebar .sidebar-spacer{flex:0 0 4px;}
   .app-wrap .main{width:100%!important;min-width:0!important;overflow:visible!important;}
-  .app-wrap .mobile-topbar button{visibility:visible!important;opacity:1!important;flex-shrink:0!important;}
   .app-wrap .mobile-nav{display:none!important;}
   .app-wrap .content{padding-bottom:max(18px,env(safe-area-inset-bottom,0px))!important;}
 }
