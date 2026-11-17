@@ -28,6 +28,7 @@ jobs:
           node tests/logica-fechas-documentos.cjs
           node tests/recorridos-conversion.cjs
           node tests/revision-clausulas-logica.cjs
+          node tests/coherencia-ocho-documentos.cjs
       - name: Auditar textos completos de los ocho documentos
         run: |
           node - <<'NODE'
