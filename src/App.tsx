@@ -5191,7 +5191,7 @@ function ContactoDocumentoField({id,label,type,value,onChange,checked,onChecked,
   var nombre=type==="tel"?"teléfono":"correo electrónico";
   return <div className="dw-contact-field" role="group" aria-labelledby={id+"-label"}>
     <div className="field dw-contact-input"><label id={id+"-label"} className="field-label" htmlFor={id}>{label}</label><input id={id} className="inp" type={type} inputMode={type==="tel"?"tel":"email"} value={value||""} onChange={onChange} placeholder={placeholder} autoComplete={autoComplete} style={style} {...atributosErrorCampo(id,error)}/>{error&&<span id={id+"-error"} className="field-error">{error}</span>}</div>
-    {(!!String(value||"").trim()||checked)&&<div className="dw-contact-print"><span>Incluir en el documento</span><button type="button" className={"dw-ios-sw"+(checked?" on":"")} role="switch" aria-checked={!!checked} aria-label={"Incluir "+nombre+" en el documento"} aria-controls={id} onClick={function(){onChecked(!checked);}}/></div>}
+    <div className="dw-contact-print"><span>Incluir en el documento</span><button type="button" className={"dw-ios-sw"+(checked?" on":"")} role="switch" aria-checked={!!checked} aria-label={"Incluir "+nombre+" en el documento"} aria-controls={id} onClick={function(){onChecked(!checked);}}/></div>
   </div>;
 }
 

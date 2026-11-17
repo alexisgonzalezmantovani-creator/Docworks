@@ -192,6 +192,18 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
   console.log('RENDER escribanía '+tipo);check(tipo+' no pide escribanía en creación',()=>assert.equal(!!document.getElementById('dw-field-escribania'),false));
   state={...state,id:'guardada-qa'};console.log('ANTES render guardada '+tipo);await a.act(async()=>render(a.StepEconomicoCompra,{mostrarEscribania:true}));console.log('DESPUÉS render guardada '+tipo);const panel=[...document.querySelectorAll('details')].find(x=>x.querySelector('#dw-field-escribania'));assert.ok(panel);await click(panel.querySelector('summary'));await fill(document.getElementById('dw-field-escribania'),'');check(tipo+' permite reemplazar escribanía sin cerrar el panel',()=>assert.equal(panel.open,true));await fill(document.getElementById('dw-field-escribania'),'Escribanía asignada después');check(tipo+' permite cargar escribanía más adelante',()=>{assert.equal(state.escribania,'Escribanía asignada después');assert.ok(!a.getCamposFaltantesDetalle(state).some(f=>f.campo==='escribania'));});
  }
+ state={...a.EMPTY_OP,tipo:'reserva',comprador_telefono:'',comprador_email:'',comprador_telefono_en_doc:false,comprador_email_en_doc:false};
+ await a.act(async()=>render(a.StepPersona,{prefix:'comprador',titulo:'Comprador'}));
+ check('los interruptores de teléfono y correo se ven antes de escribir',()=>{
+  const switches=[...document.querySelectorAll('.dw-contact-field [role="switch"]')];
+  assert.equal(switches.length,2);
+  assert.deepEqual(switches.map(el=>el.getAttribute('aria-checked')),['false','false']);
+  assert.equal(document.querySelectorAll('.dw-contact-print').length,2);
+ });
+ await click(document.querySelector('[aria-label="Incluir teléfono en el documento"]'));
+ check('activar teléfono vacío conserva el interruptor visible',()=>{assert.equal(state.comprador_telefono_en_doc,true);assert.equal(document.querySelectorAll('.dw-contact-field [role="switch"]').length,2);});
+ await click(document.querySelector('[aria-label="Incluir teléfono en el documento"]'));
+ check('desactivar teléfono vacío también conserva ambos interruptores',()=>{assert.equal(state.comprador_telefono_en_doc,false);assert.equal(document.querySelectorAll('.dw-contact-field [role="switch"]').length,2);});
  state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',comprador_telefono:'1122223333',comprador_email:'contacto@example.test',comprador_telefono_en_doc:false,comprador_email_en_doc:false};await a.act(async()=>render(a.StepPersona,{prefix:'comprador',titulo:'Comprador'}));
  check('contactos no tienen bloque separado de switches',()=>assert.equal(document.querySelector('.dw-doc-toggles'),null));
  await click(document.querySelector('[aria-label="Incluir teléfono en el documento"]'));check('switch de teléfono cambia solo teléfono',()=>{assert.equal(state.comprador_telefono_en_doc,true);assert.equal(state.comprador_email_en_doc,false);});
