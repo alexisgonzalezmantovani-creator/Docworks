@@ -5681,7 +5681,8 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     finally{setGuardandoAjuste(false);}
   }
   const [aiReview,setAiReview]=useState(null); // {loading,text,error}
-  const autoActionFiredRef=useRef(false);
+  // Cada nueva selección de descarga debe poder ejecutarse. Un bloqueo permanente
+  // impedía reintentar después de cancelar, navegar atrás o cerrar el panel nativo.
 
   function changeTab(id){ if(setTab(id)===false)return;setLastPdf(null);setLastDocx(null);setErr("");setAiReview(null); }
 
@@ -5776,13 +5777,14 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   // toque del usuario dispare navigator.share() cuanto antes, por eso el
   // pequeño delay es mínimo). Se ejecuta una sola vez.
   useEffect(function(){
-    if(!autoAction || autoActionFiredRef.current) return;
-    autoActionFiredRef.current=true;
+    if(!autoAction) return;
+    // Limpiar la solicitud antes de abrir confirmaciones o el diálogo nativo:
+    // cancelar una descarga no debe consumir los intentos posteriores.
     var t=setTimeout(function(){
+      if(onAutoActionDone) onAutoActionDone();
       if(autoAction==="whatsapp") conValidacion(handleShareWhatsApp);
       else if(autoAction==="pdf") conValidacion(handlePDF);
       else if(autoAction==="docx") conValidacion(handleDOCX);
-      if(onAutoActionDone) onAutoActionDone();
     }, 300);
     return function(){ clearTimeout(t); };
     // eslint-disable-next-line
