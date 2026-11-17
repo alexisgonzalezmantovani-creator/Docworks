@@ -5514,10 +5514,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
           {data.reserva_incluye_refuerzo&&<div id="dw-refuerzo-reserva-panel" className="dw-share-panel dw-economic-refuerzo-content">
             <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>Indicá el importe y el plazo pactados. Se incluirán en la reserva; la entrega efectiva se documentará por separado.</div>
             <Inp id="dw-field-reserva_refuerzo_monto" label={"Monto del refuerzo ("+(data.moneda||"USD")+")"} value={data.reserva_refuerzo_monto||""} onChange={function(e){onChange("reserva_refuerzo_monto",e.target.value);}} money placeholder="10.000" {...estiloCampoFaltante(faltantes,"reserva_refuerzo_monto")}/>
-            {esMontoMayorACero(data.reserva_refuerzo_monto)&&precio>0&&<div style={{fontSize:12,color:"var(--muted)",margin:"7px 0 12px"}}>
-              Seña + refuerzo previsto: <strong>{fmt$((parseMontoAR(data.anticipo)||0)+parseMontoAR(data.reserva_refuerzo_monto),data.moneda)}</strong>.
-              Saldo después de entregarlo: <strong>{fmt$(Math.max(0,precio-(parseMontoAR(data.anticipo)||0)-parseMontoAR(data.reserva_refuerzo_monto)),data.moneda)}</strong>.
-            </div>}
+            {/* Los importes quedan en campos numéricos; el documento calcula el refuerzo sin sumarlo al precio total. */}
             <div role="group" aria-label="Cómo definir el plazo del refuerzo" style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:10}}>
               {[{value:"dias",label:"Días corridos"},{value:"fecha",label:"Fecha exacta"}].map(function(m){
                 var marcado=modoPlazoRefuerzoReserva(data)===m.value;
