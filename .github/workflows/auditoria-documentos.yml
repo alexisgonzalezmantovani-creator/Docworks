@@ -1,0 +1,69 @@
+name: Auditoria coherencia 8 documentos
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '.github/workflows/auditoria-documentos.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verificar-documentos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Pruebas existentes de documentos y exportaciones
+        run: |
+          node tests/documentos.cjs
+          node tests/logica-fechas-documentos.cjs
+          node tests/recorridos-conversion.cjs
+          node tests/revision-clausulas-logica.cjs
+      - name: Auditar textos completos de los ocho documentos
+        run: |
+          node - <<'NODE'
+          const fs=require('fs'),path=require('path'),os=require('os'),esbuild=require('esbuild');
+          const root=process.cwd(),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-auditoria-docs-'));
+          const source=fs.readFileSync(path.join(root,'src/App.tsx'),'utf8');
+          esbuild.buildSync({stdin:{contents:source+'\nexport {EMPTY_OP,SAMPLE_OP_PREVIEW,getDefaultBodyBlocks,buildDocSections,opParaDocumento,aplicarEncabezadoPersonalizado,docToPlainText,getTokensSinReemplazar};',resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs')});
+          global.document={querySelector:()=>({}),title:''};const a=require(path.join(tmp,'app.cjs'));delete global.document;
+          const base={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,
+            created_at:'2026-11-16T15:00:00.000Z',
+            comprador_nombre:'Comprador Ejemplo',comprador_dni:'20300111223',comprador_domicilio:'Calle Comprador 10',
+            vendedor_nombre:'Vendedor Ejemplo',vendedor_dni:'20222999111',vendedor_domicilio:'Calle Vendedor 20',
+            locador_nombre:'Locador Ejemplo',locador_dni:'20333444555',locador_domicilio:'Calle Locador 30',
+            locatario_nombre:'Locatario Ejemplo',locatario_dni:'20444666777',locatario_domicilio:'Calle Locatario 40',
+            inmueble_direccion:'Calle Inmueble 123',inmueble_partido:'Pilar',inmueble_provincia:'Buenos Aires',
+            inmueble_en_barrio_complejo:true,inmueble_barrio:'Barrio Prueba',inmueble_unidad_funcional:'UF 15',
+            precio:'150000',anticipo:'15000',saldo:'135000',moneda:'USD',
+            fecha_posesion:'2026-12-22',compra_instrumento:'escritura',
+            res_alq_monto_reserva:'85000',res_alq_moneda:'ARS',res_alq_monto_mensual:'700000',res_alq_monto_mensual_moneda:'ARS',
+            res_alq_inicio_estimado:'2026-12-01',res_alq_plazo_cantidad:'24',res_alq_plazo_unidad:'meses',
+            alquiler_monto_inicial:'700000',alquiler_moneda:'ARS',alquiler_inicio:'2026-12-01',alquiler_fin:'2028-11-30',alquiler_plazo_meses:'24',
+            comodato_plazo:'12',comodato_uso:'vivienda',exclusividad_vigencia:'90',exclusividad_tipo:'sin',
+            refuerzo_trayectoria:'Reserva original de fecha 15/11/2026, con seña de USD 15.000.',
+            devolucion_motivo:'Las partes acuerdan devolver íntegramente la reserva de prueba.',
+            inmobiliaria_nombre:'Inmobiliaria de Prueba',inmobiliaria_matricula:'CMCPSI 0000'};
+          const tipos=['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva'];
+          const perfil={nombre:'Inmobiliaria de Prueba',matricula:'CMCPSI 0000',plantillas:{}};
+          const errors=[];
+          for(const tipo of tipos){
+            const op={...base,tipo,...(['refuerzo_reserva','devolucion_reserva'].includes(tipo)?{precio:'5000'}:{})};
+            const doc=a.aplicarEncabezadoPersonalizado(a.buildDocSections(a.opParaDocumento(op),[],tipo,a.getDefaultBodyBlocks(tipo)),op,tipo,perfil);
+            const texto=a.docToPlainText(doc);
+            console.log('\n===== INICIO '+tipo+' =====\n'+texto+'\n===== FIN '+tipo+' =====\n');
+            if(!texto.includes('Calle Inmueble 123'))errors.push(tipo+': no aparece inmueble');
+            if(a.getTokensSinReemplazar(doc).length)errors.push(tipo+': tokens sin resolver');
+          }
+          if(errors.length){console.error(errors.join('\n'));process.exitCode=1;}
+          else console.log('OK: ocho documentos generados para revisión editorial del texto completo.');
+          NODE
