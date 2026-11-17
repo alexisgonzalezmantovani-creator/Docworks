@@ -6668,7 +6668,7 @@ function HistorialAccionesCard({op}){
     {hs.length===0?<div style={{fontSize:12.5,color:"var(--dim)"}}>Todavía no hay movimientos registrados.</div>:<div style={{display:"flex",flexDirection:"column",gap:7,maxHeight:todo?260:"none",overflowY:todo?"auto":"visible"}}>
       {lista.map(function(h,i){return <div key={h.id||i} style={{display:"flex",flexDirection:"column",gap:2,padding:"8px 10px",border:"1px solid var(--border)",borderRadius:10}}>
         <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}><span style={{fontSize:12.5,fontWeight:700,color:"var(--text)"}}>{h.accion||"Actualización"}</span><span style={{fontSize:11.5,color:"var(--dim)"}}>{h.ts?new Date(h.ts).toLocaleString("es-AR"):"—"}</span></div>
-        <div style={{fontSize:12,color:"var(--muted)"}}>{h.actorNombre||"Usuario"}{h.actorRol?" · "+h.actorRol:""}</div>
+        <div style={{fontSize:12,color:"var(--muted)"}}>{h.actorNombre||"Usuario"}{h.actorRol?" · "+(h.actorRol==="dueno"?"Dueño":h.actorRol):""}</div>
         {h.detalle&&<div style={{fontSize:12,color:"var(--dim)",overflowWrap:"anywhere"}}>{h.detalle}</div>}
       </div>;})}
     </div>}
