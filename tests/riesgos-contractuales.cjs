@@ -86,5 +86,34 @@ check('reserva nueva conserva moneda esencial sin renuncias generales',()=>{
  assert.match(bloque.contenido,/moneda pactada/i);
  assert.doesNotMatch(bloque.contenido,/renunciando a invocar imprevisión/);
 });
+check('modelo de alquiler aplica 1221 sin preaviso obligatorio y cálculo 10%',()=>{
+ const b=a.getDefaultBodyBlocks('alquiler').find(x=>x.id==='alquiler.rescision');
+ assert.ok(b);assert.match(b.contenido,/artículo 1221/);
+ assert.match(b.contenido,/diez por ciento \(10%\) del saldo del canon locativo futuro/);
+ assert.doesNotMatch(b.contenido,/\{\{alquiler_aviso_plazo\}\}/);
+});
+check('estado locativo no presume entrega previa a la firma',()=>{
+ const b=a.getDefaultBodyBlocks('alquiler').find(x=>x.id==='alquiler.estado');
+ assert.ok(b);assert.match(b.contenido,/entrega material/);
+ assert.doesNotMatch(b.contenido,/El LOCATARIO recibe el inmueble/);
+});
+check('depósito pactado no se afirma ya percibido por el locador',()=>{
+ const b=a.getDefaultBodyBlocks('alquiler').find(x=>x.id==='alquiler.deposito');
+ assert.ok(b);assert.match(b.contenido,/Su entrega efectiva se acreditará/);
+ assert.doesNotMatch(b.contenido,/El LOCATARIO entrega en depósito/);
+});
+check('documentos históricos con recibos anticipados conservan alerta',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'alquiler'},doc('El LOCATARIO entrega en depósito ARS 1.000 y declara recibir el inmueble en perfecto estado de conservación.'));
+ assert.ok(v.avisos.some(x=>/depósito de garantía/i.test(x)));
+ assert.ok(v.avisos.some(x=>/estado de entrega/i.test(x)));
+});
+check('modelo de alquiler nuevo no produce falsos avisos de depósito o entrega',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const v=a.revisarRiesgosContractuales(op,d);
+ assert.ok(!v.avisos.some(x=>/depósito de garantía: verificá/i.test(x)));
+ assert.ok(!v.avisos.some(x=>/certifica el estado de entrega/i.test(x)));
+ assert.ok(!v.avisos.some(x=>/preaviso mínimo/i.test(x)));
+});
 console.log('APROBADAS '+checks+' comprobaciones preventivas de riesgo contractual.');
 
