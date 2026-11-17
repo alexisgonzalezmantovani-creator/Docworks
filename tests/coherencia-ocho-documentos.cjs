@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),esbuild=require('esbuild');
 const dir=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-ocho-documentos-'));
 esbuild.buildSync({stdin:{contents:fs.readFileSync(path.join(dir,'src/App.tsx'),'utf8')+
- '\nexport {EMPTY_OP,SAMPLE_OP_PREVIEW,getDefaultBodyBlocks,buildDocSections,opParaDocumento,aplicarEncabezadoPersonalizado,docToPlainText,getTokensSinReemplazar,resolveVars};',
+ '\nexport {EMPTY_OP,SAMPLE_OP_PREVIEW,getDefaultBodyBlocks,buildDocSections,opParaDocumento,aplicarEncabezadoPersonalizado,docToPlainText,getTokensSinReemplazar,resolveVars,generarPDF,generarDOCX};',
  resolveDir:path.join(dir,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs')});
 global.document={querySelector:()=>({}),title:''};const a=require(path.join(tmp,'app.cjs'));delete global.document;
 const perfil={nombre:'Inmobiliaria de Prueba',matricula:'CMCPSI 0000',plantillas:{}};
@@ -89,4 +89,75 @@ check('modelos estándar anteriores se normalizan sin modificar datos',()=>{
  assert.doesNotMatch(a.resolveVars('Antes de firmar, deberá completarse cualquier condición particular de devolución, retención o penalidad acordada.',{...base,tipo:'reserva_alquiler'}),/Antes de firmar/);
  assert.doesNotMatch(a.resolveVars('El VENDEDOR devuelve en este acto al COMPRADOR / OFERENTE la suma de {{precio_letras}}, recibiendo el COMPRADOR plena conformidad respecto de la devolución.-',{...base,tipo:'devolucion_reserva'}),/El VENDEDOR devuelve/);
 });
-console.log('APROBADAS '+n+' verificaciones de coherencia de ocho documentos.');
+
+const zlib=require('node:zlib');
+function contenidoZip(buf,nombre){
+  for(var pos=0;pos<buf.length-30;){
+    if(buf.readUInt32LE(pos)!==0x04034b50)break;
+    var metodo=buf.readUInt16LE(pos+8),tam=buf.readUInt32LE(pos+18);
+    var n=buf.readUInt16LE(pos+26),e=buf.readUInt16LE(pos+28);
+    var ruta=buf.toString('utf8',pos+30,pos+30+n),ini=pos+30+n+e;
+    if(ruta===nombre){
+      var dato=buf.subarray(ini,ini+tam);
+      return (metodo===8?zlib.inflateRawSync(dato):dato).toString('utf8');
+    }
+    pos=ini+tam;
+  }
+  throw Error('No se encontró '+nombre+' en Word');
+}
+(async()=>{
+  esbuild.buildSync({entryPoints:[path.join(dir,'src/Exportaciones.ts')],bundle:true,platform:'node',format:'cjs',outfile:path.join(tmp,'exportaciones.cjs')});
+  const {DOC_EXPORT_LAYOUT,organizarFilasFirmas}=require(path.join(tmp,'exportaciones.cjs'));
+  check('interlineado y separación de párrafos homogéneos',()=>{
+    assert.ok(DOC_EXPORT_LAYOUT.lineHeight>=15);
+    assert.ok(DOC_EXPORT_LAYOUT.paragraphAfter>=9);
+    assert.equal(DOC_EXPORT_LAYOUT.bodySize,10.5);
+  });
+  const roles={reserva:'OFERENTE',boleto:'COMPRADOR',reserva_alquiler:'LOCATARIO',alquiler:'LOCATARIO',comodato:'COMODATARIO',
+    exclusividad:null,refuerzo_reserva:'COMPRADOR',devolucion_reserva:'COMPRADOR'};
+  for(const [tipo,rol] of Object.entries(roles)){
+    check(tipo+': cotitulares en pareja y sin firmas duplicadas',()=>{
+      const partes=[{rol:'VENDEDOR',nombre:'Vendedor Uno'},{rol:'VENDEDOR',nombre:'Vendedor Dos'}];
+      if(rol)partes.push({rol,nombre:'Oferente Principal'});
+      partes.push({rol:'INMOBILIARIA INTERVINIENTE',usarPerfil:true});
+      const filas=organizarFilasFirmas(partes,true);
+      assert.ok(filas.every(f=>f.length<=2));
+      assert.equal(filas[0][0].nombre,'Vendedor Uno');
+      assert.equal(filas[0][1].nombre,'Vendedor Dos');
+      const flat=filas.flat().filter(Boolean);
+      assert.equal(flat.length,partes.length);
+      assert.equal(new Set(flat).size,partes.length);
+      if(rol){
+        assert.equal(filas.at(-1)[0].nombre,'Oferente Principal');
+        assert.equal(filas.at(-1)[1].usarPerfil,true);
+      }
+    });
+  }
+  const doc={titulo:'RESERVA AD REFERÉNDUM',ciudad:'Pilar',fecha:'17 de noviembre de 2026',
+    encabezado:'Las partes celebran la presente reserva conforme a estas condiciones.',
+    secciones:[{titulo:'1. PRECIO',items:['Las partes acuerdan un precio de ejemplo y se obligan a respetar el texto suscripto.']}],clausulas:[],
+    firmas:[{rol:'OFERENTE',nombre:'Juan Oferente',dni:'32123123'},{rol:'INMOBILIARIA INTERVINIENTE',usarPerfil:true}],
+    conformidad:{rol:'VENDEDOR',items:['Presto conformidad con la reserva.'],firmantes:[
+      {nombre:'María Vendedora',dni:'24000111'},{nombre:'Pedro Vendedor',dni:'24000222'}]}};
+  const pdf=await a.generarPDF(doc,null,{nombre:'Inmobiliaria Prueba',matricula:'CMCPSI 6136'});
+  const word=await a.generarDOCX(doc,{nombre:'Inmobiliaria Prueba',matricula:'CMCPSI 6136'});
+  const pdfRaw=Buffer.from(await pdf.blob.arrayBuffer()).toString('latin1');
+  const xml=contenidoZip(Buffer.from(await word.blob.arrayBuffer()),'word/document.xml');
+  check('PDF conserva dos firmas de vendedores y oferente e inmobiliaria',()=>{
+    for(const nombre of ['Juan Oferente','Inmobiliaria Prueba','Vendedora','Pedro Vendedor'])assert.ok(pdfRaw.includes(nombre),nombre);
+    assert.ok(pdf.blob.size>1000);
+  });
+  check('Word compone dos columnas y conserva nombres completos',()=>{
+    const tablas=xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g)||[];
+    const principal=tablas.find(t=>t.includes('Juan Oferente')&&t.includes('Inmobiliaria Prueba'));
+    const vendedores=tablas.find(t=>t.includes('María Vendedora')&&t.includes('Pedro Vendedor'));
+    for(const tabla of [principal,vendedores]){
+      assert.ok(tabla,'faltan firmas en tabla');
+      assert.equal((tabla.match(/<w:gridCol w:w="4860"\/>/g)||[]).length,2);
+      assert.equal((tabla.match(/<w:tc>/g)||[]).length,2);
+    }
+    assert.ok(xml.includes('Matrícula CMCPSI 6136'));
+  });
+  console.log('APROBADAS '+n+' verificaciones, incluidos interlineado y firmas PDF/Word.');
+})().catch(e=>{console.error(e);process.exitCode=1;});
+
