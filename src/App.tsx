@@ -914,6 +914,24 @@ function resolveVars(text, op, extra=undefined) {
   // debe leerse "vigencia hasta el DD/MM/AAAA" cuando se eligió fecha fija.
   // La corrección actúa al renderizar: no reescribe modelos ni snapshots.
   var textoBase=String(text);
+  // Compatibilidad editorial con las frases estándar anteriores.
+  // No modifica modelos personalizados ni datos guardados.
+  if(op&&op.tipo==="reserva_alquiler"){
+    textoBase=textoBase.replace("Antes de firmar, deberá completarse cualquier condición particular de devolución, retención o penalidad acordada.",
+      "No se presume pactada ninguna penalidad que no haya sido expresamente acordada entre las partes.");
+  }
+  if(op&&op.tipo==="boleto"){
+    textoBase=textoBase.replace("El VENDEDOR {{vendedor_nombre}} vende, cede y transfiere al COMPRADOR {{comprador_nombre}}, quien compra y acepta, el inmueble ubicado en",
+      "El VENDEDOR {{vendedor_nombre}} se obliga a vender al COMPRADOR {{comprador_nombre}}, quien se obliga a comprar, el inmueble ubicado en");
+  }
+  if(op&&op.tipo==="devolucion_reserva"){
+    textoBase=textoBase.replace("El VENDEDOR devuelve en este acto al COMPRADOR / OFERENTE la suma de {{precio_letras}}, recibiendo el COMPRADOR plena conformidad respecto de la devolución.-",
+      "Se deja constancia de la entrega al COMPRADOR / OFERENTE de la suma de {{precio_letras}} en concepto de devolución de reserva. El COMPRADOR / OFERENTE declara recibir el importe indicado y prestar conformidad con esta devolución.-");
+  }
+  if(op&&op.tipo==="reserva"){
+    textoBase=textoBase.replace("El vencimiento de la aceptación de la presente Reserva caducará irrevocablemente",
+      "El plazo para aceptar la presente Reserva vencerá");
+  }
   if(op&&op.tipo==="reserva"&&op.reserva_vigencia_modo==="fecha") {
     textoBase=textoBase.replace(/\b(vigencia)\s+de(\s+\{\{\s*reserva_vigencia_texto\s*\}\})/gi,"$1$2");
   }
@@ -3486,6 +3504,11 @@ function sustituirTokens(tpl, op, perfil, tipo) {
   var esAlq = tipo==="alquiler"||tipo==="reserva_alquiler";
   var esResAlq=tipo==="reserva_alquiler";
   var textoPlantilla=String(tpl||"");
+  if(tipo==="devolucion_reserva"){
+    textoPlantilla=textoPlantilla.replace(
+      "En este acto {{vendedor_nombre}}, DNI/CUIT {{vendedor_dni}}, restituye a {{comprador_nombre}}, DNI/CUIT {{comprador_dni}}, la suma de {{precio_letras}} en concepto de devolución de la reserva respecto del inmueble sito en {{inmueble_direccion}}, {{inmueble_partido}}.",
+      "En este acto se deja constancia de la devolución a {{comprador_nombre}}, DNI/CUIT {{comprador_dni}}, de la suma de {{precio_letras}} correspondiente a la reserva vinculada con {{vendedor_nombre}}, DNI/CUIT {{vendedor_dni}}, respecto del inmueble sito en {{inmueble_direccion}}, {{inmueble_partido}}.");
+  }
   if(tipo==="exclusividad"){
     // Evitar que la introducción afirme exclusividad cuando se eligió
     // autorización SIN exclusividad. Aplicar a textos de fábrica y snapshots.
@@ -3541,7 +3564,7 @@ var DEFAULT_ENCABEZADOS = {
   refuerzo_reserva:
     "En este acto {{comprador_nombre}}, DNI/CUIT {{comprador_dni}}, entrega a {{vendedor_nombre}}, DNI/CUIT {{vendedor_dni}}, la suma de {{precio_letras}} en concepto de refuerzo de la reserva oportunamente suscripta respecto del inmueble sito en {{inmueble_direccion}}, {{inmueble_partido}}.",
   devolucion_reserva:
-    "En este acto {{vendedor_nombre}}, DNI/CUIT {{vendedor_dni}}, restituye a {{comprador_nombre}}, DNI/CUIT {{comprador_dni}}, la suma de {{precio_letras}} en concepto de devolución de la reserva respecto del inmueble sito en {{inmueble_direccion}}, {{inmueble_partido}}."
+    "En este acto se deja constancia de la devolución a {{comprador_nombre}}, DNI/CUIT {{comprador_dni}}, de la suma de {{precio_letras}} correspondiente a la reserva vinculada con {{vendedor_nombre}}, DNI/CUIT {{vendedor_dni}}, respecto del inmueble sito en {{inmueble_direccion}}, {{inmueble_partido}}."
 };
 
 function getEncabezadoTemplate(tipo, perfil) {
@@ -3884,7 +3907,7 @@ const DW_EXPENSAS_BASE_ORIGINAL = "Los impuestos, tasas, expensas y servicios de
 var BODY_TEMPLATE_PRESETS = {
   reserva: (typeof DEFAULT_BLOQUES_RESERVA!=="undefined" ? DEFAULT_BLOQUES_RESERVA : []).map(function(b){ return Object.assign({}, b); }),
   boleto: [
-    {id:"boleto.objeto",titulo:"OBJETO",contenido:"El VENDEDOR {{vendedor_nombre}} vende, cede y transfiere al COMPRADOR {{comprador_nombre}}, quien compra y acepta, el inmueble ubicado en {{inmueble_direccion}}, {{inmueble_partido}}, Provincia de {{inmueble_provincia}}{{nomenclatura_catastral_texto}}, en adelante el Inmueble.-"},
+    {id:"boleto.objeto",titulo:"OBJETO",contenido:"El VENDEDOR {{vendedor_nombre}} se obliga a vender al COMPRADOR {{comprador_nombre}}, quien se obliga a comprar, el inmueble ubicado en {{inmueble_direccion}}, {{inmueble_partido}}, Provincia de {{inmueble_provincia}}{{nomenclatura_catastral_texto}}, en adelante el Inmueble.-"},
     {id:"boleto.precio",titulo:"PRECIO",contenido:"El precio total y definitivo de la presente compraventa se fija en {{precio_letras}}, que las partes declaran justo y conveniente a sus intereses.-"},
     {id:"boleto.forma_pago",titulo:"FORMA DE PAGO",contenido:"{{boleto_pago_acordado}}"},
     {id:"boleto.posesion",titulo:"POSESIÓN Y ESCRITURACIÓN",contenido:"{{compra_posesion_texto}}"},
@@ -3939,7 +3962,7 @@ var BODY_TEMPLATE_PRESETS = {
   devolucion_reserva: [
     {id:"devolucion.antecedentes",titulo:"ANTECEDENTES",contenido:"Las partes habían suscripto una Reserva de Compra para el inmueble ubicado en {{inmueble_direccion}}, {{inmueble_partido}}.-"},
     {id:"devolucion.motivo",titulo:"MOTIVO DE LA DEVOLUCIÓN",contenido:"{{devolucion_motivo_texto}}"},
-    {id:"devolucion.devolucion",titulo:"DEVOLUCIÓN",contenido:"El VENDEDOR devuelve en este acto al COMPRADOR / OFERENTE la suma de {{precio_letras}}, recibiendo el COMPRADOR plena conformidad respecto de la devolución.-"},
+    {id:"devolucion.devolucion",titulo:"DEVOLUCIÓN",contenido:"Se deja constancia de la entrega al COMPRADOR / OFERENTE de la suma de {{precio_letras}} en concepto de devolución de reserva. El COMPRADOR / OFERENTE declara recibir el importe indicado y prestar conformidad con esta devolución.-"},
     {id:"devolucion.finiquito",titulo:"FINIQUITO",contenido:"Las partes dejan constancia de la devolución del importe aquí indicado. El alcance de cualquier liberación o renuncia de reclamos se limita a los conceptos expresamente identificados y aceptados en este instrumento, sin afectar derechos irrenunciables.-"},
   ],
 };
@@ -4023,7 +4046,7 @@ function bloquesBaseObligatoriosPorTipo(tipo) {
   var comunes=[{id:tipo+".jurisdiccion",titulo:"JURISDICCIÓN",contenido:"Para las cuestiones derivadas del presente instrumento, las partes se someten a la jurisdicción de los tribunales ordinarios competentes que correspondan conforme a la normativa aplicable, sin perjuicio de las normas de competencia inderogable."}];
   if(tipo==="reserva"||tipo==="boleto") comunes.push({id:tipo+".expensas_servicios",titulo:"EXPENSAS, IMPUESTOS Y SERVICIOS",contenido:DW_EXPENSAS_BASE_CLARO});
   if(tipo==="reserva") comunes.push({id:"reserva.libre_ocupantes",titulo:"ENTREGA LIBRE DE OCUPANTES",contenido:DW_ENTREGA_RESERVA_CLARA});
-  if(tipo==="reserva_alquiler") comunes.push({id:"reserva_alquiler.incumplimiento",titulo:"SEÑA Y CONSECUENCIAS DEL INCUMPLIMIENTO",contenido:"Si la reserva fuera aceptada, las consecuencias de un eventual incumplimiento o desistimiento serán las que las partes hayan pactado expresamente en este instrumento y las que resulten aplicables conforme a la normativa vigente. Antes de firmar, deberá completarse cualquier condición particular de devolución, retención o penalidad acordada."});
+  if(tipo==="reserva_alquiler") comunes.push({id:"reserva_alquiler.incumplimiento",titulo:"SEÑA Y CONSECUENCIAS DEL INCUMPLIMIENTO",contenido:"Si la reserva fuera aceptada, las consecuencias de un eventual incumplimiento o desistimiento serán las que las partes hayan pactado expresamente en este instrumento y las que resulten aplicables conforme a la normativa vigente. No se presume pactada ninguna penalidad que no haya sido expresamente acordada entre las partes."});
   if(tipo==="comodato") comunes.push({id:"comodato.libre_ocupantes",titulo:"ENTREGA Y RESTITUCIÓN DEL INMUEBLE",contenido:"El COMODANTE declara entregar el inmueble en condiciones de uso y el COMODATARIO se obliga a restituirlo al finalizar el comodato, libre de personas y bienes propios, salvo lo expresamente convenido por las partes."});
   if(tipo==="reserva_alquiler") comunes.push({id:"reserva_alquiler.expensas_servicios",titulo:"EXPENSAS Y SERVICIOS",contenido:"Las expensas, impuestos y servicios correspondientes al inmueble serán asumidos por las partes según lo acordado para la futura locación y la normativa aplicable; su distribución definitiva deberá quedar expresamente establecida en el contrato de locación."});
   if(tipo==="exclusividad") comunes.push({id:"exclusividad.incumplimiento",titulo:"INCUMPLIMIENTO",contenido:"El incumplimiento de las obligaciones asumidas en esta autorización dará lugar a los reclamos y consecuencias que correspondan según lo expresamente convenido y la normativa aplicable."});
@@ -4340,7 +4363,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
         {rol:"COMPRADOR", nombre:op.comprador_nombre||"___", dni:op.comprador_dni||"___", domicilio:op.comprador_domicilio, email:op.comprador_email},
       ],
       secciones:[
-        {titulo:"1. OBJETO", items:["El VENDEDOR "+(op.vendedor_nombre||"___")+" vende, cede y transfiere al COMPRADOR "+(op.comprador_nombre||"___")+", quien compra y acepta, el inmueble ubicado en "+(op.inmueble_direccion||"___")+", "+(op.inmueble_partido||"___")+", Provincia de "+(op.inmueble_provincia||"___")+(op.nomenclatura_catastral?", Nomenclatura Catastral "+op.nomenclatura_catastral:"")+".-"]},
+        {titulo:"1. OBJETO", items:["El VENDEDOR "+(op.vendedor_nombre||"___")+" se obliga a vender al COMPRADOR "+(op.comprador_nombre||"___")+", quien se obliga a comprar, el inmueble ubicado en "+(op.inmueble_direccion||"___")+", "+(op.inmueble_partido||"___")+", Provincia de "+(op.inmueble_provincia||"___")+(op.nomenclatura_catastral?", Nomenclatura Catastral "+op.nomenclatura_catastral:"")+".-"]},
         {titulo:"2. PRECIO", items:["El precio total y definitivo de la presente compraventa se fija en "+fmt$L(op.precio,op.moneda)+", que las partes declaran justo y conveniente a sus intereses.-"]},
         {titulo:"3. FORMA DE PAGO", items:[tokensPagoCompra(op).boleto_pago_acordado || "Acuerdo de pago pendiente de completar y verificar."]},
         {titulo:"4. POSESIÓN Y ESCRITURACIÓN", items:[textoPosesionBoletoCompra(op)]},
