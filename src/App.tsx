@@ -714,7 +714,7 @@ const VAR_GROUPS = [
     { key:"reserva_alquiler_comision_locatario_texto", label:"Comisión locatario — texto completo" },
   ]},
 ];
-const VAR_MONEY_FIELDS = { precio:"moneda", anticipo:"moneda", saldo:"moneda", alquiler_monto_inicial:"alquiler_moneda", res_alq_monto_reserva:"res_alq_moneda", res_alq_monto_mensual:"res_alq_monto_mensual_moneda" };
+const VAR_MONEY_FIELDS = { precio:"moneda", anticipo:"moneda", saldo:"moneda", reserva_refuerzo_monto:"moneda", alquiler_monto_inicial:"alquiler_moneda", res_alq_monto_reserva:"res_alq_moneda", res_alq_monto_mensual:"res_alq_monto_mensual_moneda" };
 const VAR_DATE_FIELDS = ["fecha_posesion","alquiler_inicio","alquiler_fin","res_alq_inicio_estimado"];
 function fmtVarValue(key, op) {
   var v = op[key];
@@ -883,6 +883,7 @@ function derivedTokensGenerales(op) {
     exclusividad_modalidad_texto: exclModalidad,
     refuerzo_trayectoria: antecedentesRefuerzo(op),
     reserva_refuerzo_plazo:textoPlazoRefuerzoReserva(op),
+    reserva_refuerzo_monto:esMontoMayorACero(op.reserva_refuerzo_monto)?fmt$L(op.reserva_refuerzo_monto,op.moneda):"___",
     devolucion_motivo_texto: op.devolucion_motivo || "Por mutuo acuerdo entre las partes, y ante la no concreción de la operación, se procede a la devolución íntegra del monto de reserva oportunamente entregado.-"
   };
   Object.assign(__tg,datosAdicionalesInmueble(op));
@@ -983,6 +984,8 @@ function derivedTokensReserva(op) {
     comodato_plazo_texto: textoPlazoComodato(plazoComodatoEfectivo(op)),
     reserva_vigencia_dias: String(parseInt(op.reserva_vigencia_dias,10)>0?parseInt(op.reserva_vigencia_dias,10):30),
     reserva_vigencia_texto: (function(){
+      if(op.reserva_vigencia_modo==="fecha")
+        return "hasta el "+(op.reserva_vigencia_fecha?fmtD(op.reserva_vigencia_fecha):"___")+", contada desde la conformidad por el Vendedor";
       var n=parseInt(op.reserva_vigencia_dias,10); if(!(n>0)) n=30;
       var letras=palabrasDias(n); if(letras===String(n)) letras=numeroALetras(n).toLowerCase();
       return n+" ("+letras+") días corridos contados desde su conformación por el Vendedor";
@@ -1296,7 +1299,7 @@ var TOKEN_LABELS_DOCWORKS = {
   vendedor_nombre:"Nombre del vendedor / titular", vendedor_dni:"DNI / CUIT del vendedor", vendedor_domicilio:"Domicilio del vendedor", vendedor_email:"Correo electrónico del vendedor", vendedor_telefono:"Teléfono del vendedor",
   locador_nombre:"Nombre del locador", locador_dni:"DNI / CUIT del locador", locador_domicilio:"Domicilio del locador", locatario_nombre:"Nombre del locatario", locatario_dni:"DNI / CUIT del locatario", locatario_domicilio:"Domicilio del locatario",
   inmueble_barrio:"Barrio / complejo", inmueble_unidad_funcional:"Unidad funcional / lote", inmueble_direccion:"Dirección del inmueble", inmueble_partido:"Partido / Municipio", inmueble_provincia:"Provincia", nomenclatura_catastral:"Nomenclatura catastral", descripcion_inmueble:"Detalles adicionales del inmueble", inmueble_documentacion_actual_texto:"Documentación actual (declarada)", compra_instrumento_nombre:"Instrumentación prevista (escritura, boleto o cesión)", compra_instrumento_firma:"Instrumento de firma", compra_instrumento_de_firma:"Firma del instrumento", compra_instrumento_a_firma:"Firma del instrumento", compra_boleto_origen:"Boleto antecedente de la cesión",
-  reserva_refuerzo_plazo:"Plazo del refuerzo", fecha_operacion_larga:"Fecha de la operación", inmobiliaria_nombre:"Nombre de la inmobiliaria", inmobiliaria_matricula:"Matrícula de la inmobiliaria", alquiler_monto_letras:"Canon mensual en letras", comision_porcentaje:"Porcentaje de comisión"
+  reserva_refuerzo_plazo:"Plazo del refuerzo", reserva_refuerzo_monto:"Monto del refuerzo", fecha_operacion_larga:"Fecha de la operación", inmobiliaria_nombre:"Nombre de la inmobiliaria", inmobiliaria_matricula:"Matrícula de la inmobiliaria", alquiler_monto_letras:"Canon mensual en letras", comision_porcentaje:"Porcentaje de comisión"
 };
 function tokensDeTextoDocWorks(texto){
   var out=[]; var seen={};
@@ -1989,6 +1992,11 @@ function getInconsistenciasCamposOperacion(op){
   if(compra)fechas.push(["fecha_posesion","Fecha de posesión"]);
   if(op.tipo==="reserva"){
     if(op.reserva_incluye_refuerzo){
+      var montoRefuerzo=parseMontoAR(op.reserva_refuerzo_monto);
+      if(!esMontoMayorACero(op.reserva_refuerzo_monto))
+        add("reserva_refuerzo_monto","Monto del refuerzo","Indicá un importe de refuerzo mayor a cero.");
+      else if(esMontoMayorACero(op.precio)&&Math.round((montoRefuerzo+(parseMontoAR(op.anticipo)||0))*100)>Math.round(parseMontoAR(op.precio)*100))
+        add("reserva_refuerzo_monto","Monto del refuerzo","La seña más el refuerzo no pueden superar el precio total.");
       if(modoPlazoRefuerzoReserva(op)==="fecha"){
         fechas.push(["reserva_fecha_refuerzo","Fecha límite del refuerzo"]);
         if(!informado(op.reserva_fecha_refuerzo))
@@ -2000,7 +2008,10 @@ function getInconsistenciasCamposOperacion(op){
       }
     }
     if(op.reserva_aceptacion_modo==="fecha")fechas.push(["reserva_aceptacion_vencimiento","Vencimiento para la aceptación"]);
-    entero("reserva_vigencia_dias","Vigencia de la reserva",1);
+    if(op.reserva_vigencia_modo==="fecha"){
+      fechas.push(["reserva_vigencia_fecha","Fecha de vencimiento de la reserva"]);
+      if(!informado(op.reserva_vigencia_fecha))add("reserva_vigencia_fecha","Fecha de vigencia de la reserva","Elegí la fecha exacta de vencimiento.");
+    }else entero("reserva_vigencia_dias","Vigencia de la reserva",1);
     if(op.reserva_aceptacion_modo==="horas")entero("reserva_aceptacion_horas","Plazo de aceptación en horas",1);
     else if(op.reserva_aceptacion_modo!=="fecha")entero("reserva_aceptacion_dias","Plazo de aceptación en días",1);
   }
@@ -2336,7 +2347,7 @@ function validarDocumentoParaExport(op, doc, perfil){
     var cantidadCuotas=Number(op.compra_cuotas_cantidad);
     if(!esMontoMayorACero(op.precio)) errores.push("Completá el precio total para definir las condiciones de pago.");
     if(parseMontoAR(op.anticipo)>parseMontoAR(op.precio)) errores.push("La entrega inicial supera el precio total. Revisá las condiciones económicas.");
-    if(medioPago==="sin_definir") errores.push("Seleccioná el medio de pago acordado antes de exportar.");
+    if(medioPago==="sin_definir"&&modalidadPago!=="hipotecario") errores.push("Seleccioná el medio de pago acordado antes de exportar.");
     if(medioPago==="otro"&&!String(op.compra_medio_otro||"").trim()) errores.push("Especificá el medio de pago acordado.");
     if(modalidadPago==="cuotas"){
       if(!Number.isInteger(cantidadCuotas)||cantidadCuotas<1||cantidadCuotas>36) errores.push("Indicá una cantidad de cuotas entre 1 y 36.");
@@ -2366,6 +2377,7 @@ function validarDocumentoParaExport(op, doc, perfil){
       } else if(!detallePago) errores.push("Cargá los importes, vencimientos y medios de cada cuota antes de exportar.");
       else avisos.push("Esta operación usa un cronograma anterior en texto libre. Revisá cada importe y vencimiento antes de firmar.");
     }
+    if(modalidadPago==="hipotecario"&&!detallePago) errores.push("Indicá las condiciones del crédito hipotecario antes de exportar.");
     if(modalidadPago==="especial"&&!detallePago) errores.push("Describí la condición especial de pago antes de exportar.");
     if(modalidadPago==="entrega_saldo"&&!detallePago) errores.push("Indicá cuándo y cómo se abonará el saldo pendiente; no alcanza con cargar los importes.");
     if(modalidadPago==="unico"&&parseMontoAR(op.anticipo)>0) errores.push("Elegiste pago único, pero también cargaste una entrega inicial. Corregí la modalidad o la entrega para evitar contradicciones.");
@@ -2403,7 +2415,7 @@ function validarDocumentoParaExport(op, doc, perfil){
     // Detectar una contradicción contractual frecuente: un modelo que obliga
     // a pagar TODO el saldo al escriturar pese a un cronograma en cuotas.
     // Solo se activa ante modalidades explícitas y no altera modelos históricos.
-    if((modalidadPago==="cuotas"||modalidadPago==="especial") &&
+    if((modalidadPago==="cuotas"||modalidadPago==="especial"||modalidadPago==="hipotecario") &&
        /(?:saldo|restante)[\s\S]{0,120}(?:al momento de|en el acto de|a la firma de)[\s\S]{0,65}(?:escritura|escrituraci[oó]n)/i.test(textoDocumentoPago)){
       errores.push("El documento indica que el saldo se paga al escriturar, pero cargaste cuotas o condiciones especiales. Corregí la cláusula de forma de pago del modelo antes de exportar.");
     }
@@ -3777,8 +3789,10 @@ function migrarBloqueLegacy(b){
     b=Object.assign({},b,{condicion:"op_refuerzo",obligatoria:false});
     // Solo el texto idéntico al modelo anterior: nunca alterar una cláusula propia.
     if(String(b.contenido||"")==="El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva dentro de los 7 días corridos a partir de su conformidad, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-")
-      b=Object.assign({},b,{contenido:"El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva {{reserva_refuerzo_plazo}}, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-"});
+      b=Object.assign({},b,{contenido:"Una vez conformada la presente Reserva por el Vendedor, el Oferente se compromete a entregar como refuerzo de la seña la suma de {{reserva_refuerzo_monto}} {{reserva_refuerzo_plazo}}. Este importe se imputará al precio total convenido, sin incrementarlo; su entrega efectiva deberá documentarse mediante el instrumento correspondiente.-"});
   }
+  if(b.id==="reserva.refuerzo"&&String(b.contenido||"")==="El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva {{reserva_refuerzo_plazo}}, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-")
+    b=Object.assign({},b,{contenido:"Una vez conformada la presente Reserva por el Vendedor, el Oferente se compromete a entregar como refuerzo de la seña la suma de {{reserva_refuerzo_monto}} {{reserva_refuerzo_plazo}}. Este importe se imputará al precio total convenido, sin incrementarlo; su entrega efectiva deberá documentarse mediante el instrumento correspondiente.-"});
   if(b.id==="alquiler.seguro"&&b.condicion!=="op_seguro_esencial") b=Object.assign({},b,{condicion:"op_seguro"});
   var c=String(b.contenido||"");
   if(c.indexOf("{{inmueble_provincia}}{{nomenclatura_catastral}}")>=0){
@@ -4095,8 +4109,9 @@ function tokensPagoCompra(op){
   var precio=parseMontoAR(op.precio||0),anticipo=parseMontoAR(op.anticipo||0);
   var saldo=precio-anticipo;
   var texto="";
-  if(modalidad!=="habitual" && medioTexto && precio>0 && saldo>=0 && !(modalidad==="unico"&&anticipo>0)){
+  if(modalidad!=="habitual" && (medioTexto||modalidad==="hipotecario") && precio>0 && saldo>=0 && !(modalidad==="unico"&&anticipo>0)){
     if(modalidad==="unico") texto="El precio convenido de "+fmt$L(precio,moneda)+" se abonará en un único pago "+medioTexto+".";
+    else if(modalidad==="hipotecario"&&detalle) texto="El precio total convenido es de "+fmt$L(precio,moneda)+". Las partes prevén que el saldo de "+fmt$L(saldo,moneda)+" sea abonado con fondos provenientes de un crédito hipotecario solicitado por la parte compradora, conforme a las condiciones particulares indicadas a continuación. La concesión del crédito no se presume aprobada.";
     else if(modalidad==="entrega_saldo") texto="El precio convenido es de "+fmt$L(precio,moneda)+". "+(anticipo>0?"Se prevé una entrega inicial de "+fmt$L(anticipo,moneda)+" y un saldo de "+fmt$L(saldo,moneda):"Se prevé un saldo pendiente de "+fmt$L(saldo,moneda)) +", con pago "+medioTexto+". Las fechas y condiciones son las indicadas en el acuerdo.";
     else if(modalidad==="cuotas"){
       var n=Number(op.compra_cuotas_cantidad);
@@ -4228,7 +4243,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
       // 14. Asesoramiento individual
       {titulo:esUSD?"14. ASESORAMIENTO LEGAL E IMPOSITIVO":"13. ASESORAMIENTO LEGAL E IMPOSITIVO", items:[RECOMENDACION_ASESORAMIENTO]},
       // 15. Refuerzo
-      (!op.reserva_incluye_refuerzo?null:{titulo:esUSD?"15. REFUERZO":"14. REFUERZO", items:["El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva "+textoPlazoRefuerzoReserva(op)+", cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-"]}),
+      (!op.reserva_incluye_refuerzo?null:{titulo:esUSD?"15. REFUERZO":"14. REFUERZO", items:["Una vez conformada la presente Reserva por el Vendedor, el Oferente se compromete a entregar como refuerzo de la seña la suma de "+(esMontoMayorACero(op.reserva_refuerzo_monto)?fmt$L(op.reserva_refuerzo_monto,op.moneda):"___")+" "+textoPlazoRefuerzoReserva(op)+". Este importe se imputará al precio total convenido, sin incrementarlo; su entrega efectiva deberá documentarse mediante el instrumento correspondiente.-"]}),
     ].filter(Boolean);
     var numIncumplimiento = 7;
 
@@ -5346,6 +5361,9 @@ function StepInmueble({data,onChange,faltantes}){
 function CompartidaBlock({data,onChange,equipo}){
   var on = !!data.compartida;
   var conColega = !!data.compartida_colega_activo;
+  var esAlquilerCompartido=data.tipo==="alquiler"||data.tipo==="reserva_alquiler";
+  var rolComprador=esAlquilerCompartido?"locatario":"comprador";
+  var rolVendedor=esAlquilerCompartido?"locador":"vendedor";
   var miembros = (equipo||[]).filter(function(m){return m.rol!=="viewer";});
   function seleccionarColega(id){
     var m=miembros.find(function(x){return x.id===id;});
@@ -5365,9 +5383,11 @@ function CompartidaBlock({data,onChange,equipo}){
           <Inp id="dw-field-compartida_matricula" label="N° de matrícula" value={data.compartida_matricula||""} onChange={function(e){onChange("compartida_matricula",e.target.value);}} placeholder="Ej. CUCICBA 1234"/>
         </div>
         <Slt id="dw-field-compartida_alcance" label="Alcance de lo compartido" value={data.compartida_alcance||"completa"} onChange={function(e){onChange("compartida_alcance",e.target.value);}} className="col2" hint="Define qué parte de la comisión se comparte con la otra inmobiliaria">
-          <option value="completa">50% de la operación completa (comprador/locatario y vendedor/locador)</option>
-          <option value="parte_compradora">Sólo 50% de la parte compradora / locataria</option>
+          <option value="completa">50% de la operación completa ({rolComprador} y {rolVendedor})</option>
+          <option value="parte_compradora">Sólo 50% de la parte {esAlquilerCompartido?"locataria":"compradora"}</option>
+          <option value="otra">Otro acuerdo</option>
         </Slt>
+        {data.compartida_alcance==="otra"&&<Inp id="dw-field-compartida_alcance_otro" label="Detalle del acuerdo compartido" value={data.compartida_alcance_otro||""} onChange={function(e){onChange("compartida_alcance_otro",e.target.value);}} placeholder="Escribí el acuerdo pactado" className="col2"/>}
       </div>}
       <button type="button" className={"dw-share-toggle"+(conColega?" is-active":"")} aria-expanded={conColega} aria-controls="dw-share-colleague-panel" onClick={function(){onChange("compartida_colega_activo",!conColega);}}>
         <span>{conColega?"✓ Operación con colega de mi inmobiliaria":"+ Operación con colega de mi inmobiliaria"}</span>
@@ -5448,7 +5468,7 @@ function ComisionEditor({data,onChange,prefix,label,base,monedaBase,defaultPct,l
 // Resumen descriptivo del acuerdo. No altera las cláusulas legales publicadas.
 function describirAcuerdoPagoCompra(op){
   if(!op || !op.compra_modalidad_pago || op.compra_modalidad_pago==="habitual") return "";
-  var modos={unico:"Pago único",entrega_saldo:"Entrega inicial y saldo",cuotas:"Pago en cuotas",especial:"Condición especial"};
+  var modos={unico:"Pago único",entrega_saldo:"Entrega inicial y saldo",cuotas:"Pago en cuotas",hipotecario:"Crédito hipotecario",especial:"Condición especial"};
   var medios={efectivo:"en efectivo",transferencia:"por transferencia bancaria",mixto:"en efectivo y por transferencia bancaria"};
   var modalidad=modos[op.compra_modalidad_pago]||"";
   if(!modalidad)return "";
@@ -5489,7 +5509,12 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
             <span aria-hidden="true">{data.reserva_incluye_refuerzo?"−":"+"}</span>
           </button>
           {data.reserva_incluye_refuerzo&&<div id="dw-refuerzo-reserva-panel" className="dw-share-panel dw-economic-refuerzo-content">
-            <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>El plazo elegido se incorpora automáticamente a la cláusula. El refuerzo efectivo se documenta por separado.</div>
+            <div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>Indicá el importe y el plazo pactados. Se incluirán en la reserva; la entrega efectiva se documentará por separado.</div>
+            <Inp id="dw-field-reserva_refuerzo_monto" label={"Monto del refuerzo ("+(data.moneda||"USD")+")"} value={data.reserva_refuerzo_monto||""} onChange={function(e){onChange("reserva_refuerzo_monto",e.target.value);}} money placeholder="10.000" {...estiloCampoFaltante(faltantes,"reserva_refuerzo_monto")}/>
+            {esMontoMayorACero(data.reserva_refuerzo_monto)&&precio>0&&<div style={{fontSize:12,color:"var(--muted)",margin:"7px 0 12px"}}>
+              Seña + refuerzo previsto: <strong>{fmt$((parseMontoAR(data.anticipo)||0)+parseMontoAR(data.reserva_refuerzo_monto),data.moneda)}</strong>.
+              Saldo después de entregarlo: <strong>{fmt$(Math.max(0,precio-(parseMontoAR(data.anticipo)||0)-parseMontoAR(data.reserva_refuerzo_monto)),data.moneda)}</strong>.
+            </div>
             <div role="group" aria-label="Cómo definir el plazo del refuerzo" style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:10}}>
               {[{value:"dias",label:"Días corridos"},{value:"fecha",label:"Fecha exacta"}].map(function(m){
                 var marcado=modoPlazoRefuerzoReserva(data)===m.value;
@@ -5502,9 +5527,19 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
           </div>}
         </div>}
         {data.tipo==="reserva"&&<div className="col2 dw-economic-term">
-          <Inp id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva (días corridos)" type="number" min="1" step="1" value={data.reserva_vigencia_dias??"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} placeholder="30" hint="Sugerido: 30 días corridos desde la conformidad del vendedor. Podés escribir otro plazo, incluso más de 90 días."/>
-          <button type="button" className="dw-economic-term-reset" onClick={function(){onChange("reserva_vigencia_dias","30");}}>Usar 30 días sugeridos</button>
-        </div>}
+          <div role="group" aria-label="Elegir vigencia de la reserva" style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:10}}>
+            {[{value:"dias",label:"Días corridos"},{value:"fecha",label:"Fecha exacta"}].map(function(m){
+              var marcado=(data.reserva_vigencia_modo||"dias")===m.value;
+              return <button key={m.value} type="button" aria-pressed={marcado} onClick={function(){onChange("reserva_vigencia_modo",m.value);}} style={{padding:"8px 11px",fontSize:12,borderRadius:8,border:"1px solid "+(marcado?"rgba(56,189,248,.65)":"var(--border2)"),background:marcado?"rgba(56,189,248,.12)":"var(--card)",color:"var(--text)",fontWeight:marcado?700:500,cursor:"pointer"}}>{m.label}</button>;
+            })}
+          </div>
+          {(data.reserva_vigencia_modo||"dias")==="fecha"
+            ?<Inp id="dw-field-reserva_vigencia_fecha" label="Vigencia hasta el día" type="date" value={data.reserva_vigencia_fecha||""} onChange={function(e){onChange("reserva_vigencia_fecha",e.target.value);}} hint="La fecha exacta se incluirá en el documento." {...estiloCampoFaltante(faltantes,"reserva_vigencia_fecha")}/>
+            :<>
+              <Inp id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva (días corridos)" type="number" min="1" step="1" value={data.reserva_vigencia_dias??"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} placeholder="30" hint="Sugerido: 30 días corridos desde la conformidad del vendedor."/>
+              <button type="button" className="dw-economic-term-reset" onClick={function(){onChange("reserva_vigencia_dias","30");}}>Usar 30 días sugeridos</button>
+            </>}
+        </div>
         {data.tipo==="reserva"&&<DetallesFormulario className="col2 dw-economic-advanced dw-economic-acceptance" inicialmenteAbierto={!!((data.reserva_aceptacion_modo||"dias")!=="dias"||Number(data.reserva_aceptacion_dias||5)!==5)}>
           <summary>
             <span className="dw-economic-advanced-title">Plazo de aceptación</span>
@@ -5564,6 +5599,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
               <option value="unico">Pago único</option>
               <option value="entrega_saldo">Entrega inicial y saldo</option>
               <option value="cuotas">Pago en cuotas</option>
+              <option value="hipotecario">Crédito hipotecario</option>
               <option value="especial">Condición especial</option>
             </Slt>
             <Slt id="dw-field-compra_medio_pago" label="Medio de pago" value={data.compra_medio_pago||"sin_definir"} onChange={function(e){onChange("compra_medio_pago",e.target.value);}}>
@@ -5604,13 +5640,14 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
           {data.compra_modalidad_pago!=="habitual"&&<div style={{marginTop:10,padding:"11px 12px",border:"1px solid var(--border)",borderRadius:10,background:"var(--surface2)"}}>
             <div style={{fontSize:12,fontWeight:700,marginBottom:5}}>Resumen del acuerdo de pago</div>
             <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
-              {data.compra_modalidad_pago==="unico"?"Pago único":data.compra_modalidad_pago==="entrega_saldo"?"Entrega inicial y saldo":data.compra_modalidad_pago==="cuotas"?"Pago en cuotas":"Condición especial"}
+              {data.compra_modalidad_pago==="unico"?"Pago único":data.compra_modalidad_pago==="entrega_saldo"?"Entrega inicial y saldo":data.compra_modalidad_pago==="cuotas"?"Pago en cuotas":data.compra_modalidad_pago==="hipotecario"?"Crédito hipotecario":"Condición especial"}
               {" · "}{data.compra_medio_pago==="efectivo"?"Efectivo":data.compra_medio_pago==="transferencia"?"Transferencia bancaria":data.compra_medio_pago==="mixto"?"Efectivo y transferencia":data.compra_medio_pago==="otro"?(data.compra_medio_otro||"Medio sin especificar"):"Medio a definir"}
               {data.compra_modalidad_pago==="cuotas"&&Number(data.compra_cuotas_cantidad)>0?" · "+data.compra_cuotas_cantidad+" cuotas":""}
             </div>
             {precio<=0&&<div style={{color:"var(--danger,#c45353)",fontSize:12,marginTop:6}}>Completá el precio total para calcular los pagos.</div>}
             {anticipo>precio&&precio>0&&<div style={{color:"var(--danger,#c45353)",fontSize:12,marginTop:6}}>La entrega inicial supera el precio total.</div>}
             {data.compra_modalidad_pago==="cuotas"&&(!Number.isInteger(Number(data.compra_cuotas_cantidad))||Number(data.compra_cuotas_cantidad)<1||!((cronogramaCuotasCompra(data)[0]||{}).fecha||data.compra_cuotas_primera_fecha))&&<div style={{color:"var(--danger,#c45353)",fontSize:12,marginTop:6}}>Indicá una cantidad válida de cuotas y el vencimiento de la cuota 1.</div>}
+            {data.compra_modalidad_pago==="hipotecario"&&!String(data.compra_condiciones_pago||"").trim()&&<div style={{color:"var(--danger,#c45353)",fontSize:12,marginTop:6}}>Describí las condiciones previstas del crédito hipotecario.</div>}
             {data.compra_modalidad_pago==="especial"&&!String(data.compra_condiciones_pago||"").trim()&&<div style={{color:"var(--danger,#c45353)",fontSize:12,marginTop:6}}>Describí la condición especial acordada.</div>}
             {data.compra_medio_pago==="mixto"&&!String(data.compra_condiciones_pago||"").trim()&&<div style={{color:"var(--danger,#c45353)",fontSize:12,marginTop:6}}>Detallá cuánto se abona por cada medio de pago.</div>}
             <div style={{fontSize:11,color:"var(--dim)",marginTop:7}}>Resumen interno: {describirAcuerdoPagoCompra(data)}. Las condiciones especiales deben figurar también en el documento final.</div>

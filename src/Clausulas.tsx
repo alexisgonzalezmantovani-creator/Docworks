@@ -63,8 +63,8 @@ export var DEFAULT_BLOQUES_RESERVA = [
     contenido:RECOMENDACION_ASESORAMIENTO,
     variables:[], condicion:null, orden:14, activo:true, obligatoria:true, proteccion:"C", permisos_excepcion:[] },
   { id:"reserva.refuerzo", titulo:"REFUERZO", sinTitulo:false,
-    contenido:"El Oferente podrá ofrecer, de así convenirlo con el Vendedor, un Refuerzo de la presente Reserva {{reserva_refuerzo_plazo}}, cuyo monto y demás condiciones se consignarán en el instrumento de Refuerzo de Reserva correspondiente.-",
-    variables:["reserva_refuerzo_plazo"], condicion:"op_refuerzo", orden:15, activo:true, obligatoria:false, proteccion:"C", permisos_excepcion:[] },
+    contenido:"Una vez conformada la presente Reserva por el Vendedor, el Oferente se compromete a entregar como refuerzo de la seña la suma de {{reserva_refuerzo_monto}} {{reserva_refuerzo_plazo}}. Este importe se imputará al precio total convenido, sin incrementarlo; su entrega efectiva deberá documentarse mediante el instrumento correspondiente.-",
+    variables:["reserva_refuerzo_monto","reserva_refuerzo_plazo"], condicion:"op_refuerzo", orden:15, activo:true, obligatoria:false, proteccion:"C", permisos_excepcion:[] },
 ];
 
 // Catálogo activo único para Biblioteca y las opciones de cada documento.
