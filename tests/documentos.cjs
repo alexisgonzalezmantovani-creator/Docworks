@@ -2,13 +2,22 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const esbuild=require('esbuild');
 const root=path.resolve(__dirname,'..');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-test-'));
-const exportsList=['camposTratamientoActivos','textoTratamientoPersona','sustituirTokens','resolveVars','tokensEncabezadoParaTipo','PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','conservaChipsAjuste','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion','datosCompraCompartidos','getResumenPartes'];
+const exportsList=['camposTratamientoActivos','textoTratamientoPersona','sustituirTokens','resolveVars','tokensEncabezadoParaTipo','PLANTILLA_TIPOS','SAMPLE_OP_PREVIEW','EMPTY_OP','getDefaultBodyBlocks','normalizarBodyBlock','buildDocSections','conservaChipsAjuste','opParaDocumento','docToPlainText','getTokensSinReemplazar','asegurarFirmasDocumento','generarPDF','generarDOCX','aplicarEncabezadoPersonalizado','CuerpoPlantillaPanel','ReservaBloquesPanel','getCamposFaltantesDetalle','validarDocumentoParaExport','crearSnapshotPlantillaOperacion','datosCompraCompartidos','getResumenPartes','campoDesdeTextoFaltante','resaltarFaltantes'];
 esbuild.buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+'\nexport { '+exportsList.join(',')+' };',resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs')});
 global.document={querySelector:()=>({}),title:''};
 const app=require(path.join(tmp,'app.cjs'));
 delete global.document;
 (async()=>{
  let count=0;function check(label,fn){fn();count++;console.log('OK',label);}
+ check('cada marca roja navega al campo correspondiente',()=>{
+   const frase='Entre ___, DNI/CUIT ___, con domicilio en ___, en adelante el LOCADOR';
+   const op={tipo:'alquiler'},tocados=[];
+   const partes=app.resaltarFaltantes(frase,indice=>tocados.push(app.campoDesdeTextoFaltante(frase,op,indice)));
+   partes.filter(x=>x&&x.props&&x.props.onClick).forEach(x=>x.props.onClick());
+   assert.deepEqual(tocados,['locador_nombre','locador_dni','locador_domicilio']);
+   assert.equal(app.campoDesdeTextoFaltante('LOCADOR: ___',op),'locador_nombre');
+   assert.equal(app.campoDesdeTextoFaltante('DNI/CUIT: ___',op),'locador_dni');
+ });
  check('la introducción nueva ofrece instrumento y no documentación actual',()=>{
   assert.ok(app.tokensEncabezadoParaTipo('reserva').includes('compra_instrumento_nombre'));
   assert.ok(app.tokensEncabezadoParaTipo('boleto').includes('compra_instrumento_nombre'));

@@ -5973,7 +5973,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                     return (
                       <div key={i} style={{textAlign:"justify",marginBottom:10,color:"#1f2937",lineHeight:1.55}}>
                         <strong style={{color:(perfil&&perfil.plantillaEstilo==="clasico")?"#1a1a1a":((perfil&&perfil.colorPrimario)||"#142a4d")}}>{bl.prefix}</strong>
-                        <span>{resaltarFaltantes(normalizarTextoDocumento(bl.t),function(){var campo=campoDesdeTextoFaltante(bl.t,op);if(onCompleteData)onCompleteData(op,campo);})}</span>
+                        <span>{resaltarFaltantes(normalizarTextoDocumento(bl.t),function(indice){var campo=campoDesdeTextoFaltante(bl.t,op,indice);if(onCompleteData)onCompleteData(op,campo);})}</span>
                       </div>
                     );
                   }
@@ -5986,7 +5986,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                       marginLeft:bl.center?0:(bl.indent?14:0),
                       marginBottom:bl.label?6:2,
                       letterSpacing:bl.label?"0.03em":"normal",
-                    }}>{resaltarFaltantes(normalizarTextoDocumento(bl.t||""),function(){var campo=campoDesdeTextoFaltante(bl.t,op);if(onCompleteData)onCompleteData(op,campo);})}</div>
+                    }}>{resaltarFaltantes(normalizarTextoDocumento(bl.t||""),function(indice){var campo=campoDesdeTextoFaltante(bl.t,op,indice);if(onCompleteData)onCompleteData(op,campo);})}</div>
                   );
                 })}
               </div>

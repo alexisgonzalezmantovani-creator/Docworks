@@ -471,7 +471,7 @@ function injectFonts() {
 // Si esos archivos no existen todavía, initPWA() no rompe nada: el registro
 // del Service Worker falla en silencio y la app sigue funcionando online.
 const DOCWORKS_HEADER_LOGO = "/docworks-header-logo.png";
-var DOCWORKS_VERSION = "6.78";
+var DOCWORKS_VERSION = "6.79";
 // 5.05 PRO — elimina IDs duplicados del formulario Inmueble; registra fallos de auditoría de exportación.
 // PDF WinAnsi: latin1Safe ya convierte signos tipográficos compatibles; validar caracteres no representables por separado.
 // DocWorks 4.69PRO — Alquiler: Estado del inmueble, Prohibición de subalquilar y Obras y mejoras pasan al texto base (ya no son opcionales); se retira "Servicios a cargo del locatario" por repetir Gastos y mantenimiento.
@@ -6574,21 +6574,36 @@ function ReservaCompactSummary({op,operaciones}){
 }
 
 // En la vista previa, cada espacio en blanco (___) se marca en rojo para ver enseguida qué falta.
-function campoDesdeTextoFaltante(texto,op){
+function campoDesdeTextoFaltante(texto,op,indice=0){
   var t=String(texto||"").toLowerCase();
+  // En una misma frase hay varios ___: resolver el dato junto a cada marca.
+  var marcas=Array.from(t.matchAll(/_{3,}/g));
+  var marca=marcas[indice]||marcas[0];
+  var antes=marca?t.slice(0,marca.index):t;
+  var contexto=antes.split(/_{3,}/).pop().slice(-100).trim();
   var rol=(t.indexOf("comprador")>=0||t.indexOf("oferente")>=0)?"comprador":(t.indexOf("vendedor")>=0?"vendedor":(t.indexOf("locador")>=0?"locador":(t.indexOf("locatario")>=0?"locatario":(t.indexOf("comodatario")>=0?"comodatario":(t.indexOf("comodante")>=0?"comodante":"")))));
-  var campo=t.indexOf("dni")>=0||t.indexOf("cuit")>=0?"dni":(t.indexOf("domicilio")>=0?"domicilio":(t.indexOf("teléfono")>=0||t.indexOf("telefono")>=0?"telefono":(t.indexOf("correo")>=0||t.indexOf("mail")>=0||t.indexOf("email")>=0?"email":(t.indexOf("nombre")>=0||t.indexOf("razón social")>=0?"nombre":""))));
+  if(!rol){
+    var tipo=op&&op.tipo;
+    rol=(tipo==="alquiler"||tipo==="reserva_alquiler")?"locador":(tipo==="comodato"?"comodante":(tipo==="reserva"||tipo==="boleto"?"comprador":(tipo==="exclusividad"?"autorizante":"")));
+  }
+  var campo=/\b(?:dni|cuit|cuil|documento de identidad)\b[^\w]*$/.test(contexto)?"dni":
+    /\b(?:domicilio|domiciliado|domiciliada|residencia)(?:\s+en)?[^\w]*$/.test(contexto)?"domicilio":
+    /\b(?:tel[eé]fono|celular|whatsapp)\b[^\w]*$/.test(contexto)?"telefono":
+    /\b(?:correo(?: electr[oó]nico)?|e-?mail)\b[^\w]*$/.test(contexto)?"email":
+    /\b(?:nombre|raz[oó]n social|locador|locatario|comprador|vendedor|oferente|comodante|comodatario|autorizante|entre)\b[^\w]*$/.test(contexto)?"nombre":"";
   if(rol&&campo)return rol+"_"+campo;
+  var campoGeneral=t.indexOf("dni")>=0||t.indexOf("cuit")>=0?"dni":(t.indexOf("domicilio")>=0?"domicilio":(t.indexOf("teléfono")>=0||t.indexOf("telefono")>=0?"telefono":(t.indexOf("correo")>=0||t.indexOf("mail")>=0||t.indexOf("email")>=0?"email":(t.indexOf("nombre")>=0||t.indexOf("razón social")>=0?"nombre":""))));
+  if(rol&&marca)return rol+"_nombre";
+  if(rol&&campoGeneral)return rol+"_"+campoGeneral;
   var checks: [RegExp,string][]=[[/direcci[oó]n del inmueble|inmueble sito|inmueble ubicado/,"inmueble_direccion"],[/precio|monto total|valor de venta/,"precio"],[/anticipo|seña/,"anticipo"],[/fecha de inicio|inicio del alquiler/,"alquiler_inicio"],[/alquiler mensual/,"alquiler_monto_inicial"],[/partido|municipio/,"inmueble_partido"],[/provincia/,"inmueble_provincia"]];
   for(var i=0;i<checks.length;i++)if(checks[i][0].test(t))return checks[i][1];
-  if(campo&&rol)return rol+"_"+campo;
   return "";
 }
 function resaltarFaltantes(texto,onMissing){
   var t=String(texto||"");
   if(!/_{3,}/.test(t)) return t;
   return t.split(/(_{3,})/).map(function(parte,i){
-    return /^_{3,}$/.test(parte) ? <span key={i} role={onMissing?"button":undefined} tabIndex={onMissing?0:undefined} onClick={onMissing?function(){onMissing();}:undefined} onKeyDown={onMissing?function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();onMissing();}}:undefined} title={onMissing?"Tocá para completar este dato":"Dato faltante"} style={{color:"#dc2626",background:"rgba(220,38,38,0.12)",borderRadius:3,padding:"0 2px",fontWeight:700,cursor:onMissing?"pointer":undefined,textDecoration:onMissing?"underline dotted":"none"}}>{parte}</span> : parte;
+    return /^_{3,}$/.test(parte) ? <span key={i} role={onMissing?"button":undefined} tabIndex={onMissing?0:undefined} onClick={onMissing?function(){onMissing((i-1)/2);}:undefined} onKeyDown={onMissing?function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();onMissing((i-1)/2);}}:undefined} title={onMissing?"Tocá para completar este dato":"Dato faltante"} style={{color:"#dc2626",background:"rgba(220,38,38,0.12)",borderRadius:3,padding:"0 2px",fontWeight:700,cursor:onMissing?"pointer":undefined,textDecoration:onMissing?"underline dotted":"none"}}>{parte}</span> : parte;
   });
 }
 
