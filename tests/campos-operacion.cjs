@@ -63,6 +63,22 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
  await a.act(async()=>render(a.StepCondicionesAlquiler));
  const meses=document.getElementById('dw-field-alquiler_plazo_meses');await fill(meses,'');check('meses puede quedar vacío mientras se reemplaza',()=>assert.equal(meses.value,''));await fill(meses,'12');check('meses acepta reemplazo sin prefijo',()=>assert.equal(state.alquiler_plazo_meses,'12'));
  for(const campo of ['alquiler_interes_punitorio','alquiler_penalidad_meses']){const el=document.getElementById('dw-field-'+campo);await fill(el,'');check(campo+' permite borrar',()=>assert.equal(el.value,''));await fill(el,'10');check(campo+' toma valor nuevo',()=>assert.equal(state[campo],'10'));await fill(el,'0');check(campo+' conserva cero explícito',()=>assert.equal(el.value,'0'));}
+ check('mora estándar muestra campos numéricos y oculta el editor avanzado',()=>{
+   assert.equal(document.getElementById('dw-field-alquiler_mora_modo').value,'estandar');
+   assert.ok(document.getElementById('dw-field-alquiler_interes_punitorio'));
+   assert.ok(document.getElementById('dw-field-alquiler_penalidad_meses'));
+   assert.equal(document.getElementById('dw-field-alquiler_mora_texto'),null);
+ });
+ await a.act(async()=>{
+   const el=document.getElementById('dw-field-alquiler_mora_modo');
+   el.value='personalizada';el.dispatchEvent(new Event('change',{bubbles:true}));
+ });
+ check('mora avanzada presenta editor único y no duplica controles numéricos',()=>{
+   assert.equal(state.alquiler_mora_modo,'personalizada');
+   assert.ok(document.getElementById('dw-field-alquiler_mora_texto'));
+   assert.equal(document.getElementById('dw-field-alquiler_interes_punitorio'),null);
+   assert.equal(document.getElementById('dw-field-alquiler_penalidad_meses'),null);
+ });
  check('selector de rescisión aparece con el artículo 1221 como estándar',()=>{
    const el=document.getElementById('dw-field-alquiler_rescision_modo');
    assert.ok(el);assert.equal(el.value,'legal');

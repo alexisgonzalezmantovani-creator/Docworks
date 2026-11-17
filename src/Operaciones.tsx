@@ -30,6 +30,7 @@ export const EMPTY_OP = {
   alquiler_forma_pago:["transferencia"], alquiler_dia_pago:"1", alquiler_dia_pago_otro:"",
   alquiler_interes_punitorio:"5", alquiler_penalidad_meses:"2", alquiler_seguro_dias:"10", alquiler_aviso_meses:"1",
   alquiler_rescision_modo:"legal", alquiler_rescision_texto:"",
+  alquiler_mora_modo:"estandar", alquiler_mora_texto:"",
   clausulas_ids:[], clausulas_custom:"", clausulas_custom_titulo:"", clausulas_custom_incluida:false, entrega_aires_detalle:"", entrega_muebles_detalle:"",
   inmueble_tipo:"departamento", inmueble_tipo_otro:"", inmueble_unidad_funcional:"", inmueble_en_barrio_complejo:false, inmueble_barrio:"",
   alquiler_modo_plazo:"preset", alquiler_plazo_dias:"0",

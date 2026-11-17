@@ -2183,6 +2183,8 @@ function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
   if(op.inmueble_tipo==="otro")lista.push(["inmueble_tipo_otro","Tipo de inmueble (otro)"]);
   if((op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto")lista.push(["compra_boleto_origen","Boleto antecedente de la cesión"]);
   if(op.tipo==="alquiler"){
+    if(op.alquiler_mora_modo==="personalizada")
+      lista.push(["alquiler_mora_texto","Cláusula de mora y penalidades personalizada"]);
     if(op.alquiler_rescision_modo==="personalizada")
       lista.push(["alquiler_rescision_texto","Condiciones de rescisión anticipada personalizadas"]);
     if(op.alquiler_deposito==="otro")lista.push(["alquiler_deposito_otro_monto","Monto personalizado del depósito"]);
@@ -2433,6 +2435,19 @@ function validarDocumentoParaExport(op, doc, perfil){
   // Los datos críticos y sus inconsistencias se verifican en un único lugar.
   // Evitar mensajes duplicados para el mismo plazo de aceptación.
   if(op.tipo==="alquiler"){
+    if(op.alquiler_mora_modo==="personalizada"){
+      var textoMora=String(op.alquiler_mora_texto||"").trim();
+      if(!textoMora)
+        errores.push("Elegiste mora y penalidades personalizadas: completá la redacción antes de exportar.");
+      else {
+        var textoMoraDocumento=(doc.secciones||[]).filter(function(sec){
+          return sec._bloqueId==="alquiler.mora"||/MORA Y PENALIDADES/i.test(String(sec.titulo||""));
+        }).map(function(sec){return (sec.items||[]).join(" ");}).join(" ");
+        if(!textoMoraDocumento||textoMoraDocumento.indexOf(resolveVars(textoMora,op))<0)
+          errores.push("La cláusula de mora personalizada no figura en el documento generado. Revisá el modelo antes de exportar.");
+      }
+      avisos.push("Mora y penalidades personalizadas: verificá proporcionalidad, intereses y procedimiento legal de intimación antes de firmar.");
+    }
     if(op.alquiler_rescision_modo==="personalizada"){
       var textoRescision=String(op.alquiler_rescision_texto||"").trim();
       if(!textoRescision)
@@ -4812,6 +4827,18 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
       }
     }
   }
+  // La edición avanzada de mora afecta solo a la operación, no al modelo
+  // publicado ni al snapshot. Si la sección no existe, el validador avisa.
+  if((tipo||op.tipo)==="alquiler" && op.alquiler_mora_modo==="personalizada"){
+    var moraPersonalizada=String(op.alquiler_mora_texto||"").trim();
+    if(moraPersonalizada){
+      doc.secciones=(doc.secciones||[]).map(function(sec){
+        if(sec._bloqueId!=="alquiler.mora" &&
+           !/MORA Y PENALIDADES/i.test(String(sec.titulo||"")))return sec;
+        return Object.assign({},sec,{items:[resolveVars(moraPersonalizada,op)]});
+      });
+    }
+  }
   // El texto de rescisión personalizado afecta solo a esta operación y nunca
   // sobreescribe la plantilla, snapshot o documento de otra inmobiliaria.
   if((tipo||op.tipo)==="alquiler" && op.alquiler_rescision_modo==="personalizada"){
@@ -5937,8 +5964,20 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
 
 
       <div className="col2" style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginTop:6,marginBottom:2}}>Mora y rescisión</div>
+      <div className="col2">
+        <Slt id="dw-field-alquiler_mora_modo" label="Mora y penalidades" value={data.alquiler_mora_modo||"estandar"} onChange={function(e){onChange("alquiler_mora_modo",e.target.value);}} hint="Podés ajustar los valores estándar o redactar una cláusula completa para este contrato.">
+          <option value="estandar">Estándar (interés y penalidad editables)</option>
+          <option value="personalizada">Edición avanzada de la cláusula</option>
+        </Slt>
+        {data.alquiler_mora_modo==="personalizada"&&<>
+          <Txa id="dw-field-alquiler_mora_texto" label="Redacción acordada de mora y penalidades" value={data.alquiler_mora_texto||""} onChange={function(e){onChange("alquiler_mora_texto",e.target.value);}} placeholder="Escribí la cláusula acordada, indicando intereses, penalidades y condiciones aplicables..." rows={5} {...estiloCampoFaltante(faltantes,"alquiler_mora_texto","Completá la redacción de mora y penalidades.")}/>
+          <div role="note" style={{fontSize:12,color:"var(--dim)",marginTop:7}}>Este texto sustituirá únicamente la cláusula de mora de esta operación. Revisá su validez y proporcionalidad antes de firmar.</div>
+        </>}
+      </div>
+      {data.alquiler_mora_modo!=="personalizada"&&<>
       <Inp id="dw-field-alquiler_interes_punitorio" label="Interés punitorio mensual (%)" value={data.alquiler_interes_punitorio??"5"} onChange={function(e){onChange("alquiler_interes_punitorio",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_interes_punitorio","5");}} placeholder="5" type="number" hint="Por mora en el pago del canon" {...estiloCampoFaltante(faltantes,"alquiler_interes_punitorio","Ingresá un número válido igual o mayor a cero.")}/>
       <Inp id="dw-field-alquiler_penalidad_meses" label="Cláusula penal (meses de alquiler)" value={data.alquiler_penalidad_meses??"2"} onChange={function(e){onChange("alquiler_penalidad_meses",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_penalidad_meses","2");}} placeholder="2" type="number" hint="Por cada mes de demora en restituir" {...estiloCampoFaltante(faltantes,"alquiler_penalidad_meses","Ingresá un número válido igual o mayor a cero.")}/>
+      </>}
       <div className="col2">
         <Slt id="dw-field-alquiler_rescision_modo" label="Rescisión anticipada" value={data.alquiler_rescision_modo||"legal"} onChange={function(e){onChange("alquiler_rescision_modo",e.target.value);}} hint="Elegí el texto legal estándar o incorporá las condiciones particulares de esta operación.">
           <option value="legal">Según artículo 1221 (predeterminado)</option>

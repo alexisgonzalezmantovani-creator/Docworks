@@ -193,5 +193,43 @@ check('honorarios fuera de Buenos Aires no infieren norma provincial',()=>{
  const v=a.revisarRiesgosContractuales(op,d);
  assert.ok(!v.avisos.some(x=>/Honorarios de reserva de alquiler en Provincia de Buenos Aires/i.test(x)));
 });
+check('mora estándar usa porcentajes editables y no importa texto avanzado',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_interes_punitorio:'3',alquiler_penalidad_meses:'1',alquiler_mora_modo:'estandar',alquiler_mora_texto:'TEXTO EXCLUSIVO PERSONALIZADO'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const m=d.secciones.find(x=>x._bloqueId==='alquiler.mora'||/MORA Y PENALIDADES/i.test(x.titulo));assert.ok(m);
+ assert.match(m.items.join(' '),/3% mensual/);
+ assert.match(m.items.join(' '),/1 veces el canon/);
+ assert.ok(!m.items.join(' ').includes('TEXTO EXCLUSIVO PERSONALIZADO'));
+});
+check('modo avanzado reemplaza solamente mora, sin afectar rescisión ni honorarios',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_mora_modo:'personalizada',alquiler_mora_texto:'Las partes pactan penalidad especial de prueba, sujeta a la normativa aplicable.'};
+ const baseBlocks=a.getDefaultBodyBlocks('alquiler');
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',baseBlocks);
+ const normal=a.buildDocSections(a.opParaDocumento({...op,alquiler_mora_modo:'estandar'}),[],'alquiler',baseBlocks);
+ const isMora=x=>x._bloqueId==='alquiler.mora'||/MORA Y PENALIDADES/i.test(x.titulo);
+ assert.equal(d.secciones.find(isMora).items.join(' '),op.alquiler_mora_texto);
+ assert.deepEqual(d.secciones.filter(x=>!isMora(x)),normal.secciones.filter(x=>!isMora(x)));
+ assert.match(baseBlocks.find(x=>x.id==='alquiler.mora').contenido,/alquiler_interes_punitorio/);
+});
+check('texto de mora avanzada vacío se detecta antes de exportar',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_mora_modo:'personalizada',alquiler_mora_texto:''};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const v=a.validarDocumentoParaExport(op,d,{nombre:'Inmobiliaria QA'});
+ assert.ok(v.errores.some(x=>/mora y penalidades personalizada/i.test(x)));
+});
+check('cláusula avanzada no impresa bloquea exportación con modelo propio',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_mora_modo:'personalizada',alquiler_mora_texto:'Texto avanzado acordado'};
+ const d={documentoPropio:true,encabezado:'Contrato propio que no incorpora mora',secciones:[],clausulas:[]};
+ const v=a.validarDocumentoParaExport(op,d,{nombre:'QA'});
+ assert.ok(v.errores.some(x=>/cláusula de mora personalizada no figura/i.test(x)));
+});
+check('contratos históricos sin selector de mora mantienen cláusula estándar',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_mora_texto:'Texto que no debería imprimirse'};
+ delete op.alquiler_mora_modo;
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const m=d.secciones.find(x=>x._bloqueId==='alquiler.mora'||/MORA Y PENALIDADES/i.test(x.titulo));
+ assert.match(m.items.join(' '),/artículo 1222/);
+ assert.ok(!m.items.join(' ').includes('Texto que no debería imprimirse'));
+});
 console.log('APROBADAS '+checks+' comprobaciones preventivas de riesgo contractual.');
 
