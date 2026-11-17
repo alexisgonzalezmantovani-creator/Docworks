@@ -17,12 +17,46 @@ export function contactosDocumento(doc){
 // Parámetros compartidos de exportación PDF/DOCX. Las medidas se expresan en puntos
 // reales; cada generador convierte a su unidad nativa (PDF points / Word twips).
 export const DOC_EXPORT_LAYOUT = {
-  bodySize:10.5, lineHeight:13.5, paragraphAfter:8, paragraphBefore:0,
+  bodySize:10.5, lineHeight:15.25, paragraphAfter:10, paragraphBefore:0,
   marginTop:62, marginBottom:66, marginSide:54,
   titleSize:15, subtitleSize:10, signatureSize:8, signatureRoleSize:8,
-  signatureGap:62, signatureLabelGap:36
+  signatureGap:64, signatureLabelGap:66
 };
 export function docxTwipsFromPt(pt){ return Math.round(pt*20); }
+
+/**
+ * Distribución única de firmas para los ocho modelos: dos columnas cómodas.
+ * Los cotitulares de una misma parte quedan juntos; si existen un oferente/
+ * comprador/locatario y una inmobiliaria, forman la última fila en extremos.
+ * No reescribe ni reordena partes del documento legal: sólo el pie de firmas.
+ */
+export function organizarFilasFirmas(firmantes, incluirInmobiliaria=true){
+  var personas=(Array.isArray(firmantes)?firmantes:[]).filter(Boolean).slice();
+  if(incluirInmobiliaria&&!personas.some(function(f){return !!f.usarPerfil;})){
+    personas.push({rol:"INMOBILIARIA INTERVINIENTE",nombre:"",dni:"",usarPerfil:true});
+  }
+  var intermediarios=[],resto=[];
+  personas.forEach(function(p){
+    if(p.usarPerfil || /INMOBILIARIA INTERVINIENTE|^INMOBILIARIA$/.test(String(p.rol||"").toUpperCase())) intermediarios.push(p);
+    else resto.push(p);
+  });
+  var filas=[];
+  var oferenteIndex=intermediarios.length ? resto.findIndex(function(p){
+    return /OFERENTE|COMPRADOR|LOCATARIO|COMODATARIO|CESIONARIO/.test(String(p.rol||"").toUpperCase());
+  }) : -1;
+  var oferente=oferenteIndex>=0?resto.splice(oferenteIndex,1)[0]:null;
+  while(resto.length>=2) filas.push(resto.splice(0,2));
+  if(oferente){
+    if(resto.length) filas.push([resto.shift()]);
+    filas.push([oferente,intermediarios.shift()]);
+  }else if(intermediarios.length&&resto.length) {
+    filas.push([resto.shift(),intermediarios.shift()]);
+  }else if(resto.length) filas.push([resto.shift()]);
+  // Si hubo cotitulares, su fila permanece intacta y la inmobiliaria a la derecha.
+  while(intermediarios.length) filas.push([null,intermediarios.shift()]);
+  return filas;
+}
+
 
 
 export function pdfStr(s){ return s.replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)"); }
@@ -343,7 +377,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
         });
       }
       // Espacio extra entre cláusulas/párrafos, para que el documento respire.
-      y-=(opts.spaceAfter!=null?opts.spaceAfter:11);
+      y-=(opts.spaceAfter!=null?opts.spaceAfter:13);
     }
 
     // Contratos propios: el texto pegado incluye el documento entero. Cada renglón
@@ -409,74 +443,66 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
     if(doc.clausulas&&doc.clausulas.length){
       doc.clausulas.forEach(function(c){
         var label=prefijoClausulaDesdeNumTitulo(c.num, c.titulo||"");
-        drawParagraph([{txt:label,bold:true}], cuerpoTrasRotulo(c.texto||""), {gap:14.5, spaceAfter:17, indent:16});
+        drawParagraph([{txt:label,bold:true}], cuerpoTrasRotulo(c.texto||""), {gap:DOC_EXPORT_LAYOUT.lineHeight, spaceAfter:20, indent:16});
       });
     }
 
-    // Firmas principales: espacio generoso ARRIBA de la línea para firma
-    // manuscrita al imprimir (~55–65 pt). Si no entra el bloque completo,
-    // salta de página entero (no deja la línea sin aire).
-    var firmantesPpales = (doc.firmas&&doc.firmas.length) ? doc.firmas : doc.partes;
-    var nFirm = (firmantesPpales && firmantesPpales.length) ? firmantesPpales.length : 0;
-    var firmaBlank = DOC_EXPORT_LAYOUT.signatureGap;
-    var firmaLabels = DOC_EXPORT_LAYOUT.signatureLabelGap;
-    var huboInmobEnFirmas=false;
-    // Igual que Word: máximo tres firmantes por fila. Con cuatro o más,
-    // el cálculo anterior comprimía todas las firmas en una única línea.
-    var firmasPorFilaPdf=3;
-    if(nFirm){
-      var colW=(W-ML-MR)/firmasPorFilaPdf;
-      var sigW=Math.min(160,Math.max(100,colW-16));
-      for(var inicioFirmaPdf=0;inicioFirmaPdf<nFirm;inicioFirmaPdf+=firmasPorFilaPdf){
+    // Firmas uniformes para todos los modelos: dos columnas, aire para firmar
+    // y co-titulares en la misma fila. Los contratos propios no reciben una
+    // firma automática de inmobiliaria.
+    var firmaBlank=DOC_EXPORT_LAYOUT.signatureGap;
+    var firmaLabels=DOC_EXPORT_LAYOUT.signatureLabelGap;
+    function renglonesFirmaPdf(cadena,maxW,size){
+      var palabras=String(cadena||"").split(/\s+/).filter(Boolean),resultado=[],linea="";
+      palabras.forEach(function(palabra){
+        var intento=linea?linea+" "+palabra:palabra;
+        if(linea&&textWidthPt(latin1Safe(intento),size,false)>maxW){resultado.push(linea);linea=palabra;}
+        else linea=intento;
+      });
+      if(linea)resultado.push(linea);
+      return resultado;
+    }
+    function imprimirFirmaPdf(p,cx,anchoFirma){
+      var nombre=p.usarPerfil?((perfil&&perfil.nombre)||"Inmobiliaria interviniente"):(p.nombre||"");
+      var rol=p.rol||"";
+      lines.push("0.5 G 0.6 w "+(cx-anchoFirma/2)+" "+y+" m "+(cx+anchoFirma/2)+" "+y+" l S 0 G");
+      renglonesFirmaPdf(rol,anchoFirma+12,8).slice(0,2).forEach(function(t,i){textCentered(cx,y-13-i*10,t,8,false);});
+      renglonesFirmaPdf(nombre,anchoFirma+14,8).slice(0,2).forEach(function(t,i){textCentered(cx,y-35-i*10,t,8,true);});
+      if(p.dni)textCentered(cx,y-57,tipoIdentificacion(p.dni,p)+": "+p.dni,8,false);
+      else if(p.usarPerfil&&perfil&&perfil.matricula)textCentered(cx,y-57,"Matrícula "+perfil.matricula,8,false);
+    }
+    var firmasOriginales=(doc.firmas&&doc.firmas.length)?doc.firmas:(doc.partes||[]);
+    if(!doc.documentoPropio || firmasOriginales.length){
+      var filasFirmasPdf=organizarFilasFirmas(firmasOriginales,!doc.documentoPropio);
+      filasFirmasPdf.forEach(function(fila){
+        ensureSpace(firmaBlank+firmaLabels+30);
+        hline(y); y-=14; y-=firmaBlank;
+        var anchoCol=(W-ML-MR)/2, anchoFirma=Math.min(200,anchoCol-34);
+        fila.forEach(function(p,i){if(p)imprimirFirmaPdf(p,ML+(i+.5)*anchoCol,anchoFirma);});
+        y-=firmaLabels;
+      });
+    }
+    // Conformidad de vendedores: una o dos firmas lado a lado en la misma
+    // fila, conservando nombres y documentos de cada titular.
+    if(doc.conformidad&&doc.conformidad.items&&doc.conformidad.items.length){
+      y-=18; ensureSpace(36); hline(y); y-=16;
+      text(ML,y,"PRESTA CONFORMIDAD",11,true,0,labelColor); y-=16;
+      doc.conformidad.items.forEach(function(txt,i){
+        drawParagraph([{txt:(i+1)+". ",bold:true}],txt,{spaceAfter:13});
+      });
+      var conformantes=(doc.conformidad.firmantes&&doc.conformidad.firmantes.length)
+        ?doc.conformidad.firmantes:[{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}];
+      for(var inicioConf=0;inicioConf<conformantes.length;inicioConf+=2){
+        var filaConf=conformantes.slice(inicioConf,inicioConf+2);
         ensureSpace(firmaBlank+firmaLabels+24);
-        hline(y); y-=14;
-        y-=firmaBlank;
-        firmantesPpales.slice(inicioFirmaPdf,inicioFirmaPdf+firmasPorFilaPdf).forEach(function(p,i){
-          var cx=ML+i*colW+colW/2;
-          var nombreFirma=p.usarPerfil?((perfil&&perfil.nombre)||"Inmobiliaria interviniente"):p.nombre;
-          var rolFirma=p.usarPerfil?(p.rol+((perfil&&perfil.matricula)?" — Mat. "+perfil.matricula:"")):p.rol;
-          if(p.usarPerfil) huboInmobEnFirmas=true;
-          lines.push("0.5 G 0.6 w "+(cx-sigW/2)+" "+y+" m "+(cx+sigW/2)+" "+y+" l S 0 G");
-          textCentered(cx,y-12,rolFirma||"",8,false);
-          textCentered(cx,y-24,nombreFirma||"",8,true);
-          if(p.dni) textCentered(cx,y-35,tipoIdentificacion(p.dni,p)+": "+p.dni,8,false);
+        y-=8; y-=firmaBlank;
+        var anchoColConf=(W-ML-MR)/2, anchoFirmaConf=Math.min(200,anchoColConf-34);
+        filaConf.forEach(function(firmante,i){
+          var cx=filaConf.length===1?W/2:ML+(i+.5)*anchoColConf;
+          imprimirFirmaPdf(Object.assign({rol:doc.conformidad.rol||"VENDEDOR"},firmante),cx,anchoFirmaConf);
         });
         y-=firmaLabels;
       }
-    }
-    if(!doc.documentoPropio&&!huboInmobEnFirmas){
-      ensureSpace(firmaBlank + 28);
-      y -= Math.min(firmaBlank, 40);
-      textCentered(ML+(W-ML-MR)/2,y,"________________________",9,false);
-      textCentered(ML+(W-ML-MR)/2,y-14,"INMOBILIARIA INTERVINIENTE"+(perfil&&perfil.nombre?" — "+perfil.nombre:""),8,false);
-      y -= 28;
-    }
-
-    // Presta Conformidad + firma de la parte correspondiente con el mismo aire para
-    // firmar a mano. Si el bloque no entra, ensureSpace mueve todo junto.
-    if(doc.conformidad&&doc.conformidad.items&&doc.conformidad.items.length){
-      y -= 18;
-      ensureSpace(36);
-      hline(y); y -= 16;
-      text(ML,y,"PRESTA CONFORMIDAD",11,true,0,labelColor); y -= 16;
-      var confItems=doc.conformidad.items;
-      confItems.forEach(function(txt,i){
-        drawParagraph([{txt:(i+1)+". ",bold:true}], txt, {spaceAfter:10});
-      });
-      // Una firma de conformidad por titular; mantener compatibilidad con documentos antiguos.
-      var conformantes=doc.conformidad.firmantes&&doc.conformidad.firmantes.length?doc.conformidad.firmantes:[{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}];
-      conformantes.forEach(function(firmante){
-      ensureSpace(firmaBlank + firmaLabels + 10);
-      y -= 8;
-      y -= firmaBlank;
-      var cxConformidad=ML+(W-ML-MR)/2;
-      var sigWConformidad=Math.min(200,Math.max(140,W-ML-MR-40));
-      lines.push("0.5 G 0.6 w "+(cxConformidad-sigWConformidad/2)+" "+y+" m "+(cxConformidad+sigWConformidad/2)+" "+y+" l S 0 G");
-      textCentered(cxConformidad,y-12,doc.conformidad.rol||"VENDEDOR",8,false);
-      textCentered(cxConformidad,y-24,firmante.nombre||"",8,true);
-      if(firmante.dni) textCentered(cxConformidad,y-35,tipoIdentificacion(firmante.dni,firmante)+": "+firmante.dni,8,false);
-      y -= firmaLabels;
-      });
     }
 
     // Cierra la última página pendiente
@@ -678,9 +704,9 @@ export async function generarDOCXModulo(doc, perfil, deps) {
             body += pxRuns([
               {text: prefix, bold:true, size:10.5, color:DOCX_COLOR_PRIM},
               {text: " "+cuerpoTrasRotulo(item), size:10.5},
-            ], {justify:true, spacing:{before:200, after:80}});
+            ], {justify:true, spacing:{before:210, after:135}});
           } else {
-            body += px(normalizarTextoDocumento(item), {size:10.5, spacing:{before:40, after:80}, justify:true});
+            body += px(normalizarTextoDocumento(item), {size:10.5, spacing:{before:70, after:135}, justify:true});
           }
         });
       });
@@ -693,58 +719,54 @@ export async function generarDOCXModulo(doc, perfil, deps) {
         body += pxRuns([
           {text: label, bold:true, size:10.5, color:DOCX_COLOR_PRIM},
           {text: " "+cuerpoTrasRotulo(c.texto||""), size:10.5},
-        ], {justify:true, spacing:{before:200, after:80}});
+        ], {justify:true, spacing:{before:210, after:135}});
       });
     }
 
-    // Firmas: grilla horizontal solo para modelos DocWorks.
-    // El contrato propio ya incluye las firmas que escribió la inmobiliaria.
-    if(!doc.documentoPropio){
-    body += px("", {border:true, spacing:{before:140,after:100}});
-    body += px("FIRMAS", {keepNext:true,bold:true, size:DOC_EXPORT_LAYOUT.signatureSize+3, center:true, spacing:{before:100,after:90}});
-    var firmantesPpalesDocx = (doc.firmas && doc.firmas.length) ? doc.firmas.slice() : (doc.partes||[]).slice();
-    var huboInmobEnFirmasDocx = firmantesPpalesDocx.some(function(f){return !!f.usarPerfil;});
-    if (!huboInmobEnFirmasDocx) firmantesPpalesDocx.push({rol:"INMOBILIARIA INTERVINIENTE",usarPerfil:true});
-    var firmasPorFilaDocx = 3;
-    var anchoCeldaFirmaDocx = 3240;
-    function celdaFirmaDocx(parte){
-      var nombreFirma = parte.usarPerfil ? ((perfil&&perfil.nombre)||"Inmobiliaria interviniente") : (parte.nombre||"");
-      var rolFirma = parte.usarPerfil ? ((parte.rol||"INMOBILIARIA INTERVINIENTE")+((perfil&&perfil.matricula)?" — Mat. "+perfil.matricula:"")) : (parte.rol||"");
-      var contenido = px("________________________", {size:DOC_EXPORT_LAYOUT.signatureSize,center:true,spacing:{before:docxTwipsFromPt(Math.min(DOC_EXPORT_LAYOUT.signatureGap,58)),after:35}})
-        + px(rolFirma,{size:DOC_EXPORT_LAYOUT.signatureRoleSize,color:"555555",center:true,spacing:{before:0,after:12}})
-        + px(nombreFirma,{size:DOC_EXPORT_LAYOUT.signatureSize,bold:true,center:true,spacing:{before:0,after:12}});
-      if(parte.dni) contenido += px(tipoIdentificacion(parte.dni,parte)+": "+parte.dni,{size:8.5,color:"666666",center:true,spacing:{before:0,after:20}});
-      return '<w:tc><w:tcPr><w:tcW w:w="'+anchoCeldaFirmaDocx+'" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>'+contenido+'</w:tc>';
-    }
-    body += '<w:tbl><w:tblPr><w:tblW w:w="9720" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="3240"/><w:gridCol w:w="3240"/><w:gridCol w:w="3240"/></w:tblGrid>';
-    for (var firmaInicioDocx=0; firmaInicioDocx<firmantesPpalesDocx.length; firmaInicioDocx+=firmasPorFilaDocx){
-      body += '<w:tr><w:trPr><w:cantSplit/></w:trPr>';
-      for (var firmaColDocx=0;firmaColDocx<firmasPorFilaDocx;firmaColDocx++){
-        var firmaActualDocx=firmantesPpalesDocx[firmaInicioDocx+firmaColDocx];
-        body += firmaActualDocx ? celdaFirmaDocx(firmaActualDocx) : '<w:tc><w:tcPr><w:tcW w:w="3240" w:type="dxa"/></w:tcPr><w:p/></w:tc>';
+    // Grilla de firmas de dos columnas para los ocho documentos estándar.
+    // No modificar los contratos propios pegados por la inmobiliaria.
+    function tablaFirmasDocx(filas,conformidad){
+      var anchoCelda=4860;
+      var xml='<w:tbl><w:tblPr><w:tblW w:w="9720" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="4860"/><w:gridCol w:w="4860"/></w:tblGrid>';
+      function celda(p){
+        var tcPr='<w:tcPr><w:tcW w:w="'+anchoCelda+'" w:type="dxa"/><w:tcMar><w:start w:w="240" w:type="dxa"/><w:end w:w="240" w:type="dxa"/></w:tcMar><w:vAlign w:val="top"/></w:tcPr>';
+        if(!p)return '<w:tc>'+tcPr+'<w:p/></w:tc>';
+        var nombre=p.usarPerfil?((perfil&&perfil.nombre)||"Inmobiliaria interviniente"):(p.nombre||"");
+        var rol=p.rol||(conformidad?"VENDEDOR":"");
+        var contenido=px("________________________",{keepNext:true,size:DOC_EXPORT_LAYOUT.signatureSize,center:true,spacing:{before:docxTwipsFromPt(DOC_EXPORT_LAYOUT.signatureGap),after:45}})
+          +px(rol,{keepNext:true,size:DOC_EXPORT_LAYOUT.signatureRoleSize,color:"555555",center:true,spacing:{before:0,after:25}})
+          +px(nombre,{keepNext:!!p.dni||!!(p.usarPerfil&&perfil&&perfil.matricula),size:DOC_EXPORT_LAYOUT.signatureSize,bold:true,center:true,spacing:{before:0,after:25}});
+        if(p.dni)contenido+=px(tipoIdentificacion(p.dni,p)+": "+p.dni,{size:8.5,color:"666666",center:true,spacing:{before:0,after:45}});
+        else if(p.usarPerfil&&perfil&&perfil.matricula)contenido+=px("Matrícula "+perfil.matricula,{size:8.5,color:"666666",center:true,spacing:{before:0,after:45}});
+        return '<w:tc>'+tcPr+contenido+'</w:tc>';
       }
-      body += '</w:tr>';
-    }
-    body += '</w:tbl>';
-
-    }
-    // Presta Conformidad (reserva): aceptación posterior del propietario, numeración propia
-    if (doc.conformidad && doc.conformidad.items && doc.conformidad.items.length) {
-      body += px("", {border:true, spacing:{before:140,after:100}});
-      body += px("PRESTA CONFORMIDAD", {keepNext:true,bold:true, size:11, spacing:{before:80,after:120}});
-      doc.conformidad.items.forEach(function(txt, i) {
-        body += pxRuns([
-          {text: (i+1)+". ", bold:true, size:10.5, color:DOCX_COLOR_PRIM},
-          {text: txt, size:10.5},
-        ], {justify:true, spacing:{before:140, after:80}});
+      filas.forEach(function(fila){
+        xml+='<w:tr><w:trPr><w:cantSplit/></w:trPr>'+celda(fila[0]||null)+celda(fila[1]||null)+'</w:tr>';
       });
-      var conformantesDocx=doc.conformidad.firmantes&&doc.conformidad.firmantes.length?doc.conformidad.firmantes:[{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}];
-      conformantesDocx.forEach(function(firmante){
-      body += px("________________________", {keepNext:true,keepLines:true,size:DOC_EXPORT_LAYOUT.signatureSize, center:true, spacing:{before:docxTwipsFromPt(DOC_EXPORT_LAYOUT.signatureGap),after:35}});
-      body += px(doc.conformidad.rol||"VENDEDOR", {keepNext:true,size:9, color:"555555", center:true, spacing:{before:0,after:12}});
-      body += px(firmante.nombre||"", {keepNext:!!firmante.dni,size:10, bold:true, center:true, spacing:{before:0,after:14}});
-      if (firmante.dni) body += px(tipoIdentificacion(firmante.dni,firmante)+": "+firmante.dni, {size:9, color:"444444", center:true, spacing:{before:0,after:90}});
+      return xml+'</w:tbl>';
+    }
+    if(!doc.documentoPropio){
+      body+=px("",{border:true,spacing:{before:140,after:100}});
+      body+=px("FIRMAS",{keepNext:true,bold:true,size:DOC_EXPORT_LAYOUT.signatureSize+3,center:true,spacing:{before:100,after:90}});
+      var firmantesBase=(doc.firmas&&doc.firmas.length)?doc.firmas:(doc.partes||[]);
+      body+=tablaFirmasDocx(organizarFilasFirmas(firmantesBase,true),false);
+    }
+    if(doc.conformidad&&doc.conformidad.items&&doc.conformidad.items.length){
+      body+=px("",{border:true,spacing:{before:140,after:100}});
+      body+=px("PRESTA CONFORMIDAD",{keepNext:true,bold:true,size:11,spacing:{before:80,after:120}});
+      doc.conformidad.items.forEach(function(txt,i){
+        body+=pxRuns([{text:(i+1)+". ",bold:true,size:10.5,color:DOCX_COLOR_PRIM},{text:txt,size:10.5}],
+          {justify:true,spacing:{before:180,after:130}});
       });
+      var conformantesDocx=(doc.conformidad.firmantes&&doc.conformidad.firmantes.length)?doc.conformidad.firmantes:
+        [{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}];
+      var filasConfDocx=[];
+      for(var ic=0;ic<conformantesDocx.length;ic+=2){
+        filasConfDocx.push(conformantesDocx.slice(ic,ic+2).map(function(p){
+          return Object.assign({rol:doc.conformidad.rol||"VENDEDOR"},p);
+        }));
+      }
+      body+=tablaFirmasDocx(filasConfDocx,true);
     }
 
     // El pie se genera como footer real de Word (por página), no como contenido
