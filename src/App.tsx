@@ -5539,7 +5539,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
               <Inp id="dw-field-reserva_vigencia_dias" label="Vigencia de la reserva (días corridos)" type="number" min="1" step="1" value={data.reserva_vigencia_dias??"30"} onChange={function(e){onChange("reserva_vigencia_dias",e.target.value);}} placeholder="30" hint="Sugerido: 30 días corridos desde la conformidad del vendedor."/>
               <button type="button" className="dw-economic-term-reset" onClick={function(){onChange("reserva_vigencia_dias","30");}}>Usar 30 días sugeridos</button>
             </>}
-        </div>
+        </div>}
         {data.tipo==="reserva"&&<DetallesFormulario className="col2 dw-economic-advanced dw-economic-acceptance" inicialmenteAbierto={!!((data.reserva_aceptacion_modo||"dias")!=="dias"||Number(data.reserva_aceptacion_dias||5)!==5)}>
           <summary>
             <span className="dw-economic-advanced-title">Plazo de aceptación</span>
