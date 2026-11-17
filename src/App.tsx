@@ -2242,6 +2242,63 @@ function getProblemasFechas(op) {
   }
   return problemas;
 }
+// Auditoría preventiva de afirmaciones económicas y plazos en el texto final.
+ // Solo emite errores verificables y avisos para revisión humana; no presume
+ // entregas de dinero ni sustituye acuerdos jurídicos de cada inmobiliaria.
+function revisarRiesgosContractuales(op,doc) {
+  op=op||{}; doc=doc||{};
+  var avisos=[],errores=[],tipo=String(op.tipo||"");
+  var texto=[String(doc.encabezado||""),
+    (doc.secciones||[]).map(function(s){return (s.items||[]).join(" ");}).join(" "),
+    (doc.clausulas||[]).map(function(c){return String(c.texto||"");}).join(" ")
+  ].join(" ");
+  var fechaDoc=fechaDocumentoISO(op);
+  if(tipo==="reserva"){
+    if(op.reserva_vigencia_modo==="fecha" && /^\d{4}-\d{2}-\d{2}$/.test(String(op.reserva_vigencia_fecha||""))
+       && fechaDoc && String(op.reserva_vigencia_fecha)<String(fechaDoc)){
+      errores.push("La fecha de vigencia de la reserva es anterior a la fecha del documento. Corregí la fecha o revisá el modelo antes de exportar.");
+    }
+    if(op.reserva_aceptacion_modo==="fecha" && /^\d{4}-\d{2}-\d{2}$/.test(String(op.reserva_aceptacion_vencimiento||""))
+       && fechaDoc && String(op.reserva_aceptacion_vencimiento)<String(fechaDoc)){
+      errores.push("El plazo de aceptación ya venció antes de la fecha del documento. Revisá el vencimiento antes de exportar.");
+    }
+    if(/art[.íiculo\s]*1059/i.test(texto)&&/perder[aá]|otro tanto igual|doblad[ao]/i.test(texto))
+      avisos.push("La reserva prevé pérdida de la seña o devolución duplicada: verificá que la facultad de arrepentimiento y la tenencia efectiva de los fondos hayan sido acordadas expresamente (art. 1059 CCyC).");
+    if(/renunciando a invocar[^.]{0,190}(?:fuerza mayor|imprevisi[oó]n)/i.test(texto))
+      avisos.push("La cláusula de moneda contiene una renuncia amplia a defensas legales. Requiere revisión jurídica específica antes de la firma.");
+  }
+  if(tipo==="reserva_alquiler"){
+    if(/entrega en este acto|recibimos de/i.test(texto))
+      avisos.push("Confirmá la recepción efectiva de la reserva de alquiler y quién tiene el dinero en guarda. No firmes un recibo antes de que la entrega se haya producido.");
+    if(!/no aceptaci[oó]n|no conforma|no conformada|restituc|devoluci[oó]n/i.test(texto))
+      avisos.push("El texto no describe qué sucede con los fondos si el locador rechaza o no acepta la reserva. Revisá la devolución y el plazo pactado.");
+  }
+  if(tipo==="boleto" && /se prev[eé] una entrega inicial/i.test(texto))
+    avisos.push("El boleto prevé una entrega inicial: comprobá si el importe ya se recibió o si es solo una obligación futura; documentá la recepción por separado.");
+  if(tipo==="alquiler"){
+    if(/(?:rescindir|resoluci[oó]n anticipada)[\s\S]{0,200}con\s+\d+\s+mes(?:es)?\s+de\s+antelaci[oó]n/i.test(texto))
+      avisos.push("La cláusula de rescisión impone un preaviso mínimo. Revisá su validez y compatibilidad con el artículo 1221 del CCyC aplicable a este contrato.");
+    if(/inter[eé]s punitorio[^.]{0,100}% mensual/i.test(texto)||/veces el canon locativo mensual/i.test(texto))
+      avisos.push("Revisá la proporcionalidad de los intereses y penalidades locativas, sin confundir mora contractual con los requisitos legales previos al desalojo de vivienda.");
+    if(op.alquiler_comisiones_importadas &&
+       ["locador","locatario"].some(function(rol){return String(op["alquiler_comision_"+rol+"_modo"]||"")!=="fijo";}))
+      avisos.push("Los honorarios importados desde la reserva cambiaron de base de cálculo. Confirmá que conserven los importes económicos pactados.");
+  }
+  if(tipo==="comodato" && /recibe de plena conformidad/i.test(texto))
+    avisos.push("El comodato afirma recepción del inmueble: comprobá si la entrega y el estado fueron efectivamente verificados.");
+  if(tipo==="exclusividad"&&String(op.exclusividad_tipo||"").toLowerCase()==="sin")
+    avisos.push("Autorización sin exclusividad: verificá cuándo se devengan los honorarios si la venta se concreta directamente o con otro intermediario.");
+  if(tipo==="refuerzo_reserva"){
+    if(/(?:entrega en este acto|en este acto[^.]{0,100}entrega)/i.test(texto))
+      avisos.push("El refuerzo documenta una entrega de dinero en este acto: confirmá su recepción efectiva, tenedor, fecha, moneda y medio de pago.");
+    if(/manteniendo plena vigencia todas sus condiciones, plazos/i.test(texto))
+      avisos.push("El texto presume que los plazos de la reserva inicial siguen vigentes: verificá vencimientos y pactá una prórroga escrita si corresponde.");
+  }
+  if(tipo==="devolucion_reserva"&&/entrega al comprador|declara recibir el importe|devoluci[oó]n a/i.test(texto))
+    avisos.push("El acta da por realizada la devolución de dinero: confirmá importe, moneda, recepción efectiva, tenedor anterior y medio de pago antes de firmarla.");
+  return {errores:errores,avisos:avisos};
+}
+
 // Validación única previa a exportar. Los errores críticos bloquean la exportación.
 // 5.18: control preventivo de textos de prueba y ordinales duplicados.
 // Solo informa errores de revisión: nunca reescribe cláusulas de la inmobiliaria.
@@ -2482,6 +2539,11 @@ function validarDocumentoParaExport(op, doc, perfil){
     if(/antes de utilizar esta cl[aá]usula/i.test(texto))avisos.push("La cláusula «"+(c.titulo||"Sin título")+"» conserva una instrucción de edición. Revisá su redacción antes de compartir el documento.");
     if(op.tipo==="exclusividad"&&/fecha de entrega pactada/i.test(texto))avisos.push("Revisá si la cláusula «"+(c.titulo||"Entrega")+"» corresponde a una autorización de venta: hace referencia a una entrega del inmueble.");
   });
+  // Hallazgos contractuales: errores de fechas comprobables y avisos
+  // sobre afirmaciones que solo las partes pueden confirmar.
+  var riesgos=revisarRiesgosContractuales(op,doc);
+  riesgos.errores.forEach(function(p){errores.push(p);});
+  riesgos.avisos.forEach(function(p){avisos.push(p);});
   getProblemasFechas(op).forEach(function(p){avisos.push(p);});
   var tokens=getTokensSinReemplazar(doc);
   if(tokens.length) errores.push("Hay tokens o texto sin resolver en el documento: "+tokens.join(", ")+". Revisá las cláusulas y los datos de la operación.");
@@ -3920,6 +3982,7 @@ var BODY_TEMPLATE_PRESETS = {
     {id:"reserva_alquiler.objeto",titulo:"OBJETO",contenido:"El LOCATARIO / OFERENTE entrega en este acto, en concepto de Reserva de Locación sujeta a la conformidad del LOCADOR, la suma de {{reserva_alquiler_reserva}}, para la locación del inmueble ubicado en {{inmueble_direccion}}, {{inmueble_partido}}, Provincia de {{inmueble_provincia}}.-"},
     {id:"reserva_alquiler.condiciones",titulo:"CONDICIONES ESTIMADAS DE LOCACIÓN",contenido:"Valor del alquiler mensual: {{reserva_alquiler_canon}}. Plazo estimado: {{reserva_alquiler_plazo_texto}}, con inicio estimado el {{res_alq_inicio_estimado}} y vencimiento estimado el {{reserva_alquiler_fin_estimado}}, ambos días inclusive.-"},
     {id:"reserva_alquiler.aceptacion",titulo:"VIGENCIA Y ACEPTACIÓN",contenido:"El LOCADOR deberá conformar la presente dentro de un plazo de {{res_alq_aceptacion_plazo}}. La Reserva mantendrá su vigencia por {{res_alq_vigencia_plazo}} corridos desde su conformación, plazo dentro del cual deberá suscribirse el correspondiente Contrato de Locación.-"},
+    {id:"reserva_alquiler.no_aceptacion",titulo:"NO ACEPTACIÓN Y CONSTANCIA DE FONDOS",contenido:"La no aceptación por el LOCADOR deberá comunicarse al LOCATARIO / OFERENTE. Si corresponde restituir importes según lo pactado y la normativa aplicable, se dejará constancia del importe, la persona que los tenía en guarda, la fecha y el medio de devolución.-"},
     {id:"reserva_alquiler.honorarios_locador",titulo:"HONORARIOS DEL LOCADOR",contenido:"{{reserva_alquiler_comision_locador_texto}}"},
     {id:"reserva_alquiler.honorarios_locatario",titulo:"HONORARIOS DEL LOCATARIO",contenido:"{{reserva_alquiler_comision_locatario_texto}}"},
   ],
@@ -3940,7 +4003,7 @@ var BODY_TEMPLATE_PRESETS = {
     {id:"alquiler.honorarios_locatario",titulo:"HONORARIOS DEL LOCATARIO",contenido:"{{alquiler_comision_locatario_texto}}"},
   ],
   comodato: [
-    {id:"comodato.objeto",titulo:"OBJETO",contenido:"El COMODANTE cede gratuitamente al COMODATARIO el uso del inmueble ubicado en {{inmueble_direccion}}, {{inmueble_partido}}, Provincia de {{inmueble_provincia}}, quien lo recibe de plena conformidad.-"},
+    {id:"comodato.objeto",titulo:"OBJETO",contenido:"El COMODANTE cede gratuitamente al COMODATARIO el uso del inmueble ubicado en {{inmueble_direccion}}, {{inmueble_partido}}, Provincia de {{inmueble_provincia}}. La entrega material y el estado del inmueble se acreditarán con la puesta a disposición efectiva o la constancia que suscriban las partes.-"},
     {id:"comodato.plazo",titulo:"PLAZO",contenido:"El presente comodato tendrá una duración de {{comodato_plazo_texto}}, vencido el cual el COMODATARIO deberá restituir el bien en las mismas condiciones en que lo recibió.-"},
     {id:"comodato.uso",titulo:"USO Y DESTINO",contenido:"Destino: {{comodato_uso}}. El COMODATARIO no podrá ceder ni subarrendar el bien sin autorización previa y por escrito del COMODANTE.-"},
     {id:"comodato.obligaciones",titulo:"OBLIGACIONES DEL COMODATARIO",contenido:"El COMODATARIO se obliga a conservar el bien en buen estado, abonar los gastos ordinarios de uso y servicios, no introducir modificaciones sin autorización del COMODANTE, y restituir el inmueble a la finalización del plazo pactado.-"},
@@ -3956,7 +4019,7 @@ var BODY_TEMPLATE_PRESETS = {
   refuerzo_reserva: [
     {id:"refuerzo.antecedentes",titulo:"ANTECEDENTES",contenido:"{{refuerzo_trayectoria}}"},
     {id:"refuerzo.objeto",titulo:"OBJETO DEL REFUERZO",contenido:"En este acto el COMPRADOR entrega, en calidad de REFUERZO de la Reserva oportunamente suscripta, la suma de {{precio_letras}}, en concepto de ampliación del monto originalmente entregado.-"},
-    {id:"refuerzo.condiciones",titulo:"CONDICIONES",contenido:"El presente Refuerzo integra y complementa la Reserva original, manteniendo plena vigencia todas sus condiciones, plazos y cláusulas oportunamente pactadas.-"},
+    {id:"refuerzo.condiciones",titulo:"CONDICIONES",contenido:"El presente Refuerzo integra y complementa la Reserva original y se imputa a lo acordado en ella. Su suscripción no prorroga por sí sola plazos vencidos ni modifica las demás condiciones pactadas: cualquier prórroga o modificación deberá convenirse expresamente por escrito entre las partes.-"},
     {id:"refuerzo.incumplimiento",titulo:"INCUMPLIMIENTO",contenido:"El refuerzo se incorpora a las sumas entregadas bajo la reserva original. Su tratamiento frente a un incumplimiento será el previsto expresamente en esa reserva y en la normativa aplicable, sin establecer por este documento una penalidad adicional no acordada.-"},
   ],
   devolucion_reserva: [

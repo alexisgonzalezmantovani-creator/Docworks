@@ -1,0 +1,90 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),esbuild=require('esbuild');
+const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-riesgos-'));
+esbuild.buildSync({stdin:{contents:fs.readFileSync(path.join(root,'src/App.tsx'),'utf8')+
+ '\nexport {revisarRiesgosContractuales,validarDocumentoParaExport,getDefaultBodyBlocks,EMPTY_OP,SAMPLE_OP_PREVIEW,buildDocSections,opParaDocumento};',
+ resolveDir:path.join(root,'src'),loader:'tsx'},bundle:true,platform:'node',format:'cjs',jsx:'automatic',outfile:path.join(tmp,'app.cjs')});
+global.document={querySelector:()=>({}),title:''};const a=require(path.join(tmp,'app.cjs'));delete global.document;
+let checks=0;function check(label,fn){fn();checks++;console.log('OK',label);}
+function doc(text){return {encabezado:'',secciones:[{titulo:'DOCUMENTO',items:[text]}],clausulas:[]};}
+const base={...a.EMPTY_OP,created_at:'2026-11-17T12:00:00.000Z'};
+check('vencimiento de reserva anterior al documento: error verificable',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'reserva',reserva_vigencia_modo:'fecha',reserva_vigencia_fecha:'2026-11-16'},doc('Texto.'));
+ assert.match(v.errores.join(' '),/fecha de vigencia/i);
+});
+check('fecha de vigencia futura: sin falso positivo',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'reserva',reserva_vigencia_modo:'fecha',reserva_vigencia_fecha:'2026-12-15'},doc('Texto.'));
+ assert.equal(v.errores.length,0);
+});
+check('aceptación con fecha anterior: alerta comprobable',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'reserva',reserva_aceptacion_modo:'fecha',reserva_aceptacion_vencimiento:'2026-11-10'},doc('Texto.'));
+ assert.match(v.errores.join(' '),/aceptación/i);
+});
+check('seña penitencial y renuncia amplia se señalan sin cambiar sus efectos',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'reserva'},
+ doc('Con efectos del art. 1059: el oferente perderá la reserva. Renunciando a invocar imprevisión o fuerza mayor.'));
+ assert.ok(v.avisos.some(x=>/arrepentimiento/i.test(x)));
+ assert.ok(v.avisos.some(x=>/renuncia amplia/i.test(x)));
+});
+check('reserva de alquiler advierte guarda y devolución faltante',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'reserva_alquiler'},doc('El LOCATARIO entrega en este acto la reserva.'));
+ assert.ok(v.avisos.some(x=>/recepción efectiva/i.test(x)));
+ assert.ok(v.avisos.some(x=>/rechaza/i.test(x)));
+});
+check('modelo nuevo de reserva de alquiler incorpora constancia de no aceptación',()=>{
+ const b=a.getDefaultBodyBlocks('reserva_alquiler');
+ assert.ok(b.some(x=>x.id==='reserva_alquiler.no_aceptacion'&&/guarda/.test(x.contenido)));
+});
+check('refuerzo ya no presume prórroga de plazos vencidos',()=>{
+ const b=a.getDefaultBodyBlocks('refuerzo_reserva'),c=b.find(x=>x.id==='refuerzo.condiciones');
+ assert.ok(c);
+ assert.match(c.contenido,/no prorroga por sí sola plazos vencidos/);
+ assert.doesNotMatch(c.contenido,/manteniendo plena vigencia todas sus condiciones, plazos/);
+});
+check('refuerzo anterior sí genera aviso si afirma plazos vigentes',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'refuerzo_reserva'},doc('En este acto el comprador entrega 100. Manteniendo plena vigencia todas sus condiciones, plazos y cláusulas.'));
+ assert.ok(v.avisos.some(x=>/recepción efectiva/i.test(x)));
+ assert.ok(v.avisos.some(x=>/vencimientos/i.test(x)));
+});
+check('devolución exige comprobar recepción efectiva de los fondos',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'devolucion_reserva'},doc('Se deja constancia de la entrega al COMPRADOR. El COMPRADOR declara recibir el importe.'));
+ assert.ok(v.avisos.some(x=>/recepción efectiva/i.test(x)));
+});
+check('comodato nuevo no certifica entrega material anticipada',()=>{
+ const b=a.getDefaultBodyBlocks('comodato').find(x=>x.id==='comodato.objeto');
+ assert.ok(b);assert.match(b.contenido,/entrega material/);
+ assert.doesNotMatch(b.contenido,/quien lo recibe de plena conformidad/);
+});
+check('alquiler revisa preaviso, intereses y comisiones importadas',()=>{
+ const op={...base,tipo:'alquiler',alquiler_comisiones_importadas:true,alquiler_comision_locador_modo:'porcentaje',alquiler_comision_locatario_modo:'fijo'};
+ const v=a.revisarRiesgosContractuales(op,doc('El LOCATARIO podrá rescindir anticipadamente debiendo notificar con 1 mes de antelación. Interés punitorio del 5% mensual.'));
+ assert.ok(v.avisos.some(x=>/preaviso mínimo/i.test(x)));
+ assert.ok(v.avisos.some(x=>/proporcionalidad/i.test(x)));
+ assert.ok(v.avisos.some(x=>/honorarios importados/i.test(x)));
+});
+check('honorarios de reserva convertidos a importes fijos no generan falso aviso',()=>{
+ const op={...base,tipo:'alquiler',alquiler_comisiones_importadas:true,alquiler_comision_locador_modo:'fijo',alquiler_comision_locatario_modo:'fijo'};
+ assert.ok(!a.revisarRiesgosContractuales(op,doc('Texto sin honorarios.')).avisos.some(x=>/honorarios importados/i.test(x)));
+});
+check('autorización sin exclusividad advierte momento del honorario',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'exclusividad',exclusividad_tipo:'sin'},doc('Autorización de venta.'));
+ assert.ok(v.avisos.some(x=>/se devengan/i.test(x)));
+});
+check('boleto con entrega inicial prevista no se trata como recibo',()=>{
+ const v=a.revisarRiesgosContractuales({...base,tipo:'boleto'},doc('Se prevé una entrega inicial de 100.'));
+ assert.ok(v.avisos.some(x=>/ya se recibió/i.test(x)));
+});
+check('integración: el validador final incorpora las advertencias y fechas',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',created_at:'2026-11-17T12:00:00.000Z',reserva_vigencia_modo:'fecha',reserva_vigencia_fecha:'2026-11-16'};
+ const documento=a.buildDocSections(a.opParaDocumento(op),[],'reserva',a.getDefaultBodyBlocks('reserva'));
+ const r=a.validarDocumentoParaExport(op,documento,{nombre:'Inmobiliaria QA'});
+ assert.ok(r.errores.some(x=>/fecha de vigencia/i.test(x)));
+ assert.ok(r.avisos.some(x=>/arrepentimiento/i.test(x)));
+});
+check('reserva nueva conserva moneda esencial sin renuncias generales',()=>{
+ const bloque=a.getDefaultBodyBlocks('reserva').find(x=>x.id==='reserva.moneda_condicion_esencial');
+ assert.ok(bloque);
+ assert.match(bloque.contenido,/moneda pactada/i);
+ assert.doesNotMatch(bloque.contenido,/renunciando a invocar imprevisión/);
+});
+console.log('APROBADAS '+checks+' comprobaciones preventivas de riesgo contractual.');
+
