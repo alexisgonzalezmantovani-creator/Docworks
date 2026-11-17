@@ -2295,6 +2295,45 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
+/* iPad/tablet: dar protagonismo a la hoja del documento.
+   Mantener el scroll interior independiente, sin modificar el diseño iPhone. */
+@media (min-width:641px) and (max-width:1180px){
+  .modal-overlay-viewer{padding:10px!important;}
+  .modal-overlay-viewer .viewer-modal{
+    width:calc(100vw - 20px)!important;
+    max-width:1100px!important;
+    height:calc(100dvh - 20px)!important;
+    max-height:calc(100dvh - 20px)!important;
+  }
+  .modal-overlay-viewer .viewer-modal .modal-body{padding:12px 14px 14px;}
+  .modal-overlay-viewer .viewer-modal .doc-viewer-tab-content:not(.doc-tab-static){
+    min-height:0!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
+    flex:1 0 auto!important;
+    height:min(59dvh,650px)!important;
+    min-height:min(59dvh,650px)!important;
+    max-height:none!important;
+    margin:4px 0 8px!important;
+    padding:0!important;
+    overflow:hidden!important;
+    border-radius:13px;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
+    height:100%!important;
+    min-height:0!important;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview>.pdf-content{
+    min-height:0!important;
+    flex:1 1 auto!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+}
+
 /* 6.70 — visor iPhone: ventana de lectura con borde y scroll propio.
    La operación conserva su flujo; al abrir Ajustes, el listado puede
    desplazarse sin tapar el documento ni perder la terminación inferior. */
