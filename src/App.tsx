@@ -3263,7 +3263,7 @@ function finalizeDoc(doc, op, clausulasLib) {
     .forEach(function(c) {
       agregarExtra(resolveVars(c.titulo, op),resolveVars(c.contenido, op)+detalleClausulaOperacion(c,op),c.obligatoria);
     });
-  if (op.clausulas_custom && op.clausulas_custom.trim()) {
+  if (op.clausulas_custom && op.clausulas_custom.trim() && op.clausulas_custom_incluida!==false) {
     if (op.clausulas_custom_titulo && op.clausulas_custom_titulo.trim()) {
       agregarExtra(resolveVars(op.clausulas_custom_titulo.trim(), op),resolveVars(op.clausulas_custom.trim(), op),false);
     } else {
@@ -5926,7 +5926,7 @@ function SeguroOperacion({data,onChange,faltantes=[],seguroPorDefecto=true}){
     {seguroMarcado&&<Inp id="dw-field-alquiler_seguro_dias" label="Plazo para contratar el seguro (días)" value={data.alquiler_seguro_dias??"10"} onChange={function(e){onChange("alquiler_seguro_dias",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_seguro_dias","10");}} placeholder="10" type="number" {...estiloCampoFaltante(faltantes,"alquiler_seguro_dias","Ingresá un número válido igual o mayor a cero.")}/>}
   </div>;
 }
-function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]}){
+function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[],onAddClausula}){
   var selected=Array.isArray(data.clausulas_ids)?data.clausulas_ids:[];
   var cfgOpcionales=obtenerPlantillaConfig(perfil,data.tipo,clausulas);
   var idsOpcionales=Array.isArray(cfgOpcionales.clausulas_ids)?cfgOpcionales.clausulas_ids:[];
@@ -5974,12 +5974,28 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
   var ideaIARef=useRef<HTMLTextAreaElement | null>(null);
   var [loadingIA,setLoadingIA]=useState(false);
   var [errorIA,setErrorIA]=useState("");
+  var [guardandoBiblioteca,setGuardandoBiblioteca]=useState(false);
+  var [bibliotecaEstado,setBibliotecaEstado]=useState("");
+  var [firmaGuardada,setFirmaGuardada]=useState("");
   var [buscarClausula,setBuscarClausula]=useState("");
   var busqueda=buscarClausula.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
   var listaVisible=busqueda?lista.filter(function(c){return String(c.titulo||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().includes(busqueda);}):lista;
   // Cerrar el editor es solo una acción visual: no borra la cláusula personal.
   // No hace falta un efecto de sincronización: los campos escriben en data al editar.
-  async function completarRedaccionIA(){if(loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){onChange("clausulas_custom_titulo",d.titulo||"");onChange("clausulas_custom",d.contenido||"");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
+  async function completarRedaccionIA(){if(loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){onChange("clausulas_custom_titulo",d.titulo||"");onChange("clausulas_custom",d.contenido||"");onChange("clausulas_custom_incluida",false);setBibliotecaEstado("");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
+  async function guardarEnBiblioteca(){
+    var firma=tituloCustom.trim()+"\n"+contenidoCustom.trim();
+    if(guardandoBiblioteca||firma===firmaGuardada||!onAddClausula)return;
+    if(!tituloCustom.trim()||!contenidoCustom.trim()){setBibliotecaEstado("Completá título y texto antes de guardar en biblioteca.");return;}
+    setGuardandoBiblioteca(true);setBibliotecaEstado("");
+    try{
+      var respuesta=await onAddClausula({titulo:tituloCustom.trim(),contenido:contenidoCustom.trim(),categoria:"general",tipos:[data.tipo],obligatoria:false});
+      if(respuesta&&respuesta.error)throw respuesta.error;
+      setFirmaGuardada(firma);
+      setBibliotecaEstado("Guardada en la biblioteca para futuras operaciones.");
+    }catch(err){setBibliotecaEstado(err&&err.message?err.message:"No se pudo guardar en biblioteca.");}
+    finally{setGuardandoBiblioteca(false);}
+  }
   function narrarConIA(){if(loadingIA)return;if(!ideaIA.trim()){setErrorIA("Describí primero qué condición querés incluir en la cláusula.");if(ideaIARef.current)ideaIARef.current.focus();return;}if(String(contenidoCustom||"").trim()){requestDwConfirm("Ya tenés una cláusula escrita. ¿Reemplazarla por el texto redactado con IA?",function(){void completarRedaccionIA();},"Reemplazar");return;}void completarRedaccionIA();}
   return <div>
     <SeguroOperacion data={data} onChange={onChange} faltantes={faltantes} seguroPorDefecto={!seguroSoloSiLoEligen(data,perfil)}/>
@@ -6019,12 +6035,12 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
     </div>
     <div style={{marginTop:14,paddingTop:12,borderTop:"1px dashed var(--border2)"}}>
       <button type="button" aria-expanded={showAdd} aria-controls="dw-clausula-personal-editor" onClick={function(){setShowAdd(function(v){return !v;});}} style={{width:"100%",padding:"11px 13px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)",cursor:"pointer",textAlign:"left",fontWeight:700}}>{showAdd?"− Ocultar editor":String(contenidoCustom||"").trim()?"✎ Editar mi cláusula":"＋ Escribir cláusula propia"}</button>
-      {!showAdd&&!!String(contenidoCustom||"").trim()&&<div style={{fontSize:12,color:"var(--green)",marginTop:6}}>Tu cláusula sigue incluida en esta operación aunque el editor esté cerrado.</div>}
+      {!showAdd&&!!String(contenidoCustom||"").trim()&&<div style={{fontSize:12,color:data.clausulas_custom_incluida===false?"var(--muted)":"var(--green)",marginTop:6}}>{data.clausulas_custom_incluida===false?"Cláusula redactada, pendiente de insertar.":"Cláusula incluida en esta operación."}</div>}
       {showAdd&&<div id="dw-clausula-personal-editor" style={{marginTop:9,padding:12,borderRadius:12,border:"1px solid var(--border2)",background:"rgba(212,168,83,.035)"}}>
-        <Inp label="Título" value={tituloCustom} onChange={function(e){onChange("clausulas_custom_titulo",e.target.value);}} placeholder="Ej.: Prohibición de mascotas"/>
+        <Inp label="Título" value={tituloCustom} onChange={function(e){onChange("clausulas_custom_titulo",e.target.value);onChange("clausulas_custom_incluida",false);setBibliotecaEstado("");}} placeholder="Ej.: Prohibición de mascotas"/>
         <AvisoClausulasPersonalizadas/>
-        <Txa label="Texto" value={contenidoCustom} onChange={function(e){onChange("clausulas_custom",e.target.value);}} placeholder="Escribí la cláusula…" rows={4}/>
-        <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){onChange("clausulas_custom",(contenidoCustom?contenidoCustom+" ":"")+t);}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictar texto de la cláusula</span></div>
+        <Txa label="Texto" value={contenidoCustom} onChange={function(e){onChange("clausulas_custom",e.target.value);onChange("clausulas_custom_incluida",false);setBibliotecaEstado("");}} placeholder="Escribí la cláusula…" rows={4}/>
+        <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap",marginTop:5}}><VozATextoButton onText={function(t){onChange("clausulas_custom",(contenidoCustom?contenidoCustom+" ":"")+t);onChange("clausulas_custom_incluida",false);setBibliotecaEstado("");}}/><span style={{fontSize:12,color:"var(--dim)"}}>Dictar texto de la cláusula</span></div>
         <details style={{marginTop:14,padding:"12px 13px",border:"1px solid var(--border2)",borderRadius:12,background:"var(--surface2)"}}>
           <summary style={{fontSize:12,fontWeight:750,color:"var(--text)",marginBottom:5,cursor:"pointer",minHeight:26}}>✦ Redactar con IA (opcional)</summary>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:9}}>Describí en pocas palabras la condición que querés agregar. No incluyas nombres, DNI, domicilios ni datos de la operación.</div>
@@ -6035,9 +6051,18 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[]})
           </div>
         </details>
         {errorIA&&<div style={{fontSize:12,color:"var(--red)",marginTop:5}}>{errorIA}</div>}
-        <div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Esta cláusula se guarda únicamente en esta operación; no modifica la biblioteca de la inmobiliaria.</div>
+        <div style={{display:"flex",justifyContent:"flex-end",gap:8,alignItems:"center",flexWrap:"wrap",marginTop:14}}>
+          {onAddClausula&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){void guardarEnBiblioteca();}} disabled={!tituloCustom.trim()||!contenidoCustom.trim()||guardandoBiblioteca||firmaGuardada===tituloCustom.trim()+"\n"+contenidoCustom.trim()}>{firmaGuardada===tituloCustom.trim()+"\n"+contenidoCustom.trim()?"Guardada en biblioteca":guardandoBiblioteca?"Guardando…":"Guardar en biblioteca"}</button>}
+          <button type="button" className="btn btn-primary btn-sm" disabled={!contenidoCustom.trim()} onClick={function(){
+            if(!contenidoCustom.trim())return;
+            onChange("clausulas_custom_incluida",true);
+            setShowAdd(false);
+          }}>{data.clausulas_custom_incluida===false?"Insertar en este documento":"Confirmar en este documento"}</button>
+        </div>
+        {bibliotecaEstado&&<div role="status" style={{fontSize:12,color:"var(--muted)",textAlign:"right",marginTop:7}}>{bibliotecaEstado}</div>}
+        <div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Insertar la incorpora a esta operación. Guardar en biblioteca conserva una copia para futuras operaciones.</div>
         {(!!String(contenidoCustom||"").trim()||!!String(tituloCustom||"").trim())&&<button type="button" onClick={function(){
-          requestDwConfirm("¿Eliminar la cláusula propia de esta operación? Esta acción borra su título y texto.",function(){onChange("clausulas_custom_titulo","");onChange("clausulas_custom","");setIdeaIA("");setErrorIA("");setShowAdd(false);},"Eliminar");
+          requestDwConfirm("¿Eliminar la cláusula propia de esta operación? Esta acción borra su título y texto.",function(){onChange("clausulas_custom_titulo","");onChange("clausulas_custom","");onChange("clausulas_custom_incluida",false);setIdeaIA("");setErrorIA("");setShowAdd(false);},"Eliminar");
         }} style={{marginTop:12,padding:"8px 10px",border:"1px solid var(--border2)",borderRadius:8,background:"transparent",color:"var(--red)",cursor:"pointer",fontSize:12}}>Eliminar mi cláusula</button>}
       </div>}
     </div>
