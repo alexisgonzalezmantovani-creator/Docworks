@@ -3555,7 +3555,10 @@ function aplicarEncabezadoPersonalizado(doc, op, tipo, perfil) {
   }
   var tpl = snapshot ? snapshot.introduccion : getEncabezadoTemplate(tipo, perfil);
   if (!tpl) return doc;
-  return Object.assign({}, doc, { encabezado: sustituirTokens(tpl, op, perfil, tipo) });
+  // El preámbulo debe usar los mismos nombres de cotitulares y la misma
+  // dirección con barrio/UF que se imprimen en el cuerpo del documento.
+  // opParaDocumento es idempotente por __personasOriginales y __direccionBaseDocWorks.
+  return Object.assign({}, doc, { encabezado: sustituirTokens(tpl, opParaDocumento(op), perfil, tipo) });
 }
 
 function validarChipsIntroduccionIA(salida,original,tipo){
