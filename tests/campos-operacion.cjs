@@ -62,7 +62,20 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
  state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler'};
  await a.act(async()=>render(a.StepCondicionesAlquiler));
  const meses=document.getElementById('dw-field-alquiler_plazo_meses');await fill(meses,'');check('meses puede quedar vacío mientras se reemplaza',()=>assert.equal(meses.value,''));await fill(meses,'12');check('meses acepta reemplazo sin prefijo',()=>assert.equal(state.alquiler_plazo_meses,'12'));
- for(const campo of ['alquiler_interes_punitorio','alquiler_penalidad_meses','alquiler_aviso_meses']){const el=document.getElementById('dw-field-'+campo);await fill(el,'');check(campo+' permite borrar',()=>assert.equal(el.value,''));await fill(el,'10');check(campo+' toma valor nuevo',()=>assert.equal(state[campo],'10'));await fill(el,'0');check(campo+' conserva cero explícito',()=>assert.equal(el.value,'0'));}
+ for(const campo of ['alquiler_interes_punitorio','alquiler_penalidad_meses']){const el=document.getElementById('dw-field-'+campo);await fill(el,'');check(campo+' permite borrar',()=>assert.equal(el.value,''));await fill(el,'10');check(campo+' toma valor nuevo',()=>assert.equal(state[campo],'10'));await fill(el,'0');check(campo+' conserva cero explícito',()=>assert.equal(el.value,'0'));}
+ check('selector de rescisión aparece con el artículo 1221 como estándar',()=>{
+   const el=document.getElementById('dw-field-alquiler_rescision_modo');
+   assert.ok(el);assert.equal(el.value,'legal');
+   assert.equal(document.getElementById('dw-field-alquiler_rescision_texto'),null);
+ });
+ await a.act(async()=>{
+   const el=document.getElementById('dw-field-alquiler_rescision_modo');
+   el.value='personalizada';el.dispatchEvent(new Event('change',{bubbles:true}));
+ });
+ check('elegir acuerdo personalizado muestra la redacción editable',()=>{
+   assert.equal(state.alquiler_rescision_modo,'personalizada');
+   assert.ok(document.getElementById('dw-field-alquiler_rescision_texto'));
+ });
  state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',reserva_aceptacion_modo:'dias'};await a.act(async()=>render(a.StepEconomicoCompra));let dias=document.querySelector('input[max="90"]');await fill(dias,'');check('días de aceptación permite borrar',()=>assert.equal(dias.value,''));await fill(dias,'12');check('aceptación conserva 12 y calcula vencimiento',()=>{assert.equal(state.reserva_aceptacion_dias,'12');assert.ok(state.reserva_aceptacion_vencimiento);});
  state={...state,reserva_aceptacion_modo:'horas'};await a.act(async()=>render(a.StepEconomicoCompra));const horas=document.querySelector('input[max="720"]');await fill(horas,'');check('horas permite borrar',()=>assert.equal(horas.value,''));await fill(horas,'72');check('horas permite reemplazar',()=>assert.equal(state.reserva_aceptacion_horas,'72'));
  state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva_alquiler',res_alq_moneda:'ARS',res_alq_monto_mensual_moneda:'USD',res_alq_monto_mensual:'1.900',alquiler_monto_inicial:'999',alquiler_moneda:'ARS',res_alq_comision_locador_valor:'1',res_alq_comision_locatario_valor:'2'};

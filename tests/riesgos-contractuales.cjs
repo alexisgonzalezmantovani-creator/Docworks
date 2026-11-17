@@ -115,5 +115,43 @@ check('modelo de alquiler nuevo no produce falsos avisos de depósito o entrega'
  assert.ok(!v.avisos.some(x=>/certifica el estado de entrega/i.test(x)));
  assert.ok(!v.avisos.some(x=>/preaviso mínimo/i.test(x)));
 });
+check('rescision legal predeterminada conserva texto del modelo',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_rescision_modo:'legal',alquiler_rescision_texto:'TEXTO NO DEBE IMPRIMIRSE'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const x=d.secciones.find(z=>z._bloqueId==='alquiler.rescision'||/RESOLUCI[ÓO]N ANTICIPADA/.test(z.titulo));
+ assert.ok(x);assert.match(x.items.join(' '),/artículo 1221/);
+ assert.ok(!x.items.join(' ').includes('TEXTO NO DEBE IMPRIMIRSE'));
+});
+check('rescision personalizada reemplaza solo esa clausula',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_rescision_modo:'personalizada',alquiler_rescision_texto:'Las partes acuerdan una notificación por escrito de veinte días, sujeta a la normativa vigente.'};
+ const b=a.getDefaultBodyBlocks('alquiler'),before=a.buildDocSections(a.opParaDocumento({...op,alquiler_rescision_modo:'legal'}),[],'alquiler',b);
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',b);
+ const key=x=>x._bloqueId==='alquiler.rescision'||/RESOLUCI[ÓO]N ANTICIPADA/.test(x.titulo);
+ const original=before.secciones.find(key),chosen=d.secciones.find(key);
+ assert.ok(chosen);assert.equal(chosen.items.join(' '),op.alquiler_rescision_texto);
+ assert.match(original.items.join(' '),/artículo 1221/);
+ assert.deepEqual(d.secciones.filter(x=>!key(x)),before.secciones.filter(x=>!key(x)));
+ assert.match(b.find(x=>x.id==='alquiler.rescision').contenido,/artículo 1221/);
+});
+check('rescision personalizada vacia avisa y exige completar',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_rescision_modo:'personalizada',alquiler_rescision_texto:''};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const res=a.validarDocumentoParaExport(op,d,{nombre:'Inmobiliaria QA'});
+ assert.ok(res.errores.some(x=>/rescis/i.test(x)));
+});
+check('rescision personalizada no impresa bloquea exportacion de contrato propio',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_rescision_modo:'personalizada',alquiler_rescision_texto:'Redacción acordada de rescisión'};
+ const d={documentoPropio:true,encabezado:'Un contrato propio que no contiene la clausula elegida',secciones:[],clausulas:[]};
+ const res=a.validarDocumentoParaExport(op,d,{nombre:'Inmobiliaria QA'});
+ assert.ok(res.errores.some(x=>/no figura en el documento generado/i.test(x)));
+});
+check('no altera contratos historicos sin modalidad configurada',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler'};
+ delete op.alquiler_rescision_modo;
+ op.alquiler_rescision_texto='Texto que no debe reemplazar nada';
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const x=d.secciones.find(z=>z._bloqueId==='alquiler.rescision'||/RESOLUCI[ÓO]N ANTICIPADA/.test(z.titulo));
+ assert.match(x.items.join(' '),/artículo 1221/);
+});
 console.log('APROBADAS '+checks+' comprobaciones preventivas de riesgo contractual.');
 

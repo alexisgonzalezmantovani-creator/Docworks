@@ -2175,6 +2175,8 @@ function getCamposFaltantesDetalle(op,perfil=null) { perfil=perfil||null;
   if(op.inmueble_tipo==="otro")lista.push(["inmueble_tipo_otro","Tipo de inmueble (otro)"]);
   if((op.tipo==="reserva"||op.tipo==="boleto")&&op.compra_instrumento==="cesion_boleto")lista.push(["compra_boleto_origen","Boleto antecedente de la cesión"]);
   if(op.tipo==="alquiler"){
+    if(op.alquiler_rescision_modo==="personalizada")
+      lista.push(["alquiler_rescision_texto","Condiciones de rescisión anticipada personalizadas"]);
     if(op.alquiler_deposito==="otro")lista.push(["alquiler_deposito_otro_monto","Monto personalizado del depósito"]);
     if(op.alquiler_actualizacion==="otro")lista.push(["alquiler_actualizacion_otro","Índice de actualización acordado"]);
     if(op.alquiler_actualizacion!=="fijo"&&op.alquiler_periodo_actualizacion==="otro")lista.push(["alquiler_periodo_otro","Período de actualización acordado"]);
@@ -2415,6 +2417,19 @@ function validarDocumentoParaExport(op, doc, perfil){
   // Los datos críticos y sus inconsistencias se verifican en un único lugar.
   // Evitar mensajes duplicados para el mismo plazo de aceptación.
   if(op.tipo==="alquiler"){
+    if(op.alquiler_rescision_modo==="personalizada"){
+      var textoRescision=String(op.alquiler_rescision_texto||"").trim();
+      if(!textoRescision)
+        errores.push("Elegiste rescisión personalizada: escribí las condiciones acordadas antes de exportar.");
+      else {
+        var textoRenderizado=(doc.secciones||[]).filter(function(sec){
+          return sec._bloqueId==="alquiler.rescision"||/(?:RESOLUCI[ÓO]N|RESCISI[ÓO]N) ANTICIPADA/i.test(String(sec.titulo||""));
+        }).map(function(sec){return (sec.items||[]).join(" ");}).join(" ");
+        if(!textoRenderizado||textoRenderizado.indexOf(resolveVars(textoRescision,op))<0)
+          errores.push("La rescisión personalizada no figura en el documento generado. Revisá el modelo antes de exportar.");
+      }
+      avisos.push("La rescisión anticipada contiene condiciones personalizadas: verificá que sean compatibles con el artículo 1221 y los derechos legales aplicables.");
+    }
     var depositoModo=String(op.alquiler_deposito==null?"1":op.alquiler_deposito);
     if(["1","2","otro"].indexOf(depositoModo)<0) errores.push("El depósito no es válido: elegí 1 mes, 2 meses o monto personalizado.");
   }
@@ -4787,6 +4802,18 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
       }
     }
   }
+  // El texto de rescisión personalizado afecta solo a esta operación y nunca
+  // sobreescribe la plantilla, snapshot o documento de otra inmobiliaria.
+  if((tipo||op.tipo)==="alquiler" && op.alquiler_rescision_modo==="personalizada"){
+    var redaccion=String(op.alquiler_rescision_texto||"").trim();
+    if(redaccion){
+      doc.secciones=(doc.secciones||[]).map(function(sec){
+        if(sec._bloqueId!=="alquiler.rescision" &&
+           !/(?:RESOLUCI[ÓO]N|RESCISI[ÓO]N) ANTICIPADA/i.test(String(sec.titulo||"")))return sec;
+        return Object.assign({},sec,{items:[resolveVars(redaccion,op)]});
+      });
+    }
+  }
   // Las redacciones antiguas con «y/o» se transforman al instrumento elegido
   // también en operaciones que conservan un snapshot de fábrica.
   if((tipo||op.tipo)==="reserva"||(tipo||op.tipo)==="boleto"){
@@ -5902,7 +5929,16 @@ function StepCondicionesAlquiler({data,onChange,equipo,faltantes}){
       <div className="col2" style={{fontSize:12,fontWeight:700,color:"var(--dim)",letterSpacing:"0.08em",marginTop:6,marginBottom:2}}>Mora y rescisión</div>
       <Inp id="dw-field-alquiler_interes_punitorio" label="Interés punitorio mensual (%)" value={data.alquiler_interes_punitorio??"5"} onChange={function(e){onChange("alquiler_interes_punitorio",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_interes_punitorio","5");}} placeholder="5" type="number" hint="Por mora en el pago del canon" {...estiloCampoFaltante(faltantes,"alquiler_interes_punitorio","Ingresá un número válido igual o mayor a cero.")}/>
       <Inp id="dw-field-alquiler_penalidad_meses" label="Cláusula penal (meses de alquiler)" value={data.alquiler_penalidad_meses??"2"} onChange={function(e){onChange("alquiler_penalidad_meses",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_penalidad_meses","2");}} placeholder="2" type="number" hint="Por cada mes de demora en restituir" {...estiloCampoFaltante(faltantes,"alquiler_penalidad_meses","Ingresá un número válido igual o mayor a cero.")}/>
-      <Inp id="dw-field-alquiler_aviso_meses" label="Preaviso de modelo personalizado (meses)" hint="El modelo estándar usa el art. 1221 CCyC; este dato solo corresponde si tu cláusula personalizada lo utiliza." value={data.alquiler_aviso_meses??"1"} onChange={function(e){onChange("alquiler_aviso_meses",e.target.value);}} onBlur={function(e){if(e.target.value==="")onChange("alquiler_aviso_meses","1");}} placeholder="1" type="number" {...estiloCampoFaltante(faltantes,"alquiler_aviso_meses","Ingresá un número válido igual o mayor a cero.")}/>
+      <div className="col2">
+        <Slt id="dw-field-alquiler_rescision_modo" label="Rescisión anticipada" value={data.alquiler_rescision_modo||"legal"} onChange={function(e){onChange("alquiler_rescision_modo",e.target.value);}} hint="Elegí el texto legal estándar o incorporá las condiciones particulares de esta operación.">
+          <option value="legal">Según artículo 1221 (predeterminado)</option>
+          <option value="personalizada">Acuerdo personalizado</option>
+        </Slt>
+        {data.alquiler_rescision_modo==="personalizada"&&<>
+          <Txa id="dw-field-alquiler_rescision_texto" label="Condiciones acordadas de rescisión" value={data.alquiler_rescision_texto||""} onChange={function(e){onChange("alquiler_rescision_texto",e.target.value);}} placeholder="Redactá las condiciones particulares acordadas entre las partes..." rows={4} {...estiloCampoFaltante(faltantes,"alquiler_rescision_texto","Escribí las condiciones acordadas.")}/>
+          <div role="note" style={{fontSize:12,color:"var(--dim)",marginTop:7}}>Reemplaza la cláusula solo en este contrato. Los acuerdos particulares deben respetar los derechos legales aplicables.</div>
+        </>}
+      </div>
     </div></div>
   );
 }
