@@ -135,6 +135,15 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   const fragmentos=listaAjustes.locator('textarea');
   await fragmentos.first().fill('Texto ajustado QA. Importe ');
   assert.equal(await listaAjustes.getByTestId('dw-ajuste-chip').count(),1,name+' chip automático conservado al editar');checks++;
+  const flujo=await listaAjustes.getByTestId('dw-ajuste-editor-flujo').evaluate(el=>{
+    const campos=[...el.querySelectorAll('textarea')],chips=[...el.querySelectorAll('[data-testid="dw-ajuste-chip"]')];
+    const style=getComputedStyle(el);
+    const internos=campos.every(c=>getComputedStyle(c).overflowY==='hidden'&&c.scrollHeight<=c.clientHeight+3);
+    const alineados=campos.every(c=>c.getBoundingClientRect().width>el.getBoundingClientRect().width*.8);
+    return {direccion:style.flexDirection,internos,alineados,chips:chips.length};
+  });
+  assert.ok(flujo.direccion==='column'&&flujo.internos&&flujo.alineados&&flujo.chips===1,name+' ajustes apilados sin doble scroll: '+JSON.stringify(flujo));checks++;
+
   await listaAjustes.getByRole('button',{name:'Guardar ajuste',exact:true}).click();
   await fragmentos.first().waitFor({state:'detached'});
   assert.ok((await page.locator('.pdf-text').textContent()).includes('Texto ajustado QA.'),name+' guardar actualiza el documento');checks++;
