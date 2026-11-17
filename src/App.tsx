@@ -917,6 +917,12 @@ function resolveVars(text, op, extra=undefined) {
   if(op&&op.tipo==="reserva"&&op.reserva_vigencia_modo==="fecha") {
     textoBase=textoBase.replace(/\b(vigencia)\s+de(\s+\{\{\s*reserva_vigencia_texto\s*\}\})/gi,"$1$2");
   }
+  // Compatibilidad para snapshots de reserva que aún imprimen escritura
+  // aunque la instrumentación elegida sea boleto o cesión.
+  if(op&&op.tipo==="reserva"&&op.compra_instrumento&&op.compra_instrumento!=="escritura"){
+    textoBase=textoBase.replace(/para la firma de la Escritura Traslativa de Dominio tendrá carácter constitutivo\./g,
+      "para la firma {{compra_instrumento_de_firma}} tendrá carácter constitutivo.");
+  }
   var out=textoBase.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}\s*%(?:\s+del\s+(?:(?:primer)\s+)?canon\s+mensual)?/g, function(_, key) {
     if(!commissionKeys[key]) return "{{"+key+"}}%";
     var base=0,moneda="ARS",legacy=key,def="1";
@@ -3478,6 +3484,18 @@ var ENCABEZADO_TOKENS_INFO = [
 ];
 function sustituirTokens(tpl, op, perfil, tipo) {
   var esAlq = tipo==="alquiler"||tipo==="reserva_alquiler";
+  var esResAlq=tipo==="reserva_alquiler";
+  var textoPlantilla=String(tpl||"");
+  if(tipo==="exclusividad"){
+    // Evitar que la introducción afirme exclusividad cuando se eligió
+    // autorización SIN exclusividad. Aplicar a textos de fábrica y snapshots.
+    if((op.exclusividad_tipo||"con")==="sin")
+      textoPlantilla=textoPlantilla.replace(/autorización de comercialización exclusiva/gi,
+        "autorización de comercialización sin exclusividad");
+    // Los modelos antiguos guardaban ambos tokens pegados, sin separador.
+    textoPlantilla=textoPlantilla.replace(/\{\{inmobiliaria_nombre\}\}\{\{inmobiliaria_matricula\}\}/g,
+      "{{inmobiliaria_nombre}}"+(perfil&&perfil.matricula?", matrícula {{inmobiliaria_matricula}}":""));
+  }
   var map = {
     comprador_nombre:op.comprador_nombre||"___", comprador_dni:op.comprador_dni||"___", comprador_domicilio:op.comprador_domicilio||"___",
     vendedor_nombre:op.vendedor_nombre||"___", vendedor_dni:op.vendedor_dni||"___", vendedor_domicilio:op.vendedor_domicilio||"___",
@@ -3493,14 +3511,17 @@ function sustituirTokens(tpl, op, perfil, tipo) {
     nomenclatura_catastral: op.nomenclatura_catastral ? (", Nomenclatura Catastral "+op.nomenclatura_catastral) : "",
     nomenclatura_catastral_texto: op.nomenclatura_catastral ? (", Nomenclatura Catastral "+op.nomenclatura_catastral) : "",
     precio_letras: op.precio ? fmt$L(op.precio, op.moneda) : "___",
-    anticipo_letras: op.anticipo ? fmt$L(op.anticipo, op.moneda) : "___",
+    // La reserva de alquiler usa res_alq_monto_reserva, no anticipo de compra.
+    // Respetar también introducciones históricas con {{anticipo_letras}}.
+    anticipo_letras: esResAlq ? (op.res_alq_monto_reserva?fmt$L(op.res_alq_monto_reserva,op.res_alq_moneda||"ARS"):"___") : (op.anticipo ? fmt$L(op.anticipo, op.moneda) : "___"),
+    reserva_alquiler_reserva: op.res_alq_monto_reserva ? fmt$L(op.res_alq_monto_reserva,op.res_alq_moneda||"ARS") : "___",
     saldo_letras: op.saldo ? fmt$L(op.saldo, op.moneda) : "___",
     alquiler_monto_letras: op.alquiler_monto_inicial ? fmt$L(op.alquiler_monto_inicial, op.alquiler_moneda) : "___",
     fecha_operacion_larga: (function(){ var f=(esAlq ? op.alquiler_inicio : ((op.tipo==="reserva"||op.tipo==="refuerzo_reserva"||op.tipo==="devolucion_reserva") ? (op.fecha_instrumento||op.fecha_operacion||op.fecha) : op.fecha_posesion)) || op.fecha_operacion || op.fecha || (op.created_at ? String(op.created_at).slice(0,10) : ""); return f ? fmtDLarga(f) : "___"; })(),
     inmobiliaria_nombre: (perfil&&perfil.nombre)||"",
     inmobiliaria_matricula: (perfil&&perfil.matricula)||"",
   };
-  return tpl.replace(/\{\{(\w+)\}\}/g, function(m,k){ if(TOKENS_CONTACTO_PARTES_PRIVADOS[k]) return ""; var trato=textoTratamientoPersona(op,k);if(trato!==null)return trato;return (k in map) ? map[k] : m; });
+  return textoPlantilla.replace(/\{\{(\w+)\}\}/g, function(m,k){ if(TOKENS_CONTACTO_PARTES_PRIVADOS[k]) return ""; var trato=textoTratamientoPersona(op,k);if(trato!==null)return trato;return (k in map) ? map[k] : m; });
 }
 // Preámbulos por defecto (con tokens). Se usan si no hay personalización
 // y se pueden editar por tipo de documento en Plantillas → Introducción.
