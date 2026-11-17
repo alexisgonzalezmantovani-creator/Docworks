@@ -253,7 +253,7 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
    const f=a.analizarDatosObligatorios(reservaSeparada,'reserva',opConCotitularYBarrio).faltaPlantilla.map(x=>x.token);
    assert.ok(!f.includes('vendedor_nombre'));assert.ok(!f.includes('inmueble_direccion'));
  });
- const sinCotitular={...reservaSeparada,encabezado:'Vendedor Titular. Inmueble ubicado en Calle Ejemplo 123.',secciones:[],clausulas:[],partes:[]};
+ const sinCotitular={encabezado:'Vendedor Titular. Inmueble ubicado en Calle Ejemplo 123.',secciones:[],clausulas:[],partes:[],firmas:[],conformidad:null};
  check('la validación exige todos los vendedores',()=>assert.ok(a.analizarDatosObligatorios(sinCotitular,'reserva',opConCotitularYBarrio).faltaPlantilla.some(x=>x.token==='vendedor_nombre')));
  await a.act(async()=>root.unmount());dom.window.close();console.log('APROBADAS '+count+' verificaciones de campos, monedas, conversiones y contactos.');
 })().catch(e=>{console.error(e);process.exitCode=1;dom.window.close()});
