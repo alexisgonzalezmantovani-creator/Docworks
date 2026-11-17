@@ -2,7 +2,7 @@ import { solicitarCaptcha } from './Captcha';
 import { UsoInmobiliarias } from './UsoInmobiliarias';
 import { crearAccesoCuenta } from './AccesoCuenta';
 import { VistaPreviaAspecto } from './VistaPreviaAspecto';
-import { mostrarUbicacionDocumento } from './Exportaciones';
+import { mostrarUbicacionDocumento, organizarFilasFirmas } from './Exportaciones';
 import { permisosOperacion } from './AccionesOperaciones';
 import { CentroAyuda } from './PrimerosPasos';
 import { prepararTecladoOperacion, avanzarConEnterOperacion } from './NavegacionCamposOperacion';
@@ -5917,15 +5917,24 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         b.push({blank:true});
       });
     }
+    if(!doc.documentoPropio){
+      b.push({sep:true});
+      b.push({t:"FIRMAS",bold:true,center:true,label:true});
+      organizarFilasFirmas((doc.firmas&&doc.firmas.length)?doc.firmas:(doc.partes||[]),true).forEach(function(fila){
+        b.push({firmaRow:fila});
+      });
+    }
     if(doc.conformidad&&doc.conformidad.items&&doc.conformidad.items.length){
       b.push({sep:true});
       b.push({t:"PRESTA CONFORMIDAD",bold:true,label:true});
       doc.conformidad.items.forEach(function(t,i){ b.push({t:(i+1)+". "+t,justify:true}); });
-      (doc.conformidad.firmantes&&doc.conformidad.firmantes.length?doc.conformidad.firmantes:[{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}]).forEach(function(firmante){
-        b.push({blank:true});
-        b.push({t:(doc.conformidad.rol||"VENDEDOR"),bold:true,center:true});
-        b.push({t:(firmante.nombre||"")+(firmante.dni?" — "+firmante.dni:""),bold:true,center:true});
-      });
+      var conformantes=(doc.conformidad.firmantes&&doc.conformidad.firmantes.length)?doc.conformidad.firmantes:
+        [{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}];
+      for(var j=0;j<conformantes.length;j+=2){
+        b.push({firmaRow:conformantes.slice(j,j+2).map(function(p){
+          return Object.assign({rol:doc.conformidad.rol||"VENDEDOR"},p);
+        })});
+      }
     }
     return b;
   }
@@ -6006,11 +6015,20 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
             <div className="pdf-content pdf-content-lg">
               <div className="pdf-text">
                 {previewBlocks().map(function(bl,i){
-                  if(bl.blank) return <div key={i} style={{height:13}}/>;
+                  if(bl.blank) return <div key={i} style={{height:16}}/>;
+                  if(bl.firmaRow) return <div key={i} data-testid="dw-preview-firmas-row" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",columnGap:22,margin:"34px 2px 24px",alignItems:"start"}}>
+                    {bl.firmaRow.map(function(f,j){return f?<div key={j} style={{gridColumn:bl.firmaRow.length===1?"1 / -1":undefined,width:bl.firmaRow.length===1?"48%":"100%",justifySelf:"center",minWidth:0,textAlign:"center",color:"#1f2937",fontSize:11}}>
+                      <div style={{borderTop:"1px solid #64748b",margin:"0 8px 10px"}}/>
+                      <div style={{fontSize:10,color:"#475569",fontWeight:600,overflowWrap:"anywhere"}}>{f.rol||"FIRMANTE"}</div>
+                      <div style={{marginTop:4,fontWeight:700,overflowWrap:"anywhere"}}>{f.usarPerfil?((perfil&&perfil.nombre)||"Inmobiliaria interviniente"):(f.nombre||"")}</div>
+                      {f.dni&&<div style={{marginTop:4,fontSize:10,color:"#475569"}}>{tipoIdentificacion(f.dni,f)+": "+f.dni}</div>}
+                      {f.usarPerfil&&perfil&&perfil.matricula&&<div style={{marginTop:4,fontSize:10,color:"#475569"}}>{"Matrícula "+perfil.matricula}</div>}
+                    </div>:<div key={j}/>;})}
+                  </div>;
                   if(bl.sep) return <div key={i} style={{borderTop:"1px solid #d1d5db",margin:"10px 0"}}/>;
                   if(bl.clause && bl.prefix){
                     return (
-                      <div key={i} style={{textAlign:"justify",marginBottom:10,color:"#1f2937",lineHeight:1.55}}>
+                      <div key={i} style={{textAlign:"justify",marginBottom:15,color:"#1f2937",lineHeight:1.62}}>
                         <strong style={{color:(perfil&&perfil.plantillaEstilo==="clasico")?"#1a1a1a":((perfil&&perfil.colorPrimario)||"#142a4d")}}>{bl.prefix}</strong>
                         <span>{resaltarFaltantes(normalizarTextoDocumento(bl.t),function(indice){var campo=campoDesdeTextoFaltante(bl.t,op,indice);if(onCompleteData)onCompleteData(op,campo);})}</span>
                       </div>
@@ -6023,7 +6041,8 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                       color:bl.dim?"#6b7280":"#1f2937",
                       textAlign:bl.center?"center":(bl.justify?"justify":"left"),
                       marginLeft:bl.center?0:(bl.indent?14:0),
-                      marginBottom:bl.label?6:2,
+                      marginBottom:bl.label?10:5,
+                       lineHeight:1.62,
                       letterSpacing:bl.label?"0.03em":"normal",
                     }}>{resaltarFaltantes(normalizarTextoDocumento(bl.t||""),function(indice){var campo=campoDesdeTextoFaltante(bl.t,op,indice);if(onCompleteData)onCompleteData(op,campo);})}</div>
                   );
