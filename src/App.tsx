@@ -792,6 +792,20 @@ function textoPlazoRefuerzoReserva(op){
   return "dentro de "+dias+(dias===1?" día corrido":" días corridos")+" desde la conformidad del Vendedor";
 }
 
+// La documentación de respaldo no equivale por sí sola a una fianza aceptada.
+ // El texto personalizado del administrador tiene prioridad; el modelo base
+ // no extiende automáticamente la fianza más allá del plazo original (art. 1225).
+function textoGarantiaAlquiler(op){
+  if(String(op.alquiler_garantia_texto_personalizado||"").trim())
+    return String(op.alquiler_garantia_texto_personalizado).trim();
+  if(op.alquiler_garantia_tipo==="propietario")
+    return "Se identifica como garante propuesto a "+(op.alquiler_garantia_titular||"___")+", "+tipoIdentificacion(op.alquiler_garantia_dni)+": "+(op.alquiler_garantia_dni||"___")+", quien declara ser titular del inmueble sito en "+(op.alquiler_garantia_inmueble||"___")+". La fianza requiere su aceptación expresa mediante firma y se limita al alcance legalmente válido de las obligaciones del contrato original. Cualquier renovación o prórroga exige nuevo consentimiento expreso del fiador conforme al artículo 1225 del Código Civil y Comercial de la Nación.-";
+  if(op.alquiler_garantia_tipo==="seguro_caucion")
+    return "La garantía prevista consiste en un seguro de caución cuya póliza, vigencia y condiciones deberán acreditarse mediante el instrumento emitido por la entidad aseguradora. Su contratación no se presume por la sola firma de este contrato.-";
+  if(op.alquiler_garantia_tipo==="aval_bancario")
+    return "La garantía prevista consiste en un aval bancario a favor del LOCADOR. Su emisión, alcance y vigencia deberán acreditarse mediante el instrumento correspondiente; no se presume otorgado por la sola firma de este contrato.-";
+  return "Se presenta como antecedente de solvencia el recibo de sueldo de "+(op.alquiler_garantia_titular||"___")+". Su presentación no constituye por sí sola una fianza personal: para ello se requiere un compromiso de garantía expreso del tercero.-";
+}
 function derivedTokensGenerales(op) {
   op = op || {};
   var plazoReserva=plazoReservaAlquiler(op);
@@ -817,13 +831,7 @@ function derivedTokensGenerales(op) {
   var depositoDesc = op.alquiler_deposito === "otro" ? "un monto fijo de "+fmt$L(depositoMontoNum,depositoMoneda) : "el equivalente a "+depositoMeses+" "+depositoUnidad+" de alquiler, es decir "+fmt$L(depositoMontoNum,depositoMoneda);
   var avisoMesesToken = String(valorComisionPredeterminado(op.alquiler_aviso_meses,"1"));
   var avisoPlazoToken = Number(avisoMesesToken)===1 ? "1 mes" : avisoMesesToken+" meses";
-  var garantiaDetalle = (op.alquiler_garantia_texto_personalizado && op.alquiler_garantia_texto_personalizado.trim())
-    ? op.alquiler_garantia_texto_personalizado.trim()
-    : op.alquiler_garantia_tipo === "propietario"
-    ? "Se constituye garantía propietaria a cargo de "+(op.alquiler_garantia_titular||"___")+", "+tipoIdentificacion(op.alquiler_garantia_dni)+": "+(op.alquiler_garantia_dni||"___")+", titular del inmueble sito en "+(op.alquiler_garantia_inmueble||"___")+".-"
-    : op.alquiler_garantia_tipo === "seguro_caucion" ? "Se constituye como garantía un Seguro de Caución a contratar por el LOCATARIO en forma previa a la firma del presente.-"
-    : op.alquiler_garantia_tipo === "aval_bancario" ? "Se constituye como garantía un Aval Bancario otorgado a favor del LOCADOR.-"
-    : "Se constituye como garantía el Recibo de Sueldo de "+(op.alquiler_garantia_titular||"___")+".-";
+  var garantiaDetalle = textoGarantiaAlquiler(op);
   var exclCon = (op.exclusividad_tipo||"con")==="con";
   var exclModalidad = exclCon ? "La presente autorización es EXCLUSIVA. Durante su vigencia, el AUTORIZANTE no podrá comercializar el inmueble por otro medio o intermediario.-" : "La presente autorización es SIN EXCLUSIVIDAD. El AUTORIZANTE podrá comercializar el inmueble simultáneamente por otros medios o intermediarios.-";
   var __tg = {
@@ -2270,6 +2278,9 @@ function revisarRiesgosContractuales(op,doc) {
       avisos.push("La cláusula de moneda contiene una renuncia amplia a defensas legales. Requiere revisión jurídica específica antes de la firma.");
   }
   if(tipo==="reserva_alquiler"){
+    if(/buenos aires/i.test(String(op.inmueble_provincia||"")) &&
+       /(?:\d+(?:[.,]\d+)?% del canon mensual)/i.test(texto))
+      avisos.push("Honorarios de reserva de alquiler en Provincia de Buenos Aires: la cláusula usa un porcentaje del canon mensual; revisá la base y el monto total del plazo contractual conforme al art. 54 de la Ley 10.973 antes de firmar.");
     if(/entrega en este acto|recibimos de/i.test(texto))
       avisos.push("Confirmá la recepción efectiva de la reserva de alquiler y quién tiene el dinero en guarda. No firmes un recibo antes de que la entrega se haya producido.");
     if(!/no aceptaci[oó]n|no conforma|no conformada|restituc|devoluci[oó]n/i.test(texto))
@@ -2278,6 +2289,11 @@ function revisarRiesgosContractuales(op,doc) {
   if(tipo==="boleto" && /se prev[eé] una entrega inicial/i.test(texto))
     avisos.push("El boleto prevé una entrega inicial: comprobá si el importe ya se recibió o si es solo una obligación futura; documentá la recepción por separado.");
   if(tipo==="alquiler"){
+    if(op.alquiler_garantia_tipo==="propietario" &&
+       !/consentimiento expreso del fiador|nuevo consentimiento expreso|pr[oó]rroga exige nuevo/i.test(texto))
+      avisos.push("La garantía propietaria no aclara el consentimiento expreso del fiador para prórrogas o renovaciones (art. 1225 CCyC). Verificá alcance y firma del garante.");
+    if(/(?:garantiza[^.]{0,160}(?:toda renovaci[oó]n|todas las pr[oó]rrogas)|fianza[^.]{0,120}pr[oó]rroga autom[aá]tica)/i.test(texto))
+      avisos.push("El texto podría extender anticipadamente la fianza a prórrogas: revisá su compatibilidad con el artículo 1225 CCyC.");
     if(/(?:entrega en depósito|recibi[oó] en concepto de dep[oó]sito)/i.test(texto))
       avisos.push("El contrato afirma que se recibió el depósito de garantía: verificá el pago efectivo y conservá recibo o comprobante.");
     if(/(?:perfecto estado de conservaci[oó]n|recibe de plena conformidad)/i.test(texto))
@@ -4014,7 +4030,7 @@ var BODY_TEMPLATE_PRESETS = {
     {id:"alquiler.subalquiler",titulo:"PROHIBICIÓN DE SUBALQUILAR",contenido:"El LOCATARIO no podrá subalquilar, ceder ni transferir total o parcialmente el uso del inmueble sin el consentimiento expreso y por escrito del LOCADOR."},
     {id:"alquiler.obras",titulo:"OBRAS Y MEJORAS",contenido:"El LOCATARIO deberá solicitar autorización escrita al LOCADOR antes de realizar modificaciones u obras no urgentes. El tratamiento de mejoras, reparaciones necesarias y eventuales compensaciones se ajustará a lo pactado válidamente y a la normativa aplicable."},
     {id:"alquiler.deposito",titulo:"DEPÓSITO EN GARANTÍA",contenido:"Las partes pactan un depósito en garantía de {{alquiler_deposito_desc}}. Su entrega efectiva se acreditará mediante recibo o medio de pago verificable; la firma del presente contrato no presume por sí sola la percepción del importe. La moneda, forma y condiciones de restitución serán las expresamente convenidas por las partes conforme a la normativa aplicable.-"},
-    {id:"alquiler.mora",titulo:"MORA Y PENALIDADES",contenido:"El incumplimiento de cualquier obligación a cargo del LOCATARIO, incluida la falta de pago de un (1) mes de alquiler, lo constituirá en mora en forma automática, sin necesidad de interpelación judicial o extrajudicial alguna.-\n\nLa mora en el pago del canon locativo devengará un interés punitorio del {{alquiler_interes_punitorio}}% mensual hasta su efectivo pago.-\n\nSi el LOCATARIO no restituyera el inmueble al vencimiento del contrato, deberá abonar en concepto de cláusula penal una suma equivalente a {{alquiler_penalidad_meses}} veces el canon locativo mensual vigente, por cada mes o fracción de demora en la restitución.-"},
+    {id:"alquiler.mora",titulo:"MORA Y PENALIDADES",contenido:"El incumplimiento de cualquier obligación a cargo del LOCATARIO, incluida la falta de pago de un (1) mes de alquiler, lo constituirá en mora en forma automática, sin necesidad de interpelación judicial o extrajudicial alguna.-\n\nLa mora contractual no elimina la intimación fehaciente previa a una demanda de desalojo por falta de pago cuando el destino sea habitacional, conforme al artículo 1222 del Código Civil y Comercial de la Nación.-\n\nLa mora en el pago del canon locativo devengará un interés punitorio del {{alquiler_interes_punitorio}}% mensual hasta su efectivo pago.-\n\nSi el LOCATARIO no restituyera el inmueble al vencimiento del contrato, deberá abonar en concepto de cláusula penal una suma equivalente a {{alquiler_penalidad_meses}} veces el canon locativo mensual vigente, por cada mes o fracción de demora en la restitución.-"},
     {id:"alquiler.seguro",titulo:"SEGURO",contenido:"El LOCATARIO se obliga a contratar, dentro de los {{alquiler_seguro_dias}} días corridos de la firma del presente, un seguro de Responsabilidad Civil e Incendio sobre el inmueble, designando como beneficiario al LOCADOR, debiendo acreditar su vigencia durante toda la duración del contrato.-"},
     {id:"alquiler.rescision",titulo:"RESOLUCIÓN ANTICIPADA",contenido:"El LOCATARIO podrá resolver anticipadamente la locación conforme al artículo 1221 del Código Civil y Comercial de la Nación, según el régimen aplicable a la fecha de celebración del contrato. Para contratos comprendidos en la redacción vigente de dicho artículo, la indemnización equivale al diez por ciento (10%) del saldo del canon locativo futuro, calculado desde la notificación de la rescisión hasta la finalización pactada. La notificación deberá ser fehaciente, sin que este modelo establezca un plazo mínimo adicional de preaviso.-"},
     {id:"alquiler.garantia",titulo:"GARANTÍA",contenido:"{{alquiler_garantia_detalle}}"},
@@ -4593,13 +4609,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
   // ── CONTRATO DE LOCACIÓN (tipo por defecto: "alquiler") ────────────────────
   var fin = fmtD(finAlquilerISO(op));
   var plazoTxt = plazoAlquilerTexto(op.alquiler_plazo_meses||"24", op.alquiler_plazo_dias||"0");
-  var garantiaDetalle = (op.alquiler_garantia_texto_personalizado && op.alquiler_garantia_texto_personalizado.trim())
-    ? op.alquiler_garantia_texto_personalizado.trim()
-    : op.alquiler_garantia_tipo==="propietario"
-    ? "Se constituye garantía propietaria a cargo de "+(op.alquiler_garantia_titular||"___")+", "+tipoIdentificacion(op.alquiler_garantia_dni)+": "+(op.alquiler_garantia_dni||"___")+", titular del inmueble sito en "+(op.alquiler_garantia_inmueble||"___")+".-"
-    : op.alquiler_garantia_tipo==="seguro_caucion" ? "Se constituye como garantía un Seguro de Caución a contratar por el LOCATARIO en forma previa a la firma del presente.-"
-    : op.alquiler_garantia_tipo==="aval_bancario" ? "Se constituye como garantía un Aval Bancario otorgado a favor del LOCADOR.-"
-    : "Se constituye como garantía el Recibo de Sueldo de "+(op.alquiler_garantia_titular||"___")+".-";
+  var garantiaDetalle = textoGarantiaAlquiler(op);
 
   var indiceKey = op.alquiler_actualizacion||"ICL";
   var indiceEsFijo = indiceKey==="fijo";
@@ -4645,7 +4655,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
       {titulo:"4. GASTOS Y MANTENIMIENTO", items:["Quedan a cargo del LOCATARIO los gastos de expensas ordinarias, electricidad, gas, agua, internet y demás servicios del inmueble desde la entrega de la posesión. Quedan a cargo del LOCADOR las expensas extraordinarias y los impuestos que graven el inmueble (ARBA / Impuesto Inmobiliario). El LOCATARIO no podrá subalquilar, ceder ni transferir el uso del inmueble, ni realizar obras o mejoras, sin el consentimiento previo y por escrito del LOCADOR.-"]},
       {titulo:"5. DEPÓSITO EN GARANTÍA", items:["El LOCATARIO entrega en depósito "+depositoDesc+", que será restituido al finalizar la locación conforme a las condiciones expresamente pactadas por las partes y a la normativa vigente aplicable. El depósito no devengará intereses salvo pacto expreso o disposición legal aplicable y no podrá imputarse al pago de alquileres, salvo acuerdo expreso entre las partes.-"]},
       {titulo:"6. MORA Y PENALIDADES", items:[
-        "El incumplimiento de cualquier obligación a cargo del LOCATARIO, incluida la falta de pago de un (1) mes de alquiler, lo constituirá en mora en forma automática, sin necesidad de interpelación judicial o extrajudicial alguna.-",
+        "El incumplimiento de cualquier obligación a cargo del LOCATARIO, incluida la falta de pago de un (1) mes de alquiler, lo constituirá en mora en forma automática, sin necesidad de interpelación judicial o extrajudicial alguna.-\n\nLa mora contractual no elimina la intimación fehaciente previa a una demanda de desalojo por falta de pago cuando el destino sea habitacional, conforme al artículo 1222 del Código Civil y Comercial de la Nación.-",
         "La mora en el pago del canon locativo devengará un interés punitorio del "+interesPunitorio+"% mensual hasta su efectivo pago.-",
         "Si el LOCATARIO no restituyera el inmueble al vencimiento del contrato, deberá abonar en concepto de cláusula penal una suma equivalente a "+penalidadMeses+" veces el canon locativo mensual vigente, por cada mes o fracción de demora en la restitución.-",
       ]},

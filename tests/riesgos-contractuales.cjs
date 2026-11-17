@@ -153,5 +153,45 @@ check('no altera contratos historicos sin modalidad configurada',()=>{
  const x=d.secciones.find(z=>z._bloqueId==='alquiler.rescision'||/RESOLUCI[ÓO]N ANTICIPADA/.test(z.titulo));
  assert.match(x.items.join(' '),/artículo 1221/);
 });
+check('garantía propietaria estándar identifica consentimiento expreso y artículo 1225',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_garantia_tipo:'propietario',alquiler_garantia_titular:'Garante Prueba',alquiler_garantia_dni:'12345678',alquiler_garantia_inmueble:'Casa Ejemplo'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const g=d.secciones.find(x=>x._bloqueId==='alquiler.garantia');
+ assert.ok(g);const t=g.items.join(' ');
+ assert.match(t,/Garante Prueba/);assert.match(t,/nuevo consentimiento expreso/);assert.match(t,/1225/);
+});
+check('seguro de caucion no se declara contratado antes de ver póliza',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_garantia_tipo:'seguro_caucion'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const g=d.secciones.find(x=>x._bloqueId==='alquiler.garantia');
+ assert.ok(g);assert.match(g.items.join(' '),/no se presume/);assert.match(g.items.join(' '),/póliza/);
+});
+check('texto personalizado de garantía no se altera automáticamente',()=>{
+ const texto='Garantía personalizada de la inmobiliaria. El fiador firma el acuerdo individual.';
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_garantia_tipo:'propietario',alquiler_garantia_texto_personalizado:texto};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const g=d.secciones.find(x=>x._bloqueId==='alquiler.garantia');assert.ok(g);
+ assert.equal(g.items.join(' '),texto);
+});
+check('mora contractual no elimina intimación previa al desalojo de vivienda',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const m=d.secciones.find(x=>x._bloqueId==='alquiler.mora');assert.ok(m);
+ assert.match(m.items.join(' '),/1222/);
+ assert.match(m.items.join(' '),/5% mensual/);
+ assert.match(m.items.join(' '),/2 veces el canon/);
+});
+check('reserva de alquiler bonaerense advierte base de honorarios sobre canon mensual',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva_alquiler',inmueble_provincia:'Buenos Aires'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'reserva_alquiler',a.getDefaultBodyBlocks('reserva_alquiler'));
+ const v=a.revisarRiesgosContractuales(op,d);
+ assert.ok(v.avisos.some(x=>/Honorarios de reserva de alquiler en Provincia de Buenos Aires/i.test(x)));
+});
+check('honorarios fuera de Buenos Aires no infieren norma provincial',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva_alquiler',inmueble_provincia:'Córdoba'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'reserva_alquiler',a.getDefaultBodyBlocks('reserva_alquiler'));
+ const v=a.revisarRiesgosContractuales(op,d);
+ assert.ok(!v.avisos.some(x=>/Honorarios de reserva de alquiler en Provincia de Buenos Aires/i.test(x)));
+});
 console.log('APROBADAS '+checks+' comprobaciones preventivas de riesgo contractual.');
 
