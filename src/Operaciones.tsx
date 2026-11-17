@@ -5909,7 +5909,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       var prefix=String(prefijoClausulaFormal(s.titulo)||"");
       (s.items||[]).forEach(function(i,idx){
         if(!i) return;
-        if(idx===0) b.push({prefix:prefix, t:cuerpoTrasRotulo(i), justify:true, clause:true});
+        if(idx===0) b.push({prefix:prefix, t:cuerpoTrasRotulo(i), justify:true, clause:true, infoSena:op.tipo==="reserva"&&/SEÑA Y CONSECUENCIAS/i.test(String(s.titulo||""))});
         else b.push({t:normalizarTextoDocumento(i), justify:true, indent:true});
       });
       b.push({blank:true});
@@ -6034,6 +6034,12 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                     return (
                       <div key={i} style={{textAlign:"justify",marginBottom:15,color:"#1f2937",lineHeight:1.62}}>
                         <strong style={{color:(perfil&&perfil.plantillaEstilo==="clasico")?"#1a1a1a":((perfil&&perfil.colorPrimario)||"#142a4d")}}>{bl.prefix}</strong>
+                        {bl.infoSena&&<details style={{display:"inline-block",position:"relative",margin:"0 5px",verticalAlign:"middle",textAlign:"left"}}>
+                          <summary aria-label="Información sobre seña y arrepentimiento" title="Información sobre el artículo 1059: tocar para leer" style={{display:"inline-block",listStyle:"none",cursor:"pointer",color:"#34659a",fontSize:14,fontWeight:700}}>ⓘ</summary>
+                          <span role="note" style={{display:"block",position:"relative",padding:"8px 10px",margin:"5px 0",borderRadius:7,border:"1px solid #d6e2ef",background:"#f5f9ff",color:"#334155",fontSize:11.5,lineHeight:1.5,maxWidth:360}}>
+                            La seña confirmatoria y la facultad expresa de arrepentimiento tienen efectos distintos (art. 1059 CCyC). Revisá la redacción de la cláusula y quién recibió los fondos antes de firmar.
+                          </span>
+                        </details>}
                         <span>{resaltarFaltantes(normalizarTextoDocumento(bl.t),function(indice){var campo=campoDesdeTextoFaltante(bl.t,op,indice);if(onCompleteData)onCompleteData(op,campo);})}</span>
                       </div>
                     );
