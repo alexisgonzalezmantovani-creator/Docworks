@@ -237,5 +237,25 @@ check('contratos históricos sin selector de mora mantienen cláusula estándar'
  assert.match(m.items.join(' '),/artículo 1222/);
  assert.ok(!m.items.join(' ').includes('Texto que no debería imprimirse'));
 });
+check('reserva de compra no hereda las tres advertencias de reserva de alquiler',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',inmueble_provincia:'Buenos Aires'};
+ const d={tipoDocumento:'reserva',encabezado:'Reserva de compraventa',secciones:[{titulo:'HONORARIOS',items:['3% del canon mensual. Entrega en este acto.']}],clausulas:[]};
+ const v=a.validarDocumentoParaExport(op,d,{nombre:'QA'});
+ assert.ok(!v.avisos.some(x=>/Honorarios de reserva de alquiler|recepci[oó]n efectiva de la reserva de alquiler|fondos si el locador rechaza/i.test(x)));
+});
+check('reserva de alquiler conserva sus propias advertencias',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva_alquiler',inmueble_provincia:'Buenos Aires'};
+ const d={tipoDocumento:'reserva_alquiler',encabezado:'Reserva de locación',secciones:[{titulo:'HONORARIOS',items:['3% del canon mensual. Entrega en este acto.']}],clausulas:[]};
+ const v=a.validarDocumentoParaExport(op,d,{nombre:'QA'});
+ assert.ok(v.avisos.some(x=>/Honorarios de reserva de alquiler/i.test(x)));
+ assert.ok(v.avisos.some(x=>/recepci[oó]n efectiva de la reserva de alquiler/i.test(x)));
+ assert.ok(v.avisos.some(x=>/fondos si el locador rechaza/i.test(x)));
+});
+check('tipo documental cruzado entre compra y alquiler impide exportar',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva'};
+ const d={tipoDocumento:'reserva_alquiler',encabezado:'Reserva de alquiler',secciones:[],clausulas:[]};
+ const v=a.validarDocumentoParaExport(op,d,{nombre:'QA'});
+ assert.ok(v.errores.some(x=>/tipo del documento no coincide/i.test(x)));
+});
 console.log('APROBADAS '+checks+' comprobaciones preventivas de riesgo contractual.');
 
