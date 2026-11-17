@@ -198,8 +198,14 @@ check('mora estándar usa porcentajes editables y no importa texto avanzado',()=
  const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
  const m=d.secciones.find(x=>x._bloqueId==='alquiler.mora'||/MORA Y PENALIDADES/i.test(x.titulo));assert.ok(m);
  assert.match(m.items.join(' '),/3% mensual/);
- assert.match(m.items.join(' '),/1 veces el canon/);
+ assert.match(m.items.join(' '),/1 vez el canon/);
  assert.ok(!m.items.join(' ').includes('TEXTO EXCLUSIVO PERSONALIZADO'));
+});
+check('cláusula penal plural conserva veces para dos o más cánones',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_penalidad_meses:'2'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ const m=d.secciones.find(x=>x._bloqueId==='alquiler.mora');
+ assert.match(m.items.join(' '),/2 veces el canon/);
 });
 check('modo avanzado reemplaza solamente mora, sin afectar rescisión ni honorarios',()=>{
  const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_mora_modo:'personalizada',alquiler_mora_texto:'Las partes pactan penalidad especial de prueba, sujeta a la normativa aplicable.'};
