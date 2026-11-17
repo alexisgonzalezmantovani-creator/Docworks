@@ -5514,7 +5514,7 @@ function StepEconomicoCompra({data,onChange,equipo,faltantes,mostrarEscribania=f
             {esMontoMayorACero(data.reserva_refuerzo_monto)&&precio>0&&<div style={{fontSize:12,color:"var(--muted)",margin:"7px 0 12px"}}>
               Seña + refuerzo previsto: <strong>{fmt$((parseMontoAR(data.anticipo)||0)+parseMontoAR(data.reserva_refuerzo_monto),data.moneda)}</strong>.
               Saldo después de entregarlo: <strong>{fmt$(Math.max(0,precio-(parseMontoAR(data.anticipo)||0)-parseMontoAR(data.reserva_refuerzo_monto)),data.moneda)}</strong>.
-            </div>
+            </div>}
             <div role="group" aria-label="Cómo definir el plazo del refuerzo" style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:10}}>
               {[{value:"dias",label:"Días corridos"},{value:"fecha",label:"Fecha exacta"}].map(function(m){
                 var marcado=modoPlazoRefuerzoReserva(data)===m.value;
