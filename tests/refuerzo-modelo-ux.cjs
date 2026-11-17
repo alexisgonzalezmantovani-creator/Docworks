@@ -4,9 +4,9 @@ esbuild.buildSync({stdin:{contents:fs.readFileSync(root+'/src/App.tsx','utf8')+'
 global.document={querySelector:()=>({}),title:''};
 const a=require(tmp+'/app.cjs');delete global.document;
 let count=0;const check=(name,fn)=>{fn();console.log('OK',name);count++};
-const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',reserva_incluye_refuerzo:true,reserva_refuerzo_modo:'dias',reserva_refuerzo_dias:'7',reserva_fecha_refuerzo:''};
+const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',reserva_incluye_refuerzo:true,reserva_refuerzo_modo:'dias',reserva_refuerzo_dias:'7',reserva_fecha_refuerzo:'',reserva_refuerzo_monto:'10000'};
 const render=(data,blocks)=>a.buildDocSections(a.opParaDocumento(data),[],'reserva',blocks);
-const refuerzo=doc=>doc.secciones.find(x=>/REFUERZO/i.test(x.titulo)&&x.items.some(v=>/Oferente podrá ofrecer/i.test(v)))?.items.join(' ')||'';
+const refuerzo=doc=>doc.secciones.find(x=>/REFUERZO/i.test(x.titulo)&&x.items.some(v=>/refuerzo de la seña/i.test(v)))?.items.join(' ')||'';
 check('sin refuerzo la cláusula queda fuera',()=>{
  const d=render({...op,reserva_incluye_refuerzo:false},a.getDefaultBodyBlocks('reserva'));
  assert.ok(!refuerzo(d));
