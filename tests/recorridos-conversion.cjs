@@ -84,6 +84,16 @@ check('refuerzo, devolución y comodato no heredan cláusulas ni comisiones de l
 check('boleto y contrato conservan cláusulas pactadas que deben revisarse',()=>{
  assert.equal(boleto.clausulas_custom,reserva.clausulas_custom);
  assert.equal(contrato.clausulas_custom,alquiler.clausulas_custom);
+ assert.equal(boleto.clausulas_custom_incluida,true);
+ assert.equal(contrato.clausulas_custom_incluida,true);
+});
+check('las cláusulas pendientes siguen sin insertar al convertir un documento',()=>{
+ const b=convertir('convertirABoleto',{...reserva,clausulas_custom_incluida:false});
+ const c=convertir('convertirAContrato',{...alquiler,clausulas_custom_incluida:false});
+ assert.equal(b.clausulas_custom_incluida,false);
+ assert.equal(c.clausulas_custom_incluida,false);
+ assert.ok(!a.docToPlainText(a.buildDocSections(a.opParaDocumento(b),[],'boleto')).includes('Detalle exclusivo de esta operación.'));
+ assert.ok(!a.docToPlainText(a.buildDocSections(a.opParaDocumento(c),[],'alquiler')).includes('Detalle exclusivo de esta operación.'));
 });
 check('convertir no modifica la reserva original',()=>assert.equal(JSON.stringify([reserva,alquiler]),antes));
 for(const op of [boleto,refuerzo,devolucion,comodato])check(op.tipo+' conserva cotitulares sin compartir objetos',()=>{assert.deepEqual(op.comprador_cotitulares,reserva.comprador_cotitulares);op.comprador_cotitulares[0].nombre='Nombre cambiado en el hijo';assert.equal(reserva.comprador_cotitulares[0].nombre,'Cotitular Uno')});

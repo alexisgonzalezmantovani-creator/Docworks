@@ -6250,7 +6250,7 @@ function getResumenPartes(op){
   return prefixes.map(function(prefix,i){return {label:capRol(roles[i]||roles[0]),nombre:op[prefix+"_nombre"]||"",dni:op[prefix+"_dni"]||""};});
 }
 function datosCompraCompartidos(op,conClausulas=true){
-  var datos={compra_instrumento:op.compra_instrumento||"escritura",compra_boleto_origen:op.compra_boleto_origen||"",clausulas_custom:op.clausulas_custom||"",comision_vendedor_valor_editado:op.comision_vendedor_valor_editado,comision_comprador_valor_editado:op.comision_comprador_valor_editado,inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
+  var datos={compra_instrumento:op.compra_instrumento||"escritura",compra_boleto_origen:op.compra_boleto_origen||"",clausulas_custom:op.clausulas_custom||"",clausulas_custom_incluida:op.clausulas_custom_incluida,comision_vendedor_valor_editado:op.comision_vendedor_valor_editado,comision_comprador_valor_editado:op.comision_comprador_valor_editado,inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",clausulas_ids:(op.clausulas_ids||[]).slice(),inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",inmueble_tipo_otro:op.inmueble_tipo_otro||"",nomenclatura_catastral:op.nomenclatura_catastral||"",clausulas_custom_titulo:op.clausulas_custom_titulo||""};
   ["comprador","vendedor"].forEach(function(prefix){
     datos[prefix+"_telefono"]=op[prefix+"_telefono"]||"";
     datos[prefix+"_email"]=op[prefix+"_email"]||"";
@@ -6265,6 +6265,7 @@ function datosCompraCompartidos(op,conClausulas=true){
     delete datos.clausulas_ids;
     delete datos.clausulas_custom;
     delete datos.clausulas_custom_titulo;
+    delete datos.clausulas_custom_incluida;
     ["comision_vendedor","comision_comprador"].forEach(function(prefix){
       delete datos[prefix+"_valor_editado"];
       delete datos[prefix+"_ocultar_doc"];
@@ -9668,7 +9669,7 @@ function DocWorksApp(){
   function yaConvertido(opId, tipoHijo){ return operaciones.some(function(o){return o.parent_id===opId && o.tipo===tipoHijo;}); }
   function convertirAContrato(op){
     if(yaConvertido(op.id,"alquiler")) return;
-    var nuevo=Object.assign({},EMPTY_OP,{tipo:"alquiler",estado:"borrador",parent_id:op.id,locador_nombre:op.locador_nombre,locador_dni:op.locador_dni,locador_domicilio:op.locador_domicilio,locador_email:op.locador_email,locatario_nombre:op.locatario_nombre,locatario_dni:op.locatario_dni,locatario_domicilio:op.locatario_domicilio,locatario_email:op.locatario_email,inmueble_direccion:op.inmueble_direccion,inmueble_partido:op.inmueble_partido,inmueble_provincia:op.inmueble_provincia,nomenclatura_catastral:op.nomenclatura_catastral,descripcion_inmueble:op.descripcion_inmueble,inmueble_tipo:op.inmueble_tipo||"departamento",alquiler_monto_inicial:op.res_alq_monto_mensual||"",alquiler_moneda:op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS",alquiler_plazo_meses:String(plazoReservaAlquiler(op).meses),alquiler_plazo_dias:String(plazoReservaAlquiler(op).dias),alquiler_inicio:op.res_alq_inicio_estimado||"",alquiler_dia_pago:op.res_alq_dia_pago||"1",alquiler_dia_pago_otro:op.res_alq_dia_pago_otro||"",alquiler_destino:op.res_alq_destino||"vivienda",alquiler_comision:valorComisionPredeterminado(op.res_alq_comision,"1"),clausulas_ids:op.clausulas_ids||[],clausulas_custom:op.clausulas_custom||""});
+    var nuevo=Object.assign({},EMPTY_OP,{tipo:"alquiler",estado:"borrador",parent_id:op.id,locador_nombre:op.locador_nombre,locador_dni:op.locador_dni,locador_domicilio:op.locador_domicilio,locador_email:op.locador_email,locatario_nombre:op.locatario_nombre,locatario_dni:op.locatario_dni,locatario_domicilio:op.locatario_domicilio,locatario_email:op.locatario_email,inmueble_direccion:op.inmueble_direccion,inmueble_partido:op.inmueble_partido,inmueble_provincia:op.inmueble_provincia,nomenclatura_catastral:op.nomenclatura_catastral,descripcion_inmueble:op.descripcion_inmueble,inmueble_tipo:op.inmueble_tipo||"departamento",alquiler_monto_inicial:op.res_alq_monto_mensual||"",alquiler_moneda:op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS",alquiler_plazo_meses:String(plazoReservaAlquiler(op).meses),alquiler_plazo_dias:String(plazoReservaAlquiler(op).dias),alquiler_inicio:op.res_alq_inicio_estimado||"",alquiler_dia_pago:op.res_alq_dia_pago||"1",alquiler_dia_pago_otro:op.res_alq_dia_pago_otro||"",alquiler_destino:op.res_alq_destino||"vivienda",alquiler_comision:valorComisionPredeterminado(op.res_alq_comision,"1"),clausulas_ids:op.clausulas_ids||[],clausulas_custom:op.clausulas_custom||"",clausulas_custom_incluida:op.clausulas_custom_incluida});
     // La reserva y el contrato comparten los bienes y contactos acordados.
     // Copiar los detalles además de los IDs evita perder el inventario al convertir.
     Object.assign(nuevo,{
