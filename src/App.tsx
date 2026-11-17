@@ -1868,6 +1868,21 @@ function analizarDatosObligatorios(doc,tipo,op){
     }
     var variantes=variantesCoberturaObligatoria(token,res.valor,opResolver);
     var cubierto=variantes.some(function(v){return v&&texto.indexOf(v)>=0;});
+    // La dirección base puede estar impresa sin el barrio y la UF, aunque
+    // el campo resuelto sea la dirección completa. No reportarla como ausente.
+    if(!cubierto&&token==="inmueble_direccion"){
+      var direccionBase=normalizarTextoComparacion(String(op&&op.inmueble_direccion||""));
+      cubierto=!!direccionBase&&texto.indexOf(direccionBase)>=0;
+    }
+    // Los nombres de cotitulares también pueden figurar separados. Solo
+    // se considera cubierta la identidad cuando aparecen TODOS los titulares.
+    if(!cubierto&&/^(comprador|vendedor|locador|locatario)_nombre$/.test(token)&&typeof personasDe==="function"){
+      var rol=token.split("_")[0],personas=personasDe(op||{},rol);
+      if(personas.length>1) cubierto=personas.every(function(persona){
+        var nombre=normalizarTextoComparacion(String(persona&&persona.nombre||""));
+        return !!nombre&&texto.indexOf(nombre)>=0;
+      });
+    }
     if(!cubierto){
       faltaPlantilla.push({token:token,label:labelTokenObligatorio(token),mensaje:"La plantilla no menciona "+labelTokenObligatorio(token)+" (se acepta el importe en letras o en cifras, y la fecha en formato impreso)."});
     }
