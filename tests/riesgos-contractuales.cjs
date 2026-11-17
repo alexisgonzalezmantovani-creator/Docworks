@@ -19,10 +19,10 @@ check('aceptación con fecha anterior: alerta comprobable',()=>{
  const v=a.revisarRiesgosContractuales({...base,tipo:'reserva',reserva_aceptacion_modo:'fecha',reserva_aceptacion_vencimiento:'2026-11-10'},doc('Texto.'));
  assert.match(v.errores.join(' '),/aceptación/i);
 });
-check('seña penitencial y renuncia amplia se señalan sin cambiar sus efectos',()=>{
+check('seña informativa no interrumpe exportación, renuncia amplia sí se advierte',()=>{
  const v=a.revisarRiesgosContractuales({...base,tipo:'reserva'},
  doc('Con efectos del art. 1059: el oferente perderá la reserva. Renunciando a invocar imprevisión o fuerza mayor.'));
- assert.ok(v.avisos.some(x=>/arrepentimiento/i.test(x)));
+ assert.ok(!v.avisos.some(x=>/arrepentimiento|seña|art. 1059/i.test(x)));
  assert.ok(v.avisos.some(x=>/renuncia amplia/i.test(x)));
 });
 check('reserva de alquiler advierte guarda y devolución faltante',()=>{
@@ -78,7 +78,7 @@ check('integración: el validador final incorpora las advertencias y fechas',()=
  const documento=a.buildDocSections(a.opParaDocumento(op),[],'reserva',a.getDefaultBodyBlocks('reserva'));
  const r=a.validarDocumentoParaExport(op,documento,{nombre:'Inmobiliaria QA'});
  assert.ok(r.errores.some(x=>/fecha de vigencia/i.test(x)));
- assert.ok(r.avisos.some(x=>/arrepentimiento/i.test(x)));
+ assert.ok(!r.avisos.some(x=>/arrepentimiento|seña|art. 1059/i.test(x)));
 });
 check('reserva nueva conserva moneda esencial sin renuncias generales',()=>{
  const bloque=a.getDefaultBodyBlocks('reserva').find(x=>x.id==='reserva.moneda_condicion_esencial');
@@ -256,6 +256,12 @@ check('tipo documental cruzado entre compra y alquiler impide exportar',()=>{
  const d={tipoDocumento:'reserva_alquiler',encabezado:'Reserva de alquiler',secciones:[],clausulas:[]};
  const v=a.validarDocumentoParaExport(op,d,{nombre:'QA'});
  assert.ok(v.errores.some(x=>/tipo del documento no coincide/i.test(x)));
+});
+check('texto estándar de seña no produce aviso modal de exportación',()=>{
+ const op={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva'};
+ const d=a.buildDocSections(a.opParaDocumento(op),[],'reserva',a.getDefaultBodyBlocks('reserva'));
+ const v=a.validarDocumentoParaExport(op,d,{nombre:'QA'});
+ assert.ok(!v.avisos.some(x=>/seña|arrepentimiento|art. 1059/i.test(x)));
 });
 console.log('APROBADAS '+checks+' comprobaciones preventivas de riesgo contractual.');
 
