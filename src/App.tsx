@@ -910,7 +910,14 @@ function resolveVars(text, op, extra=undefined) {
     res_alq_comision_locador:true, res_alq_comision_locatario:true
   };
   var fixedLegacyKeys={};
-  var out=String(text).replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}\s*%(?:\s+del\s+(?:(?:primer)\s+)?canon\s+mensual)?/g, function(_, key) {
+  // En plantillas anteriores, "vigencia de {{reserva_vigencia_texto}}"
+  // debe leerse "vigencia hasta el DD/MM/AAAA" cuando se eligió fecha fija.
+  // La corrección actúa al renderizar: no reescribe modelos ni snapshots.
+  var textoBase=String(text);
+  if(op&&op.tipo==="reserva"&&op.reserva_vigencia_modo==="fecha") {
+    textoBase=textoBase.replace(/\b(vigencia)\s+de(\s+\{\{\s*reserva_vigencia_texto\s*\}\})/gi,"$1$2");
+  }
+  var out=textoBase.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}\s*%(?:\s+del\s+(?:(?:primer)\s+)?canon\s+mensual)?/g, function(_, key) {
     if(!commissionKeys[key]) return "{{"+key+"}}%";
     var base=0,moneda="ARS",legacy=key,def="1";
     if(key.indexOf("comision_vendedor")==0 || key.indexOf("comision_comprador")==0){
@@ -985,7 +992,7 @@ function derivedTokensReserva(op) {
     reserva_vigencia_dias: String(parseInt(op.reserva_vigencia_dias,10)>0?parseInt(op.reserva_vigencia_dias,10):30),
     reserva_vigencia_texto: (function(){
       if(op.reserva_vigencia_modo==="fecha")
-        return "hasta el "+(op.reserva_vigencia_fecha?fmtD(op.reserva_vigencia_fecha):"___")+", contada desde la conformidad por el Vendedor";
+        return "hasta el "+(op.reserva_vigencia_fecha?fmtD(op.reserva_vigencia_fecha):"___");
       var n=parseInt(op.reserva_vigencia_dias,10); if(!(n>0)) n=30;
       var letras=palabrasDias(n); if(letras===String(n)) letras=numeroALetras(n).toLowerCase();
       return n+" ("+letras+") días corridos contados desde su conformación por el Vendedor";
