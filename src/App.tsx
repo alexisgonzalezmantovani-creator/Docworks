@@ -2276,7 +2276,7 @@ function revisarRiesgosContractuales(op,doc) {
       errores.push("El plazo de aceptación ya venció antes de la fecha del documento. Revisá el vencimiento antes de exportar.");
     }
     if(/art[.íiculo\s]*1059/i.test(texto)&&/perder[aá]|otro tanto igual|doblad[ao]/i.test(texto))
-      avisos.push("La reserva prevé pérdida de la seña o devolución duplicada: verificá que la facultad de arrepentimiento y la tenencia efectiva de los fondos hayan sido acordadas expresamente (art. 1059 CCyC).");
+      avisos.push("La reserva contempla pérdida del importe o devolución duplicada por incomparecencia. Revisá si se trata de incumplimiento o de una facultad expresa de arrepentimiento: no tienen necesariamente los mismos efectos (art. 1059 CCyC). Confirmá también quién recibió los fondos antes de firmar.");
     if(/renunciando a invocar[^.]{0,190}(?:fuerza mayor|imprevisi[oó]n)/i.test(texto))
       avisos.push("La cláusula de moneda contiene una renuncia amplia a defensas legales. Requiere revisión jurídica específica antes de la firma.");
   }
