@@ -84,9 +84,12 @@ async function callGemini(apiKey: string, model: string, systemInstruction: stri
     console.error("Gemini API error; status:", response.status);
     // Si el modelo principal está saturado o alcanza un límite temporal,
     // reintentar una vez con un modelo Flash alternativo antes de fallar.
-    if ((response.status === 429 || response.status === 503) && model !== "gemini-2.5-flash") {
-      console.warn("Gemini model fallback:", model, "-> gemini-2.5-flash", response.status);
-      return await callGemini(apiKey, "gemini-2.5-flash", systemInstruction, messages, maxOutputTokens);
+    // Algunos proyectos no tienen disponible el mismo modelo/tier.
+    // Reintentar con un modelo alternativo ante errores de modelo (400/404)
+    // o de capacidad (429/503), sin exponer la solicitud ni la clave en logs.
+    if ([400, 404, 429, 503].includes(response.status) && model !== "gemini-3.6-flash") {
+      console.warn("Gemini model fallback:", model, "-> gemini-3.6-flash", response.status);
+      return await callGemini(apiKey, "gemini-3.6-flash", systemInstruction, messages, maxOutputTokens);
     }
     throw new Error("El proveedor de IA no pudo completar la consulta. Intentá nuevamente más tarde.");
   }
@@ -143,7 +146,7 @@ Deno.serve(async (req) => {
     const geminiApiKey = Deno.env.get("GEMINI_API_KEY");
     if (!geminiApiKey) throw new Error("No está configurado el secreto GEMINI_API_KEY en Supabase.");
 
-    const model = "gemini-3.6-flash";
+    const model = "gemini-2.5-flash";
 
     if (payload.mode === "generic_chat") {
       const text = await callGemini(geminiApiKey, model, BOTIA_SYSTEM, messages, 4096);
