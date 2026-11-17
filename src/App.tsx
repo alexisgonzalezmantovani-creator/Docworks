@@ -2275,8 +2275,9 @@ function revisarRiesgosContractuales(op,doc) {
        && fechaDoc && String(op.reserva_aceptacion_vencimiento)<String(fechaDoc)){
       errores.push("El plazo de aceptación ya venció antes de la fecha del documento. Revisá el vencimiento antes de exportar.");
     }
-    if(/art[.íiculo\s]*1059/i.test(texto)&&/perder[aá]|otro tanto igual|doblad[ao]/i.test(texto))
-      avisos.push("La reserva contempla pérdida del importe o devolución duplicada por incomparecencia. Revisá si se trata de incumplimiento o de una facultad expresa de arrepentimiento: no tienen necesariamente los mismos efectos (art. 1059 CCyC). Confirmá también quién recibió los fondos antes de firmar.");
+    // La referencia estándar a la seña del art. 1059 es información contextual
+    // del modelo, no un hallazgo nuevo que deba interrumpir cada descarga.
+    // La aclaración se muestra junto a la cláusula en la vista previa.
     if(/renunciando a invocar[^.]{0,190}(?:fuerza mayor|imprevisi[oó]n)/i.test(texto))
       avisos.push("La cláusula de moneda contiene una renuncia amplia a defensas legales. Requiere revisión jurídica específica antes de la firma.");
   }
