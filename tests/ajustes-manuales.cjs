@@ -23,24 +23,32 @@ export {act,createElement,createRoot,AjustesHarness,generarPDF,generarDOCX,build
 // que falla la primera vez. Esto prueba el botón Reintentar sin tocar archivos del usuario.
 const exportSource=fs.readFileSync(dir+'/src/Operaciones.tsx','utf8');
 const exportAst=ts.createSourceFile('Operaciones.tsx',exportSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
-const exportHandlers={};(function visitar(n){if(ts.isFunctionDeclaration(n)&&['handlePDF','handleDOCX'].includes(n.name?.text))exportHandlers[n.name.text]=n.getText(exportAst);ts.forEachChild(n,visitar)})(exportAst);
-assert.ok(exportHandlers.handlePDF&&exportHandlers.handleDOCX,'existen los manejadores de descarga');
-function simularDescarga(formato){
- let estado={accion:null,error:'',busy:{},generados:0};
+const exportHandlers={};(function visitar(n){if(ts.isFunctionDeclaration(n)&&['handlePDF','handleDOCX','handleShareWhatsApp'].includes(n.name?.text))exportHandlers[n.name.text]=n.getText(exportAst);ts.forEachChild(n,visitar)})(exportAst);
+assert.ok(exportHandlers.handlePDF&&exportHandlers.handleDOCX&&exportHandlers.handleShareWhatsApp,'existen los manejadores de descarga y compartir');
+function simularDescarga(formato,modo='ok'){
+ let estado={accion:null,error:'',busy:{},generados:0,intentos:0,modo,liberar:null};
  const iniciar=new Function('estado','formato',`
    const guardandoAjuste=false,hayCambiosAjuste=()=>false;
-   const descargaEnCursoRef={current:{pdf:false,docx:false}};
+   const descargaEnCursoRef={current:{pdf:false,docx:false,share:false}};
    const setBusy=f=>estado.busy=typeof f==='function'?f(estado.busy):f;
    const setErr=x=>estado.error=x,setLastAction=x=>estado.accion=x;
    const setLastPdf=()=>{},setLastDocx=()=>{};
    const getDoc=()=>({titulo:'Reserva ficticia'});
    const tabActual={label:'Reserva'},op={inmueble_direccion:'Inmueble ficticio'};
    const exportacionCompartida=async()=>{estado.generados++;return {blob:{},filename:'test'};};
-   const descargarArchivo=async()=>{estado.intentos=(estado.intentos||0)+1;
+   const descargarArchivo=async()=>{estado.intentos++;
      if(estado.intentos===1)throw Error('Descarga simulada interrumpida');};
+   const dwNotify=()=>{};
+   const entregarArchivo=async()=>{estado.intentos++;
+     if(estado.modo==='pendiente')await new Promise(r=>estado.liberar=r);
+     if(estado.modo==='error'&&estado.intentos===1)throw Error('Compartir interrumpido');
+     if(estado.modo==='cancelar')throw Object.assign(new Error('Usuario canceló'),{name:'AbortError'});
+     return 'shared';
+   };
    ${exportHandlers.handlePDF}
    ${exportHandlers.handleDOCX}
-   return formato==='pdf'?handlePDF:handleDOCX;
+   ${exportHandlers.handleShareWhatsApp}
+   return formato==='pdf'?handlePDF:formato==='docx'?handleDOCX:handleShareWhatsApp;
  `)(estado,formato);
  return {iniciar,estado};
 }
@@ -62,6 +70,33 @@ async function check(label,fn){await fn();checks++;console.log('OK',label)}
     assert.equal(prueba.estado.error,'','el error desaparece después del reintento');
     assert.equal(prueba.estado.intentos,2,'la descarga se vuelve a intentar');
   }
+ });
+ await check('compartir bloquea el doble toque y libera el bloqueo al terminar',async()=>{
+  const prueba=simularDescarga('share','pendiente');
+  const primero=prueba.iniciar();
+  for(let i=0;i<30&&!prueba.estado.liberar;i++)await Promise.resolve();
+  assert.equal(typeof prueba.estado.liberar,'function','la entrega debe estar pendiente');
+  await prueba.iniciar();
+  assert.equal(prueba.estado.intentos,1,'un segundo toque no debe compartir dos veces');
+  prueba.estado.liberar();
+  await primero;
+  assert.equal(prueba.estado.busy.share,false,'el botón vuelve a estar disponible');
+  assert.equal(prueba.estado.accion,null,'no deja reintento tras compartir correctamente');
+ });
+ await check('compartir fallido permite reintentar; cancelar no deja error',async()=>{
+  const prueba=simularDescarga('share','error');
+  await prueba.iniciar();
+  assert.equal(prueba.estado.accion,'share','se conserva la acción para reintentar');
+  assert.match(prueba.estado.error,/Compartir interrumpido/);
+  await prueba.iniciar();
+  assert.equal(prueba.estado.intentos,2,'la entrega se vuelve a intentar');
+  assert.equal(prueba.estado.accion,null,'el reintento correcto limpia la acción');
+  assert.equal(prueba.estado.error,'','el error se limpia al reintentar');
+  const cancelar=simularDescarga('share','cancelar');
+  await cancelar.iniciar();
+  assert.equal(cancelar.estado.accion,null,'cancelar compartir no deja un reintento');
+  assert.equal(cancelar.estado.error,'','cancelar no muestra error');
+  assert.equal(cancelar.estado.busy.share,false,'cancelar vuelve a habilitar el botón');
  });
  await iniciar();await escribir('Texto manual que debe conservarse.');
  await check('no abre confirmación de exportación con cambios de cláusula sin guardar',async()=>{

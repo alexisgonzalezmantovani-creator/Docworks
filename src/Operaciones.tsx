@@ -5731,7 +5731,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   // Cada nueva selección de descarga debe poder ejecutarse. Un bloqueo permanente
   // impedía reintentar después de cancelar, navegar atrás o cerrar el panel nativo.
 
-  function changeTab(id){ if(setTab(id)===false)return;setLastPdf(null);setLastDocx(null);setErr("");setAiReview(null); }
+  function changeTab(id){ if(setTab(id)===false)return;setLastPdf(null);setLastDocx(null);setErr("");setLastAction(null);setAiReview(null); }
 
   async function ejecutarRevisionIA(){
     if(aiReview&&aiReview.loading) return;
@@ -5906,6 +5906,9 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
 
   async function handleShareWhatsApp(docOverride=undefined){
     if(guardandoAjuste||hayCambiosAjuste()){setErr(guardandoAjuste?"La cláusula todavía se está guardando. Intentá de nuevo cuando termine.":"Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
+    // Evitar dos entregas del mismo archivo ante un doble toque.
+    if(descargaEnCursoRef.current.share)return;
+    descargaEnCursoRef.current.share=true;
     setErr("");setLastAction("share");
     setBusy(function(b){return Object.assign({},b,{share:true});});
     try{
@@ -5920,10 +5923,12 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       }
       setLastAction(null);
     } catch(e){
-      if(e && e.name==="AbortError"){ /* usuario canceló el share, no es error */ }
+      if(e && e.name==="AbortError")setLastAction(null); // Cancelar no es un error ni requiere reintentar.
       else { setErr((e&&e.message?e.message:"No se pudo compartir el documento.")+" En iPhone, probá Compartir y luego Guardar en Archivos; después podés adjuntarlo desde WhatsApp."); }
+    } finally{
+      descargaEnCursoRef.current.share=false;
+      setBusy(function(b){return Object.assign({},b,{share:false});});
     }
-    setBusy(function(b){return Object.assign({},b,{share:false});});
   }
 
   function previewBlocks(){
