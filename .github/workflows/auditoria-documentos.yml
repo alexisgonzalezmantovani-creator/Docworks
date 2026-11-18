@@ -22,6 +22,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Instalar herramientas de lectura de PDF
+        run: sudo apt-get update -o Acquire::Retries=3 && sudo apt-get install -y -o Acquire::Retries=3 poppler-utils
       - name: Pruebas existentes de documentos y exportaciones
         run: |
           node tests/documentos.cjs
