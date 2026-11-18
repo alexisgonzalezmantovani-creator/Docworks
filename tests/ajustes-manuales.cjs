@@ -12,7 +12,7 @@ require('esbuild').buildSync({stdin:{contents:source+`
 import {act,createElement} from 'react';import {createRoot} from 'react-dom/client';
 let ultimoGuardado=null,llamadas=0,modo='ok',resolverGuardado=null;
 function AjustesHarness(){
- const [viewDoc,setViewDoc]=useState({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'qa-ajustes',tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:[{id:'reserva.qa',titulo:'Texto de prueba',contenido:'Texto original de prueba.',activo:true,orden:1},{id:'reserva.precio',titulo:'Precio',contenido:'La suma de {{precio_letras}}.',activo:true,orden:2}]}}),[tab,setTab]=useState('reserva'),[destino,setDestino]=useState('visor');
+ const [viewDoc,setViewDoc]=useState({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'qa-ajustes',tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:[{id:'reserva.qa',titulo:'Texto de prueba',contenido:'Texto original de prueba.',activo:true,orden:1},{id:'reserva.precio',titulo:'Precio',contenido:'La suma de {{precio_letras}}.',activo:true,orden:2},{id:'reserva.legado',titulo:'Precio histórico',contenido:'El monto será [precio en letras].',activo:true,orden:3}]}}),[tab,setTab]=useState('reserva'),[destino,setDestino]=useState('visor');
  const salidaVisorRef=useRef(null),setDocAutoAction=()=>{};
  ${cierre}
  return <><button onClick={()=>cerrarVisorSeguro()}>Cerrar visor QA</button><button onClick={()=>cerrarVisorSeguro(()=>setDestino('formulario'))}>Editar operación QA</button><output id="destino">{destino}</output>{viewDoc&&<DocumentViewer op={viewDoc} perfil={{nombre:'Inmobiliaria de prueba',plantillas:{}}} clausulas={[]} operaciones={[viewDoc]} bloquesReserva={[]} tab={tab} onChangeTab={setTab} salidaGuardRef={salidaVisorRef} onUpdateOperation={async next=>{llamadas++;if(modo==='error')return {error:{message:'Error de guardado de prueba'}};if(modo==='sin_respuesta')return null;if(modo==='vacia')return {};if(modo==='demora')await new Promise(r=>resolverGuardado=r);ultimoGuardado=next;setViewDoc(next);return {operacion:next};}}/>}</>;
@@ -50,6 +50,31 @@ async function check(label,fn){await fn();checks++;console.log('OK',label)}
   await click(boton('Guardar ajuste'));
   assert.equal(document.querySelector('[data-testid="dw-editor-inline"]'),null,'El editor debe cerrarse tras guardar');
   assert.ok(document.querySelector('.pdf-text').textContent.includes('El precio ajustado es'),'La vista previa debe actualizarse después de guardar');
+ });
+ await check('restaurar desde la vista previa revierte la cláusula sin conservar el borrador',async()=>{
+  const opciones=[...document.querySelectorAll('[data-testid="dw-editar-desde-preview"]')];
+  await click(opciones[1]);
+  assert.ok(document.querySelector('[data-testid="dw-editor-inline"]'),'se reabre el ajuste vigente en la hoja');
+  assert.ok(boton('Restaurar original'),'existe acción para el ajuste guardado');
+  confirmar=true;
+  await click(boton('Restaurar original'));
+  assert.equal(document.querySelector('[data-testid="dw-editor-inline"]'),null);
+  assert.ok(!document.querySelector('.pdf-text').textContent.includes('El precio ajustado es'));
+  assert.ok(document.querySelector('.pdf-text').textContent.includes('La suma de'));
+ });
+ await iniciar(false);
+ await check('chip histórico sin cambios no crea un ajuste manual ni llama a Supabase',async()=>{
+  const detalles=document.querySelector('[data-testid="dw-ajustes-manuales"]');
+  assert.ok(detalles);detalles.open=true;
+  const fila=document.querySelector('[data-ajuste-id="reserva.legado"]');
+  assert.ok(fila,'aparece el bloque histórico');
+  await click(fila.querySelector('button'));
+  assert.ok(document.querySelector('[data-testid="dw-ajuste-chip"]'),'el chip legado se normalizó en el editor');
+  const llamadasAntes=a.estadoAjustes().llamadas;
+  await click(boton('Guardar ajuste'));
+  assert.equal(a.estadoAjustes().llamadas,llamadasAntes,'no se debe enviar ningún cambio artificial');
+  assert.equal(document.querySelector('textarea'),null,'el editor se cierra si no hubo cambios');
+  assert.equal(document.querySelector('[data-ajuste-id="reserva.legado"]').textContent.includes('Ajuste guardado'),false);
  });
  await a.act(async()=>root.unmount());dom.window.close();console.log('APROBADAS',checks,'pruebas del visor y ajustes manuales con servicios simulados.');
 })().catch(async e=>{console.error(e);process.exitCode=1;if(root)await a.act(async()=>root.unmount());dom.window.close()});

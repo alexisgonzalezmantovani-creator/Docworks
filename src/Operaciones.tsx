@@ -5683,13 +5683,17 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       setErrorAjuste("Los campos automáticos son obligatorios: no se pueden eliminar, cambiar de orden ni reemplazar.");return;
     }
     var previo=op.ajustes_manuales&&op.ajustes_manuales[tab]&&op.ajustes_manuales[tab][b.id];
-    if(contenido===String(b.contenido||"")&&typeof previo!=="string"){cerrarEdicionAjuste();dwNotify("info","No hay cambios para guardar.");return;}
-    if(typeof previo==="string"&&contenido===previo){cerrarEdicionAjuste();dwNotify("info","Esta cláusula ya estaba guardada.");return;}
+    // Comparar contra el mismo texto normalizado que se ofrece en el editor.
+    // Los modelos históricos con [precio en letras] no deben contar como
+    // modificados sólo porque el chip se haya actualizado visualmente.
+    var contenidoModelo=canonizarMarcadoresAjuste(String(b.contenido||""));
+    if(contenido===contenidoModelo&&typeof previo!=="string"){cerrarEdicionAjuste();dwNotify("info","No hay cambios para guardar.");return;}
+    if(typeof previo==="string"&&contenido===canonizarMarcadoresAjuste(previo)){cerrarEdicionAjuste();dwNotify("info","Esta cláusula ya estaba guardada.");return;}
     setGuardandoAjuste(true);setErrorAjuste("");
     try{
       var mapa=Object.assign({},op.ajustes_manuales||{});
       var porDocumento=Object.assign({},mapa[tab]||{});
-      if(contenido===String(b.contenido||""))delete porDocumento[b.id];
+      if(contenido===contenidoModelo)delete porDocumento[b.id];
       else porDocumento[b.id]=contenido;
       if(Object.keys(porDocumento).length)mapa[tab]=porDocumento;
       else delete mapa[tab];
@@ -5698,7 +5702,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       if(res&&res.error)throw res.error;
       if(!res||!res.operacion||String(res.operacion.id)!==String(op.id))
         throw new Error("El servidor no confirmó el guardado de la cláusula. Reintentá antes de salir.");
-      setAjusteEditando(null);setPartesAjuste([]);
+      cerrarEdicionAjuste();
       dwNotify("success","Ajuste guardado para esta operación.");
     }catch(e){setErrorAjuste(e&&e.message?e.message:"No se pudo guardar el ajuste.");}
     finally{setGuardandoAjuste(false);}
@@ -5718,7 +5722,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       if(res&&res.error)throw res.error;
       if(!res||!res.operacion||String(res.operacion.id)!==String(op.id))
         throw new Error("El servidor no confirmó la restauración de la cláusula. Reintentá antes de salir.");
-      setAjusteEditando(null);setPartesAjuste([]);
+      cerrarEdicionAjuste();
       dwNotify("success","Se restauró el texto original de esta cláusula.");
     }catch(e){setErrorAjuste(e&&e.message?e.message:"No se pudo restaurar la cláusula.");}
     finally{setGuardandoAjuste(false);}
