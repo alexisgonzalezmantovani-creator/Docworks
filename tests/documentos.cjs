@@ -184,6 +184,22 @@ delete global.document;
    assert.equal(app.conservaChipsAjuste(texto,'Moneda {{moneda_txt}} y {{precio_letras}}.'),false);
    assert.equal(app.conservaChipsAjuste('Importe [precio en letras].','Importe {{precio_letras}}.'),true);
  });
+ check('un marcador manual incompleto no se imprime ni reemplaza el modelo',()=>{
+   const plantilla={id:'reserva.precio',titulo:'PRECIO',orden:1,activo:true,contenido:'Precio {{precio_letras}}.'};
+   const original={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva',
+     plantilla_snapshot:{tipo:'reserva',body_blocks:[plantilla]}};
+   const marcadoresMalos=['Acuerdo cambiado con {{precio_letras}} y {{incompleto.',
+     'Acuerdo cambiado con {{precio_letras}} y texto }} sobrante.',
+     'Acuerdo cambiado con {{precio_letras}} y {{campo-con-guion}}.'];
+   for(const texto of marcadoresMalos){
+     assert.equal(app.conservaChipsAjuste(plantilla.contenido,texto),false,'el chip incompleto no debe aceptarse');
+     const op={...original,ajustes_manuales:{reserva:{'reserva.precio':texto}}};
+     const documento=app.buildDocSections(app.opParaDocumento(op),[],'reserva');
+     const salida=app.docToPlainText(documento);
+     assert.ok(!salida.includes('Acuerdo cambiado'),'no debe aparecer el ajuste inválido');
+     assert.deepEqual(app.getTokensSinReemplazar(documento),[]);
+   }
+ });
  check('modelo antiguo con precio entre corchetes resuelve el chip sin reescribir el snapshot',()=>{
    const bloque={id:'reserva.precio',titulo:'PRECIO',orden:1,activo:true,contenido:'El Oferente ofrece la suma de [precio en letras] para la compra del inmueble.'};
    const base={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:[bloque]}};

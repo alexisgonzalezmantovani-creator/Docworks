@@ -4726,8 +4726,13 @@ function tokensProtegidosAjuste(texto){
 function conservaChipsAjuste(original,nuevo){
   // El precio y los demás campos automáticos son inmutables: no se pueden
   // quitar, sustituir, duplicar ni reordenar mediante ajustes manuales.
+  // Una edición legada también puede traer un chip mal cerrado (por ejemplo
+  // "{{precio" o "}}"). No imprimirlo aunque los otros chips coincidan.
+  var textoNuevo=canonizarMarcadoresAjuste(nuevo);
+  var textoSinChips=textoNuevo.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g,"");
+  if(/\{\{|\}\}/.test(textoSinChips))return false;
   return JSON.stringify(tokensProtegidosAjuste(canonizarMarcadoresAjuste(original)))===
-    JSON.stringify(tokensProtegidosAjuste(canonizarMarcadoresAjuste(nuevo)));
+    JSON.stringify(tokensProtegidosAjuste(textoNuevo));
 }
 
 function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
