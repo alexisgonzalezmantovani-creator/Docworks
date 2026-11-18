@@ -24,23 +24,24 @@ function crearGuardadoPrueba(servidor,inicial={}){
 }
 function crearConfirmacionGuardadoPrueba(servidor){
  let operaciones=[{id:'restaurable',tipo:'reserva',comprador_nombre:'Versión vigente'}];
- let showForm=true,guardandoSalida=false,errorSalida='',confirmCloseForm=true,view='operaciones',navPendiente=null,viewDoc=null;
+ let showForm=true,guardandoSalida=false,guardadosNubeSalida=0,errorSalida='',confirmCloseForm=true,view='operaciones',navPendiente=null,viewDoc=null;
  const opsSupabase=servidor,perfil={rol:'dueno',plantillas:{}},clausulas=[],bloquesReserva=[];
  const draftData={...EMPTY_OP,...SAMPLE_OP_PREVIEW,tipo:'reserva',comprador_nombre:'Borrador en edición'};
  const formSnapshotRef={current:{data:draftData,editId:null}},formSaveIdRef={current:null};
- const salidaEnCursoRef={current:false},salidaRevisionRef={current:0};
+ const salidaEnCursoRef={current:false},salidaRevisionRef={current:0},guardadosNubeSalidaRef={current:0};
  const accionesContextoRef={current:{capturar:()=>()=>true}};
  const setOperaciones=f=>{operaciones=typeof f==='function'?f(operaciones):f};
  const setViewDoc=f=>{viewDoc=typeof f==='function'?f(viewDoc):f};
- const setGuardandoSalida=v=>{guardandoSalida=v},setErrorSalida=v=>{errorSalida=v};
+ const setGuardandoSalida=v=>{guardandoSalida=v},setGuardadosNubeSalida=v=>{guardadosNubeSalida=v},setErrorSalida=v=>{errorSalida=v};
  const setConfirmCloseForm=v=>{confirmCloseForm=v},setShowForm=v=>{showForm=v};
  const setEditOp=()=>{},setFormInitialOverride=()=>{},setView=v=>{view=v},setNavPendiente=v=>{navPendiente=v};
  const marcarOperacionPendiente=()=>{},desmarcarOperacionPendiente=()=>{};
  const borradorFormularioActual=()=>formSnapshotRef.current;
  ${fns.guardarBorradorYSalir}
+ ${fns.cancelarSalidaFormulario}
  ${fns.salirSinGuardarFormulario}
  ${fns.restaurarVersion}
- return {guardarBorradorYSalir,salirSinGuardarFormulario,restaurarVersion,estado:()=>({operaciones,showForm,guardandoSalida,errorSalida,confirmCloseForm,view,viewDoc,formSnapshot:formSnapshotRef.current}),
+ return {guardarBorradorYSalir,cancelarSalidaFormulario,salirSinGuardarFormulario,restaurarVersion,estado:()=>({operaciones,showForm,guardandoSalida,guardadosNubeSalida,errorSalida,confirmCloseForm,view,viewDoc,formSnapshot:formSnapshotRef.current}),
    cambiarBorrador:(cambios)=>{
     const actual=formSnapshotRef.current;
     const nuevo={...actual,data:{...actual.data,...cambios}};
@@ -151,6 +152,25 @@ await check('no se puede descartar el borrador mientras Supabase confirma el gua
  assert.equal(h.estado().showForm,false,'el guardado exitoso permite salir');
  assert.equal(h.estado().operaciones.length,2,'la operación confirmada aparece una sola vez');
  assert.equal(a.lsGet('draftOperacion',null),null,'el borrador se limpia después de confirmar');
+});
+await check('seguir editando durante guardado no permite descartar una petición activa',async()=>{
+ let confirmar,intentos=0;const pendiente=new Promise(r=>{confirmar=r});
+ const h=a.crearConfirmacionGuardadoPrueba({guardar:async op=>{intentos++;await pendiente;return {operacion:op};}});
+ const guardando=h.guardarBorradorYSalir();
+ const local=a.lsGet('draftOperacion',null);
+ h.cancelarSalidaFormulario();
+ assert.equal(h.estado().confirmCloseForm,false,'se puede continuar editando');
+ assert.equal(h.estado().guardadosNubeSalida,1,'la petición continúa activa');
+ h.salirSinGuardarFormulario();
+ assert.equal(h.estado().showForm,true,'no se puede descartar aunque se haya cancelado el diálogo');
+ assert.deepEqual(a.lsGet('draftOperacion',null),local,'la copia local se mantiene intacta');
+ assert.match(h.estado().errorSalida,/confirmando un guardado/);
+ await h.guardarBorradorYSalir();
+ assert.equal(intentos,1,'no dispara dos guardados concurrentes');
+ confirmar();await guardando;
+ assert.equal(h.estado().showForm,true,'no cierra un formulario que el usuario retomó');
+ assert.equal(h.estado().guardadosNubeSalida,0,'se libera el bloqueo tras recibir respuesta');
+ assert.equal(h.estado().operaciones.length,2,'se registra una única operación confirmada');
 });
 await check('guardar borrador: confirmación válida permite salir sin duplicar',async()=>{
  const h=a.crearConfirmacionGuardadoPrueba({guardar:async op=>({operacion:op})});

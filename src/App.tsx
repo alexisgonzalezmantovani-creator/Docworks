@@ -9022,6 +9022,9 @@ function DocWorksApp(){
   useEffect(function(){if(!showForm){formSaveIdRef.current=null;}},[showForm]);
   const salidaEnCursoRef=useRef(false);
   const salidaRevisionRef=useRef(0);
+  // Seguir editando cancela el cierre, no la petición ya enviada a Supabase.
+  const guardadosNubeSalidaRef=useRef(0);
+  const [guardadosNubeSalida,setGuardadosNubeSalida]=useState(0);
   const [guardandoSalida,setGuardandoSalida]=useState(false);
   const [errorSalida,setErrorSalida]=useState("");
   function borradorFormularioActual(){var d=formSnapshotRef.current||lsGet("draftOperacion",null);return d?Object.assign({},d,{editId:d.editId||formSaveIdRef.current||null}):null;}
@@ -9046,7 +9049,7 @@ function DocWorksApp(){
     dwNotify("info","No se guardó ninguna operación: el formulario estaba vacío.");
   }
   async function guardarBorradorYSalir(){
-    if(salidaEnCursoRef.current)return;
+    if(salidaEnCursoRef.current||guardadosNubeSalidaRef.current>0)return;
     salidaEnCursoRef.current=true;setGuardandoSalida(true);setErrorSalida("");
     var revision=++salidaRevisionRef.current,vigente=accionesContextoRef.current.capturar();
     var draft=borradorFormularioActual();
@@ -9069,8 +9072,15 @@ function DocWorksApp(){
       if(formSnapshotRef.current)formSnapshotRef.current=draft;
       lsSet("draftOperacion",Object.assign({},draft,{ts:Date.now()}));
       marcarOperacionPendiente(op.id);
+      guardadosNubeSalidaRef.current++;
+      setGuardadosNubeSalida(guardadosNubeSalidaRef.current);
       var saveDraftRes;
-      try { saveDraftRes=await opsSupabase.guardar(op); } catch(e) { saveDraftRes={error:e}; }
+      try { saveDraftRes=await opsSupabase.guardar(op); }
+      catch(e) { saveDraftRes={error:e}; }
+      finally {
+        guardadosNubeSalidaRef.current=Math.max(0,guardadosNubeSalidaRef.current-1);
+        setGuardadosNubeSalida(guardadosNubeSalidaRef.current);
+      }
       desmarcarOperacionPendiente(op.id);
       if(!vigente())return;
       // Nunca cerrar el formulario ante una respuesta vacía o de otra operación:
@@ -9114,7 +9124,10 @@ function DocWorksApp(){
   function salirSinGuardarFormulario(){
     // Una petición enviada a Supabase no puede deshacerse cerrando la ventana.
     // No descartar la copia local mientras todavía no conocemos el resultado.
-    if(salidaEnCursoRef.current)return;
+    if(salidaEnCursoRef.current||guardadosNubeSalidaRef.current>0){
+      setErrorSalida("Todavía se está confirmando un guardado en la nube. Esperá antes de descartar los cambios.");
+      return;
+    }
     salidaRevisionRef.current++;salidaEnCursoRef.current=false;setGuardandoSalida(false);setErrorSalida("");lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("info","Se descartaron los cambios sin guardar. No se creó ningún elemento en Papelera.");setView(navPendiente||"dashboard");setNavPendiente(null);
   }
 
@@ -10312,7 +10325,7 @@ function DocWorksApp(){
         />:null}>
         {viewDoc&&<DocumentViewer key={String(viewDoc.id||"")+"-"+String(viewDoc.tipo||"")} salidaGuardRef={salidaVisorRef} op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?toggleTarea:undefined} onUpdateOperation={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?onUpdateOperationGlobal:undefined} onActionWorkflow={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}:undefined} onCompleteData={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(op,campo){cerrarVisorSeguro(function(){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);});}:undefined} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
       </Modal>
-      <ConfirmModal open={confirmCloseForm} actionsClassName="dw-operation-exit-actions" title="Salir de la operación" message={guardandoSalida?"Guardando el borrador…":"¿Querés guardar el borrador antes de salir?"} confirmLabel={guardandoSalida?"Guardando…":"Guardar borrador"} confirmDisabled={guardandoSalida} cancelLabel="Seguir editando" onCancel={cancelarSalidaFormulario} secondaryLabel="Salir sin guardar" secondaryDisabled={guardandoSalida} onSecondary={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}>
+      <ConfirmModal open={confirmCloseForm} actionsClassName="dw-operation-exit-actions" title="Salir de la operación" message={guardandoSalida||guardadosNubeSalida>0?"Guardando el borrador…":"¿Querés guardar el borrador antes de salir?"} confirmLabel={guardandoSalida||guardadosNubeSalida>0?"Guardando…":"Guardar borrador"} confirmDisabled={guardandoSalida||guardadosNubeSalida>0} cancelLabel="Seguir editando" onCancel={cancelarSalidaFormulario} secondaryLabel="Salir sin guardar" secondaryDisabled={guardandoSalida||guardadosNubeSalida>0} onSecondary={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}>
         {errorSalida&&<p role="alert" style={{fontSize:13,color:"var(--red)",lineHeight:1.5}}>{errorSalida}</p>}
       </ConfirmModal>
       <ConfirmModal
