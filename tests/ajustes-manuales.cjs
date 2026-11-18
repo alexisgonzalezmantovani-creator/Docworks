@@ -22,7 +22,7 @@ export {act,createElement,createRoot,AjustesHarness};export const estadoAjustes=
 const a=require(tmp+'/app.cjs');let root,checks=0;
 const botones=()=>[...document.querySelectorAll('button')],boton=t=>{const el=botones().find(b=>b.textContent.trim()===t);assert.ok(el,'botón '+t);return el};
 async function click(el){await a.act(async()=>el.click())}
-async function iniciar(){if(root)await a.act(async()=>root.unmount());root=a.createRoot(document.getElementById('root'));await a.act(async()=>{root.render(a.createElement(a.AjustesHarness));await new Promise(r=>setTimeout(r,30))});document.querySelector('[data-testid="dw-ajustes-manuales"]').open=true;await click(document.querySelector('[data-testid="dw-ajustes-manuales"] button'));}
+async function iniciar(abrirEditor=true){if(root)await a.act(async()=>root.unmount());root=a.createRoot(document.getElementById('root'));await a.act(async()=>{root.render(a.createElement(a.AjustesHarness));await new Promise(r=>setTimeout(r,30))});if(abrirEditor){document.querySelector('[data-testid="dw-ajustes-manuales"]').open=true;await click(document.querySelector('[data-testid="dw-ajustes-manuales"] button'));}}
 async function escribir(valor){const el=document.querySelector('textarea');assert.ok(el);await a.act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,valor);el.dispatchEvent(new Event('input',{bubbles:true}))});}
 async function check(label,fn){await fn();checks++;console.log('OK',label)}
 (async()=>{
@@ -35,5 +35,19 @@ async function check(label,fn){await fn();checks++;console.log('OK',label)}
  await check('ajuste guardado actualiza la vista previa y permite cerrar sin aviso',async()=>{assert.ok(document.querySelector('.pdf-text').textContent.includes('Texto manual que debe conservarse.'));const antes=preguntas;await click(boton('Cerrar visor QA'));assert.equal(preguntas,antes);assert.equal(document.querySelector('.doc-viewer-shell'),null);});
  a.modoAjustes('ok');await iniciar();await escribir('Otro ajuste sin guardar.');
  await check('confirmar descarte abre formulario sin guardar el borrador',async()=>{confirmar=true;const antes=a.estadoAjustes().llamadas;await click(boton('Editar operación QA'));assert.equal(document.querySelector('#destino').textContent,'formulario');assert.equal(document.querySelector('.doc-viewer-shell'),null);assert.equal(a.estadoAjustes().llamadas,antes);});
+ await iniciar(false);
+ await check('edición de cláusula desde la propia hoja mantiene los chips protegidos',async()=>{
+  const opciones=[...document.querySelectorAll('[data-testid="dw-editar-desde-preview"]')];
+  assert.ok(opciones.length>=2,'La vista previa debe ofrecer edición para cláusulas del modelo');
+  await click(opciones[1]);
+  const panel=document.querySelector('[data-testid="dw-editor-inline"]');
+  assert.ok(panel,'La edición debe aparecer directamente en la vista previa');
+  assert.ok(panel.querySelector('[data-testid="dw-ajuste-chip"]'),'El chip automático debe seguir protegido');
+  assert.equal(document.querySelector('[data-testid="dw-ajustes-manuales"]').open,false,'No se debe abrir el panel superior');
+  await escribir('El precio ajustado es ');
+  await click(boton('Guardar ajuste'));
+  assert.equal(document.querySelector('[data-testid="dw-editor-inline"]'),null,'El editor debe cerrarse tras guardar');
+  assert.ok(document.querySelector('.pdf-text').textContent.includes('El precio ajustado es'),'La vista previa debe actualizarse después de guardar');
+ });
  await a.act(async()=>root.unmount());dom.window.close();console.log('APROBADAS',checks,'pruebas del visor y ajustes manuales con servicios simulados.');
 })().catch(async e=>{console.error(e);process.exitCode=1;if(root)await a.act(async()=>root.unmount());dom.window.close()});
