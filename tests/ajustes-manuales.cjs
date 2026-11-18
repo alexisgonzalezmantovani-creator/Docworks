@@ -12,12 +12,12 @@ require('esbuild').buildSync({stdin:{contents:source+`
 import {act,createElement} from 'react';import {createRoot} from 'react-dom/client';
 let ultimoGuardado=null,llamadas=0,modo='ok',resolverGuardado=null;
 function AjustesHarness(){
- const [viewDoc,setViewDoc]=useState({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'qa-ajustes',tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:[{id:'reserva.qa',titulo:'Texto de prueba',contenido:'Texto original de prueba.',activo:true,orden:1},{id:'reserva.precio',titulo:'Precio',contenido:'La suma de {{precio_letras}}.',activo:true,orden:2},{id:'reserva.legado',titulo:'Precio histórico',contenido:'El monto será [precio en letras].',activo:true,orden:3}]}}),[tab,setTab]=useState('reserva'),[destino,setDestino]=useState('visor');
+ const [autoAction,setAutoAction]=useState(null),[viewDoc,setViewDoc]=useState({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'qa-ajustes',tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:[{id:'reserva.qa',titulo:'Texto de prueba',contenido:'Texto original de prueba.',activo:true,orden:1},{id:'reserva.precio',titulo:'Precio',contenido:'La suma de {{precio_letras}}.',activo:true,orden:2},{id:'reserva.legado',titulo:'Precio histórico',contenido:'El monto será [precio en letras].',activo:true,orden:3}]}}),[tab,setTab]=useState('reserva'),[destino,setDestino]=useState('visor');
  const salidaVisorRef=useRef(null),setDocAutoAction=()=>{};
  ${cierre}
- return <><button onClick={()=>cerrarVisorSeguro()}>Cerrar visor QA</button><button onClick={()=>cerrarVisorSeguro(()=>setDestino('formulario'))}>Editar operación QA</button><output id="destino">{destino}</output>{viewDoc&&<DocumentViewer op={viewDoc} perfil={{nombre:'Inmobiliaria de prueba',plantillas:{}}} clausulas={[]} operaciones={[viewDoc]} bloquesReserva={[]} tab={tab} onChangeTab={setTab} salidaGuardRef={salidaVisorRef} onUpdateOperation={async next=>{llamadas++;if(modo==='error')return {error:{message:'Error de guardado de prueba'}};if(modo==='sin_respuesta')return null;if(modo==='vacia')return {};if(modo==='demora')await new Promise(r=>resolverGuardado=r);ultimoGuardado=next;setViewDoc(next);return {operacion:next};}}/>}</>;
+ return <><button onClick={()=>cerrarVisorSeguro()}>Cerrar visor QA</button><button onClick={()=>cerrarVisorSeguro(()=>setDestino('formulario'))}>Editar operación QA</button><button onClick={()=>setAutoAction('pdf')}>Exportar PDF QA</button><output id="destino">{destino}</output>{viewDoc&&<DocumentViewer op={viewDoc} perfil={{nombre:'Inmobiliaria de prueba',plantillas:{}}} clausulas={[]} operaciones={[viewDoc]} bloquesReserva={[]} tab={tab} onChangeTab={setTab} salidaGuardRef={salidaVisorRef} autoAction={autoAction} onAutoActionDone={()=>setAutoAction(null)} onUpdateOperation={async next=>{llamadas++;if(modo==='error')return {error:{message:'Error de guardado de prueba'}};if(modo==='sin_respuesta')return null;if(modo==='vacia')return {};if(modo==='demora')await new Promise(r=>resolverGuardado=r);ultimoGuardado=next;setViewDoc(next);return {operacion:next};}}/>}</>;
 }
-export {act,createElement,createRoot,AjustesHarness};export const estadoAjustes=()=>({ultimoGuardado,llamadas});export const modoAjustes=m=>modo=m;export const resolverAjustes=()=>resolverGuardado();
+export {act,createElement,createRoot,AjustesHarness,generarPDF,generarDOCX,buildDocSections,opParaDocumento};export const estadoAjustes=()=>({ultimoGuardado,llamadas});export const modoAjustes=m=>modo=m;export const resolverAjustes=()=>resolverGuardado();
 `,resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
 const a=require(tmp+'/app.cjs');let root,checks=0;
 const botones=()=>[...document.querySelectorAll('button')],boton=t=>{const el=botones().find(b=>b.textContent.trim()===t);assert.ok(el,'botón '+t);return el};
@@ -27,6 +27,13 @@ async function escribir(valor){const el=document.querySelector('textarea');asser
 async function check(label,fn){await fn();checks++;console.log('OK',label)}
 (async()=>{
  await iniciar();await escribir('Texto manual que debe conservarse.');
+ await check('no abre confirmación de exportación con cambios de cláusula sin guardar',async()=>{
+  await click(boton('Exportar PDF QA'));
+  await a.act(async()=>new Promise(r=>setTimeout(r,360)));
+  assert.match(document.querySelector('.doc-viewer-tab-content')?.textContent||'',/Guardá o descartá los ajustes manuales/);
+  assert.equal(document.body.textContent.includes('Generar documento final'),false);
+  assert.equal(document.querySelector('textarea')?.value,'Texto manual que debe conservarse.','no perdió el borrador');
+ });
  await check('cancelar cierre conserva el texto manual sin guardar',async()=>{const antes=preguntas;await click(boton('Cerrar visor QA'));assert.equal(preguntas,antes+1);assert.equal(document.querySelector('textarea')?.value,'Texto manual que debe conservarse.');});
  await check('cancelar paso al formulario conserva visor y borrador',async()=>{await click(boton('Editar operación QA'));assert.equal(document.querySelector('#destino').textContent,'visor');assert.ok(document.querySelector('textarea'));});
  await check('cancelar cambio de pestaña conserva el borrador',async()=>{await click(botones().find(b=>b.textContent.includes('Ficha completa')));assert.ok(document.querySelector('textarea'));});
@@ -34,6 +41,25 @@ async function check(label,fn){await fn();checks++;console.log('OK',label)}
  await check('respuesta nula no cierra el editor ni informa éxito',async()=>{a.modoAjustes('sin_respuesta');await click(boton('Guardar ajuste'));assert.match(document.querySelector('[role="alert"]').textContent,/no confirmó/);assert.equal(document.querySelector('textarea').value,'Texto manual que debe conservarse.');});
  await check('respuesta vacía conserva los cambios para reintentar',async()=>{a.modoAjustes('vacia');await click(boton('Guardar ajuste'));assert.match(document.querySelector('[role="alert"]').textContent,/no confirmó/);assert.equal(document.querySelector('textarea').value,'Texto manual que debe conservarse.');});
  await check('no permite salir mientras se confirma el guardado',async()=>{a.modoAjustes('demora');await click(boton('Guardar ajuste'));await click(boton('Cerrar visor QA'));assert.ok(document.querySelector('textarea'));assert.equal(document.querySelector('textarea').disabled,true);await a.act(async()=>{a.resolverAjustes();await new Promise(r=>setTimeout(r,30))});assert.equal(document.querySelector('textarea'),null);assert.ok(Object.values(a.estadoAjustes().ultimoGuardado.ajustes_manuales.reserva).includes('Texto manual que debe conservarse.'));});
+ await check('archivo PDF y Word contienen el ajuste confirmado y no el texto anterior',async()=>{
+  const op=a.estadoAjustes().ultimoGuardado;
+  assert.ok(op?.ajustes_manuales?.reserva?.['reserva.qa'],'debe existir el ajuste confirmado');
+  const doc=a.buildDocSections(a.opParaDocumento(op),[],'reserva');
+  const pdf=await a.generarPDF(doc,null,{}),word=await a.generarDOCX(doc,{});
+  const raw=Buffer.from(await pdf.blob.arrayBuffer()).toString('latin1');
+  const zip=Buffer.from(await word.blob.arrayBuffer());
+  let xml='';
+  for(let p=0;p+30<zip.length&&zip.readUInt32LE(p)===0x04034b50;){
+    const metodo=zip.readUInt16LE(p+8),len=zip.readUInt32LE(p+18),nombre=zip.readUInt16LE(p+26),extra=zip.readUInt16LE(p+28),start=p+30+nombre+extra;
+    let contenido=zip.subarray(start,start+len);
+    if(metodo===8)contenido=require('node:zlib').inflateRawSync(contenido);
+    xml+=contenido.toString('utf8');p=start+len;
+  }
+  assert.ok(raw.includes('Texto manual que debe conservarse.'),'el PDF debe tener el último ajuste');
+  assert.ok(xml.includes('Texto manual que debe conservarse.'),'el Word debe tener el último ajuste');
+  assert.ok(!raw.includes('Texto original de prueba.'),'el PDF no debe incluir la versión anterior');
+  assert.ok(!xml.includes('Texto original de prueba.'),'el Word no debe incluir la versión anterior');
+ });
  await check('ajuste guardado actualiza la vista previa y permite cerrar sin aviso',async()=>{assert.ok(document.querySelector('.pdf-text').textContent.includes('Texto manual que debe conservarse.'));const antes=preguntas;await click(boton('Cerrar visor QA'));assert.equal(preguntas,antes);assert.equal(document.querySelector('.doc-viewer-shell'),null);});
  a.modoAjustes('ok');await iniciar();await escribir('Otro ajuste sin guardar.');
  await check('confirmar descarte abre formulario sin guardar el borrador',async()=>{confirmar=true;const antes=a.estadoAjustes().llamadas;await click(boton('Editar operación QA'));assert.equal(document.querySelector('#destino').textContent,'formulario');assert.equal(document.querySelector('.doc-viewer-shell'),null);assert.equal(a.estadoAjustes().llamadas,antes);});

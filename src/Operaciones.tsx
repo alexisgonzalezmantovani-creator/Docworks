@@ -5846,7 +5846,14 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     try{Promise.resolve(onAuditExport(entrada)).catch(function(err){console.warn("DocWorks: falló el registro de auditoría de exportación",err);});}catch(_e){console.warn("DocWorks: no se pudo iniciar la auditoría de exportación",_e);}
   }
   function formatoDeFuncion(fn){if(fn===handleDOCX)return "Word";if(fn===handleShareWhatsApp)return "WhatsApp";if(fn===handlePDF)return "PDF";return "TXT";}
-  function conValidacion(fn){var doc=getDoc(),validacion=validarDocumentoParaExport(op,doc,perfil);
+  function conValidacion(fn){
+    // Mostrar la advertencia antes de abrir diálogos de confirmación:
+    // los ajustes en edición todavía no forman parte del PDF ni del Word.
+    if(guardandoAjuste||hayCambiosAjuste()){
+      setErr(guardandoAjuste?"La cláusula todavía se está guardando. Intentá de nuevo cuando termine.":"Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");
+      return;
+    }
+    var doc=getDoc(),validacion=validarDocumentoParaExport(op,doc,perfil);
     if(validacion.puedeExportar===false){
       setErr("La cesión de boleto requiere un contrato propio específico. No se puede exportar como cesión el documento estándar.");
       return;
