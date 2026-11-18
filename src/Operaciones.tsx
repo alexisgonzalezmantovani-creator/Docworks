@@ -2314,10 +2314,12 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     overflow-x:hidden!important;
   }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
-    flex:1 0 auto!important;
+    flex:0 0 auto!important;
+    height:min(59vh,650px)!important; /* fallback para WebKit sin dvh */
     height:min(59dvh,650px)!important;
-    min-height:min(59dvh,650px)!important;
-    max-height:none!important;
+    min-height:0!important;
+    max-height:min(59vh,650px)!important;
+    max-height:min(59dvh,650px)!important;
     margin:4px 0 8px!important;
     padding:0!important;
     overflow:hidden!important;
