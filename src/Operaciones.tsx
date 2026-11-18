@@ -5645,6 +5645,21 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     ajusteOriginalRef.current=contenido;
     setAjusteEditando(b.id);setErrorAjuste("");
   }
+  function renderAjusteEditor(b,vigente){
+    return <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
+      <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"stretch",minWidth:0}} data-testid="dw-ajuste-editor-flujo">
+        {partesAjuste.map(function(p,i){return p.chip
+          ?<span key={i} data-testid="dw-ajuste-chip" data-token={p.chip.replace(/[{}]/g,"").trim()} title="Campo automático protegido: se completa con los datos de esta operación" style={{display:"inline-flex",alignSelf:"flex-start",alignItems:"center",gap:5,borderRadius:999,padding:"7px 10px",fontSize:11.5,fontWeight:750,background:"rgba(56,189,248,.16)",color:"#0284c7",border:"1px solid rgba(56,189,248,.55)",maxWidth:"100%",overflowWrap:"anywhere"}}><span aria-hidden="true">🔒</span>{tokenLabelDocWorks(p.chip.replace(/[{}]/g,"").trim())}</span>
+          :<textarea key={i} className="inp" aria-label={"Editar "+(b.titulo||"cláusula")+" · fragmento "+(i+1)} rows={2} ref={function(el){if(el){el.style.height="auto";el.style.height=Math.max(72,el.scrollHeight+2)+"px";}}} style={{display:"block",width:"100%",minWidth:0,maxWidth:"100%",overflowY:"hidden",resize:"none",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;e.target.style.height="auto";e.target.style.height=Math.max(72,e.target.scrollHeight+2)+"px";setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/>;})}
+      </div>
+      {errorAjuste&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorAjuste}</div>}
+      <div style={{display:"flex",gap:7,justifyContent:"flex-end",flexWrap:"wrap"}}>
+        {vigente&&<button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){restaurarAjuste(b);}}>Restaurar original</button>}
+        <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(permitirDescartarAjuste())cerrarEdicionAjuste();}}>Cancelar</button>
+        <button type="button" className="btn btn-primary btn-sm" disabled={guardandoAjuste} onClick={function(){guardarAjuste(b);}}>{guardandoAjuste?"Guardando…":"Guardar ajuste"}</button>
+      </div>
+    </div>;
+  }
   async function guardarAjuste(b){
     if(!onUpdateOperation||guardandoAjuste)return;
     var contenido=partesAjuste.map(function(p){return p.chip||p.texto||"";}).join("");
