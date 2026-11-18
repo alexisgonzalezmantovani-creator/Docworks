@@ -440,5 +440,29 @@ delete global.document;
   for(let at=0;at+30<wordBytes.length&&wordBytes.readUInt32LE(at)===0x04034b50;){const method=wordBytes.readUInt16LE(at+8),size=wordBytes.readUInt32LE(at+18),len=wordBytes.readUInt16LE(at+26),extra=wordBytes.readUInt16LE(at+28),start=at+30+len+extra;let data=wordBytes.subarray(start,start+size);if(method===8)data=require('node:zlib').inflateRawSync(data);xml+=data.toString('utf8');at=start+size;}
   check(nombre+' coincide en PDF y Word',()=>{assert.equal((pdfTexto.match(/CallePrueba 123/g)||[]).length,esperado);assert.equal((xml.match(/CallePrueba 123/g)||[]).length,esperado);});
  }
+
+ // Regresión: ninguna reserva extensa debe terminar con una página dedicada
+ // únicamente a las firmas. Los datos son ficticios y no usan Supabase.
+ const pdfExtensoDoc={
+  tipoDocumento:'reserva',titulo:'RESERVA DE COMPRA',ciudad:'Pilar',fecha:'18/11/2026',
+  secciones:Array.from({length:45},(_,i)=>({titulo:(i+1)+'. CONDICIONES DEL ACUERDO',items:[
+   i===44?'CIERREUNICO: Las partes ratifican las condiciones de la reserva y se obligan a firmar lo acordado.':
+   'Las partes acuerdan libremente los plazos, importes y obligaciones de esta operación inmobiliaria. '.repeat(5)
+  ]})),
+  clausulas:[],partes:[],conformidad:null,firmas:[
+   {nombre:'Vendedor de Prueba',rol:'VENDEDOR',dni:'00000000'},
+   {nombre:'Co titular de Prueba',rol:'VENDEDOR',dni:'00000001'},
+   {nombre:'Comprador de Prueba',rol:'COMPRADOR',dni:'00000002'}
+  ]
+ };
+ const pdfExtenso=await app.generarPDF(pdfExtensoDoc,null,{nombre:'Inmobiliaria de Prueba'});
+ const paginas=(Buffer.from(await pdfExtenso.blob.arrayBuffer()).toString('latin1').match(/stream\n([\s\S]*?)\nendstream/g)||[]);
+ const ultimaPagina=paginas[ paginas.length-1 ]||'';
+ check('PDF extenso genera más de una página sin firmas huérfanas',()=>{
+  assert.ok(paginas.length>=2,'El caso debe atravesar varias páginas.');
+  assert.ok(ultimaPagina.includes('CIERREUNICO'),'La última página debe conservar el cierre contractual junto a las firmas.');
+  assert.ok(ultimaPagina.includes('Comprador de Prueba'),'La última página debe incluir la firma del comprador.');
+  assert.ok(!ultimaPagina.includes('NaN')&&!ultimaPagina.includes('undefined'),'Las medidas de paginación deben ser números finitos.');
+ });
  console.log('APROBADAS',count,'verificaciones. Exportaciones:',tmp);
 })().catch(e=>{console.error(e);process.exitCode=1;});
