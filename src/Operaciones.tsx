@@ -5582,6 +5582,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
 
   // Editor opcional de ajustes finales. Cada chip es una pieza de solo lectura.
   const [ajusteEditando,setAjusteEditando]=useState(null);
+  const [editorEnVistaPrevia,setEditorEnVistaPrevia]=useState(false);
   const [partesAjuste,setPartesAjuste]=useState([]);
   const [guardandoAjuste,setGuardandoAjuste]=useState(false);
   const [errorAjuste,setErrorAjuste]=useState("");
@@ -5596,21 +5597,20 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     var visibles=new Set((doc.secciones||[]).map(function(sec){return sec&&sec._bloqueId;}).filter(Boolean));
     return lista.filter(function(b){return b&&b.id&&visibles.has(b.id)&&b.activo!==false&&String(b.contenido||"").trim();});
   }
-  const ajustesDetailsRef=useRef(null);
   function editarDesdeVistaPrevia(bloqueId){
     var bloque=bloquesParaAjustes().find(function(b){return b.id===bloqueId;});
-    if(!bloque || !permitirDescartarAjuste())return;
+    if(!bloque)return;
+    if(ajusteEditando===bloqueId && editorEnVistaPrevia){
+      if(permitirDescartarAjuste())cerrarEdicionAjuste();
+      return;
+    }
+    if(!permitirDescartarAjuste())return;
     abrirAjuste(bloque);
-    if(ajustesDetailsRef.current)ajustesDetailsRef.current.open=true;
-    setTimeout(function(){
-      var raiz=ajustesDetailsRef.current;
-      if(!raiz)return;
-      var destino=Array.from(raiz.querySelectorAll("[data-ajuste-id]")).find(function(el){return el.getAttribute("data-ajuste-id")===bloqueId;});
-      if(destino){destino.scrollIntoView({block:"nearest",behavior:"smooth"});var campo=destino.querySelector("textarea");if(campo)campo.focus({preventScroll:true});}
-    },0);
+    setEditorEnVistaPrevia(true);
   }
   function cerrarEdicionAjuste(){
     setAjusteEditando(null);setPartesAjuste([]);setErrorAjuste("");
+    setEditorEnVistaPrevia(false);
   }
   const ajusteOriginalRef=useRef("");
   function hayCambiosAjuste(){
@@ -5989,7 +5989,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
         {onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
-          <details ref={ajustesDetailsRef} className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
+          <details className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
               ✎ Ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
             </summary>
@@ -6003,22 +6003,10 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                   <span style={{fontSize:13,fontWeight:650,color:"var(--text)"}}>{b.titulo||"Cláusula"}</span>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     {vigente&&<span style={{fontSize:10,color:"var(--green)"}}>Ajuste guardado</span>}
-                    <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(ajusteEditando===b.id){if(permitirDescartarAjuste())cerrarEdicionAjuste();}else if(permitirDescartarAjuste())abrirAjuste(b);}}>{ajusteEditando===b.id?"Cerrar":"Editar"}</button>
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(ajusteEditando===b.id){if(permitirDescartarAjuste())cerrarEdicionAjuste();}else if(permitirDescartarAjuste()){setEditorEnVistaPrevia(false);abrirAjuste(b);}}}>{ajusteEditando===b.id?"Cerrar":"Editar"}</button>
                   </div>
                 </div>
-                {ajusteEditando===b.id&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
-                  <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"stretch",minWidth:0}} data-testid="dw-ajuste-editor-flujo">
-                    {partesAjuste.map(function(p,i){return p.chip
-                      ?<span key={i} data-testid="dw-ajuste-chip" data-token={p.chip.replace(/[{}]/g,"").trim()} title="Campo automático protegido: se completa con los datos de esta operación" style={{display:"inline-flex",alignSelf:"flex-start",alignItems:"center",gap:5,borderRadius:999,padding:"7px 10px",fontSize:11.5,fontWeight:750,background:"rgba(56,189,248,.16)",color:"#0284c7",border:"1px solid rgba(56,189,248,.55)",maxWidth:"100%",overflowWrap:"anywhere"}}><span aria-hidden="true">🔒</span>{tokenLabelDocWorks(p.chip.replace(/[{}]/g,"").trim())}</span>
-                      :<textarea key={i} className="inp" aria-label={"Editar "+(b.titulo||"cláusula")+" · fragmento "+(i+1)} rows={2} ref={function(el){if(el){el.style.height="auto";el.style.height=Math.max(72,el.scrollHeight+2)+"px";}}} style={{display:"block",width:"100%",minWidth:0,maxWidth:"100%",overflowY:"hidden",resize:"none",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;e.target.style.height="auto";e.target.style.height=Math.max(72,e.target.scrollHeight+2)+"px";setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/>;})}
-                  </div>
-                  {errorAjuste&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorAjuste}</div>}
-                  <div style={{display:"flex",gap:7,justifyContent:"flex-end",flexWrap:"wrap"}}>
-                    {vigente&&<button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){restaurarAjuste(b);}}>Restaurar original</button>}
-                    <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(permitirDescartarAjuste())cerrarEdicionAjuste();}}>Cancelar</button>
-                    <button type="button" className="btn btn-primary btn-sm" disabled={guardandoAjuste} onClick={function(){guardarAjuste(b);}}>{guardandoAjuste?"Guardando…":"Guardar ajuste"}</button>
-                  </div>
-                </div>}
+                {ajusteEditando===b.id&&!editorEnVistaPrevia&&renderAjusteEditor(b,vigente)}
               </div>;
             })}
           </details>}
@@ -6047,7 +6035,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                     return (
                       <div key={i} style={{textAlign:"justify",marginBottom:15,color:"#1f2937",lineHeight:1.62}}>
                         <strong style={{color:(perfil&&perfil.plantillaEstilo==="clasico")?"#1a1a1a":((perfil&&perfil.colorPrimario)||"#142a4d")}}>{bl.prefix}</strong>
-                        {bl.bloqueId&&onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().some(function(b){return b.id===bl.bloqueId;})&&<button type="button" data-testid="dw-editar-desde-preview" aria-label={"Editar cláusula "+bl.prefix} title="Editar esta cláusula en Ajustes manuales" onClick={function(){editarDesdeVistaPrevia(bl.bloqueId);}} style={{margin:"0 6px",border:"1px solid #bcd7e8",borderRadius:5,padding:"2px 7px",background:"#eef7fd",color:"#17618d",fontSize:11,fontWeight:700,cursor:"pointer"}}>✎ Editar</button>}
+                        {bl.bloqueId&&onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().some(function(b){return b.id===bl.bloqueId;})&&<button type="button" data-testid="dw-editar-desde-preview" aria-label={"Editar cláusula "+bl.prefix} title="Editar esta cláusula aquí mismo" onClick={function(){editarDesdeVistaPrevia(bl.bloqueId);}} style={{margin:"0 6px",border:"1px solid #bcd7e8",borderRadius:5,padding:"2px 7px",background:"#eef7fd",color:"#17618d",fontSize:11,fontWeight:700,cursor:"pointer"}}>{editorEnVistaPrevia&&ajusteEditando===bl.bloqueId?"Cerrar edición":"✎ Editar"}</button>}
                         {bl.infoSena&&<details style={{display:"inline-block",position:"relative",margin:"0 5px",verticalAlign:"middle",textAlign:"left"}}>
                           <summary aria-label="Información sobre seña y arrepentimiento" title="Información sobre el artículo 1059: tocar para leer" style={{display:"inline-block",listStyle:"none",cursor:"pointer",color:"#34659a",fontSize:14,fontWeight:700}}>ⓘ</summary>
                           <span role="note" style={{display:"block",position:"relative",padding:"8px 10px",margin:"5px 0",borderRadius:7,border:"1px solid #d6e2ef",background:"#f5f9ff",color:"#334155",fontSize:11.5,lineHeight:1.5,maxWidth:360}}>
@@ -6055,6 +6043,13 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                           </span>
                         </details>}
                         <span>{resaltarFaltantes(normalizarTextoDocumento(bl.t),function(indice){var campo=campoDesdeTextoFaltante(bl.t,op,indice);if(onCompleteData)onCompleteData(op,campo);})}</span>
+                        {bl.bloqueId&&editorEnVistaPrevia&&ajusteEditando===bl.bloqueId&&bloquesParaAjustes().filter(function(b){return b.id===bl.bloqueId;}).map(function(b){
+                          var vigente=!!(op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.prototype.hasOwnProperty.call(op.ajustes_manuales[tab],b.id));
+                          return <div key={b.id} data-testid="dw-editor-inline" style={{padding:12,margin:"12px 0",border:"1px solid #bcd7e8",borderRadius:10,background:"#f7fafc",color:"#1f2937",textAlign:"left"}}>
+                            <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>Editar — {b.titulo||"Cláusula"}</div>
+                            {renderAjusteEditor(b,vigente)}
+                          </div>;
+                        })}
                       </div>
                     );
                   }
