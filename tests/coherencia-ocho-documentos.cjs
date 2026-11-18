@@ -99,6 +99,7 @@ const escenariosInmobiliarias=[
  {id:'propia',nombre:'Agencia Contrato Propio QA',modo:'propio'}
 ];
 const marcasPorInmobiliaria=new Map();
+const documentosMultiInmobiliaria=[];
 for(const escenario of escenariosInmobiliarias){
  for(const tipo of tipos){
   const marca='MARCA'+escenario.id.toUpperCase()+'TIPO'+tipo.replace(/_/g,'').toUpperCase();
@@ -127,6 +128,7 @@ for(const escenario of escenariosInmobiliarias){
     tipos:[tipo],obligatoria:true,activo:true}];
   const doc=a.buildDocSections(a.opParaDocumento(operacion),bibliotecaPosterior,tipo);
   const texto=a.docToPlainText(doc);
+  documentosMultiInmobiliaria.push({escenario,tipo,marca,doc});
   check(escenario.id+' / '+tipo+': respeta texto, chips, aislamiento y snapshot',()=>{
    assert.ok(texto.includes(marca), 'no aparece la cláusula personalizada '+marca);
    assert.ok(texto.includes(base.inmueble_direccion), 'no se sustituyó dirección');
@@ -232,6 +234,27 @@ function contenidoZip(buf,nombre){
     }
     assert.ok(xml.includes('Matrícula CMCPSI 6136'));
   });
+  // Comprobar las exportaciones de TODOS los modelos con tres agencias distintas.
+  // Se leen los bytes reales, no únicamente el objeto intermedio del generador.
+  for(const {escenario,tipo,marca,doc} of documentosMultiInmobiliaria){
+    const perfilQA={nombre:escenario.nombre,matricula:'MAT-'+escenario.id};
+    const salidaPDF=await a.generarPDF(doc,null,perfilQA);
+    const salidaDOCX=await a.generarDOCX(doc,perfilQA);
+    const bytesPDF=Buffer.from(await salidaPDF.blob.arrayBuffer()).toString('latin1');
+    const documentoXML=contenidoZip(Buffer.from(await salidaDOCX.blob.arrayBuffer()),'word/document.xml');
+    check(escenario.id+' / '+tipo+': PDF y Word conservan la cláusula única',()=>{
+      assert.ok(salidaPDF.blob.size>1000,'PDF vacío');
+      assert.ok(salidaDOCX.blob.size>1000,'Word vacío');
+      assert.ok(bytesPDF.includes(marca),'PDF no incluye el texto exclusivo de la agencia');
+      assert.ok(documentoXML.includes(marca),'Word no incluye el texto exclusivo de la agencia');
+      for(const otra of escenariosInmobiliarias){
+        if(otra.id===escenario.id)continue;
+        const marcaAjena=marcasPorInmobiliaria.get(otra.id+':'+tipo);
+        assert.ok(!bytesPDF.includes(marcaAjena),'PDF mezcla cláusulas de agencias');
+        assert.ok(!documentoXML.includes(marcaAjena),'Word mezcla cláusulas de agencias');
+      }
+    });
+  }
   console.log('APROBADAS '+n+' verificaciones, incluidos interlineado y firmas PDF/Word.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
 
