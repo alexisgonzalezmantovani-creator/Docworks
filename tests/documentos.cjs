@@ -475,7 +475,7 @@ delete global.document;
  const pdfCuatroFilas=await app.generarPDF(
   {...pdfExtensoDoc,firmas:firmasNumerosas},null,{nombre:'Inmobiliaria de Prueba'});
  const paginasCuatroFilas=(Buffer.from(await pdfCuatroFilas.blob.arrayBuffer())
-  .toString('latin1').match(/stream\\n([\\s\\S]*?)\\nendstream/g)||[]);
+  .toString('latin1').match(/stream\n([\s\S]*?)\nendstream/g)||[]);
  const ultimaCuatroFilas=paginasCuatroFilas.at(-1)||'';
  check('PDF extenso con cuatro filas de firmas conserva el cierre en el último folio',()=>{
   assert.ok(paginasCuatroFilas.length>=2);
