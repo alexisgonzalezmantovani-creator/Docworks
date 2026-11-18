@@ -298,7 +298,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       text(cx-w/2,yy,safe,size,bold,wordSpacing,colorRgb);
     }
 
-    function drawParagraph(prefixRuns, bodyText, opts:{size?:number;gap?:number;indent?:number;spaceAfter?:number}={}){
+    function drawParagraph(prefixRuns, bodyText, opts:{size?:number;gap?:number;indent?:number;spaceAfter?:number;keepWithSignatures?:number}={}){
       opts=opts||{};
       var size=opts.size||DOC_EXPORT_LAYOUT.bodySize, gap=opts.gap||DOC_EXPORT_LAYOUT.lineHeight, indent=opts.indent||16;
       var maxW=W-ML-MR;
@@ -355,7 +355,12 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
         }
       } else {
         wrapped.forEach(function(ln,li){
-          ensureSpace(gap);
+          // Mantener las últimas dos líneas ligadas al bloque de firmas.
+          // No mover páginas completas ni reducir el tamaño de la letra.
+          if(opts.keepWithSignatures && li>=Math.max(0,wrapped.length-2)){
+            var lineasRestantes=wrapped.length-li;
+            ensureSpace(lineasRestantes*gap+opts.keepWithSignatures);
+          }else ensureSpace(gap);
           var isLast=(li===wrapped.length-1);
           var lineStr=ln.words.join(" ");
           var lx, avail;
@@ -425,6 +430,20 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       hline(y); y-=20;
     }
 
+    // Medir el cierre documental antes de paginar las últimas líneas.
+    // Así no se crea una hoja nueva solo para las firmas.
+    // Las dimensiones de las firmas se calcularon antes de las secciones.
+    var firmasOriginales=(doc.firmas&&doc.firmas.length)?doc.firmas:(doc.partes||[]);
+    var filasFirmasPdf=(!doc.documentoPropio||firmasOriginales.length)
+      ?organizarFilasFirmas(firmasOriginales,!doc.documentoPropio):[];
+    var altoFilaFirma=firmaBlank+firmaLabels+30;
+    var altoPaginaUtil=H-MT-MB;
+    var filasUnidas=Math.min(filasFirmasPdf.length,Math.max(1,Math.floor((altoPaginaUtil-90)/altoFilaFirma)));
+    var reservaCierreFirmas=filasUnidas*altoFilaFirma+18;
+    var ultimaClausulaConTexto=(doc.clausulas||[]).filter(function(c){return String(c.texto||"").trim();}).slice(-1)[0]||null;
+    var ultimaSeccionConTexto=(doc.secciones||[]).filter(function(sec){return (sec.items||[]).some(function(t){return String(t||"").trim();});}).slice(-1)[0]||null;
+    var ultimoTextoSeccion=ultimaSeccionConTexto?(ultimaSeccionConTexto.items||[]).filter(function(t){return String(t||"").trim();}).slice(-1)[0]:null;
+
     // Secciones — rótulo en negrita + texto corrido en el mismo párrafo (estilo Bayugar).
     // Si el título es solo el número ("7."), la cláusula no lleva rótulo (como en el modelo).
     // Aplica a TODOS los tipos de documento (reserva, boleto, alquiler, etc.).
@@ -433,8 +452,9 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
         var prefix = prefijoClausulaFormal(sec.titulo);
         (sec.items||[]).forEach(function(item,idx){
           if(!item) return;
-          if(idx===0) drawParagraph([{txt:prefix,bold:true}], cuerpoTrasRotulo(item));
-          else drawParagraph([], normalizarTextoDocumento(item));
+          var ultimoParrafo=!ultimaClausulaConTexto&&sec===ultimaSeccionConTexto&&item===ultimoTextoSeccion;
+          if(idx===0) drawParagraph([{txt:prefix,bold:true}], cuerpoTrasRotulo(item),{keepWithSignatures:ultimoParrafo?reservaCierreFirmas:0});
+          else drawParagraph([], normalizarTextoDocumento(item),{keepWithSignatures:ultimoParrafo?reservaCierreFirmas:0});
         });
       });
     }
@@ -443,7 +463,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
     if(doc.clausulas&&doc.clausulas.length){
       doc.clausulas.forEach(function(c){
         var label=prefijoClausulaDesdeNumTitulo(c.num, c.titulo||"");
-        drawParagraph([{txt:label,bold:true}], cuerpoTrasRotulo(c.texto||""), {gap:DOC_EXPORT_LAYOUT.lineHeight, spaceAfter:20, indent:16});
+        drawParagraph([{txt:label,bold:true}], cuerpoTrasRotulo(c.texto||""), {gap:DOC_EXPORT_LAYOUT.lineHeight, spaceAfter:20, indent:16, keepWithSignatures:c===ultimaClausulaConTexto?reservaCierreFirmas:0});
       });
     }
 
@@ -471,9 +491,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       if(p.dni)textCentered(cx,y-57,tipoIdentificacion(p.dni,p)+": "+p.dni,8,false);
       else if(p.usarPerfil&&perfil&&perfil.matricula)textCentered(cx,y-57,"Matrícula "+perfil.matricula,8,false);
     }
-    var firmasOriginales=(doc.firmas&&doc.firmas.length)?doc.firmas:(doc.partes||[]);
     if(!doc.documentoPropio || firmasOriginales.length){
-      var filasFirmasPdf=organizarFilasFirmas(firmasOriginales,!doc.documentoPropio);
       filasFirmasPdf.forEach(function(fila){
         ensureSpace(firmaBlank+firmaLabels+30);
         hline(y); y-=14; y-=firmaBlank;
