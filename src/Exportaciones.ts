@@ -438,7 +438,7 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       ?organizarFilasFirmas(firmasOriginales,!doc.documentoPropio):[];
     var altoFilaFirma=firmaBlank+firmaLabels+30;
     var altoPaginaUtil=H-MT-MB;
-    var filasUnidas=Math.min(filasFirmasPdf.length,Math.max(1,Math.floor((altoPaginaUtil-90)/altoFilaFirma)));
+    var filasUnidas=Math.min(filasFirmasPdf.length,Math.max(1,Math.floor((altoPaginaUtil-50)/altoFilaFirma)));
     var reservaCierreFirmas=filasUnidas*altoFilaFirma+18;
     var ultimaClausulaConTexto=(doc.clausulas||[]).filter(function(c){return String(c.texto||"").trim();}).slice(-1)[0]||null;
     var ultimaSeccionConTexto=(doc.secciones||[]).filter(function(sec){return (sec.items||[]).some(function(t){return String(t||"").trim();});}).slice(-1)[0]||null;
