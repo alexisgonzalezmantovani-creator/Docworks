@@ -9815,6 +9815,11 @@ function DocWorksApp(){
     });
     var res;
     try { res=await opsSupabase.guardar(next); } catch(e) { res={error:e}; }
+    // Una respuesta nula o vacía no confirma que Supabase haya persistido.
+    // Evitar dejar el visor y la lista en un estado optimista no guardado.
+    if(!res||(!res.error&&!res.contextoObsoleto&&(!res.operacion||String(res.operacion.id)!==String(next.id)))){
+      res={error:{message:"El servidor no confirmó el guardado de la operación. Revisá tu conexión e intentá nuevamente."}};
+    }
     desmarcarOperacionPendiente(next.id);
     if(res&&res.contextoObsoleto)return res;
     if(res&&res.error){

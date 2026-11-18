@@ -5696,6 +5696,8 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       var res=await onUpdateOperation(Object.assign({},op,{ajustes_manuales:mapa}));
       if(res&&res.contextoObsoleto)throw new Error("Tu sesión cambió durante el guardado. Reabrí la operación antes de continuar.");
       if(res&&res.error)throw res.error;
+      if(!res||!res.operacion||String(res.operacion.id)!==String(op.id))
+        throw new Error("El servidor no confirmó el guardado de la cláusula. Reintentá antes de salir.");
       setAjusteEditando(null);setPartesAjuste([]);
       dwNotify("success","Ajuste guardado para esta operación.");
     }catch(e){setErrorAjuste(e&&e.message?e.message:"No se pudo guardar el ajuste.");}
@@ -5714,6 +5716,8 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       var res=await onUpdateOperation(Object.assign({},op,{ajustes_manuales:mapa}));
       if(res&&res.contextoObsoleto)throw new Error("Tu sesión cambió durante el guardado. Reabrí la operación antes de continuar.");
       if(res&&res.error)throw res.error;
+      if(!res||!res.operacion||String(res.operacion.id)!==String(op.id))
+        throw new Error("El servidor no confirmó la restauración de la cláusula. Reintentá antes de salir.");
       setAjusteEditando(null);setPartesAjuste([]);
       dwNotify("success","Se restauró el texto original de esta cláusula.");
     }catch(e){setErrorAjuste(e&&e.message?e.message:"No se pudo restaurar la cláusula.");}
