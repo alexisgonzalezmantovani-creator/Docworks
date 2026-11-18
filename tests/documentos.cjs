@@ -451,7 +451,7 @@ delete global.document;
   ]}],clausulas:[],partes:[],firmas:[]
  },null,{nombre:'Inmobiliaria de Prueba'});
  const pdfPalabraTexto=Buffer.from(await pdfPalabraLarga.blob.arrayBuffer()).toString('latin1');
- const fragmentosToken=[...pdfPalabraTexto.matchAll(/\\((W+)\\) Tj/g)].map(m=>m[1]);
+ const fragmentosToken=[...pdfPalabraTexto.matchAll(/\((W+)\) Tj/g)].map(m=>m[1]);
  check('PDF divide cadenas largas sin recortar caracteres ni invadir márgenes',()=>{
   assert.ok(fragmentosToken.length>=3,'El token no fue dividido en varios renglones');
   assert.equal(fragmentosToken.join(''),palabraSinEspacios,'La división perdió caracteres');
