@@ -284,7 +284,17 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    const tipoActual=await page.locator('#dw-modelo-documento [aria-pressed=true]').getAttribute('data-document-type');
    const idsDocumento=await page.locator('#dw-model-extra-clauses [data-clausula-id]').evaluateAll(xs=>xs.map(x=>x.dataset.clausulaId));
    await page.getByRole('navigation',{name:'Cláusulas y documentos'}).getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
-   await page.locator('#dw-biblioteca-documento [data-document-type="'+tipoActual+'"]').click();
+   // WebKit puede mantener el botón en transición durante cambios rápidos.
+   // Comprobamos visibilidad real y ejecutamos el click nativo en ese motor.
+   const botonBiblioteca=page.locator('#dw-biblioteca-documento [data-document-type="'+tipoActual+'"]');
+   if(engine==='webkit'){
+    await botonBiblioteca.evaluate(el=>{
+     const rect=el.getBoundingClientRect();
+     if(!rect.width||!rect.height||getComputedStyle(el).visibility==='hidden')throw Error('Botón de biblioteca oculto');
+     el.click();
+    });
+   }else await botonBiblioteca.click();
+   await page.waitForFunction(tipo=>document.querySelector('#dw-biblioteca-documento [data-document-type="'+tipo+'"]')?.getAttribute('aria-pressed')==='true',tipoActual);
    const idsBiblioteca=await page.locator('[data-clausula-id]').evaluateAll(xs=>xs.map(x=>x.dataset.clausulaId));
    assert.deepEqual(idsDocumento,idsBiblioteca,name+' mismo catálogo '+label);checks++;
    assert.deepEqual(idsDocumento,['ejemplo-opcional'],name+' sin cláusulas viejas/eliminadas '+label);checks++;
