@@ -178,9 +178,11 @@ const casosPartes=[
  let countWrites=0;a=app.crearAccionesPrueba(initial,{guardar:()=>{countWrites++;return Promise.resolve({data:[]})}},context('vendedor','vendedor'));await a.onConvertirDevolucion(fakeOp);
  check('vendedor no inicia conversión que requiere editar/cerrar padre',()=>{assert.equal(countWrites,0);assert.equal(a.estado().showForm,false)});
 
- const createPending=deferred();countWrites=0;a=app.crearAccionesPrueba(initial,{guardar:()=>{countWrites++;return createPending.promise}},context());
- const create1=a.convertirABoleto(fakeOp),create2=a.convertirABoleto(fakeOp);createPending.resolve({data:[]});await Promise.all([create1,create2]);
- check('doble clic de conversión crea un solo documento',()=>{assert.equal(countWrites,1);assert.equal(a.estado().operaciones.length,2)});
+ const createPending=deferred();let documentoPendiente=null;countWrites=0;
+ a=app.crearAccionesPrueba(initial,{guardar:op=>{countWrites++;documentoPendiente=op;return createPending.promise}},context());
+ const create1=a.convertirABoleto(fakeOp),create2=a.convertirABoleto(fakeOp);
+ createPending.resolve({operacion:documentoPendiente});await Promise.all([create1,create2]);
+ check('doble clic de conversión crea un solo documento confirmado',()=>{assert.equal(countWrites,1);assert.equal(a.estado().operaciones.length,2);assert.equal(a.estado().operaciones[1].id,documentoPendiente.id)});
  Object.defineProperty(global,'navigator',{value:dom.window.navigator,configurable:true});Object.defineProperty(navigator,'onLine',{value:true,configurable:true});
  for(const draftContext of [null,{usuarioId:'otro',inmobiliariaId:'tenant-a'},{usuarioId:'owner',inmobiliariaId:'otro-tenant'}]){
   const draft={data:{...fakeOp,id:undefined},contexto:draftContext};app.lsSet('draftOperacion',draft);const beforeDraft=app.lsGet('draftOperacion',null);countWrites=0;
