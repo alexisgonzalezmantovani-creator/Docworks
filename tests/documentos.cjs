@@ -441,6 +441,39 @@ delete global.document;
   check(nombre+' coincide en PDF y Word',()=>{assert.equal((pdfTexto.match(/CallePrueba 123/g)||[]).length,esperado);assert.equal((xml.match(/CallePrueba 123/g)||[]).length,esperado);});
  }
 
+ // Ajustes guardados: los ocho tipos exportan el texto modificado, sin
+ // cambiar el snapshot ni trasladar ajustes a otra operación.
+ for(const tipo of app.PLANTILLA_TIPOS){
+   const marca='AJUSTEMANUAL'+tipo.replace(/_/g,'').toUpperCase();
+   const id='qa.'+tipo+'.ajuste';
+   const snap={tipo,body_blocks:[{id,titulo:'ACUERDO PARTICULAR',contenido:'La propiedad {{inmueble_direccion}} integra este acuerdo.',activo:true,orden:1}]};
+   const original=JSON.stringify(snap);
+   const op={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo,plantilla_snapshot:snap,
+     ajustes_manuales:{[tipo]:{[id]:marca+' corresponde a {{inmueble_direccion}}.'}}};
+   const docAjustado=app.buildDocSections(app.opParaDocumento(op),[],tipo);
+   const docSinAjuste=app.buildDocSections(app.opParaDocumento({...op,ajustes_manuales:{}}),[],tipo);
+   check(tipo+' ajuste manual queda aislado y conserva el chip',()=>{
+     assert.ok(app.docToPlainText(docAjustado).includes(marca));
+     assert.ok(!app.docToPlainText(docSinAjuste).includes(marca));
+     assert.deepEqual(app.getTokensSinReemplazar(docAjustado),[]);
+     assert.equal(JSON.stringify(snap),original);
+   });
+   const pdf=await app.generarPDF(docAjustado,null,{}),word=await app.generarDOCX(docAjustado,{});
+   const datosPDF=Buffer.from(await pdf.blob.arrayBuffer()).toString('latin1');
+   const datosWord=Buffer.from(await word.blob.arrayBuffer());
+   let xml='';
+   for(let p=0;p+30<datosWord.length&&datosWord.readUInt32LE(p)===0x04034b50;){
+     const method=datosWord.readUInt16LE(p+8),size=datosWord.readUInt32LE(p+18),n=datosWord.readUInt16LE(p+26),extra=datosWord.readUInt16LE(p+28),start=p+30+n+extra;
+     let content=datosWord.subarray(start,start+size);
+     if(method===8)content=require('node:zlib').inflateRawSync(content);
+     xml+=content.toString('utf8');p=start+size;
+   }
+   check(tipo+' ajuste manual está en PDF y Word',()=>{
+     assert.ok(datosPDF.includes(marca),'PDF no refleja ajuste');
+     assert.ok(xml.includes(marca),'Word no refleja ajuste');
+   });
+ }
+
  // Regresión: las cadenas sin espacios también deben ajustarse al ancho
  // de la hoja; antes un solo token podía desbordar el margen derecho.
  const palabraSinEspacios='W'.repeat(180);

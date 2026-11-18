@@ -32,12 +32,17 @@ export function docxTwipsFromPt(pt){ return Math.round(pt*20); }
  */
 export function organizarFilasFirmas(firmantes, incluirInmobiliaria=true){
   var personas=(Array.isArray(firmantes)?firmantes:[]).filter(Boolean).slice();
-  if(incluirInmobiliaria&&!personas.some(function(f){return !!f.usarPerfil;})){
+  // Algunos documentos históricos guardaban la inmobiliaria por su rol, sin
+  // usarPerfil. Reconocer ambas variantes antes de agregar una firma automática.
+  function esFirmaInmobiliaria(p){
+    return !!(p&&(p.usarPerfil||/^(?:INMOBILIARIA INTERVINIENTE|INMOBILIARIA)$/.test(String(p.rol||"").trim().toUpperCase())));
+  }
+  if(incluirInmobiliaria&&!personas.some(esFirmaInmobiliaria)){
     personas.push({rol:"INMOBILIARIA INTERVINIENTE",nombre:"",dni:"",usarPerfil:true});
   }
   var intermediarios=[],resto=[];
   personas.forEach(function(p){
-    if(p.usarPerfil || /INMOBILIARIA INTERVINIENTE|^INMOBILIARIA$/.test(String(p.rol||"").toUpperCase())) intermediarios.push(p);
+    if(esFirmaInmobiliaria(p)) intermediarios.push(p);
     else resto.push(p);
   });
   var filas=[];

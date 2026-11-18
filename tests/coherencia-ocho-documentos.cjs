@@ -215,6 +215,15 @@ function textoDibujadoPDF(raw){
       }
     });
   }
+  check('firmas antiguas sin usarPerfil no duplican inmobiliaria',()=>{
+    for(const rol of ['INMOBILIARIA',' INMOBILIARIA INTERVINIENTE ']){
+      const firmantes=[{rol:'COMPRADOR',nombre:'Persona de prueba'},{rol,nombre:'Agencia Histórica'}];
+      const filas=organizarFilasFirmas(firmantes,true),final=filas.flat().filter(Boolean);
+      assert.equal(final.length,2,'se agregó una firma inexistente: '+rol);
+      assert.equal(final.filter(f=>/INMOBILIARIA/i.test(f.rol)).length,1);
+      assert.equal(final[1].nombre,'Agencia Histórica','se reemplazó la firma original');
+    }
+  });
   const doc={titulo:'RESERVA AD REFERÉNDUM',ciudad:'Pilar',fecha:'17 de noviembre de 2026',
     encabezado:'Las partes celebran la presente reserva conforme a estas condiciones.',
     secciones:[{titulo:'1. PRECIO',items:['Las partes acuerdan un precio de ejemplo y se obligan a respetar el texto suscripto.']}],clausulas:[],
