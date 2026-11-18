@@ -431,8 +431,10 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
     }
 
     // Medir el cierre documental antes de paginar las últimas líneas.
-    // Así no se crea una hoja nueva solo para las firmas.
-    // Las dimensiones de las firmas se calcularon antes de las secciones.
+    // Las medidas deben estar definidas ANTES de calcular el espacio reservado:
+    // con undefined el resultado era NaN y la protección jamás se activaba.
+    var firmaBlank=DOC_EXPORT_LAYOUT.signatureGap;
+    var firmaLabels=DOC_EXPORT_LAYOUT.signatureLabelGap;
     var firmasOriginales=(doc.firmas&&doc.firmas.length)?doc.firmas:(doc.partes||[]);
     var filasFirmasPdf=(!doc.documentoPropio||firmasOriginales.length)
       ?organizarFilasFirmas(firmasOriginales,!doc.documentoPropio):[];
@@ -470,8 +472,6 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
     // Firmas uniformes para todos los modelos: dos columnas, aire para firmar
     // y co-titulares en la misma fila. Los contratos propios no reciben una
     // firma automática de inmobiliaria.
-    var firmaBlank=DOC_EXPORT_LAYOUT.signatureGap;
-    var firmaLabels=DOC_EXPORT_LAYOUT.signatureLabelGap;
     function renglonesFirmaPdf(cadena,maxW,size){
       var palabras=String(cadena||"").split(/\s+/).filter(Boolean),resultado=[],linea="";
       palabras.forEach(function(palabra){
