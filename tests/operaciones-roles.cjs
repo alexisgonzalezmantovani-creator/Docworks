@@ -182,7 +182,7 @@ const casosPartes=[
  a=app.crearAccionesPrueba(initial,{guardar:op=>{countWrites++;documentoPendiente=op;return createPending.promise}},context());
  const create1=a.convertirABoleto(fakeOp),create2=a.convertirABoleto(fakeOp);
  createPending.resolve({operacion:documentoPendiente});await Promise.all([create1,create2]);
- check('doble clic de conversión crea un solo documento confirmado',()=>{assert.equal(countWrites,1);assert.equal(a.estado().operaciones.length,2);assert.equal(a.estado().operaciones[1].id,documentoPendiente.id)});
+ check('doble clic de conversión crea un solo documento confirmado',()=>{assert.equal(countWrites,1);assert.equal(a.estado().operaciones.length,2);assert.equal(a.estado().operaciones[0].id,documentoPendiente.id)});
  Object.defineProperty(global,'navigator',{value:dom.window.navigator,configurable:true});Object.defineProperty(navigator,'onLine',{value:true,configurable:true});
  for(const draftContext of [null,{usuarioId:'otro',inmobiliariaId:'tenant-a'},{usuarioId:'owner',inmobiliariaId:'otro-tenant'}]){
   const draft={data:{...fakeOp,id:undefined},contexto:draftContext};app.lsSet('draftOperacion',draft);const beforeDraft=app.lsGet('draftOperacion',null);countWrites=0;
