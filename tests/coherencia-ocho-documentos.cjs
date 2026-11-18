@@ -90,6 +90,69 @@ check('modelos estándar anteriores se normalizan sin modificar datos',()=>{
  assert.doesNotMatch(a.resolveVars('El VENDEDOR devuelve en este acto al COMPRADOR / OFERENTE la suma de {{precio_letras}}, recibiendo el COMPRADOR plena conformidad respecto de la devolución.-',{...base,tipo:'devolucion_reserva'}),/El VENDEDOR devuelve/);
 });
 
+
+// Matriz multi-inmobiliaria ficticia: ocho documentos x tres maneras de trabajar.
+// No utiliza registros reales ni modifica las plantillas guardadas de producción.
+const escenariosInmobiliarias=[
+ {id:'compleja',nombre:'Agencia Compleja QA',modo:'bloques'},
+ {id:'esencial',nombre:'Agencia Esencial QA',modo:'esencial'},
+ {id:'propia',nombre:'Agencia Contrato Propio QA',modo:'propio'}
+];
+const marcasPorInmobiliaria=new Map();
+for(const escenario of escenariosInmobiliarias){
+ for(const tipo of tipos){
+  const marca='MARCA'+escenario.id.toUpperCase()+'TIPO'+tipo.replace(/_/g,'').toUpperCase();
+  marcasPorInmobiliaria.set(escenario.id+':'+tipo,marca);
+ }
+}
+for(const escenario of escenariosInmobiliarias){
+ for(const tipo of tipos){
+  const marca=marcasPorInmobiliaria.get(escenario.id+':'+tipo);
+  const operacion={...base,tipo,inmobiliaria_nombre:escenario.nombre,
+    inmobiliaria_matricula:'MAT-'+escenario.id,
+    precio:['refuerzo_reserva','devolucion_reserva'].includes(tipo)?'5000':base.precio};
+  const bloques=escenario.modo==='esencial'?a.getDefaultBodyBlocks(tipo,true):a.getDefaultBodyBlocks(tipo);
+  const originalBloques=JSON.stringify(bloques);
+  const modificados=bloques.map(b=>({...b}));
+  const bloqueMarca={id:'qa.'+escenario.id+'.'+tipo,titulo:'ACUERDO PARTICULAR QA',
+    contenido:marca+' {{inmueble_direccion}}',activo:true,orden:modificados.length+1};
+  modificados.push(bloqueMarca);
+  const snapshot=escenario.modo==='propio'
+    ?{tipo,version:1,documento_propio:marca+' {{inmueble_direccion}}. {{comprador_nombre}}. {{vendedor_nombre}}.'}
+    :{tipo,version:1,body_blocks:modificados,clausulas:[],clausulas_ids:[],obligatorias_ids:[]};
+  operacion.plantilla_snapshot=snapshot;
+  const copiaSnapshot=JSON.stringify(snapshot);
+  const doc=a.buildDocSections(a.opParaDocumento(operacion),[],tipo);
+  const texto=a.docToPlainText(doc);
+  check(escenario.id+' / '+tipo+': respeta texto, chips, aislamiento y snapshot',()=>{
+   assert.ok(texto.includes(marca), 'no aparece la cláusula personalizada '+marca);
+   assert.ok(texto.includes(base.inmueble_direccion), 'no se sustituyó dirección');
+   assert.deepEqual(a.getTokensSinReemplazar(doc),[], 'hay chips sin resolver');
+   for(const otro of escenariosInmobiliarias){
+    if(otro.id===escenario.id)continue;
+    assert.ok(!texto.includes(marcasPorInmobiliaria.get(otro.id+':'+tipo)), 'se mezcló otra inmobiliaria');
+   }
+   assert.equal(JSON.stringify(snapshot),copiaSnapshot,'se alteró la instantánea');
+   assert.equal(JSON.stringify(bloques),originalBloques,'se alteró el modelo original');
+   assert.equal((texto.match(new RegExp(marca,'g'))||[]).length,1,'duplicó cláusula');
+  });
+  if(escenario.modo!=='propio'){
+   check(escenario.id+' / '+tipo+': cambios futuros no afectan documento histórico',()=>{
+    const actualizado=modificados.map(b=>b.id===bloqueMarca.id?{...b,contenido:'NUEVO MODELO '+marca}:b);
+    const guardado=a.buildDocSections(a.opParaDocumento(operacion),[],tipo,actualizado);
+    assert.ok(a.docToPlainText(guardado).includes(marca));
+    assert.ok(!a.docToPlainText(guardado).includes('NUEVO MODELO '+marca));
+   });
+  }else{
+   check(escenario.id+' / '+tipo+': contrato propio no agrega cláusulas del modelo ajeno',()=>{
+    assert.equal(doc.documentoPropio,true);
+    assert.equal(doc.secciones.length,0);
+    assert.equal(doc.firmas.length,0);
+   });
+  }
+ }
+}
+
 const zlib=require('node:zlib');
 function contenidoZip(buf,nombre){
   for(var pos=0;pos<buf.length-30;){
