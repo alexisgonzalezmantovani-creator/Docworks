@@ -175,6 +175,13 @@ await check('respuesta vacía del servidor no confirma guardado ni cierra el for
  assert.ok(result.error);assert.equal(h.estado().showForm,true);
  assert.equal(h.estado().operaciones.length,0);
 });
+await check('guardar operación: una confirmación de otro ID no cierra el formulario',async()=>{
+ const h=a.crearGuardadoPrueba({guardar:async op=>({operacion:{...op,id:'otra-operacion'}})});
+ const respuesta=await h.saveOp(data,'guardar','borrador');
+ assert.ok(respuesta.error,'una operación ajena no confirma el guardado');
+ assert.equal(h.estado().showForm,true,'el formulario no se cierra');
+ assert.equal(h.estado().operaciones.length,0,'la operación ajena no se añade al listado');
+});
 await check('respuesta con objeto vacío no confirma guardado ni cierra el formulario',async()=>{
  const h=a.crearGuardadoPrueba({guardar:async()=>({})});
  const result=await h.saveOp(data,'guardar','borrador');
@@ -187,6 +194,22 @@ await check('respuesta con objeto vacío en sincronización conserva el borrador
  await h.sincronizarDraftOffline();
  assert.ok(a.lsGet('draftOperacion',null));
  assert.equal(h.estado().operaciones.length,0);
+});
+await check('sincronización offline: ID ajeno conserva el borrador y permite reintentar',async()=>{
+ const ids=[];const h=a.crearGuardadoPrueba({guardar:async op=>{
+  ids.push(op.id);
+  return {operacion:ids.length===1?{...op,id:'id-ajeno'}:op};
+ }});
+ a.lsSet('draftOperacion',{data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});
+ await h.sincronizarDraftOffline();
+ const pendiente=a.lsGet('draftOperacion',null);
+ assert.ok(pendiente?.data?.id,'el borrador se conserva al recibir otro ID');
+ assert.equal(h.estado().operaciones.length,0,'no incorpora operaciones ajenas');
+ await h.sincronizarDraftOffline();
+ assert.equal(ids.length,2);
+ assert.equal(ids[0],ids[1],'el reintento mantiene el identificador original');
+ assert.equal(a.lsGet('draftOperacion',null),null,'la confirmación correcta limpia el borrador');
+ assert.equal(h.estado().operaciones[0]?.id,ids[0]);
 });
 await check('respuesta vacía en sincronización conserva el borrador offline',async()=>{
  const h=a.crearGuardadoPrueba({guardar:async()=>null});
@@ -201,6 +224,19 @@ await check('reintento de cierre sin confirmación conserva la reserva pendiente
  const h=a.crearGuardadoPrueba({guardar:async()=>({})},{operaciones:[padre,devolucion]});
  await h.reintentarCierresDevolucion();
  assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
+});
+await check('cierre pendiente: respuesta de otra reserva no confirma ni borra el pendiente',async()=>{
+ const padre={...data,id:'padre-cierre-id-erroneo',estado:'cerrado',proceso_estado:'pendiente_cierre_devolucion'};
+ const devolucion={...data,id:'devolucion-cierre-id-erroneo',tipo:'devolucion_reserva',parent_id:padre.id,estado:'activo'};
+ let intentos=0;const h=a.crearGuardadoPrueba({guardar:async op=>{
+  intentos++;
+  return {operacion:intentos===1?{...op,id:'otra-reserva'}:op};
+ }},{operaciones:[padre,devolucion]});
+ await h.reintentarCierresDevolucion();
+ assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
+ await h.reintentarCierresDevolucion();
+ assert.equal(intentos,2,'el cierre debe poder reintentarse');
+ assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'rechazada');
 });
 await check('reintentos simultáneos de cierre solo realizan una solicitud',async()=>{
  const padre={...data,id:'padre-concurrente',estado:'cerrado',proceso_estado:'pendiente_cierre_devolucion'};
@@ -231,6 +267,16 @@ await check('devolución confirmada y cierre sin respuesta conserva marca de rei
  assert.equal(estado.showForm,false);
  assert.equal(estado.operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
  assert.equal(estado.operaciones.filter(o=>o.id===devolucion.id).length,1);
+});
+await check('devolución confirmada con cierre de otra reserva conserva cierre pendiente',async()=>{
+ const padre={...data,id:'padre-cierre-ajeno',tipo:'reserva',estado:'activo'};
+ const devolucion={...data,id:'devolucion-cierre-ajeno',tipo:'devolucion_reserva',parent_id:padre.id};
+ const h=a.crearGuardadoPrueba({guardar:async op=>({operacion:op.id===padre.id?{...op,id:'otra-reserva'}:op})},{operaciones:[padre]});
+ await h.saveOp(devolucion,'guardar','activo');
+ assert.equal(h.estado().showForm,false,'la devolución confirmada permite salir');
+ assert.equal(h.estado().operaciones.filter(o=>o.id===devolucion.id).length,1,'no duplica la devolución');
+ assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
+ assert.ok(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),'deja el reintento marcado');
 });
 await check('devolución confirmada deja reserva cerrada y rechazada según servidor',async()=>{
  const padre={...data,id:'padre-cierre-ok',tipo:'reserva',estado:'activo'};

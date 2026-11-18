@@ -9620,7 +9620,7 @@ function DocWorksApp(){
     try {
       var res=await opsSupabase.guardar(opGuardada);
       if(!vigente()||res&&res.contextoObsoleto)return Object.assign({},res,{contextoObsoleto:true});
-      if(!res||(!res.error&&!res.contextoObsoleto&&!res.operacion)){
+      if(!res||(!res.error&&!res.contextoObsoleto&&(!res.operacion||String(res.operacion.id)!==String(opGuardada.id)))){
         reportSave("error");
         desmarcarOperacionPendiente(opGuardada.id);
         if(parentParaCerrar)desmarcarOperacionPendiente(parentParaCerrar.id);
@@ -9654,7 +9654,7 @@ function DocWorksApp(){
         try {
           var parentRes=await opsSupabase.guardar(parentCerrado);
           if(!vigente()||parentRes&&parentRes.contextoObsoleto)return Object.assign({},parentRes,{contextoObsoleto:true});
-          if(!parentRes||(!parentRes.error&&!parentRes.operacion))errorCierrePadre=new Error("El servidor no confirmó el cierre de la reserva.");
+          if(!parentRes||(!parentRes.error&&(!parentRes.operacion||String(parentRes.operacion.id)!==String(parentCerrado.id))))errorCierrePadre=new Error("El servidor no confirmó el cierre de la reserva.");
           else if(parentRes.error)errorCierrePadre=parentRes.error;
         } catch(errCierrePadre) { errorCierrePadre=errCierrePadre; }
         if(errorCierrePadre) {
@@ -9721,7 +9721,9 @@ function DocWorksApp(){
     try{
       var res=await opsSupabase.guardar(op);
       if(!vigente()||res&&res.contextoObsoleto)return;
-      if(res&&!res.error&&res.operacion){
+      // Solo borrar el borrador local si la nube confirmó ESA operación.
+      // Una respuesta con otro ID o sin ID equivale a guardar sin confirmar.
+      if(res&&!res.error&&res.operacion&&String(res.operacion.id)===String(op.id)){
         op=res.operacion;
         setOperaciones(function(ops){return [op].concat(ops.filter(function(o){return o.id!==op.id;}));});
         if(mismoBorrador(draft,lsGet("draftOperacion",null)))lsRemove("draftOperacion");
@@ -9757,10 +9759,11 @@ function DocWorksApp(){
       try{
         var resultado=await opsSupabase.guardar(cerrado);
         if(!vigente()||resultado&&resultado.contextoObsoleto)return;
-        if(!resultado||resultado.error||!resultado.operacion)continue;
+        if(!resultado||resultado.error||!resultado.operacion||String(resultado.operacion.id)!==String(cerrado.id))continue;
         if(!vigente())return;
+        var cierreConfirmado=resultado.operacion;
         try{lsRemove("docworks:devolucion:cierre-pendiente:"+padre.id);}catch(_e2){}
-        setOperaciones(function(prev){return prev.map(function(o){return o.id===cerrado.id?cerrado:o;});});
+        setOperaciones(function(prev){return prev.map(function(o){return o.id===cerrado.id?cierreConfirmado:o;});});
         dwNotify("success","Se completó el cierre pendiente de la reserva vinculada a la devolución.");
       }catch(_e3){ /* queda marcado para el próximo intento */ }
       finally{desmarcarOperacionPendiente(cerrado.id);}
