@@ -5847,6 +5847,10 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   }
   function formatoDeFuncion(fn){if(fn===handleDOCX)return "Word";if(fn===handleShareWhatsApp)return "WhatsApp";if(fn===handlePDF)return "PDF";return "TXT";}
   function conValidacion(fn){
+    if(hayEntregaEnCurso()){
+      setErr("Esperá a que termine la descarga o el envío en curso antes de iniciar otra acción.");
+      return;
+    }
     // Mostrar la advertencia antes de abrir diálogos de confirmación:
     // los ajustes en edición todavía no forman parte del PDF ni del Word.
     if(guardandoAjuste||hayCambiosAjuste()){
@@ -5863,10 +5867,15 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     setPendingFinalConfirm({fn:fn,doc:doc});}
   function resumenFinal(){var partes=[];if(op.tipo==="alquiler"||op.tipo==="reserva_alquiler"){if(op.locador_nombre)partes.push(capRol(rolParte(op.tipo,0))+": "+op.locador_nombre);if(op.locatario_nombre)partes.push(capRol(rolParte(op.tipo,1))+": "+op.locatario_nombre);}else{if(op.comprador_nombre)partes.push(capRol(rolParte(op.tipo,1))+": "+op.comprador_nombre);if(op.vendedor_nombre)partes.push(capRol(rolParte(op.tipo,0))+": "+op.vendedor_nombre);}var precio=op.tipo==="alquiler"?fmt$(op.alquiler_monto_inicial,op.alquiler_moneda)+" / mes":op.tipo==="reserva_alquiler"?fmt$(op.res_alq_monto_mensual,op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS")+" / mes":fmt$(op.precio,op.moneda);var items=getComisionComponents(op)||[],com=[];["USD","ARS"].forEach(function(mon){var total=items.filter(function(i){return (i.moneda||"ARS")==mon;}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0);if(total)com.push(fmt$(total,mon));});return {precio:precio,partes:partes,comision:com.length?com.join(" · "):"Sin comisión cargada"};}
 
-  const descargaEnCursoRef=useRef({pdf:false,docx:false});
+  // Un solo diálogo nativo de descarga/compartir por visor. Evita que
+  // Safari/Android intenten abrir dos entregas distintas simultáneamente.
+  const descargaEnCursoRef=useRef({pdf:false,docx:false,share:false});
+  function hayEntregaEnCurso(){
+    return descargaEnCursoRef.current.pdf||descargaEnCursoRef.current.docx||descargaEnCursoRef.current.share;
+  }
   async function handlePDF(docOverride=undefined){
     if(guardandoAjuste||hayCambiosAjuste()){setErr(guardandoAjuste?"La cláusula todavía se está guardando. Intentá de nuevo cuando termine.":"Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
-    if(descargaEnCursoRef.current.pdf)return;
+    if(hayEntregaEnCurso())return;
     descargaEnCursoRef.current.pdf=true;
     setBusy(function(b){return Object.assign({},b,{pdf:true});});setErr("");setLastAction("pdf");
     try{
@@ -5887,7 +5896,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
 
   async function handleDOCX(docOverride=undefined){
     if(guardandoAjuste||hayCambiosAjuste()){setErr(guardandoAjuste?"La cláusula todavía se está guardando. Intentá de nuevo cuando termine.":"Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
-    if(descargaEnCursoRef.current.docx)return;
+    if(hayEntregaEnCurso())return;
     descargaEnCursoRef.current.docx=true;
     setBusy(function(b){return Object.assign({},b,{docx:true});});setErr("");setLastAction("docx");
     try{
@@ -5907,7 +5916,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   async function handleShareWhatsApp(docOverride=undefined){
     if(guardandoAjuste||hayCambiosAjuste()){setErr(guardandoAjuste?"La cláusula todavía se está guardando. Intentá de nuevo cuando termine.":"Guardá o descartá los ajustes manuales antes de descargar o compartir el documento.");return;}
     // Evitar dos entregas del mismo archivo ante un doble toque.
-    if(descargaEnCursoRef.current.share)return;
+    if(hayEntregaEnCurso())return;
     descargaEnCursoRef.current.share=true;
     setErr("");setLastAction("share");
     setBusy(function(b){return Object.assign({},b,{share:true});});

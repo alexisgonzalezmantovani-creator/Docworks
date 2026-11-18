@@ -23,8 +23,8 @@ export {act,createElement,createRoot,AjustesHarness,generarPDF,generarDOCX,build
 // que falla la primera vez. Esto prueba el botón Reintentar sin tocar archivos del usuario.
 const exportSource=fs.readFileSync(dir+'/src/Operaciones.tsx','utf8');
 const exportAst=ts.createSourceFile('Operaciones.tsx',exportSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
-const exportHandlers={};(function visitar(n){if(ts.isFunctionDeclaration(n)&&['handlePDF','handleDOCX','handleShareWhatsApp'].includes(n.name?.text))exportHandlers[n.name.text]=n.getText(exportAst);ts.forEachChild(n,visitar)})(exportAst);
-assert.ok(exportHandlers.handlePDF&&exportHandlers.handleDOCX&&exportHandlers.handleShareWhatsApp,'existen los manejadores de descarga y compartir');
+const exportHandlers={};(function visitar(n){if(ts.isFunctionDeclaration(n)&&['handlePDF','handleDOCX','handleShareWhatsApp','hayEntregaEnCurso'].includes(n.name?.text))exportHandlers[n.name.text]=n.getText(exportAst);ts.forEachChild(n,visitar)})(exportAst);
+assert.ok(exportHandlers.handlePDF&&exportHandlers.handleDOCX&&exportHandlers.handleShareWhatsApp&&exportHandlers.hayEntregaEnCurso,'existen los manejadores y el bloqueo de entregas');
 function simularDescarga(formato,modo='ok'){
  let estado={accion:null,error:'',busy:{},generados:0,intentos:0,modo,liberar:null};
  const iniciar=new Function('estado','formato',`
@@ -37,7 +37,8 @@ function simularDescarga(formato,modo='ok'){
    const tabActual={label:'Reserva'},op={inmueble_direccion:'Inmueble ficticio'};
    const exportacionCompartida=async()=>{estado.generados++;return {blob:{},filename:'test'};};
    const descargarArchivo=async()=>{estado.intentos++;
-     if(estado.intentos===1)throw Error('Descarga simulada interrumpida');};
+     if(estado.modo==='pendiente-descarga')await new Promise(r=>estado.liberar=r);
+     else if(estado.intentos===1)throw Error('Descarga simulada interrumpida');};
    const dwNotify=()=>{};
    const entregarArchivo=async()=>{estado.intentos++;
      if(estado.modo==='pendiente')await new Promise(r=>estado.liberar=r);
@@ -45,12 +46,14 @@ function simularDescarga(formato,modo='ok'){
      if(estado.modo==='cancelar')throw Object.assign(new Error('Usuario canceló'),{name:'AbortError'});
      return 'shared';
    };
+   ${exportHandlers.hayEntregaEnCurso}
    ${exportHandlers.handlePDF}
    ${exportHandlers.handleDOCX}
    ${exportHandlers.handleShareWhatsApp}
-   return formato==='pdf'?handlePDF:formato==='docx'?handleDOCX:handleShareWhatsApp;
+   return {iniciar:formato==='pdf'?handlePDF:formato==='docx'?handleDOCX:handleShareWhatsApp,
+      acciones:{pdf:handlePDF,docx:handleDOCX,share:handleShareWhatsApp}};
  `)(estado,formato);
- return {iniciar,estado};
+ return {...iniciar,estado};
 }
 const a=require(tmp+'/app.cjs');let root,checks=0;
 const botones=()=>[...document.querySelectorAll('button')],boton=t=>{const el=botones().find(b=>b.textContent.trim()===t);assert.ok(el,'botón '+t);return el};
@@ -59,6 +62,26 @@ async function iniciar(abrirEditor=true){if(root)await a.act(async()=>root.unmou
 async function escribir(valor){const el=document.querySelector('textarea');assert.ok(el);await a.act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,valor);el.dispatchEvent(new Event('input',{bubbles:true}))});}
 async function check(label,fn){await fn();checks++;console.log('OK',label)}
 (async()=>{
+ await check('PDF, Word y WhatsApp nunca abren dos entregas a la vez',async()=>{
+  for(const [primera,segunda,modo] of [
+    ['pdf','share','pendiente-descarga'],
+    ['docx','pdf','pendiente-descarga'],
+    ['share','docx','pendiente']
+  ]){
+    const prueba=simularDescarga(primera,modo);
+    const inicial=prueba.acciones[primera]();
+    for(let i=0;i<30&&!prueba.estado.liberar;i++)await Promise.resolve();
+    assert.equal(typeof prueba.estado.liberar,'function',primera+' se mantiene en curso');
+    await prueba.acciones[segunda]();
+    assert.equal(prueba.estado.intentos,1,'la segunda entrega no debe iniciarse si '+primera+' está abierta');
+    assert.equal(prueba.estado.accion,primera,'el primer envío no pierde su estado');
+    prueba.estado.liberar();
+    await inicial;
+    assert.equal(prueba.estado.accion,null,primera+' debe quedar completado');
+    await prueba.acciones[segunda]();
+    assert.equal(prueba.estado.intentos,2,segunda+' vuelve a estar disponible después del primer envío');
+  }
+ });
  await check('PDF y Word permiten reintentar tras una descarga fallida',async()=>{
   for(const formato of ['pdf','docx']){
     const prueba=simularDescarga(formato);
