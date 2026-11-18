@@ -9069,10 +9069,15 @@ function DocWorksApp(){
       try { saveDraftRes=await opsSupabase.guardar(op); } catch(e) { saveDraftRes={error:e}; }
       desmarcarOperacionPendiente(op.id);
       if(!vigente())return;
-      if(saveDraftRes&&!saveDraftRes.error){op=saveDraftRes.operacion||op;setOperaciones(function(ops){return ops.some(function(o){return o.id===op.id;})?ops.map(function(o){return o.id===op.id?op:o;}):[op].concat(ops);});}
+      // Nunca cerrar el formulario ante una respuesta vacía o de otra operación:
+      // el borrador local permanece disponible para reintentar el guardado.
+      if(!saveDraftRes||(!saveDraftRes.error&&(!saveDraftRes.operacion||String(saveDraftRes.operacion.id)!==String(op.id)))){
+        saveDraftRes={error:new Error("El servidor no confirmó el guardado del borrador.")};
+      }
+      if(saveDraftRes&&!saveDraftRes.error){op=saveDraftRes.operacion;setOperaciones(function(ops){return ops.some(function(o){return o.id===op.id;})?ops.map(function(o){return o.id===op.id?op:o;}):[op].concat(ops);});}
       if(revision!==salidaRevisionRef.current)return;
       salidaEnCursoRef.current=false;setGuardandoSalida(false);
-      if(!saveDraftRes||saveDraftRes.error){
+      if(saveDraftRes.error){
         setErrorSalida("No se pudo guardar en la nube. Tus datos siguen disponibles. Podés continuar después en este dispositivo o volver a intentar.");
         dwNotify("error","No se pudo guardar el borrador. Tus cambios siguen en el formulario.");
         return;
@@ -9841,7 +9846,19 @@ function DocWorksApp(){
     var snap=version&&version.documento?version.documento:null;
     if(!snap||!snap.id||!snap.datos){dwNotify("error","La versión seleccionada no tiene un respaldo válido.");return;}
     var op=Object.assign({},snap.datos,{id:snap.id,tipo:snap.tipo||version.tipo_documento,estado:snap.estado||"borrador",parent_id:snap.parent_id||null,created_at:snap.creado_en||undefined});
-    try{var res=await opsSupabase.guardar(op);if(res&&res.contextoObsoleto)return res;if(res&&res.error){dwNotify("error","No se pudo restaurar la versión. "+traducirError(res.error.message));return;}setOperaciones(function(ops){return ops.map(function(o){return o.id===op.id?op:o;});});dwNotify("success","Versión "+version.version+" restaurada. La versión anterior quedó conservada en el historial.");}catch(e){console.warn("DocWorks: error restaurando versión.",e);dwNotify("error","No se pudo restaurar la versión.");}
+    try{
+      var res=await opsSupabase.guardar(op);
+      if(res&&res.contextoObsoleto)return res;
+      if(!res||(!res.error&&(!res.operacion||String(res.operacion.id)!==String(op.id)))){
+        res={error:new Error("El servidor no confirmó la restauración. El documento anterior se conserva.")};
+      }
+      if(res.error){dwNotify("error","No se pudo restaurar la versión. "+traducirError(res.error.message));return res;}
+      var confirmada=res.operacion;
+      setOperaciones(function(ops){return ops.map(function(o){return o.id===confirmada.id?confirmada:o;});});
+      setViewDoc(function(v){return v&&v.id===confirmada.id?confirmada:v;});
+      dwNotify("success","Versión "+version.version+" restaurada. La versión anterior quedó conservada en el historial.");
+      return res;
+    }catch(e){console.warn("DocWorks: error restaurando versión.",e);dwNotify("error","No se pudo restaurar la versión.");return {error:e};}
   }
   function changeEstado(id,estado){
     var previo=operaciones.find(function(o){return o.id===id;});

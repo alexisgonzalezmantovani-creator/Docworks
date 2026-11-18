@@ -21,8 +21,28 @@ function crearGuardadoPrueba(servidor,inicial={}){
  ${fns.reintentarCierresDevolucion}
  return {saveOp,sincronizarDraftOffline,reintentarCierresDevolucion,estado:()=>({operaciones,showForm}),contexto,cambiarContexto(c){docworksAuth.contexto=c;accionesContextoRef.current.actualizar(claveContextoOperaciones(c));}};
 }
+function crearConfirmacionGuardadoPrueba(servidor){
+ let operaciones=[{id:'restaurable',tipo:'reserva',comprador_nombre:'Versión vigente'}];
+ let showForm=true,guardandoSalida=false,errorSalida='',confirmCloseForm=true,view='operaciones',navPendiente=null,viewDoc=null;
+ const opsSupabase=servidor,perfil={rol:'dueno',plantillas:{}},clausulas=[],bloquesReserva=[];
+ const draftData={...EMPTY_OP,...SAMPLE_OP_PREVIEW,tipo:'reserva',comprador_nombre:'Borrador en edición'};
+ const formSnapshotRef={current:{data:draftData,editId:null}},formSaveIdRef={current:null};
+ const salidaEnCursoRef={current:false},salidaRevisionRef={current:0};
+ const accionesContextoRef={current:{capturar:()=>()=>true}};
+ const setOperaciones=f=>{operaciones=typeof f==='function'?f(operaciones):f};
+ const setViewDoc=f=>{viewDoc=typeof f==='function'?f(viewDoc):f};
+ const setGuardandoSalida=v=>{guardandoSalida=v},setErrorSalida=v=>{errorSalida=v};
+ const setConfirmCloseForm=v=>{confirmCloseForm=v},setShowForm=v=>{showForm=v};
+ const setEditOp=()=>{},setFormInitialOverride=()=>{},setView=v=>{view=v},setNavPendiente=v=>{navPendiente=v};
+ const marcarOperacionPendiente=()=>{},desmarcarOperacionPendiente=()=>{};
+ const borradorFormularioActual=()=>formSnapshotRef.current;
+ ${fns.guardarBorradorYSalir}
+ ${fns.restaurarVersion}
+ return {guardarBorradorYSalir,restaurarVersion,estado:()=>({operaciones,showForm,guardandoSalida,errorSalida,confirmCloseForm,view,viewDoc,formSnapshot:formSnapshotRef.current}),
+   abrirVista:(op)=>{viewDoc=op}};
+}
 import {act,createElement} from 'react';import {createRoot} from 'react-dom/client';
-export {crearGuardadoPrueba,act,createElement,createRoot,OperacionForm,EMPTY_OP,SAMPLE_OP_PREVIEW,lsSet,lsGet,contextoBorradorOperacion,draftTieneContenido,buildDocSections,opParaDocumento,docToPlainText};`;
+export {crearGuardadoPrueba,crearConfirmacionGuardadoPrueba,act,createElement,createRoot,OperacionForm,EMPTY_OP,SAMPLE_OP_PREVIEW,lsSet,lsGet,contextoBorradorOperacion,draftTieneContenido,buildDocSections,opParaDocumento,docToPlainText};`;
 require('esbuild').buildSync({stdin:{contents:source+'\n'+harness,resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
 const a=require(tmp+'/app.cjs'),root=a.createRoot(document.getElementById('root'));let checks=0,failures=0;
 async function confirmarCambioTipo(){
@@ -32,6 +52,47 @@ async function confirmarCambioTipo(){
 }async function check(label,fn){try{await fn();checks++;console.log('OK',label)}catch(e){failures++;console.error('FALLA',label,e.message)}}
 const data={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',comprador_nombre:'Compradora de prueba'};
 (async()=>{
+await check('guardar borrador: respuesta vacía conserva formulario y copia local',async()=>{
+ for(const guardar of [async()=>null,async()=>({}),async()=>({operacion:{id:'otro-id'}})]){
+  const h=a.crearConfirmacionGuardadoPrueba({guardar});
+  await h.guardarBorradorYSalir();
+  const estado=h.estado();
+  assert.equal(estado.showForm,true);
+  assert.equal(estado.confirmCloseForm,true);
+  assert.match(estado.errorSalida,/No se pudo guardar/);
+  assert.equal(estado.operaciones.length,1,'no se inventa una operación guardada');
+  assert.ok(a.lsGet('draftOperacion',null)?.data?.id,'el borrador se conserva para recuperar');
+ }
+});
+await check('guardar borrador: confirmación válida permite salir sin duplicar',async()=>{
+ const h=a.crearConfirmacionGuardadoPrueba({guardar:async op=>({operacion:op})});
+ await h.guardarBorradorYSalir();
+ const estado=h.estado();
+ assert.equal(estado.showForm,false);
+ assert.equal(estado.confirmCloseForm,false);
+ assert.equal(estado.operaciones.length,2);
+ assert.equal(a.lsGet('draftOperacion',null),null);
+});
+await check('restaurar versión: sin respuesta o ID ajeno conserva lo vigente',async()=>{
+ const version={version:2,documento:{id:'restaurable',tipo:'reserva',datos:{tipo:'reserva',comprador_nombre:'Versión histórica'}}};
+ for(const guardar of [async()=>null,async()=>({}),async()=>({operacion:{id:'otra-operacion'}})]){
+  const h=a.crearConfirmacionGuardadoPrueba({guardar});
+  h.abrirVista({id:'restaurable',tipo:'reserva',comprador_nombre:'Versión vigente'});
+  const res=await h.restaurarVersion(version);
+  assert.ok(res?.error,'no se puede informar restauración sin confirmación');
+  assert.equal(h.estado().operaciones[0].comprador_nombre,'Versión vigente');
+  assert.equal(h.estado().viewDoc.comprador_nombre,'Versión vigente');
+ }
+});
+await check('restaurar versión: servidor confirma y refresca lista y visor',async()=>{
+ const version={version:2,documento:{id:'restaurable',tipo:'reserva',datos:{tipo:'reserva',comprador_nombre:'Versión histórica'}}};
+ const h=a.crearConfirmacionGuardadoPrueba({guardar:async op=>({operacion:{...op,comprador_nombre:'Versión histórica confirmada'}})});
+ h.abrirVista({id:'restaurable',tipo:'reserva',comprador_nombre:'Versión vigente'});
+ const res=await h.restaurarVersion(version);
+ assert.equal(res?.operacion?.id,'restaurable');
+ assert.equal(h.estado().operaciones[0].comprador_nombre,'Versión histórica confirmada');
+ assert.equal(h.estado().viewDoc.comprador_nombre,'Versión histórica confirmada');
+});
 await check('respuesta perdida después de guardar no duplica al reintentar',async()=>{const rows=new Map(),attempts=[];let first=true;const h=a.crearGuardadoPrueba({guardar:async op=>{rows.set(op.id,JSON.parse(JSON.stringify(op)));attempts.push(op.id);if(first){first=false;throw Error('Respuesta perdida después del commit')}return {operacion:op}}});await h.saveOp(data,'guardar','borrador');await h.saveOp({...data,comprador_nombre:'Nombre corregido'},'guardar','borrador');assert.equal(rows.size,1);assert.equal(attempts[0],attempts[1]);assert.equal([...rows.values()][0].comprador_nombre,'Nombre corregido');assert.equal(h.estado().operaciones.length,1)});
 await check('sincronización offline conserva identidad después de una respuesta perdida',async()=>{const rows=new Map();let first=true;const h=a.crearGuardadoPrueba({guardar:async op=>{rows.set(op.id,JSON.parse(JSON.stringify(op)));if(first){first=false;throw Error('Respuesta perdida')}return {operacion:op}}});a.lsSet('draftOperacion',{data,editId:null,contexto:a.contextoBorradorOperacion(h.contexto)});await h.sincronizarDraftOffline();assert.ok(a.lsGet('draftOperacion',null));const recuperado=a.crearGuardadoPrueba({guardar:async op=>{rows.set(op.id,JSON.parse(JSON.stringify(op)));return {operacion:op}}});await recuperado.sincronizarDraftOffline();assert.equal(rows.size,1);assert.equal(a.lsGet('draftOperacion',null),null)});
 
