@@ -181,6 +181,12 @@ function contenidoZip(buf,nombre){
   }
   throw Error('No se encontró '+nombre+' en Word');
 }
+// Leer los operandos Tj del PDF, no buscar el marcador en los bytes crudos:
+ // un identificador largo puede quedar dividido entre dos líneas visibles.
+function textoDibujadoPDF(raw){
+ return [...raw.matchAll(/\(((?:\\.|[^\\)])*)\)\s*Tj/g)]
+  .map(m=>m[1].replace(/\\([()\\])/g,'$1')).join('');
+}
 (async()=>{
   esbuild.buildSync({entryPoints:[path.join(dir,'src/Exportaciones.ts')],bundle:true,platform:'node',format:'cjs',outfile:path.join(tmp,'exportaciones.cjs')});
   const {DOC_EXPORT_LAYOUT,organizarFilasFirmas}=require(path.join(tmp,'exportaciones.cjs'));
@@ -241,16 +247,17 @@ function contenidoZip(buf,nombre){
     const salidaPDF=await a.generarPDF(doc,null,perfilQA);
     const salidaDOCX=await a.generarDOCX(doc,perfilQA);
     const bytesPDF=Buffer.from(await salidaPDF.blob.arrayBuffer()).toString('latin1');
+    const textoPDF=textoDibujadoPDF(bytesPDF);
     const documentoXML=contenidoZip(Buffer.from(await salidaDOCX.blob.arrayBuffer()),'word/document.xml');
     check(escenario.id+' / '+tipo+': PDF y Word conservan la cláusula única',()=>{
       assert.ok(salidaPDF.blob.size>1000,'PDF vacío');
       assert.ok(salidaDOCX.blob.size>1000,'Word vacío');
-      assert.ok(bytesPDF.includes(marca),'PDF no incluye el texto exclusivo de la agencia');
+      assert.ok(textoPDF.includes(marca),'PDF no incluye el texto exclusivo de la agencia');
       assert.ok(documentoXML.includes(marca),'Word no incluye el texto exclusivo de la agencia');
       for(const otra of escenariosInmobiliarias){
         if(otra.id===escenario.id)continue;
         const marcaAjena=marcasPorInmobiliaria.get(otra.id+':'+tipo);
-        assert.ok(!bytesPDF.includes(marcaAjena),'PDF mezcla cláusulas de agencias');
+        assert.ok(!textoPDF.includes(marcaAjena),'PDF mezcla cláusulas de agencias');
         assert.ok(!documentoXML.includes(marcaAjena),'Word mezcla cláusulas de agencias');
       }
     });
