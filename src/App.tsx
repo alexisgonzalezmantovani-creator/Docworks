@@ -9111,7 +9111,12 @@ function DocWorksApp(){
     }
     salidaEnCursoRef.current=false;setGuardandoSalida(false);setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("success","Borrador guardado en Operaciones.");setView(navPendiente||"dashboard");setNavPendiente(null);
   }
-  function salirSinGuardarFormulario(){salidaRevisionRef.current++;salidaEnCursoRef.current=false;setGuardandoSalida(false);setErrorSalida("");lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("info","Se descartaron los cambios sin guardar. No se creó ningún elemento en Papelera.");setView(navPendiente||"dashboard");setNavPendiente(null);}
+  function salirSinGuardarFormulario(){
+    // Una petición enviada a Supabase no puede deshacerse cerrando la ventana.
+    // No descartar la copia local mientras todavía no conocemos el resultado.
+    if(salidaEnCursoRef.current)return;
+    salidaRevisionRef.current++;salidaEnCursoRef.current=false;setGuardandoSalida(false);setErrorSalida("");lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("info","Se descartaron los cambios sin guardar. No se creó ningún elemento en Papelera.");setView(navPendiente||"dashboard");setNavPendiente(null);
+  }
 
   const [clausulas,setClausulas]=useState([]);
   const [papeleraClausulas,setPapeleraClausulas]=useState([]);
@@ -10307,7 +10312,7 @@ function DocWorksApp(){
         />:null}>
         {viewDoc&&<DocumentViewer key={String(viewDoc.id||"")+"-"+String(viewDoc.tipo||"")} salidaGuardRef={salidaVisorRef} op={viewDoc} clausulas={clausulas} perfil={perfil} operaciones={operaciones} bloquesReserva={bloquesReserva} onSavePerfil={function(p){var anterior=perfil;setPerfil(p);return perfilNube.guardarAhora(p).then(function(res){if(res&&res.error&&!res.contextoObsoleto){setPerfil(anterior);return res;}return res;}).catch(function(err){setPerfil(anterior);return {error:err};});}} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||(viewDoc&&viewDoc.id)||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} onUpdateBloqueReserva={updateBloqueReserva} onToggleTarea={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?toggleTarea:undefined} onUpdateOperation={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?onUpdateOperationGlobal:undefined} onActionWorkflow={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(action){if(viewDoc)onActionWorkflow(viewDoc,action);}:undefined} onCompleteData={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(op,campo){cerrarVisorSeguro(function(){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);});}:undefined} tab={docTab} onChangeTab={setDocTab} autoAction={docAutoAction} onAutoActionDone={function(){setDocAutoAction(null);}}/>}
       </Modal>
-      <ConfirmModal open={confirmCloseForm} actionsClassName="dw-operation-exit-actions" title="Salir de la operación" message={guardandoSalida?"Guardando el borrador…":"¿Querés guardar el borrador antes de salir?"} confirmLabel={guardandoSalida?"Guardando…":"Guardar borrador"} confirmDisabled={guardandoSalida} cancelLabel="Seguir editando" onCancel={cancelarSalidaFormulario} secondaryLabel="Salir sin guardar" onSecondary={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}>
+      <ConfirmModal open={confirmCloseForm} actionsClassName="dw-operation-exit-actions" title="Salir de la operación" message={guardandoSalida?"Guardando el borrador…":"¿Querés guardar el borrador antes de salir?"} confirmLabel={guardandoSalida?"Guardando…":"Guardar borrador"} confirmDisabled={guardandoSalida} cancelLabel="Seguir editando" onCancel={cancelarSalidaFormulario} secondaryLabel="Salir sin guardar" secondaryDisabled={guardandoSalida} onSecondary={salirSinGuardarFormulario} onConfirm={guardarBorradorYSalir}>
         {errorSalida&&<p role="alert" style={{fontSize:13,color:"var(--red)",lineHeight:1.5}}>{errorSalida}</p>}
       </ConfirmModal>
       <ConfirmModal

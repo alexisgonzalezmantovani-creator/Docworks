@@ -38,8 +38,9 @@ function crearConfirmacionGuardadoPrueba(servidor){
  const marcarOperacionPendiente=()=>{},desmarcarOperacionPendiente=()=>{};
  const borradorFormularioActual=()=>formSnapshotRef.current;
  ${fns.guardarBorradorYSalir}
+ ${fns.salirSinGuardarFormulario}
  ${fns.restaurarVersion}
- return {guardarBorradorYSalir,restaurarVersion,estado:()=>({operaciones,showForm,guardandoSalida,errorSalida,confirmCloseForm,view,viewDoc,formSnapshot:formSnapshotRef.current}),
+ return {guardarBorradorYSalir,salirSinGuardarFormulario,restaurarVersion,estado:()=>({operaciones,showForm,guardandoSalida,errorSalida,confirmCloseForm,view,viewDoc,formSnapshot:formSnapshotRef.current}),
    cambiarBorrador:(cambios)=>{
     const actual=formSnapshotRef.current;
     const nuevo={...actual,data:{...actual.data,...cambios}};
@@ -134,6 +135,22 @@ await check('guardar y salir preserva ediciones hechas mientras responde Supabas
  assert.equal(h.estado().showForm,false,'cierra solo después de confirmar la última versión');
  assert.equal(h.estado().operaciones.find(o=>o.id===enviado.editId)?.comprador_nombre,'Modificación durante guardado');
  assert.equal(a.lsGet('draftOperacion',null),null,'limpia el borrador confirmado');
+});
+await check('no se puede descartar el borrador mientras Supabase confirma el guardado',async()=>{
+ let resolver;const pendiente=new Promise(r=>{resolver=r});
+ const h=a.crearConfirmacionGuardadoPrueba({guardar:async op=>{await pendiente;return {operacion:op};}});
+ const guardando=h.guardarBorradorYSalir();
+ assert.equal(h.estado().guardandoSalida,true,'está guardando en el servidor');
+ const local=a.lsGet('draftOperacion',null);
+ assert.ok(local?.data?.id,'la copia local existe mientras guarda');
+ h.salirSinGuardarFormulario();
+ assert.equal(h.estado().showForm,true,'no se sale con la petición enviada');
+ assert.equal(h.estado().confirmCloseForm,true,'no se oculta el diálogo prematuramente');
+ assert.deepEqual(a.lsGet('draftOperacion',null),local,'no se borra el borrador en curso');
+ resolver();await guardando;
+ assert.equal(h.estado().showForm,false,'el guardado exitoso permite salir');
+ assert.equal(h.estado().operaciones.length,2,'la operación confirmada aparece una sola vez');
+ assert.equal(a.lsGet('draftOperacion',null),null,'el borrador se limpia después de confirmar');
 });
 await check('guardar borrador: confirmación válida permite salir sin duplicar',async()=>{
  const h=a.crearConfirmacionGuardadoPrueba({guardar:async op=>({operacion:op})});
