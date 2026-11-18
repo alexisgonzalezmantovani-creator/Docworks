@@ -13,13 +13,14 @@ function crearGuardadoPrueba(servidor,inicial={}){
  let operaciones=inicial.operaciones||[],editOp=inicial.editOp||null,showForm=true,formInitialOverride=null;
  const perfil={rol:'dueno',plantillas:{}},clausulas=[],bloquesReserva=[];
  const contexto={usuario:{id:'owner',rol_base:'dueno'},inmobiliaria:{id:'tenant-a'},habilitado:true},docworksAuth={contexto,session:{}},opsSupabase=servidor;
- const accionesContextoRef={current:crearControlContextoOperaciones(claveContextoOperaciones(contexto))},formSaveIdRef={current:null},formSnapshotRef={current:null},showFormRef={current:false},draftPromptRef={current:null},sincronizacionDraftEnCursoRef={current:false},cierresDevolucionEnCursoRef={current:false};
+ const accionesContextoRef={current:crearControlContextoOperaciones(claveContextoOperaciones(contexto))},formSaveIdRef={current:null},formSnapshotRef={current:null},showFormRef={current:false},draftPromptRef={current:null},sincronizacionDraftEnCursoRef={current:false},cierresDevolucionEnCursoRef={current:false},documentosPendientesRef={current:new Map()};
  const setOperaciones=f=>{operaciones=typeof f==='function'?f(operaciones):f},setEditOp=x=>{editOp=x},setShowForm=x=>{showForm=x},setFormInitialOverride=x=>{formInitialOverride=x};
- const marcarOperacionPendiente=()=>{},desmarcarOperacionPendiente=()=>{},reportSave=()=>{},setDocAutoAction=()=>{},abrirDoc=()=>{};
+ const marcarOperacionPendiente=()=>{},desmarcarOperacionPendiente=()=>{},reportSave=()=>{},setDocAutoAction=()=>{},abrirDoc=()=>{},setFormTipo=()=>{};
  ${fns.saveOp}
  ${fns.sincronizarDraftOffline}
  ${fns.reintentarCierresDevolucion}
- return {saveOp,sincronizarDraftOffline,reintentarCierresDevolucion,estado:()=>({operaciones,showForm}),contexto,cambiarContexto(c){docworksAuth.contexto=c;accionesContextoRef.current.actualizar(claveContextoOperaciones(c));}};
+ ${fns.crearDocumentoConfirmado}
+ return {saveOp,sincronizarDraftOffline,reintentarCierresDevolucion,crearDocumentoConfirmado,estado:()=>({operaciones,showForm}),contexto,cambiarContexto(c){docworksAuth.contexto=c;accionesContextoRef.current.actualizar(claveContextoOperaciones(c));}};
 }
 function crearConfirmacionGuardadoPrueba(servidor){
  let operaciones=[{id:'restaurable',tipo:'reserva',comprador_nombre:'Versión vigente'}];
@@ -58,6 +59,24 @@ async function confirmarCambioTipo(){
 }async function check(label,fn){try{await fn();checks++;console.log('OK',label)}catch(e){failures++;console.error('FALLA',label,e.message)}}
 const data={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',comprador_nombre:'Compradora de prueba'};
 (async()=>{
+await check('documentos nuevos: sin confirmación del mismo ID no aparecen como creados',async()=>{
+ for(const modo of ['nulo','vacio','id-distinto']){
+  const h=a.crearGuardadoPrueba({guardar:async op=>modo==='nulo'?null:modo==='vacio'?{}:{operacion:{...op,id:'id-ajeno'}}});
+  const res=await h.crearDocumentoConfirmado({...data,tipo:'boleto'},'boleto',false);
+  assert.ok(res?.error,'la respuesta '+modo+' debe rechazarse');
+  assert.equal(h.estado().operaciones.length,0,'no se inventan documentos');
+ }
+});
+await check('documentos nuevos: confirmación válida crea una sola operación',async()=>{
+ let llamadas=0;
+ const h=a.crearGuardadoPrueba({guardar:async op=>{llamadas++;return {operacion:{...op,inmueble_direccion:'Dirección confirmada'}}}});
+ const res=await h.crearDocumentoConfirmado({...data,tipo:'boleto'},'boleto',false);
+ assert.ok(!res.error);
+ assert.equal(llamadas,1);
+ assert.equal(h.estado().operaciones.length,1);
+ assert.equal(h.estado().operaciones[0].id,res.operacion.id);
+ assert.equal(h.estado().operaciones[0].inmueble_direccion,'Dirección confirmada','se usa la confirmación del servidor');
+});
 await check('guardar borrador: respuesta vacía conserva formulario y copia local',async()=>{
  for(const guardar of [async()=>null,async()=>({}),async()=>({operacion:{id:'otro-id'}})]){
   const h=a.crearConfirmacionGuardadoPrueba({guardar});

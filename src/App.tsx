@@ -9913,8 +9913,16 @@ function DocWorksApp(){
     var vigente=accionesContextoRef.current.capturar();
     var op=prepararAltaOperacion(usuario,Object.assign({},datos,{id:genId(),estado:"borrador",created_at:new Date().toISOString()}));
     op=sellarVersionPlantillaOperacion(op,perfil,!!(op.plantilla_snapshot&&op.plantilla_snapshot.tipo&&op.plantilla_snapshot.tipo!==tipo),clausulas,bloquesReserva);
-    var promesa=ejecutarCambioConfirmado({vigente:vigente,solicitar:function(){return opsSupabase.guardar(op);},fallar:function(e){dwNotify("error",traducirError(e&&e.message||"No se pudo crear el documento."));},confirmar:function(res){
-      op=res.operacion||op;
+    var promesa=ejecutarCambioConfirmado({vigente:vigente,solicitar:async function(){
+      var res=await opsSupabase.guardar(op);
+      // Un 200 sin fila confirmada o con otro ID no demuestra que el nuevo
+      // documento exista. No mostrarlo como creado ni abrirlo en el editor.
+      if(res&&!res.error&&!res.contextoObsoleto&&(!res.operacion||String(res.operacion.id)!==String(op.id))){
+        return {error:new Error("El servidor no confirmó la creación del documento. Revisá la conexión antes de reintentar.")};
+      }
+      return res;
+    },fallar:function(e){dwNotify("error",traducirError(e&&e.message||"No se pudo crear el documento."));},confirmar:function(res){
+      op=res.operacion;
       setOperaciones(function(ops){return [op].concat(ops.filter(function(o){return o.id!==op.id;}));});
       if(abrir){setEditOp(op);setFormTipo(tipo);setShowForm(true);}
     }});
