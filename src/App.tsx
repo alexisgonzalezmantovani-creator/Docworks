@@ -4768,8 +4768,19 @@ function buildDocSections(op, clausulasLib, tipo, bloquesPlantilla=undefined) {
       contactosIndividuales:[],contactos:[],conformidad:null,ocultarPartesEnCuerpo:true};
   }
   if(snap){
-    var actuales=Array.isArray(clausulasLib)?clausulasLib.slice():[];
-    (snap.clausulas||[]).forEach(function(sc){var guardada=Object.assign({},sc,{obligatoria:sc.obligatoria===true||(snap.obligatorias_ids||[]).indexOf(sc.id)!==-1});var i=actuales.findIndex(function(c){return c&&c.id===sc.id;});if(i>=0)actuales[i]=Object.assign({},actuales[i],guardada);else actuales.push(guardada);});
+    // La biblioteca actual puede haber sumado cláusulas obligatorias después de
+    // crear esta operación. No aplicarlas retroactivamente a un snapshot histórico.
+    // Los extras elegidos por el asesor siguen entrando por op.clausulas_ids.
+    var snapshotTieneSeleccion=Array.isArray(snap.obligatorias_ids);
+    var obligatoriasHistoricas=snapshotTieneSeleccion?snap.obligatorias_ids:[];
+    var actuales=(Array.isArray(clausulasLib)?clausulasLib:[]).map(function(c){
+      return !c||!snapshotTieneSeleccion?c:Object.assign({},c,{obligatoria:obligatoriasHistoricas.indexOf(c.id)!==-1});
+    });
+    (snap.clausulas||[]).forEach(function(sc){
+      var guardada=Object.assign({},sc,{obligatoria:snapshotTieneSeleccion?obligatoriasHistoricas.indexOf(sc.id)!==-1:sc.obligatoria===true});
+      var i=actuales.findIndex(function(c){return c&&c.id===sc.id;});
+      if(i>=0)actuales[i]=Object.assign({},actuales[i],guardada);else actuales.push(guardada);
+    });
     clausulasLib=actuales;
     if(Array.isArray(snap.body_blocks)&&snap.body_blocks.length)bloquesPlantilla=snap.body_blocks;
   }
