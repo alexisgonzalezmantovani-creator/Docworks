@@ -45,7 +45,11 @@ const cantidad=await ajustes.getByRole('button',{name:'Editar',exact:true}).coun
 assert.ok(cantidad>=2,'Ajustes deben mostrar las cláusulas del modelo, no sólo la primera');
 const listado=await ajustes.evaluate(el=>{const antes=el.scrollTop;el.scrollTop=el.scrollHeight;return {puede:el.scrollHeight>el.clientHeight+10,despues:el.scrollTop,antes};});
 assert.ok(listado.puede&&listado.despues>listado.antes,'La lista de ajustes tiene scroll al abrirla');
-await ajustes.getByRole('button',{name:'Editar',exact:true}).first().click();
+// Editar la cláusula que realmente contiene los chips automáticos de precio,
+ // no la primera cláusula del listado (que puede no tener campos variables).
+const precioAjuste=ajustes.locator('[data-ajuste-id="reserva.precio"]');
+assert.equal(await precioAjuste.count(),1,'Debe existir la cláusula editable de precio');
+await precioAjuste.getByRole('button',{name:'Editar',exact:true}).click();
 const chips=await ajustes.locator('[data-testid="dw-ajuste-chip"]').allTextContents();
 assert.ok(chips.length>0,'Los campos insertados tienen chips protegidos');
 assert.ok(chips.some(s=>/Precio en letras|Moneda/i.test(s)),'El precio se muestra como chip con nombre legible: '+chips.join(', '));
