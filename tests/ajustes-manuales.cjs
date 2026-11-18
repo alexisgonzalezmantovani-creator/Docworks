@@ -19,6 +19,31 @@ function AjustesHarness(){
 }
 export {act,createElement,createRoot,AjustesHarness,generarPDF,generarDOCX,buildDocSections,opParaDocumento};export const estadoAjustes=()=>({ultimoGuardado,llamadas});export const modoAjustes=m=>modo=m;export const resolverAjustes=()=>resolverGuardado();
 `,resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
+// Ejecutar también los manejadores reales de exportación con una descarga simulada
+// que falla la primera vez. Esto prueba el botón Reintentar sin tocar archivos del usuario.
+const exportSource=fs.readFileSync(dir+'/src/Operaciones.tsx','utf8');
+const exportAst=ts.createSourceFile('Operaciones.tsx',exportSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+const exportHandlers={};(function visitar(n){if(ts.isFunctionDeclaration(n)&&['handlePDF','handleDOCX'].includes(n.name?.text))exportHandlers[n.name.text]=n.getText(exportAst);ts.forEachChild(n,visitar)})(exportAst);
+assert.ok(exportHandlers.handlePDF&&exportHandlers.handleDOCX,'existen los manejadores de descarga');
+function simularDescarga(formato){
+ let estado={accion:null,error:'',busy:{},generados:0};
+ const iniciar=new Function('estado','formato',`
+   const guardandoAjuste=false,hayCambiosAjuste=()=>false;
+   const descargaEnCursoRef={current:{pdf:false,docx:false}};
+   const setBusy=f=>estado.busy=typeof f==='function'?f(estado.busy):f;
+   const setErr=x=>estado.error=x,setLastAction=x=>estado.accion=x;
+   const setLastPdf=()=>{},setLastDocx=()=>{};
+   const getDoc=()=>({titulo:'Reserva ficticia'});
+   const tabActual={label:'Reserva'},op={inmueble_direccion:'Inmueble ficticio'};
+   const exportacionCompartida=async()=>{estado.generados++;return {blob:{},filename:'test'};};
+   const descargarArchivo=async()=>{estado.intentos=(estado.intentos||0)+1;
+     if(estado.intentos===1)throw Error('Descarga simulada interrumpida');};
+   ${exportHandlers.handlePDF}
+   ${exportHandlers.handleDOCX}
+   return formato==='pdf'?handlePDF:handleDOCX;
+ `)(estado,formato);
+ return {iniciar,estado};
+}
 const a=require(tmp+'/app.cjs');let root,checks=0;
 const botones=()=>[...document.querySelectorAll('button')],boton=t=>{const el=botones().find(b=>b.textContent.trim()===t);assert.ok(el,'botón '+t);return el};
 async function click(el){await a.act(async()=>el.click())}
@@ -26,6 +51,18 @@ async function iniciar(abrirEditor=true){if(root)await a.act(async()=>root.unmou
 async function escribir(valor){const el=document.querySelector('textarea');assert.ok(el);await a.act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,valor);el.dispatchEvent(new Event('input',{bubbles:true}))});}
 async function check(label,fn){await fn();checks++;console.log('OK',label)}
 (async()=>{
+ await check('PDF y Word permiten reintentar tras una descarga fallida',async()=>{
+  for(const formato of ['pdf','docx']){
+    const prueba=simularDescarga(formato);
+    await prueba.iniciar();
+    assert.equal(prueba.estado.accion,formato,'la falla debe conservar el botón Reintentar');
+    assert.match(prueba.estado.error,/Descarga simulada interrumpida/);
+    await prueba.iniciar();
+    assert.equal(prueba.estado.accion,null,'el reintento correcto debe limpiar la acción');
+    assert.equal(prueba.estado.error,'','el error desaparece después del reintento');
+    assert.equal(prueba.estado.intentos,2,'la descarga se vuelve a intentar');
+  }
+ });
  await iniciar();await escribir('Texto manual que debe conservarse.');
  await check('no abre confirmación de exportación con cambios de cláusula sin guardar',async()=>{
   await click(boton('Exportar PDF QA'));

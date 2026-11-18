@@ -5873,11 +5873,14 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       var result = await exportacionCompartida("pdf",docOverride || getDoc());
       setLastPdf(result);
       await descargarArchivo(result.blob, result.filename, "application/pdf", {title:tabActual.label, text:tabActual.label+" — "+(op.inmueble_direccion||"Operación inmobiliaria")});
+      setLastAction(null);
     }catch(e){
-      if(!(e&&e.name==="AbortError"))setErr(e&&e.message?e.message:"Error al generar el PDF.");
+      // Conservar la acción ante fallas para ofrecer "Reintentar".
+      // Cancelar el panel nativo es una decisión del usuario, no un error.
+      if(e&&e.name==="AbortError")setLastAction(null);
+      else setErr(e&&e.message?e.message:"Error al generar el PDF.");
     }finally{
       descargaEnCursoRef.current.pdf=false;
-      setLastAction(null);
       setBusy(function(b){return Object.assign({},b,{pdf:false});});
     }
   }
@@ -5891,11 +5894,12 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       var result = await exportacionCompartida("docx",docOverride || getDoc());
       setLastDocx(result);
       await descargarArchivo(result.blob, result.filename, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", {title:tabActual.label, text:tabActual.label+" — "+(op.inmueble_direccion||"Operación inmobiliaria")});
+      setLastAction(null);
     }catch(e){
-      if(!(e&&e.name==="AbortError"))setErr(e&&e.message?e.message:"Error al generar el documento Word.");
+      if(e&&e.name==="AbortError")setLastAction(null);
+      else setErr(e&&e.message?e.message:"Error al generar el documento Word.");
     }finally{
       descargaEnCursoRef.current.docx=false;
-      setLastAction(null);
       setBusy(function(b){return Object.assign({},b,{docx:false});});
     }
   }
