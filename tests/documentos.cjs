@@ -464,5 +464,27 @@ delete global.document;
   assert.ok(ultimaPagina.includes('Comprador de Prueba'),'La última página debe incluir la firma del comprador.');
   assert.ok(!ultimaPagina.includes('NaN')&&!ultimaPagina.includes('undefined'),'Las medidas de paginación deben ser números finitos.');
  });
+
+ // Regresión adicional: con siete firmantes más la inmobiliaria se generan
+ // cuatro filas de firmas. El último folio debe contener también texto legal.
+ const firmasNumerosas=Array.from({length:7},(_,i)=>({
+  nombre:'Firmante '+(i+1)+' de Prueba',
+  rol:i<4?'VENDEDOR':'COMPRADOR',
+  dni:String(30000000+i)
+ }));
+ const pdfCuatroFilas=await app.generarPDF(
+  {...pdfExtensoDoc,firmas:firmasNumerosas},null,{nombre:'Inmobiliaria de Prueba'});
+ const paginasCuatroFilas=(Buffer.from(await pdfCuatroFilas.blob.arrayBuffer())
+  .toString('latin1').match(/stream\\n([\\s\\S]*?)\\nendstream/g)||[]);
+ const ultimaCuatroFilas=paginasCuatroFilas.at(-1)||'';
+ check('PDF extenso con cuatro filas de firmas conserva el cierre en el último folio',()=>{
+  assert.ok(paginasCuatroFilas.length>=2);
+  assert.ok(ultimaCuatroFilas.includes('CIERREUNICO'),
+   'La última hoja no puede quedar ocupada únicamente por firmas.');
+  firmasNumerosas.forEach(p=>assert.ok(ultimaCuatroFilas.includes(p.nombre),
+   'Falta firma o quedó en otra hoja: '+p.nombre));
+  assert.ok(ultimaCuatroFilas.includes('Inmobiliaria de Prueba'),
+   'Falta la firma de la inmobiliaria.');
+ });
  console.log('APROBADAS',count,'verificaciones. Exportaciones:',tmp);
 })().catch(e=>{console.error(e);process.exitCode=1;});
