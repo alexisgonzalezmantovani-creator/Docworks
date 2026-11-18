@@ -5596,6 +5596,19 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     var visibles=new Set((doc.secciones||[]).map(function(sec){return sec&&sec._bloqueId;}).filter(Boolean));
     return lista.filter(function(b){return b&&b.id&&visibles.has(b.id)&&b.activo!==false&&String(b.contenido||"").trim();});
   }
+  const ajustesDetailsRef=useRef(null);
+  function editarDesdeVistaPrevia(bloqueId){
+    var bloque=bloquesParaAjustes().find(function(b){return b.id===bloqueId;});
+    if(!bloque || !permitirDescartarAjuste())return;
+    abrirAjuste(bloque);
+    if(ajustesDetailsRef.current)ajustesDetailsRef.current.open=true;
+    setTimeout(function(){
+      var raiz=ajustesDetailsRef.current;
+      if(!raiz)return;
+      var destino=Array.from(raiz.querySelectorAll("[data-ajuste-id]")).find(function(el){return el.getAttribute("data-ajuste-id")===bloqueId;});
+      if(destino){destino.scrollIntoView({block:"nearest",behavior:"smooth"});var campo=destino.querySelector("textarea");if(campo)campo.focus({preventScroll:true});}
+    },0);
+  }
   function cerrarEdicionAjuste(){
     setAjusteEditando(null);setPartesAjuste([]);setErrorAjuste("");
   }
@@ -5909,7 +5922,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
       var prefix=String(prefijoClausulaFormal(s.titulo)||"");
       (s.items||[]).forEach(function(i,idx){
         if(!i) return;
-        if(idx===0) b.push({prefix:prefix, t:cuerpoTrasRotulo(i), justify:true, clause:true, infoSena:op.tipo==="reserva"&&/SEÑA Y CONSECUENCIAS/i.test(String(s.titulo||""))});
+        if(idx===0) b.push({prefix:prefix, t:cuerpoTrasRotulo(i), justify:true, clause:true, bloqueId:s._bloqueId||null, infoSena:op.tipo==="reserva"&&/SEÑA Y CONSECUENCIAS/i.test(String(s.titulo||""))});
         else b.push({t:normalizarTextoDocumento(i), justify:true, indent:true});
       });
       b.push({blank:true});
@@ -5976,7 +5989,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
         {onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
-          <details className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
+          <details ref={ajustesDetailsRef} className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
               ✎ Ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
             </summary>
@@ -5985,7 +5998,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
             </div>
             {bloquesParaAjustes().map(function(b){
               var vigente=op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.prototype.hasOwnProperty.call(op.ajustes_manuales[tab],b.id);
-              return <div key={b.id} style={{padding:"10px 0",borderTop:"1px solid var(--border)"}}>
+              return <div key={b.id} data-ajuste-id={b.id} style={{padding:"10px 0",borderTop:"1px solid var(--border)"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
                   <span style={{fontSize:13,fontWeight:650,color:"var(--text)"}}>{b.titulo||"Cláusula"}</span>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
@@ -6034,6 +6047,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                     return (
                       <div key={i} style={{textAlign:"justify",marginBottom:15,color:"#1f2937",lineHeight:1.62}}>
                         <strong style={{color:(perfil&&perfil.plantillaEstilo==="clasico")?"#1a1a1a":((perfil&&perfil.colorPrimario)||"#142a4d")}}>{bl.prefix}</strong>
+                        {bl.bloqueId&&onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().some(function(b){return b.id===bl.bloqueId;})&&<button type="button" data-testid="dw-editar-desde-preview" aria-label={"Editar cláusula "+bl.prefix} title="Editar esta cláusula en Ajustes manuales" onClick={function(){editarDesdeVistaPrevia(bl.bloqueId);}} style={{margin:"0 6px",border:"1px solid #bcd7e8",borderRadius:5,padding:"2px 7px",background:"#eef7fd",color:"#17618d",fontSize:11,fontWeight:700,cursor:"pointer"}}>✎ Editar</button>}
                         {bl.infoSena&&<details style={{display:"inline-block",position:"relative",margin:"0 5px",verticalAlign:"middle",textAlign:"left"}}>
                           <summary aria-label="Información sobre seña y arrepentimiento" title="Información sobre el artículo 1059: tocar para leer" style={{display:"inline-block",listStyle:"none",cursor:"pointer",color:"#34659a",fontSize:14,fontWeight:700}}>ⓘ</summary>
                           <span role="note" style={{display:"block",position:"relative",padding:"8px 10px",margin:"5px 0",borderRadius:7,border:"1px solid #d6e2ef",background:"#f5f9ff",color:"#334155",fontSize:11.5,lineHeight:1.5,maxWidth:360}}>
