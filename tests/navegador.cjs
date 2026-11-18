@@ -278,7 +278,16 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.screenshot({path:path.join(out,'aspecto-'+name+'.png'),fullPage:true});
   await page.goto('http://127.0.0.1:'+server.address().port+'/workspace');
   for(const label of ['Reserva de Compra','Boleto de Compraventa','Reserva de Alquiler','Contrato de Alquiler','Comodato','Autorización de Venta','Refuerzo de Reserva','Devolución de Reserva']){
-   await page.locator('#dw-modelo-documento').getByRole('button',{name:label,exact:true}).click();
+   const botonModelo=page.locator('#dw-modelo-documento').getByRole('button',{name:label,exact:true});
+   const tipoElegido=await botonModelo.getAttribute('data-document-type');
+   if(engine==='webkit'){
+    await botonModelo.evaluate(el=>{
+     const rect=el.getBoundingClientRect();
+     if(!rect.width||!rect.height||getComputedStyle(el).visibility==='hidden'||el.disabled)throw Error('Selector de modelo no disponible');
+     el.click();
+    });
+   }else await botonModelo.click();
+   await page.waitForFunction(tipo=>document.querySelector('#dw-modelo-documento [data-document-type="'+tipo+'"]')?.getAttribute('aria-pressed')==='true',tipoElegido);
    assert.equal(await page.locator('#dw-config-modelo').count(),0);checks++;
    assert.equal(await page.locator('#dw-modelo-documento [aria-pressed=true]').innerText(),label,name+' cambio a '+label);checks++;
    const tipoActual=await page.locator('#dw-modelo-documento [aria-pressed=true]').getAttribute('data-document-type');
