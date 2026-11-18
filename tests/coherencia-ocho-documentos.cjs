@@ -122,12 +122,17 @@ for(const escenario of escenariosInmobiliarias){
     :{tipo,version:1,body_blocks:modificados,clausulas:[],clausulas_ids:[],obligatorias_ids:[]};
   operacion.plantilla_snapshot=snapshot;
   const copiaSnapshot=JSON.stringify(snapshot);
-  const doc=a.buildDocSections(a.opParaDocumento(operacion),[],tipo);
+  const nuevaObligatoria='OBLIGATORIANUEVA'+escenario.id.toUpperCase()+tipo.replace(/_/g,'').toUpperCase();
+  const bibliotecaPosterior=[{id:'qa.obligatoria.nueva',titulo:'CLÁUSULA POSTERIOR',contenido:nuevaObligatoria,
+    tipos:[tipo],obligatoria:true,activo:true}];
+  const doc=a.buildDocSections(a.opParaDocumento(operacion),bibliotecaPosterior,tipo);
   const texto=a.docToPlainText(doc);
   check(escenario.id+' / '+tipo+': respeta texto, chips, aislamiento y snapshot',()=>{
    assert.ok(texto.includes(marca), 'no aparece la cláusula personalizada '+marca);
    assert.ok(texto.includes(base.inmueble_direccion), 'no se sustituyó dirección');
    assert.deepEqual(a.getTokensSinReemplazar(doc),[], 'hay chips sin resolver');
+   if(escenario.modo!=='propio')assert.ok(!texto.includes(nuevaObligatoria),
+     'una cláusula obligatoria publicada después modificó el documento histórico');
    for(const otro of escenariosInmobiliarias){
     if(otro.id===escenario.id)continue;
     assert.ok(!texto.includes(marcasPorInmobiliaria.get(otro.id+':'+tipo)), 'se mezcló otra inmobiliaria');
@@ -137,6 +142,12 @@ for(const escenario of escenariosInmobiliarias){
    assert.equal((texto.match(new RegExp(marca,'g'))||[]).length,1,'duplicó cláusula');
   });
   if(escenario.modo!=='propio'){
+   check(escenario.id+' / '+tipo+': un extra elegido por asesor sí puede añadirse después',()=>{
+    const adicional={...operacion,clausulas_ids:['qa.obligatoria.nueva']};
+    const ajustado=a.buildDocSections(a.opParaDocumento(adicional),bibliotecaPosterior,tipo);
+    assert.ok(a.docToPlainText(ajustado).includes(nuevaObligatoria),
+      'la selección explícita del asesor debe conservarse');
+   });
    check(escenario.id+' / '+tipo+': cambios futuros no afectan documento histórico',()=>{
     const actualizado=modificados.map(b=>b.id===bloqueMarca.id?{...b,contenido:'NUEVO MODELO '+marca}:b);
     const guardado=a.buildDocSections(a.opParaDocumento(operacion),[],tipo,actualizado);
