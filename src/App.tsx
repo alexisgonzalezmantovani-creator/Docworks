@@ -9051,6 +9051,10 @@ function DocWorksApp(){
     var revision=++salidaRevisionRef.current,vigente=accionesContextoRef.current.capturar();
     var draft=borradorFormularioActual();
     if(draft&&draft.data&&draftTieneContenido(draft.data)){
+      // Conservar la foto del formulario tal como la editó el usuario.
+      // La operación enriquecida para Supabase agrega estado, fecha, plantilla,
+      // etc.; esas diferencias NO son ediciones nuevas.
+      var datosFormularioAlEnviar=draft.data;
       var existingId=draft.editId||draft.data.id||formSaveIdRef.current||null;
       var op;
       if(existingId){
@@ -9086,8 +9090,15 @@ function DocWorksApp(){
       // confirma la versión enviada, NO los cambios más recientes del formulario.
       // Nunca cerrar ni borrar ese borrador: debe poder guardarse nuevamente.
       var mismoContenidoEnviado=function(actual){
-        return !!actual&&JSON.stringify({editId:actual.editId,data:actual.data,contexto:actual.contexto})===
-          JSON.stringify({editId:draft.editId,data:draft.data,contexto:draft.contexto});
+        if(!actual||!actual.data)return false;
+        var idActual=actual.editId||actual.data.id;
+        if(!idActual||String(idActual)!==String(draft.editId))return false;
+        if(JSON.stringify(actual.contexto||null)!==JSON.stringify(draft.contexto||null))return false;
+        // El autosave y el formulario conservan los datos de edición (sin
+        // metadatos de servidor); la copia hecha al salir sí usa la operación
+        // enriquecida. Ambas representan el MISMO contenido enviado.
+        return JSON.stringify(actual.data)===JSON.stringify(datosFormularioAlEnviar)||
+          JSON.stringify(actual.data)===JSON.stringify(draft.data);
       };
       var localActual=lsGet("draftOperacion",null),formularioActual=borradorFormularioActual();
       if((localActual&&!mismoContenidoEnviado(localActual))||(formularioActual&&!mismoContenidoEnviado(formularioActual))){

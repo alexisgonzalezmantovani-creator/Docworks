@@ -46,6 +46,14 @@ function crearConfirmacionGuardadoPrueba(servidor){
     formSnapshotRef.current=nuevo;
     lsSet('draftOperacion',{...nuevo,ts:Date.now()});
    },
+   restaurarFormularioSinCambios:()=>{
+    // Simular un render real de OperacionForm: el estado del usuario conserva
+    // sus campos y no incluye metadatos agregados para la RPC.
+    const actual=formSnapshotRef.current;
+    const crudo={...actual,data:{...draftData}};
+    formSnapshotRef.current=crudo;
+    lsSet('draftOperacion',{...crudo,ts:Date.now()});
+   },
    abrirVista:(op)=>{viewDoc=op}};
 }
 import {act,createElement} from 'react';import {createRoot} from 'react-dom/client';
@@ -88,6 +96,20 @@ await check('guardar borrador: respuesta vacía conserva formulario y copia loca
   assert.equal(estado.operaciones.length,1,'no se inventa una operación guardada');
   assert.ok(a.lsGet('draftOperacion',null)?.data?.id,'el borrador se conserva para recuperar');
  }
+});
+await check('guardar y salir no confunde formulario sin cambios con operación enriquecida',async()=>{
+ let confirmar;const pendiente=new Promise(r=>{confirmar=r});
+ const h=a.crearConfirmacionGuardadoPrueba({guardar:async op=>{await pendiente;return {operacion:op};}});
+ const guardando=h.guardarBorradorYSalir();
+ const enviado=a.lsGet('draftOperacion',null);
+ assert.ok(enviado?.editId,'se asignó ID antes de esperar al servidor');
+ h.restaurarFormularioSinCambios();
+ confirmar();await guardando;
+ assert.equal(h.estado().showForm,false,'debe cerrar cuando el usuario no cambió los datos');
+ assert.equal(h.estado().confirmCloseForm,false);
+ assert.equal(h.estado().errorSalida,'','no hay cambios pendientes falsos');
+ assert.equal(a.lsGet('draftOperacion',null),null,'limpia el mismo borrador confirmado');
+ assert.equal(h.estado().operaciones.find(o=>o.id===enviado.editId)?.comprador_nombre,'Borrador en edición');
 });
 await check('guardar y salir preserva ediciones hechas mientras responde Supabase',async()=>{
  let confirmar;const pendiente=new Promise(r=>{confirmar=r});let intentos=0,ids=[];
