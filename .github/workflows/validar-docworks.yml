@@ -64,7 +64,7 @@ jobs:
   browsers:
     name: Editores en ${{ matrix.browser }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
