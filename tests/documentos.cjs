@@ -441,6 +441,23 @@ delete global.document;
   check(nombre+' coincide en PDF y Word',()=>{assert.equal((pdfTexto.match(/CallePrueba 123/g)||[]).length,esperado);assert.equal((xml.match(/CallePrueba 123/g)||[]).length,esperado);});
  }
 
+ // Regresión: las cadenas sin espacios también deben ajustarse al ancho
+ // de la hoja; antes un solo token podía desbordar el margen derecho.
+ const palabraSinEspacios='W'.repeat(180);
+ const pdfPalabraLarga=await app.generarPDF({
+  tipoDocumento:'reserva',titulo:'RESERVA DE COMPRA',ciudad:'Pilar',fecha:'18/11/2026',
+  secciones:[{titulo:'1. CONDICIÓN PARTICULAR',items:[
+   'El identificador '+palabraSinEspacios+' se incorpora íntegro al documento.'
+  ]}],clausulas:[],partes:[],firmas:[]
+ },null,{nombre:'Inmobiliaria de Prueba'});
+ const pdfPalabraTexto=Buffer.from(await pdfPalabraLarga.blob.arrayBuffer()).toString('latin1');
+ const fragmentosToken=[...pdfPalabraTexto.matchAll(/\\((W+)\\) Tj/g)].map(m=>m[1]);
+ check('PDF divide cadenas largas sin recortar caracteres ni invadir márgenes',()=>{
+  assert.ok(fragmentosToken.length>=3,'El token no fue dividido en varios renglones');
+  assert.equal(fragmentosToken.join(''),palabraSinEspacios,'La división perdió caracteres');
+  assert.ok(fragmentosToken.every(x=>x.length<=60),'Un renglón excede el ancho disponible');
+ });
+
  // Regresión: ninguna reserva extensa debe terminar con una página dedicada
  // únicamente a las firmas. Los datos son ficticios y no usan Supabase.
  const pdfExtensoDoc={

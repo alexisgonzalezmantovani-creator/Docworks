@@ -328,11 +328,37 @@ export async function generarPDFModulo(doc, logoDataUrl, perfil, deps) {
       var words=(bodyText||"").split(/\s+/).filter(Boolean);
       var wrapped=[]; var lineWords=[], firstLine=true;
       function budget(){ return firstLine ? firstBudget : restBudget; }
+      function cerrarLinea(){
+        wrapped.push({words:lineWords,first:firstLine});
+        lineWords=[];
+        firstLine=false;
+      }
       words.forEach(function(w){
-        var ww=mw((lineWords.length?" ":"")+w,size,false);
-        var curW=mw(lineWords.join(" "),size,false);
-        if(lineWords.length>0 && curW+ww>budget()){ wrapped.push({words:lineWords,first:firstLine}); lineWords=[]; firstLine=false; }
-        lineWords.push(w);
+        var pendiente=w;
+        while(pendiente){
+          var anterior=lineWords.join(" ");
+          var separador=lineWords.length?" ":"";
+          var disponible=budget()-mw(anterior+separador,size,false);
+          if(disponible<=0){ cerrarLinea(); continue; }
+          if(mw(pendiente,size,false)<=disponible){
+            lineWords.push(pendiente);
+            break;
+          }
+          if(lineWords.length){ cerrarLinea(); continue; }
+          // Un token sin espacios (número largo, URL o identificador) no debe
+          // salir del margen derecho. Cortarlo sólo en la representación PDF,
+          // sin quitar caracteres, guiones ni modificar el dato original.
+          var desde=1, hasta=pendiente.length;
+          while(desde<hasta){
+            var medio=Math.ceil((desde+hasta)/2);
+            if(mw(pendiente.slice(0,medio),size,false)<=disponible) desde=medio;
+            else hasta=medio-1;
+          }
+          var cantidad=Math.max(1,desde);
+          lineWords.push(pendiente.slice(0,cantidad));
+          pendiente=pendiente.slice(cantidad);
+          cerrarLinea();
+        }
       });
       if(lineWords.length) wrapped.push({words:lineWords,first:firstLine});
 
