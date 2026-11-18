@@ -39,6 +39,12 @@ function crearConfirmacionGuardadoPrueba(servidor){
  ${fns.guardarBorradorYSalir}
  ${fns.restaurarVersion}
  return {guardarBorradorYSalir,restaurarVersion,estado:()=>({operaciones,showForm,guardandoSalida,errorSalida,confirmCloseForm,view,viewDoc,formSnapshot:formSnapshotRef.current}),
+   cambiarBorrador:(cambios)=>{
+    const actual=formSnapshotRef.current;
+    const nuevo={...actual,data:{...actual.data,...cambios}};
+    formSnapshotRef.current=nuevo;
+    lsSet('draftOperacion',{...nuevo,ts:Date.now()});
+   },
    abrirVista:(op)=>{viewDoc=op}};
 }
 import {act,createElement} from 'react';import {createRoot} from 'react-dom/client';
@@ -63,6 +69,30 @@ await check('guardar borrador: respuesta vacía conserva formulario y copia loca
   assert.equal(estado.operaciones.length,1,'no se inventa una operación guardada');
   assert.ok(a.lsGet('draftOperacion',null)?.data?.id,'el borrador se conserva para recuperar');
  }
+});
+await check('guardar y salir preserva ediciones hechas mientras responde Supabase',async()=>{
+ let confirmar;const pendiente=new Promise(r=>{confirmar=r});let intentos=0,ids=[];
+ const h=a.crearConfirmacionGuardadoPrueba({guardar:async op=>{
+   intentos++;ids.push(op.id);
+   if(intentos===1)await pendiente;
+   return {operacion:op};
+ }});
+ const guardando=h.guardarBorradorYSalir();
+ const enviado=a.lsGet('draftOperacion',null);
+ assert.ok(enviado?.editId,'se conserva el ID antes de enviar');
+ h.cambiarBorrador({comprador_nombre:'Modificación durante guardado'});
+ confirmar();await guardando;
+ assert.equal(h.estado().showForm,true,'el formulario no se cierra al guardar una versión anterior');
+ assert.equal(h.estado().confirmCloseForm,true,'el diálogo de salida queda disponible');
+ assert.match(h.estado().errorSalida,/cambios más recientes/,'se explica por qué sigue abierto');
+ assert.equal(a.lsGet('draftOperacion',null).data.comprador_nombre,'Modificación durante guardado','el borrador nuevo no se borra');
+ assert.equal(h.estado().operaciones.find(o=>o.id===enviado.editId)?.comprador_nombre,'Borrador en edición','el primer guardado fue confirmado');
+ await h.guardarBorradorYSalir();
+ assert.equal(intentos,2,'permite reintentar guardando los cambios recientes');
+ assert.equal(ids[0],ids[1],'no crea una segunda operación');
+ assert.equal(h.estado().showForm,false,'cierra solo después de confirmar la última versión');
+ assert.equal(h.estado().operaciones.find(o=>o.id===enviado.editId)?.comprador_nombre,'Modificación durante guardado');
+ assert.equal(a.lsGet('draftOperacion',null),null,'limpia el borrador confirmado');
 });
 await check('guardar borrador: confirmación válida permite salir sin duplicar',async()=>{
  const h=a.crearConfirmacionGuardadoPrueba({guardar:async op=>({operacion:op})});

@@ -9082,8 +9082,23 @@ function DocWorksApp(){
         dwNotify("error","No se pudo guardar el borrador. Tus cambios siguen en el formulario.");
         return;
       }
+      // Si el usuario siguió editando mientras el servidor guardaba, la respuesta
+      // confirma la versión enviada, NO los cambios más recientes del formulario.
+      // Nunca cerrar ni borrar ese borrador: debe poder guardarse nuevamente.
+      var mismoContenidoEnviado=function(actual){
+        return !!actual&&JSON.stringify({editId:actual.editId,data:actual.data,contexto:actual.contexto})===
+          JSON.stringify({editId:draft.editId,data:draft.data,contexto:draft.contexto});
+      };
+      var localActual=lsGet("draftOperacion",null),formularioActual=borradorFormularioActual();
+      if((localActual&&!mismoContenidoEnviado(localActual))||(formularioActual&&!mismoContenidoEnviado(formularioActual))){
+        setErrorSalida("Se guardó una versión anterior en la nube, pero tenés cambios más recientes. Guardá nuevamente el borrador antes de salir.");
+        dwNotify("warning","Conservamos los cambios más recientes en el formulario. Volvé a guardar para sincronizarlos.");
+        return;
+      }
+      // Solo limpiar nuestra propia copia, nunca un borrador nuevo o ajeno.
+      if(mismoContenidoEnviado(localActual))lsRemove("draftOperacion");
     }
-    salidaEnCursoRef.current=false;setGuardandoSalida(false);lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("success","Borrador guardado en Operaciones.");setView(navPendiente||"dashboard");setNavPendiente(null);
+    salidaEnCursoRef.current=false;setGuardandoSalida(false);setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("success","Borrador guardado en Operaciones.");setView(navPendiente||"dashboard");setNavPendiente(null);
   }
   function salirSinGuardarFormulario(){salidaRevisionRef.current++;salidaEnCursoRef.current=false;setGuardandoSalida(false);setErrorSalida("");lsRemove("draftOperacion");setConfirmCloseForm(false);setShowForm(false);setEditOp(null);setFormInitialOverride(null);dwNotify("info","Se descartaron los cambios sin guardar. No se creó ningún elemento en Papelera.");setView(navPendiente||"dashboard");setNavPendiente(null);}
 
