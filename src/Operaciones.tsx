@@ -2326,13 +2326,22 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     border-radius:13px;
   }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
+    display:flex!important;
+    flex-direction:column!important;
+    flex:1 1 0%!important;
     height:100%!important;
     min-height:0!important;
+    max-height:100%!important;
+    overflow:hidden!important;
   }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview>.pdf-content{
+    display:block!important;
+    flex:1 1 0%!important;
+    height:0!important;
     min-height:0!important;
-    flex:1 1 auto!important;
+    max-height:100%!important;
     overflow-y:auto!important;
+    overflow-x:hidden!important;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;
   }
