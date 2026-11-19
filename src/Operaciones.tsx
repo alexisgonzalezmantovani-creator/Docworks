@@ -6689,6 +6689,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   const operacionOrigen= data.parent_id && Array.isArray(operaciones)
     ? operaciones.find(function(o){return o.id===data.parent_id;})
     : null;
+  // Atajo opcional para documentos vinculados: evita volver a recorrer partes e inmueble
+  // ya recuperados. La revisión final conserva todas las validaciones de esos campos.
+  const pasoCondicionesVinculadas= data.parent_id && !revisando && step===2
+    ? ({boleto:5,alquiler:5,refuerzo_reserva:4,devolucion_reserva:4})[data.tipo]
+    : null;
   const avisoDatosVinculados= data.parent_id && ({
     boleto:"Se copiaron partes, inmueble y datos de la reserva. Confirmá fecha de posesión, saldo y condiciones del boleto.",
     alquiler:"Se recuperaron datos de la reserva de alquiler. Revisá canon, plazo, garantía y honorarios antes de firmar.",
@@ -6726,7 +6731,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
           {puedeOmitirClausulas&&!revisando&&<Btn v="secondary" onClick={avanzarConAviso}>Agregar cláusulas</Btn>}
           {step>1&&!revisando&&<div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {puedeOmitirClausulas&&!revisando?<Btn v="success" onClick={function(){setStep(total+1);}}>Ir a revisión</Btn>:step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
+            {pasoCondicionesVinculadas?<Btn onClick={function(){setStep(pasoCondicionesVinculadas);}}>Ir a condiciones →</Btn>:puedeOmitirClausulas&&!revisando?<Btn v="success" onClick={function(){setStep(total+1);}}>Ir a revisión</Btn>:step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
           </div>}
         </div>
       </div>}
