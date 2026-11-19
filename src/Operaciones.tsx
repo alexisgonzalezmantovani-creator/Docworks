@@ -6099,10 +6099,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   return(
     <div className="doc-viewer-shell">
       <div className="doc-viewer-tabs">
-        <DocTabsBar op={op} tab={tab} onChange={function(id){if(vistaAjustes){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(false);onChangeTab(id);return;}setTab(id);}}
-          mostrarAjustes={!!onUpdateOperation&&!tabActual.esRecibo&&bloquesParaAjustes().length>0&&!((op.plantilla_snapshot||{}).documento_propio)}
-          ajustesActivo={vistaAjustes}
-          onAjustes={function(){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(!vistaAjustes);}}/>
+        <DocTabsBar op={op} tab={tab} onChange={function(id){if(vistaAjustes){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(false);onChangeTab(id);return;}setTab(id);}}/>
       </div>
       <div className={(tabActual.esResumen||tabActual.esFicha||tabActual.esTareas||tabActual.esNegociacion)?"doc-viewer-tab-content doc-tab-static":"doc-viewer-tab-content"}>
       {tabActual.esTareas ? (
@@ -6115,7 +6112,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         <DocSummaryPanel op={op} perfil={perfil} tabsDocs={TABS} onLeer={changeTab} operaciones={operaciones} onToggleTarea={onToggleTarea} onUpdateOperation={onUpdateOperation} onActionWorkflow={onActionWorkflow} onRevisionIA={ejecutarRevisionIA} aiReview={aiReview} onCopiarRevisionIA={copiarRevisionIA}/>
       ) : (
       <>
-        {tabActual.id==="reserva"&&<ReservaCompactSummary op={op} operaciones={operaciones}/>}
+
         {disponeConformidadSeparada&&tabActual.id==="reserva"&&<div className="card" style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",padding:10,marginBottom:12}}>
           <span style={{fontSize:12,color:"var(--muted)",fontWeight:650,marginRight:5}}>Documento</span>
           {[{key:false,label:"Reserva de Compra"},{key:true,label:"Conformidad del vendedor"}].map(function(o){
@@ -6134,7 +6131,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
         {onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
-          <details className="card" open={vistaAjustes} data-vista-ajustes={vistaAjustes?"1":"0"} style={{flex:vistaAjustes?"1 1 auto":"0 0 auto",minHeight:0,overflowY:"auto",display:vistaAjustes?"block":"none"}} data-testid="dw-ajustes-manuales">
+          <details className="card" open={vistaAjustes} data-vista-ajustes={vistaAjustes?"1":"0"} style={{order:1,flex:vistaAjustes?"1 1 auto":"0 0 auto",minHeight:0,overflowY:"auto",display:vistaAjustes?"block":"none"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
               ✎ Ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
             </summary>
@@ -6155,20 +6152,23 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
               </div>;
             })}
           </details>}
-        <div className="doc-reading-scroll" style={{display:vistaAjustes?"none":undefined}}>
-          <div className="pdf-preview" style={{marginBottom:14}}>
+        <div className="doc-reading-scroll" style={{order:0,flex:vistaAjustes?"0 0 auto":undefined,flexBasis:vistaAjustes?"auto":undefined,minHeight:vistaAjustes?0:undefined,overflow:vistaAjustes?"visible":undefined}}> 
+          <div className="pdf-preview" style={{marginBottom:vistaAjustes?0:14,height:vistaAjustes?"auto":undefined,flex:vistaAjustes?"0 0 auto":undefined}}> 
             <div className="pdf-chrome">
               <div className="pdf-dot" style={{background:"#ff5f57"}}/><div className="pdf-dot" style={{background:"#ffbd2e"}}/><div className="pdf-dot" style={{background:"#28c840"}}/>
-              <span style={{fontSize:12.5,color:"#f8fafc",fontWeight:700,marginLeft:9,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Vista previa</span>
+              <span style={{fontSize:12.5,color:"#f8fafc",fontWeight:700,marginLeft:9,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Vista previa · {vistaConformidadSeparada?"Conformidad del vendedor":TIPOS[op.tipo]||op.tipo}</span>
               {getCamposFaltantesDetalle&&getCamposFaltantesDetalle(op,perfil).length>0&&
                 <button type="button" onClick={function(){if(onCompleteData)onCompleteData(op,getCamposFaltantesDetalle(op,perfil)[0].campo);}}
                   disabled={!onCompleteData} title="Ir al primer dato pendiente"
                   style={{marginLeft:"auto",padding:"3px 7px",fontSize:10.5,borderRadius:6,background:"rgba(251,191,36,.12)",border:"1px solid rgba(251,191,36,.3)",color:"#fde68a",fontWeight:650,cursor:onCompleteData?"pointer":"default",whiteSpace:"nowrap"}}>
                   ⚠ {getCamposFaltantesDetalle(op,perfil).length} pendientes
                 </button>}
+              {!!onUpdateOperation&&!tabActual.esRecibo&&bloquesParaAjustes().length>0&&!((op.plantilla_snapshot||{}).documento_propio)&&
+                <button type="button" aria-pressed={vistaAjustes} onClick={function(){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(!vistaAjustes);}}
+                  style={{marginLeft:getCamposFaltantesDetalle(op,perfil).length?4:"auto",padding:"3px 7px",borderRadius:6,background:vistaAjustes?"rgba(96,165,250,.3)":"rgba(96,165,250,.13)",border:"1px solid rgba(96,165,250,.4)",color:"#bfdbfe",fontSize:10.5,fontWeight:650,cursor:"pointer",whiteSpace:"nowrap"}}>✎ Ajustes manuales</button>}
               {tabActual.esRecibo&&<span style={{marginLeft:"auto",fontSize:12,padding:"2px 8px",borderRadius:10,background:"rgba(74,222,128,0.1)",color:"var(--green)",border:"1px solid rgba(74,222,128,0.2)"}}>Recibo de honorarios</span>}
             </div>
-            <div className="pdf-content pdf-content-lg">
+            <div className="pdf-content pdf-content-lg" style={{display:vistaAjustes?"none":undefined}}> 
               <div className="pdf-text">
                 {previewBlocks().map(function(bl,i){
                   if(bl.blank) return <div key={i} style={{height:9}}/>;
