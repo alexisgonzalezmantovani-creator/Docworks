@@ -731,8 +731,8 @@ export const GS = `
    .doc-reading-scroll>.pdf-preview>.pdf-content{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
 .doc-reading-scroll .pdf-text,.dw-model-preview-text{
   font-family:Georgia,"Times New Roman",serif;
-  font-size:clamp(16px,calc(14px + .34vw),19px);
-  line-height:1.65;
+  font-size:clamp(14px,calc(12.8px + .23vw),16px);
+  line-height:1.58;
   overflow-wrap:anywhere;
 }
 .dw-model-preview{
@@ -2445,7 +2445,7 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   flex:1 1 0%;
   height:0;
   overflow-x:hidden;
-  padding:clamp(12px,2vw,26px) clamp(12px,3.4vw,48px) 24px;
+  padding:clamp(12px,1.6vw,22px) clamp(12px,2.4vw,32px) 22px;
 }
 .viewer-modal .doc-viewer-tabs{margin-bottom:8px}
 .viewer-modal .reserva-compact-summary{margin-bottom:6px}
@@ -2455,7 +2455,7 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 @media (min-width:641px){
   .modal-overlay-viewer{align-items:flex-start!important;padding:max(6px,env(safe-area-inset-top)) 8px!important}
   .modal-overlay-viewer .viewer-modal{
-    width:min(1200px,100%)!important;
+    width:min(1320px,100%)!important;
     max-width:100%!important;
     height:calc(100dvh - max(6px,env(safe-area-inset-top)) - 6px)!important;
     max-height:none!important;
@@ -6139,7 +6139,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           <div className="pdf-preview" style={{marginBottom:14}}>
             <div className="pdf-chrome">
               <div className="pdf-dot" style={{background:"#ff5f57"}}/><div className="pdf-dot" style={{background:"#ffbd2e"}}/><div className="pdf-dot" style={{background:"#28c840"}}/>
-              <span style={{fontSize:12,color:"var(--dim)",marginLeft:7,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tabActual.icon} {vistaConformidadSeparada&&disponeConformidadSeparada?"Conformidad del vendedor":tabActual.label}{tabActual.id&&TIPOS[tabActual.id]&&!vistaConformidadSeparada?" — "+TIPOS[tabActual.id]:""}</span>
+              <span style={{fontSize:13,color:"#f8fafc",fontWeight:700,marginLeft:9,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tabActual.icon} {vistaConformidadSeparada&&disponeConformidadSeparada?"Conformidad del vendedor":tabActual.label}{tabActual.id&&TIPOS[tabActual.id]&&!vistaConformidadSeparada?" — "+TIPOS[tabActual.id]:""}</span>
               {tabActual.esRecibo&&<span style={{marginLeft:"auto",fontSize:12,padding:"2px 8px",borderRadius:10,background:"rgba(74,222,128,0.1)",color:"var(--green)",border:"1px solid rgba(74,222,128,0.2)"}}>Recibo de honorarios</span>}
             </div>
             <div className="pdf-content pdf-content-lg">
