@@ -6722,10 +6722,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
         <div className="dw-operation-form-actions">
           {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
-          {puedeOmitirClausulas&&<Btn v="secondary" onClick={avanzarConAviso}>Agregar cláusulas</Btn>}
+          {revisando&&<Btn v="secondary" onClick={function(){setStep(total+1);}}>← Volver a revisión</Btn>}
+          {puedeOmitirClausulas&&!revisando&&<Btn v="secondary" onClick={avanzarConAviso}>Agregar cláusulas</Btn>}
           {step>1&&<div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {puedeOmitirClausulas?<Btn v="success" onClick={function(){setStep(total+1);}}>Ir a revisión</Btn>:step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
+            {puedeOmitirClausulas&&!revisando?<Btn v="success" onClick={function(){setStep(total+1);}}>Ir a revisión</Btn>:step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
           </div>}
         </div>
       </div>}
