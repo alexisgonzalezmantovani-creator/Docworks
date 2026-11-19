@@ -3,33 +3,126 @@ import React, {useEffect, useRef, useState} from 'react';
 const DOCS=[['reserva','Reserva de compraventa'],['boleto','Boleto de compraventa'],['reserva_alquiler','Reserva de alquiler'],['alquiler','Contrato de alquiler'],['comodato','Comodato'],['exclusividad','Autorización de venta'],['refuerzo_reserva','Refuerzo de reserva'],['devolucion_reserva','Devolución de reserva']];
 const FIELDS=[['nombre','Nombre de la inmobiliaria'],['direccion','Dirección'],['corredor_responsable','Corredor responsable'],['matricula','Matrícula del corredor'],['cuit','CUIT de la inmobiliaria'],['email','Email de contacto'],['telefono','Teléfono']];
 function readDraft(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}}
-export function InicioInmobiliaria({open,perfil,contexto,onSave,onInvite,onClose,onCreate}:any){
+
+export function InicioInmobiliaria({open,perfil,contexto,onSave,onClose,onCreate}:any){
  const key='dw_inicio_empresa_'+contexto.inmobiliaria.id+'_'+contexto.usuario.id;
- const [datos,setDatos]=useState<any>({}),[step,setStep]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState(''),[email,setEmail]=useState(''),[invites,setInvites]=useState<string[]>([]),[tipo,setTipo]=useState('reserva');
- const ref=useRef<HTMLInputElement>(null),dialog=useRef<HTMLDivElement>(null),previous=useRef<any>(null),loaded=useRef(false);
- useEffect(()=>{if(!open){loaded.current=false;return;}previous.current=document.activeElement;const saved=readDraft(key);setDatos(saved?.datos||Object.fromEntries(FIELDS.map(([k])=>[k,perfil[k]||(k==='nombre'?contexto.inmobiliaria.nombre:'')])));setDatos(p=>({...p,logoDataUrl:saved?.datos?.logoDataUrl??perfil.logoDataUrl??''}));setStep(Math.min(2,Math.max(0,saved?.step??perfil.inicio_inmobiliaria?.paso??0)));setError('');loaded.current=true;dialog.current?.focus();return ()=>{previous.current?.focus?.();};},[open,key]);
- useEffect(()=>{if(open&&loaded.current)try{localStorage.setItem(key,JSON.stringify({datos,step}));}catch{}},[datos,step,open,key]);
- if(!open)return null;
- async function guardar(next:number,finished=false){
-  setBusy(true);setError('');
-  try{const p={...perfil,...datos,inicio_inmobiliaria:{paso:next,completado:finished,version:1}};const r=await onSave(p);if(r?.error)throw r.error;setStep(next);if(finished)try{localStorage.removeItem(key);}catch{}return true;}
-  catch(e:any){setError(e.message||'No se pudo guardar. Revisá tu conexión e intentá de nuevo.');return false;}finally{setBusy(false);}
+ const [draft,setDraft]=useState<{key:string;datos:Record<string,string>;step:number}|null>(null);
+ const [busy,setBusy]=useState(false),[error,setError]=useState(''),[tipo,setTipo]=useState('reserva');
+ const fileInput=useRef<HTMLInputElement>(null),dialog=useRef<HTMLDivElement>(null);
+ const focusPending=useRef(false);
+ const cargado=open&&draft?.key===key;
+ const datos=cargado?draft.datos:{};
+ const step=cargado?draft.step:0;
+
+ useEffect(()=>{
+  if(!open){setDraft(null);return;}
+  const previous=document.activeElement as HTMLElement|null;
+  const saved=readDraft(key);
+  const defaults=Object.fromEntries(FIELDS.map(([field])=>[field,perfil[field]||(field==='nombre'?contexto.inmobiliaria.nombre:'')]));
+  // Las versiones anteriores guardaban 1 para Equipo y 2 para Documento.
+  const savedStep=saved?.step??(perfil.inicio_inmobiliaria?.completado?0:perfil.inicio_inmobiliaria?.paso??0);
+  setDraft({key,datos:{...defaults,...saved?.datos,logoDataUrl:saved?.datos?.logoDataUrl??perfil.logoDataUrl??''},step:savedStep>0?1:0});
+  setTipo('reserva');
+  setError('');
+  focusPending.current=true;
+  return ()=>previous?.focus();
+ },[open,key]);
+
+ useEffect(()=>{
+  if(!cargado)return;
+  try{localStorage.setItem(key,JSON.stringify({datos:draft.datos,step:draft.step}));}catch{}
+ },[cargado,draft,key]);
+
+ useEffect(()=>{
+  if(cargado&&focusPending.current){focusPending.current=false;dialog.current?.focus();}
+ },[cargado,step]);
+
+ if(!cargado)return null;
+
+ function cambiarPaso(next:number){
+  focusPending.current=true;
+  setDraft(current=>current&&({...current,step:next}));
  }
- async function invitar(){if(!email.trim())return;setBusy(true);setError('');try{const address=email.trim().toLowerCase();const r=await onInvite(address);if(r?.error)throw r.error;setInvites(xs=>xs.includes(address)?xs:xs.concat(address));setEmail('');}catch(e:any){setError(e.message||'No se pudo crear la invitación.');}finally{setBusy(false);}}
- function logo(e:any){const f=e.target.files?.[0];if(!f)return;if(!['image/png','image/jpeg','image/webp'].includes(f.type)||f.size>2*1024*1024){setError('Elegí un PNG, JPG o WebP de hasta 2 MB.');return;}const r=new FileReader();r.onload=()=>setDatos(p=>({...p,logoDataUrl:r.result}));r.onerror=()=>setError('No se pudo leer el logo.');r.readAsDataURL(f);}
- async function terminar(create:boolean){if(await guardar(2,true)){onClose(true);if(create)onCreate(tipo);}}
- return <div className="dw-start-overlay"><div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Prepará tu inmobiliaria" className="dw-start-card" onKeyDown={e=>{if(e.key==='Escape'&&!busy){e.preventDefault();guardar(step).then(ok=>{if(ok)onClose(false);});}if(e.key==='Tab'){const els=dialog.current?.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),select,a[href]');if(!els?.length)return;const first=els[0],last=els[els.length-1];if(e.shiftKey&&(document.activeElement===first||document.activeElement===dialog.current)){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}}>
-  <div className="dw-start-head"><div><p className="dw-help-kicker">Primeros pasos · Paso {step+1} de 3</p><h2>{['Tu inmobiliaria','Tu equipo','Tu primer documento'][step]}</h2></div><button type="button" className="btn btn-ghost" disabled={busy} aria-label="Continuar después" onClick={async()=>{if(await guardar(step))onClose(false);}}>×</button></div>
-  <div aria-label="Progreso" className="dw-start-progress">{[0,1,2].map(n=><span key={n} style={{background:n<=step?'var(--gold)':'var(--border)'}}/>)}</div>
+ function actualizar(campo:string,valor:string){
+  setDraft(current=>current?.key===key?{...current,datos:{...current.datos,[campo]:valor}}:current);
+ }
+ async function guardar(next:number,finished=false){
+  setBusy(true);
+  setError('');
+  try{
+   const p={...perfil,...datos,inicio_inmobiliaria:{paso:next===1?2:0,completado:finished||!!perfil.inicio_inmobiliaria?.completado,version:1}};
+   const r=await onSave(p);
+   if(r?.error)throw r.error;
+   return true;
+  }catch(e:any){
+   setError(e.message||'No se pudo guardar. Revisá tu conexión e intentá de nuevo.');
+   return false;
+  }finally{setBusy(false);}
+ }
+ function logo(e:React.ChangeEvent<HTMLInputElement>){
+  const file=e.target.files?.[0];
+  if(!file)return;
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>2*1024*1024){setError('Elegí un PNG, JPG o WebP de hasta 2 MB.');return;}
+  const reader=new FileReader();
+  reader.onload=()=>actualizar('logoDataUrl',String(reader.result||''));
+  reader.onerror=()=>setError('No se pudo leer el logo.');
+  reader.readAsDataURL(file);
+ }
+ async function cerrarDespues(){if(!busy&&await guardar(step))onClose(false);}
+ async function terminar(create:boolean){
+  if(!await guardar(1,true))return;
+  try{localStorage.removeItem(key);}catch{}
+  onClose(true);
+  if(create)onCreate(tipo);
+ }
+
+ function campo([k,label]:string[]){
+  return <label key={k} htmlFor={'inicio-'+k}>{label}{k==='nombre'?' *':' (opcional)'}
+   <input id={'inicio-'+k} className="inp" required={k==='nombre'} type={k==='email'?'email':k==='telefono'?'tel':'text'} maxLength={k==='direccion'?250:160} value={datos[k]||''} disabled={busy} onChange={e=>actualizar(k,e.target.value)}/>
+  </label>;
+ }
+
+ return <div className="dw-start-overlay"><div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Prepará tu inmobiliaria" className="dw-start-card"
+  onKeyDown={e=>{
+   if(e.key==='Escape'){e.preventDefault();void cerrarDespues();}
+   if(e.key!=='Tab')return;
+   const els=Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),select:not([disabled]),summary')||[]).filter(el=>{
+    const collapsed=el.closest('details:not([open])');
+    return !el.hidden&&(!collapsed||el.tagName==='SUMMARY');
+   });
+   if(!els.length)return;
+   const first=els[0],last=els[els.length-1];
+   if(e.shiftKey&&(document.activeElement===first||document.activeElement===dialog.current)){e.preventDefault();last.focus();}
+   else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }}>
+  <div className="dw-start-head"><div><p className="dw-help-kicker">Paso {step+1} de 2</p><h2>{step===0?'Tu inmobiliaria':'Tu primer documento'}</h2></div><button type="button" className="btn btn-ghost" disabled={busy} aria-label="Continuar después" onClick={cerrarDespues}>×</button></div>
+  <div aria-label="Progreso" className="dw-start-progress">{[0,1].map(n=><span key={n} style={{background:n<=step?'var(--gold)':'var(--border)'}}/>)}</div>
   {error&&<p role="alert" className="notice notice-red">{error}</p>}
-  {step===0&&<form onSubmit={async e=>{e.preventDefault();if(!datos.nombre?.trim()){setError('Completá el nombre de tu inmobiliaria.');return;}await guardar(1);}}>
-   <p className="dw-help-desc">Ya cargamos el nombre del registro. Completá los datos que quieras usar en tus documentos; el logo y los demás datos pueden esperar.</p>
-   <div className="dw-start-logo">{datos.logoDataUrl&&<img src={datos.logoDataUrl} alt="Logo de tu inmobiliaria"/>}<input ref={ref} type="file" accept="image/png,image/jpeg,image/webp" onChange={logo} hidden/><button type="button" className="btn btn-secondary" onClick={()=>ref.current?.click()}>Elegir logo (opcional)</button>{datos.logoDataUrl&&<button type="button" className="btn btn-ghost" onClick={()=>setDatos(p=>({...p,logoDataUrl:''}))}>Quitar</button>}</div>
-   <div className="dw-start-fields">{FIELDS.map(([k,label])=><label key={k} htmlFor={'inicio-'+k}>{label}{k==='nombre'?' *':' (opcional)'}<input id={'inicio-'+k} className="inp" required={k==='nombre'} type={k==='email'?'email':k==='telefono'?'tel':'text'} maxLength={k==='direccion'?250:160} value={datos[k]||''} onChange={e=>setDatos(p=>({...p,[k]:e.target.value}))}/></label>)}</div>
+  {step===0?<form onInvalid={e=>{if(e.target instanceof HTMLElement){const group=e.target.closest('details');if(group)group.open=true;}}} onSubmit={async e=>{
+   e.preventDefault();
+   if(!datos.nombre?.trim()){setError('Completá el nombre de tu inmobiliaria.');return;}
+   if(await guardar(1))cambiarPaso(1);
+  }}>
+   <p className="dw-help-desc">Estos datos se reutilizan en tus documentos.</p>
+   <div className="dw-start-fields">{[FIELDS[0],FIELDS[2],FIELDS[3]].map(campo)}</div>
+   <details style={{marginTop:12}}>
+    <summary style={{cursor:'pointer',padding:'8px 0'}}>Dirección, contacto y logo</summary>
+    <div className="dw-start-fields">{[FIELDS[1],...FIELDS.slice(4)].map(campo)}</div>
+    <div className="dw-start-logo">
+     {datos.logoDataUrl&&<img src={datos.logoDataUrl} alt="Logo de tu inmobiliaria"/>}
+     <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" onChange={logo} hidden/>
+     <button type="button" className="btn btn-secondary" disabled={busy} onClick={()=>fileInput.current?.click()}>Elegir logo (opcional)</button>
+     {datos.logoDataUrl&&<button type="button" className="btn btn-ghost" disabled={busy} onClick={()=>actualizar('logoDataUrl','')}>Quitar</button>}
+    </div>
+   </details>
    <div className="dw-start-actions"><button className="btn btn-primary" disabled={busy}>{busy?'Guardando…':'Guardar y continuar'}</button></div>
-  </form>}
-  {step===1&&<><p className="dw-help-desc">Prepará una invitación con el email del asesor. Al registrarse con ese correo, ingresará a esta inmobiliaria como broker. Podés sumar más personas y ajustar permisos desde Configuración → Equipo.</p><form onSubmit={e=>{e.preventDefault();invitar();}}><label htmlFor="inicio-invite">Email del asesor<input id="inicio-invite" className="inp" type="email" required autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><button type="submit" className="btn btn-secondary" disabled={busy||!email.trim()} style={{marginTop:10}}>Preparar invitación</button></form>{invites.length>0&&<div className="notice notice-gold"><p role="status">Invitación preparada para: {invites.join(', ')}. Compartí el enlace de registro con el asesor. Debe crear su cuenta con ese mismo email y verificarlo.</p><a href="https://docworks-eight.vercel.app/?registro=1" target="_blank" rel="noopener noreferrer">Enlace de registro</a><button type="button" className="btn btn-ghost" onClick={async()=>{try{await navigator.clipboard.writeText('Te invito a DocWorks. Registrate con '+invites.join(' o ')+' en https://docworks-eight.vercel.app/?registro=1');setError('');}catch{setError('Copiá el enlace de registro que aparece junto a este botón.');}}}>Copiar invitación</button></div>}<div className="dw-start-actions"><button className="btn btn-ghost" disabled={busy} onClick={()=>setStep(0)}>Anterior</button><button className="btn btn-primary" disabled={busy} onClick={()=>guardar(2)}>{invites.length?'Continuar':'Lo hago después'}</button></div></>}
-  {step===2&&<><p className="dw-help-desc">Tu inmobiliaria está lista para trabajar. Los modelos base ya están disponibles: elegí un documento y completá los datos de la operación. Podés revisarlo antes de descargarlo.</p><label htmlFor="inicio-documento">¿Con qué documento querés empezar?<select id="inicio-documento" className="inp" value={tipo} onChange={e=>setTipo(e.target.value)}>{DOCS.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><div className="notice notice-gold">La ayuda queda disponible en Configuración → Soporte. Podés retomar estos pasos desde Ayuda.</div><div className="dw-start-actions"><button className="btn btn-ghost" disabled={busy} onClick={()=>setStep(1)}>Anterior</button><button className="btn btn-secondary" disabled={busy} onClick={()=>terminar(false)}>Ir al panel</button><button className="btn btn-primary" disabled={busy} onClick={()=>terminar(true)}>{busy?'Guardando…':'Crear mi primer documento'}</button></div></>}
+  </form>:<>
+   <p className="dw-help-desc">Elegí un documento para cargar los datos de la operación. El modelo ya está listo para usar.</p>
+   <label htmlFor="inicio-documento">¿Con qué documento querés empezar?
+    <select id="inicio-documento" className="inp" value={tipo} disabled={busy} onChange={e=>setTipo(e.target.value)}>{DOCS.map(([id,label])=><option key={id} value={id}>{label}</option>)}</select>
+   </label>
+   <div className="dw-start-actions"><button className="btn btn-ghost" disabled={busy} onClick={()=>cambiarPaso(0)}>Anterior</button><button className="btn btn-secondary" disabled={busy} onClick={()=>terminar(false)}>Ir al panel</button><button className="btn btn-primary" disabled={busy} onClick={()=>terminar(true)}>{busy?'Guardando…':'Crear mi primer documento'}</button></div>
+  </>}
  </div><style>{HELP_CSS}</style></div>;
 }
 export const GUIAS_AYUDA=[
@@ -43,7 +136,7 @@ export function CentroAyuda({onContact,onTour,onNavigate,onOpenBot,role}:any){
  const [query,setQuery]=useState('');const norm=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();const q=norm(query.trim());const admin=['dueno','admin'].includes(role);
  const groups=GUIAS_AYUDA.map(g=>({...g,items:q?g.items.filter(([title,body])=>norm(g.title+' '+title+' '+body).includes(q)):g.items})).filter(g=>g.items.length);
  return <section aria-label="Centro de ayuda" style={{minWidth:0}}><style>{HELP_CSS}</style><p className="dw-help-kicker">Ayuda y soporte</p><h2 style={{fontSize:24,margin:'6px 0'}}>¿En qué te ayudamos?</h2><p className="dw-help-desc">Guías cortas para configurar tu cuenta, preparar documentos y resolver dudas.</p><label htmlFor="dw-help-search">Buscar en la ayuda<input id="dw-help-search" className="inp" type="search" placeholder="Ej.: invitar, PDF, contraseña…" value={query} onChange={e=>setQuery(e.target.value)}/></label>
-  <div className="dw-help-cards"><article className="card"><h3>{admin?'Prepará tu inmobiliaria':'Empezá a trabajar'}</h3><p>{admin?'Completá los datos, invitá al equipo y creá tu primer documento.':'Las bases de tu inmobiliaria ya están definidas. Empezá por una operación.'}</p><button className="btn btn-primary" onClick={admin?onTour:()=>onNavigate('dashboard')}>{admin?'Retomar primeros pasos':'Ver operaciones'}</button></article><article className="card"><h3>Contactar soporte</h3><p>Describí el problema y adjuntá una captura. Revisá que no incluya información privada de tus clientes.</p><button className="btn btn-secondary" onClick={onContact}>Crear consulta</button><a className="btn btn-ghost" href="https://wa.me/5491144795880?text=Hola%2C%20necesito%20ayuda%20con%20DocWorks" target="_blank" rel="noopener noreferrer">WhatsApp</a></article><article className="card"><h3>Asistente IA</h3><p>Consultas y cláusulas genéricas, sin datos personales ni confidenciales. Las respuestas son orientativas.</p><button className="btn btn-secondary" onClick={onOpenBot}>Abrir asistente IA</button></article></div>
+  <div className="dw-help-cards"><article className="card"><h3>{admin?'Prepará tu inmobiliaria':'Empezá a trabajar'}</h3><p>{admin?'Completá los datos y creá tu primer documento.':'Las bases de tu inmobiliaria ya están definidas. Empezá por una operación.'}</p><button className="btn btn-primary" onClick={admin?onTour:()=>onNavigate('dashboard')}>{admin?'Retomar primeros pasos':'Ver operaciones'}</button></article><article className="card"><h3>Contactar soporte</h3><p>Describí el problema y adjuntá una captura. Revisá que no incluya información privada de tus clientes.</p><button className="btn btn-secondary" onClick={onContact}>Crear consulta</button><a className="btn btn-ghost" href="https://wa.me/5491144795880?text=Hola%2C%20necesito%20ayuda%20con%20DocWorks" target="_blank" rel="noopener noreferrer">WhatsApp</a></article><article className="card"><h3>Asistente IA</h3><p>Consultas y cláusulas genéricas, sin datos personales ni confidenciales. Las respuestas son orientativas.</p><button className="btn btn-secondary" onClick={onOpenBot}>Abrir asistente IA</button></article></div>
   <div aria-live="polite" style={{fontSize:13,margin:'18px 0'}}>{q?groups.reduce((n,g)=>n+g.items.length,0)+' respuestas encontradas':''}</div>{groups.length===0&&<p role="status">No encontramos una respuesta. Probá otra palabra o creá una consulta de soporte.</p>}
   {groups.map(g=><section key={g.id} className="dw-help-topic"><h3>{g.title}</h3>{g.items.map(([title,body])=><details key={title} open={q?true:undefined}><summary>{title}</summary><p>{body}</p></details>)}{(!['primeros','documentos','cuenta','problemas'].includes(g.id)||admin||g.id==='documentos')&&<button className="btn btn-ghost" onClick={()=>onNavigate(g.view,g.tab)}>{g.action}</button>}</section>)}
  <p style={{fontSize:12,marginTop:24}}><a href="https://docworks-landing.vercel.app/terminos.html" target="_blank" rel="noopener noreferrer" style={{color:"var(--muted)"}}>Términos y condiciones</a></p>

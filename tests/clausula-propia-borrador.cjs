@@ -12,10 +12,10 @@ require('esbuild').buildSync({stdin:{contents:source+'\nimport {act,createElemen
 const a=require(path.join(tmp,'app.cjs')),root=a.createRoot(document.getElementById('root'));
 let current,setCurrent,confirmed,checks=0;
 window.addEventListener('dw:confirm',event=>{confirmed=event.detail?.onConfirm});
-function Caso(){
+function Caso({rol="broker",onAddClausula}={}){
  const [data,setData]=a.useState({...a.EMPTY_OP,tipo:'reserva',clausulas_custom_titulo:'Título guardado',clausulas_custom:'Texto guardado'});
  current=data;setCurrent=setData;
- return a.createElement(a.StepClausulas,{data,onChange:(key,value)=>setData(d=>({...d,[key]:value})),clausulas:[],perfil:{rol:'dueno',plantillas:{}},faltantes:[]});
+ return a.createElement(a.StepClausulas,{data,onChange:(key,value)=>setData(d=>({...d,[key]:value})),clausulas:[],perfil:{rol,plantillas:{}},onAddClausula,faltantes:[]});
 }
 function title(){return document.querySelector('input[placeholder="Ej.: Prohibición de mascotas"]')}
 function body(){return document.querySelector('textarea[placeholder="Escribí la cláusula…"]')}
@@ -29,7 +29,10 @@ async function fill(el,value){
 }
 (async()=>{
  try{
-  await a.act(async()=>root.render(a.createElement(Caso)));
+  const saveInLibrary=()=>{throw new Error('No se debe llamar el guardado desde el rol asesor');};
+  const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text);
+  await a.act(async()=>root.render(a.createElement(Caso,{onAddClausula:saveInLibrary})));
+  assert.equal(button('Guardar en biblioteca'),undefined);checks++;
   assert.equal(title().value,'Título guardado');assert.equal(body().value,'Texto guardado');checks+=2;
   await fill(title(),'Entrega recién pintada');
   assert.equal(current.clausulas_custom_titulo,'Entrega recién pintada');checks++;
@@ -49,6 +52,23 @@ async function fill(el,value){
   assert.equal(typeof confirmed,'function','Borrar pide confirmación');checks++;
   await a.act(async()=>confirmed());
   assert.equal(current.clausulas_custom_titulo,'');assert.equal(current.clausulas_custom,'');checks+=2;
-  console.log('APROBADAS '+checks+' comprobaciones: borrador inmediato, restauración, ocultación y borrado confirmado.');
+  await a.act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Escribir')).click());
+  await fill(body(),'Texto para confirmar en esta operación');
+  await a.act(async()=>button('Insertar en este documento').click());
+  assert.equal(current.clausulas_custom_incluida,true);checks++;
+
+  let llamadas=0;
+  async function guardarComoAdmin(clausula){
+   llamadas++;
+   assert.equal(clausula.contenido,'Texto guardado');
+   return llamadas===1?{error:{message:'Error simulado'}}:{data:'clausula-qa'};
+  }
+  await a.act(async()=>root.render(a.createElement(Caso,{key:'admin',rol:'admin',onAddClausula:guardarComoAdmin})));
+  await a.act(async()=>button('Guardar en biblioteca').click());
+  assert.match(document.body.textContent,/Error simulado/);
+  assert.equal(body().value,'Texto guardado');checks+=2;
+  await a.act(async()=>button('Guardar en biblioteca').click());
+  assert.equal(button('Guardada en biblioteca').disabled,true);checks++;
+  console.log('APROBADAS '+checks+' comprobaciones: borrador, inserción del asesor y guardado administrativo con reintento.');
  }finally{await a.act(async()=>root.unmount());dom.window.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

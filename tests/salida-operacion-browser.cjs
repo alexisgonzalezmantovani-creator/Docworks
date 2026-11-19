@@ -14,8 +14,8 @@ function SalidaHarness(){
  const docworksAuth={contexto:{usuario:{id:'qa',rol_base:'dueno'},inmobiliaria:{id:'qa'},habilitado:true}};
  const [ayuda,setAyuda]=useState(false),[bot,setBot]=useState(false);
  // Mantener en el harness el estado real que recibe OperacionForm desde 6.65.
- const [formResumeNavigation,setFormResumeNavigation]=useState(null);
  const primerDocumento=new URLSearchParams(location.search).has('primer-documento');
+ const [formResumeNavigation,setFormResumeNavigation]=useState(primerDocumento?{step:2}:null);
  const [showForm,setShowFormEstado]=useState(primerDocumento||new URLSearchParams(location.search).has('editar')),[view,setView]=useState('operaciones'),[editOp,setEditOp]=useState(new URLSearchParams(location.search).has('editar')?{...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'editar-qa',tipo:'alquiler'}:null),[formInitialOverride,setFormInitialOverride]=useState(primerDocumento?{...EMPTY_OP,tipo:'reserva'}:null),[formTipo,setFormTipo]=useState(primerDocumento?'reserva':null),[formFocusCampo,setFormFocusCampo]=useState(null),[confirmCloseForm,setConfirmCloseForm]=useState(false),[navPendiente,setNavPendiente]=useState(null),[operaciones,setOperaciones]=useState([]),[guardandoSalida,setGuardandoSalida]=useState(false),[guardadosNubeSalida,setGuardadosNubeSalida]=useState(0),[errorSalida,setErrorSalida]=useState(''),[draftPrompt,setDraftPrompt]=useState(null),[mode,setMode]=useState('ok'),[calls,setCalls]=useState(0);
  const [saveState,setSaveState]=useState("saved");const saveStatus={state:saveState,ts:1};
  const formSnapshotRef=useRef(null),formSaveIdRef=useRef(null),salidaEnCursoRef=useRef(false),salidaRevisionRef=useRef(0),guardadosNubeSalidaRef=useRef(0),accionesContextoRef=useRef(crearControlContextoOperaciones(claveContextoOperaciones(docworksAuth.contexto))),resolver=useRef(null);
@@ -66,9 +66,12 @@ const selectStep=n=>page.locator('.step-dot').nth(n-1).click();
 await page.goto(url+'/?primer-documento=1');
 await page.locator('#dw-field-comprador_nombre').waitFor();
 assert.equal(await page.getByRole('button',{name:/Guardar cambios/}).count(),0,'El primer documento inicia en modo creación');
-await selectStep(6);
-await page.getByRole('button',{name:'Revisar →',exact:true}).click();
-assert.equal(await page.getByRole('button',{name:/Guardar o emitir/}).isDisabled(),true,'Una reserva preseleccionada sin datos no se puede guardar');
+await selectStep(5);
+await page.getByRole('button',{name:'Ir a revisión',exact:true}).click();
+assert.equal(await page.getByRole('button',{name:/Guardar o emitir/}).isDisabled(),true,'La revisión directa no permite guardar sin datos');
+await page.getByRole('list',{name:'Datos para completar'}).getByRole('button',{name:/Dirección/}).click();
+await page.locator('#dw-field-inmueble_direccion:focus').waitFor();
+checks++;
 checks+=2;
 await fresh();if(width<640)await navOp();assert.ok(await page.evaluate(async()=>{await document.fonts.load('15px "DM Sans"');return document.fonts.check('15px "DM Sans"')&&getComputedStyle(document.body).fontSize==='15px';}));checks++;await page.getByRole('button',{name:'Ayuda',exact:true}).click();await page.getByRole('menuitem',{name:'Asistente IA',exact:true}).click();await page.getByRole('button',{name:'Cerrar asistente',exact:true}).click();assert.equal(await page.getByRole('menu',{name:'Ayuda',exact:true}).count(),0);checks++;if(width<640){await page.evaluate(()=>window.scrollTo({top:400,behavior:'instant'}));assert.ok(await page.locator('.fab').evaluate(el=>{const r=el.getBoundingClientRect();return getComputedStyle(el).opacity!=='0'&&r.bottom<=innerHeight;}));checks++;}
 await add();assert.equal(await page.locator('.fab').count(),0);checks++;await page.getByRole('button',{name:'Volver a operaciones',exact:true}).click();assert.ok(await page.getByRole('heading',{name:'Operaciones de prueba'}).isVisible());checks++;

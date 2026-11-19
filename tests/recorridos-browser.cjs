@@ -30,12 +30,19 @@ if(paso<total-1){
    assert.ok(Object.hasOwn(indicePorTipo,tipo),'Tipo de recorrido conocido: '+tipo);
    await page.locator('.dw-grupo-tipo-sections .dw-grupo-card').nth(indicePorTipo[tipo]).click();
   }else{
-   await page.getByRole('button',{name:'Continuar →',exact:true}).click();
+   const action=tipo!=='alquiler'&&paso===total-2?'Agregar cláusulas':'Continuar →';
+   await page.getByRole('button',{name:action,exact:true}).click();
   }
   assert.equal(await page.locator('.step-dot[aria-current="step"]').getAttribute('title'),await page.locator('.step-dot').nth(paso+1).getAttribute('title'));
   checks++;
  }}
-await page.getByRole('button',{name:'Revisar →',exact:true}).click();await page.getByText('Revisión final',{exact:true}).waitFor();checks++;
+if(tipo==='alquiler'){
+ await page.getByRole('button',{name:'Revisar →',exact:true}).click();
+}else{
+ await page.locator('.step-dot').nth(total-2).click();
+ await page.getByRole('button',{name:'Ir a revisión',exact:true}).click();
+}
+await page.getByText('Revisión final',{exact:true}).waitFor();checks++;
 if(i===0){
  await page.getByRole('button',{name:'Guardar o emitir →',exact:true}).click();
  const menu=page.getByRole('dialog',{name:'Guardar o emitir'});

@@ -6359,6 +6359,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     : !!(perfil&&perfil.plantillas&&perfil.plantillas[data.tipo]&&perfil.plantillas[data.tipo].modo_documento==="propio");
   const totalNormal=esAlq?7:esResAlq?6:esDocSimple?5:6;
   const total=totalNormal-(esContratoPropioOp?1:0);
+  const puedeOmitirClausulas=!esAlq&&!esContratoPropioOp&&step===total-1;
   // 6.64: preparar «Siguiente» en los campos de una línea, incluso al editar.
   // Los textarea de inventario, observaciones y cláusulas conservan Enter normal.
   useEffect(function(){
@@ -6705,9 +6706,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
         <div className="dw-operation-form-actions">
           {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
+          {puedeOmitirClausulas&&<Btn v="secondary" onClick={avanzarConAviso}>Agregar cláusulas</Btn>}
           {step>1&&<div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
-            {step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
+            {puedeOmitirClausulas?<Btn v="success" onClick={function(){setStep(total+1);}}>Ir a revisión</Btn>:step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
           </div>}
         </div>
       </div>}

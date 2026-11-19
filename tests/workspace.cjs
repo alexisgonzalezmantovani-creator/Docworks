@@ -18,7 +18,7 @@ assert.equal(document.querySelector('[aria-label="Desplegar introducción"]').ge
 assert.equal(document.querySelector('#dw-model-source-switch').open,false,'Cambiar de modalidad es opcional y está plegado');
 assert.ok(document.querySelector('[data-testid=dw-model-source]').textContent.includes('Modelo activo: DocWorks'),'Se identifica el modelo activo');
 await click(document.querySelector('#dw-model-source-switch summary'));
-await click(btn('Usar mi contrato completo'));
+await click(btn('Pegar mi contrato'));
 assert.ok(document.querySelector('[aria-label="Editor de contrato propio"]'),'El editor propio se abre tras confirmar');
 assert.equal(perfil.plantillas.reserva.body_blocks[1].contenido,modeloAntes,'Abrir la alternativa no modifica el modelo');
 assert.equal(perfil.plantillas.reserva.modo_documento||'docworks','docworks','Abrir el editor no cambia el origen activo');

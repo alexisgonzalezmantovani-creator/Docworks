@@ -494,7 +494,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         ? <DocumentoPropioEditor key={"contrato-propio-"+tipoDocSel} tipo={tipoDocSel} perfil={perfil} onSavePerfil={guardarPerfil} confirmar={requestDwConfirm} onCancelar={function(){setPegarMiContrato(false);}}/>
         : <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
         <details id="dw-model-clauses" className="card dw-model-disclosure" style={{padding:14}}>
-          <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Cláusulas del modelo</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Incluidas automáticamente</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+          <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Adaptar modelo</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Cláusulas incluidas automáticamente</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
           
           <div id="dw-model-preview-area">
             {bloquesError&&tipoDocSel==="reserva"&&<div className="notice notice-amber" style={{fontSize:12,marginBottom:10}}>{bloquesError} {onRetryBloques&&<button type="button" onClick={onRetryBloques} className="btn btn-secondary btn-sm">Reintentar</button>}</div>}
@@ -531,10 +531,10 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
 
       </EncabezadoFijadoPanel>}
       <details id="dw-model-source-switch" className="card dw-model-disclosure" style={{padding:"12px 14px",marginTop:2}}>
-        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>Opciones avanzadas</span><span style={{fontSize:11.5,color:"var(--dim)"}}>{verEditorPropio?"Volver al modelo DocWorks":"Usar mi contrato completo"}</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>{verEditorPropio?"Volver al modelo DocWorks":"Pegar mi contrato"}</span><span style={{fontSize:11.5,color:"var(--dim)"}}>{verEditorPropio?"Recuperar el modelo base":"Usar un contrato completo"}</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
         <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:10,paddingTop:12}}>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.6}}>{verEditorPropio?"Podés recuperar el modelo DocWorks. Sus cláusulas y tus contratos anteriores se conservan.":"Si ya tenés un contrato completo redactado, podés pegarlo como alternativa. No hace falta cambiar de modalidad para editar cláusulas. El cambio solo se aplica cuando guardás el texto propio."}</div>
-          <button type="button" className="btn btn-secondary btn-sm" style={{minHeight:44,whiteSpace:"normal"}} onClick={verEditorPropio?volverModeloEstandar:abrirEditorContratoPropio}>{verEditorPropio?"Volver al modelo DocWorks":"Usar mi contrato completo"}</button>
+          <button type="button" className="btn btn-secondary btn-sm" style={{minHeight:44,whiteSpace:"normal"}} onClick={verEditorPropio?volverModeloEstandar:abrirEditorContratoPropio}>{verEditorPropio?"Volver al modelo DocWorks":"Pegar mi contrato"}</button>
           {errorModeloPropio&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorModeloPropio}</div>}
         </div>
       </details>

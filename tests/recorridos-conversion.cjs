@@ -47,7 +47,7 @@ check('las reservas vinculadas no se pierden al entrar directamente a Refuerzo',
 }
 check('el selector no muestra el botón redundante del paso 1',()=>{
  assert.match(operacionesSource,/\{step>1&&<div className="dw-operation-next-action">/);
- assert.match(operacionesSource,/\{step<total\?<Btn onClick=\{avanzarConAviso\}>Continuar/);
+ assert.match(operacionesSource,/step<total\?<Btn onClick=\{avanzarConAviso\}>Continuar/);
 });
 
 const reserva={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'reserva',id:'reserva-origen',created_at:'2026-11-07T01:30:00Z',fecha_documento:'2026-11-06',moneda:'ARS',precio:'123456.78',anticipo:'23456.78',comprador_nombre:'Ana Compradora',vendedor_nombre:'Bruno Vendedor',comision_vendedor_modo:'fijo',comision_vendedor_valor:'1500.25',comision_vendedor_moneda:'ARS',comision_vendedor_ocultar_doc:true,comision_comprador_valor:'0',comision_comprador_valor_editado:true,inmueble_en_barrio_complejo:true,inmueble_barrio:'Complejo de prueba',inmueble_unidad_funcional:'Lote 9',comprador_cotitulares:[{nombre:'Cotitular Uno',dni:'30111222',telefono:'111111',telefono_en_doc:true}],clausulas_custom_titulo:'Acuerdo de prueba',clausulas_custom:'Detalle exclusivo de esta operación.',clausulas_custom_incluida:true};

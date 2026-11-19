@@ -6238,6 +6238,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[],o
   var ideaIARef=useRef<HTMLTextAreaElement | null>(null);
   var [loadingIA,setLoadingIA]=useState(false);
   var [errorIA,setErrorIA]=useState("");
+  var puedeGuardarEnBiblioteca=!!onAddClausula&&["dueno","admin"].includes(perfil?.rol);
   var [guardandoBiblioteca,setGuardandoBiblioteca]=useState(false);
   var [bibliotecaEstado,setBibliotecaEstado]=useState("");
   var [firmaGuardada,setFirmaGuardada]=useState("");
@@ -6249,7 +6250,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[],o
   async function completarRedaccionIA(){if(loadingIA)return;setLoadingIA(true);setErrorIA("");try{var d=await narrarClausulaIA(ideaIA.trim());if(d){onChange("clausulas_custom_titulo",d.titulo||"");onChange("clausulas_custom",d.contenido||"");onChange("clausulas_custom_incluida",false);setBibliotecaEstado("");setIdeaIA("");setShowAdd(true);}else setErrorIA("No pude interpretar la respuesta. Probá reformular la idea.");}catch(e){setErrorIA(e&&e.message?e.message:"No se pudo usar el asistente.");}finally{setLoadingIA(false);}}
   async function guardarEnBiblioteca(){
     var firma=tituloCustom.trim()+"\n"+contenidoCustom.trim();
-    if(guardandoBiblioteca||firma===firmaGuardada||!onAddClausula)return;
+    if(guardandoBiblioteca||firma===firmaGuardada||!puedeGuardarEnBiblioteca)return;
     if(!tituloCustom.trim()||!contenidoCustom.trim()){setBibliotecaEstado("Completá título y texto antes de guardar en biblioteca.");return;}
     setGuardandoBiblioteca(true);setBibliotecaEstado("");
     try{
@@ -6316,7 +6317,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[],o
         </details>
         {errorIA&&<div style={{fontSize:12,color:"var(--red)",marginTop:5}}>{errorIA}</div>}
         <div style={{display:"flex",justifyContent:"flex-end",gap:8,alignItems:"center",flexWrap:"wrap",marginTop:14}}>
-          {onAddClausula&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){void guardarEnBiblioteca();}} disabled={!tituloCustom.trim()||!contenidoCustom.trim()||guardandoBiblioteca||firmaGuardada===tituloCustom.trim()+"\n"+contenidoCustom.trim()}>{firmaGuardada===tituloCustom.trim()+"\n"+contenidoCustom.trim()?"Guardada en biblioteca":guardandoBiblioteca?"Guardando…":"Guardar en biblioteca"}</button>}
+          {puedeGuardarEnBiblioteca&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){void guardarEnBiblioteca();}} disabled={!tituloCustom.trim()||!contenidoCustom.trim()||guardandoBiblioteca||firmaGuardada===tituloCustom.trim()+"\n"+contenidoCustom.trim()}>{firmaGuardada===tituloCustom.trim()+"\n"+contenidoCustom.trim()?"Guardada en biblioteca":guardandoBiblioteca?"Guardando…":"Guardar en biblioteca"}</button>}
           <button type="button" className="btn btn-primary btn-sm" disabled={!contenidoCustom.trim()} onClick={function(){
             if(!contenidoCustom.trim())return;
             onChange("clausulas_custom_incluida",true);
@@ -6324,7 +6325,7 @@ function StepClausulas({data,onChange,clausulas,esAlquiler,perfil,faltantes=[],o
           }}>{data.clausulas_custom_incluida===false?"Insertar en este documento":"Confirmar en este documento"}</button>
         </div>
         {bibliotecaEstado&&<div role="status" style={{fontSize:12,color:"var(--muted)",textAlign:"right",marginTop:7}}>{bibliotecaEstado}</div>}
-        <div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Insertar la incorpora a esta operación. Guardar en biblioteca conserva una copia para futuras operaciones.</div>
+        {puedeGuardarEnBiblioteca&&<div style={{fontSize:12,color:"var(--dim)",marginTop:8}}>Guardar en biblioteca conserva una copia para futuras operaciones.</div>}
         {(!!String(contenidoCustom||"").trim()||!!String(tituloCustom||"").trim())&&<button type="button" onClick={function(){
           requestDwConfirm("¿Eliminar la cláusula propia de esta operación? Esta acción borra su título y texto.",function(){onChange("clausulas_custom_titulo","");onChange("clausulas_custom","");onChange("clausulas_custom_incluida",false);setIdeaIA("");setErrorIA("");setShowAdd(false);},"Eliminar");
         }} style={{marginTop:12,padding:"8px 10px",border:"1px solid var(--border2)",borderRadius:8,background:"transparent",color:"var(--red)",cursor:"pointer",fontSize:12}}>Eliminar mi cláusula</button>}
@@ -10333,9 +10334,8 @@ function DocWorksApp(){
 
       {ctx.usuario&&["dueno","admin"].includes(ctx.usuario.rol_base)&&<InicioInmobiliaria key={perfilNube.contexto} open={showOnboarding} perfil={perfil} contexto={ctx}
         onSave={async function(next){var result=await perfilNube.guardarAhora(next);if(result&&result.error)return result;setPerfil(next);return result;}}
-        onInvite={function(email){return equipoSupabase.invitar(email,"broker","junior");}}
         onClose={cerrarOnboarding}
-        onCreate={function(tipo){setView("dashboard");setFormFocusCampo(null);setEditOp(null);setFormTipo(tipo);setFormInitialOverride(Object.assign({},EMPTY_OP,{tipo:tipo}));setShowForm(true);}}/>}
+        onCreate={function(tipo){setView("dashboard");setFormFocusCampo(null);setEditOp(null);setFormTipo(tipo);setFormInitialOverride(Object.assign({},EMPTY_OP,{tipo:tipo}));setFormResumeNavigation({step:2});setShowForm(true);}}/>}
 
       <Modal open={!!viewDoc} onClose={function(){cerrarVisorSeguro();}} title={viewDoc?<OperationViewerHeading op={viewDoc}/>:"DocWorks"} wide={true} viewerMode={true}
         headerExtra={null}
