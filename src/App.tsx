@@ -6730,6 +6730,10 @@ function DocSummaryPanel({op, perfil, tabsDocs, onLeer, operaciones, onToggleTar
   var completo = faltantes.length===0;
   return (
     <div className="doc-summary-panel">
+      <div className="card" style={{padding:"12px 14px",marginBottom:12,border:"1px solid var(--border2)"}}>
+        <div style={{fontSize:13,fontWeight:800,color:"var(--text)"}}>{TIPOS[op.tipo]||op.tipo||"Documento"} · {ESTADOS[op.estado]||op.estado||"Borrador"}</div>
+        <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>{op.nombre||op.titulo_operacion||op.inmueble_direccion||"Operación sin nombre"}</div>
+      </div>
       {(()=>{var pp=getProximoPasoOperacion(op,operaciones||[]);return <div className="card" style={{padding:"10px 12px",marginBottom:12,border:"1px solid rgba(212,168,83,.18)",display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:15,color:pp.tone}}>{pp.icon}</span><div><div style={{fontSize:12,color:"var(--dim)",fontWeight:700,letterSpacing:".08em"}}>Próximo paso</div><div style={{fontSize:12.5,color:"var(--text)",fontWeight:700,marginTop:2}}>{pp.texto}</div></div></div>;})()}
       <HistorialAccionesCard op={op}/>
       <div className="card op-clean-card" style={{padding:16,marginBottom:12}}>
