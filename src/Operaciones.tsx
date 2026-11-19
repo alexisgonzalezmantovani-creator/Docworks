@@ -6086,7 +6086,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   return(
     <div className="doc-viewer-shell">
       <div className="doc-viewer-tabs">
-        <DocTabsBar op={op} tab={tab} onChange={setTab}
+        <DocTabsBar op={op} tab={tab} onChange={function(id){if(vistaAjustes){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(false);}setTab(id);}}
           mostrarAjustes={!!onUpdateOperation&&!tabActual.esRecibo&&bloquesParaAjustes().length>0&&!((op.plantilla_snapshot||{}).documento_propio)}
           ajustesActivo={vistaAjustes}
           onAjustes={function(){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(!vistaAjustes);}}/>
