@@ -320,7 +320,16 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    const idsBiblioteca=await page.locator('[data-clausula-id]').evaluateAll(xs=>xs.map(x=>x.dataset.clausulaId));
    assert.deepEqual(idsDocumento,idsBiblioteca,name+' mismo catálogo '+label);checks++;
    assert.deepEqual(idsDocumento,['ejemplo-opcional'],name+' sin cláusulas viejas/eliminadas '+label);checks++;
-   await page.getByRole('navigation',{name:'Cláusulas y documentos'}).getByRole('button',{name:'Modelos de documentos',exact:true}).click();
+   // WebKit puede conservar este botón en transición al volver desde la biblioteca.
+   const botonDocumentos=page.getByRole('navigation',{name:'Cláusulas y documentos'}).getByRole('button',{name:'Modelos de documentos',exact:true});
+   if(engine==='webkit'){
+     await botonDocumentos.evaluate(el=>{
+       const rect=el.getBoundingClientRect();
+       if(!rect.width||!rect.height||getComputedStyle(el).visibility==='hidden'||el.disabled)throw Error('Pestaña de modelos no disponible');
+       el.click();
+     });
+   }else await botonDocumentos.click();
+   await page.waitForFunction(()=>document.querySelector('button[aria-label="Modelos de documentos"]')?.getAttribute('aria-pressed')==='true');
 
   }
   await page.locator('#dw-modelo-documento').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
