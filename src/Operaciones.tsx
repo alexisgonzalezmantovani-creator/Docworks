@@ -736,49 +736,20 @@ export const GS = `
   overflow-wrap:anywhere;
 }
 .dw-model-preview{
-  position:fixed;
-  inset:0;
-  z-index:10050;
-  background:rgba(8,16,30,.88);
-  overflow:auto;
-  overscroll-behavior:contain;
-  padding:env(safe-area-inset-top) max(8px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+  position:fixed;inset:0;z-index:10050;background:rgba(8,16,30,.88);
+  display:flex;justify-content:center;align-items:stretch;overflow:hidden;overscroll-behavior:contain;
+  padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));box-sizing:border-box;
 }
-.dw-model-preview-header{
-  position:sticky;
-  top:0;
-  z-index:1;
-  max-width:1040px;
-  margin:0 auto;
-  padding:4px clamp(12px,2.7vw,36px);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  color:#1f2937;
-  background:#fff;
-  border-bottom:1px solid #e5e7eb;
-}
-.dw-model-preview-header button{
-  flex:none;
-  width:44px;
-  height:44px;
-  font-size:22px;
-  padding:0;
-}
-.dw-model-preview-sheet{
-  max-width:1040px;
-  margin:0 auto;
-  padding:12px clamp(12px,2.7vw,36px) 24px;
-  background:#fff;
-  color:#1f2937;
-  border-radius:0 0 9px 9px;
-  box-shadow:0 18px 65px rgba(0,0,0,.35);
-}
-.dw-model-preview-text{
-  color:#1f2937;
-  white-space:pre-wrap;
-}
+.dw-model-preview-frame.pdf-preview{width:min(850px,100%);height:100%;max-height:100%;min-height:0;min-width:0;margin:0;overflow:hidden;box-shadow:0 18px 65px rgba(0,0,0,.35);}
+.dw-model-preview-header.pdf-chrome{display:flex;min-height:40px;gap:6px;padding:5px 5px 10px;}
+.dw-model-preview-header button{flex:0 0 auto;margin-left:auto;min-width:40px;min-height:36px;font-size:20px;padding:4px 10px;}
+.dw-model-preview-sheet.pdf-content-lg{flex:1 1 0%;height:0;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:clamp(14px,2.2vw,28px) clamp(12px,3vw,38px) 32px;}
+.dw-model-preview .pdf-text,.dw-propio-preview .pdf-text{font-size:clamp(13px,1.05vw + 9px,14.5px);line-height:1.53;}
+.dw-model-preview-text{color:#1f2937;white-space:pre-wrap;overflow-wrap:anywhere;}
+.dw-propio-preview{margin:10px 0;max-height:min(70dvh,760px);}
+.dw-propio-preview .pdf-chrome{gap:6px;min-height:38px;}
+.dw-propio-preview .pdf-content{overflow-y:auto;}
+@media(max-width:600px){.dw-model-preview-frame.pdf-preview{width:100%;padding:7px;border-radius:11px;}.dw-model-preview-sheet.pdf-content-lg{padding:14px 12px 24px;}.dw-propio-preview{max-height:65dvh;}}
 .dw-redaccion-clausula.inp{
   min-height:90px;
   min-width:0;

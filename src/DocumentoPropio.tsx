@@ -415,11 +415,22 @@ export default function DocumentoPropioEditor({
       <button type="button" className="btn btn-primary" disabled={estado==="saving"||!necesitaGuardar} onClick={guardar}>{estado==="saving"?"Guardando…":"Guardar cambios"}</button>
       {estado==="saved"&&<span role="status" style={{fontSize:12,color:"var(--green)",alignSelf:"center"}}>✓ Guardado para próximas operaciones</span>}
     </div>
-    {mostrarVista&&<div className="dw-model-preview-text" style={{background:"#fff",border:"1px solid #d1d5db",borderRadius:8,padding:"clamp(12px,3vw,28px)"}}>
+    {mostrarVista&&<div className="pdf-preview dw-propio-preview" data-testid="dw-propio-preview">
+      <div className="pdf-chrome">
+        <span className="pdf-dot" style={{background:"#ff5f57"}}/>
+        <span className="pdf-dot" style={{background:"#ffbd2e"}}/>
+        <span className="pdf-dot" style={{background:"#28c840"}}/>
+        <span style={{fontSize:12.5,color:"#f8fafc",fontWeight:700,marginLeft:9}}>Vista previa · Contrato propio</span>
+        <button type="button" className="btn btn-secondary btn-sm" style={{marginLeft:"auto"}} onClick={()=>setMostrarVista(false)} aria-label="Cerrar vista previa">✕</button>
+      </div>
+      <div className="pdf-content pdf-content-lg">
+        <div className="pdf-text dw-model-preview-text">
       <div style={{fontSize:11,color:"#64748b",marginBottom:12}}>VISTA DEL TEXTO · los chips se completarán con los datos reales</div>
       {texto.split(/(\{\{[a-zA-Z0-9_]+\}\})/g).map((trozo,i)=>/^\{\{[a-zA-Z0-9_]+\}\}$/.test(trozo)
         ? <span key={i} style={{background:repetidos.includes(trozo.slice(2,-2))?"#fee2e2":"#e0f2fe",color:repetidos.includes(trozo.slice(2,-2))?"#991b1b":"#075985",borderRadius:4}}>{nombreDatoBreve(trozo.slice(2,-2),CHIPS.find(([key])=>key===trozo.slice(2,-2))?.[1]||trozo)}</span>
         : <span key={i}>{trozo}</span>)}
+        </div>
+      </div>
     </div>}
     {config.modo_documento==="propio"&&versionesDisponibles.length>0&&
       <details style={{fontSize:12,alignSelf:"flex-start",width:"100%"}}>
