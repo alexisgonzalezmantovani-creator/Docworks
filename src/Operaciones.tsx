@@ -6698,7 +6698,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   return(
     <div style={{paddingBottom:4}}>
       {avisoDatosVinculados&&(step===2||step>total)&&<div role="status" style={{padding:"11px 13px",marginBottom:12,borderRadius:10,border:"1px solid var(--border2)",background:"var(--card)",fontSize:12.5,lineHeight:1.55,color:"var(--text)"}}>
-        <strong style={{display:"block",marginBottom:3}}>✓ Datos recuperados de ${operacionOrigen?.tipo==="reserva_alquiler"?"la reserva de alquiler":"la operación anterior"}</strong>
+        <strong style={{display:"block",marginBottom:3}}>✓ Datos recuperados de {operacionOrigen?.tipo==="reserva_alquiler"?"la reserva de alquiler":"la operación anterior"}</strong>
         <span>{avisoDatosVinculados}</span>
         {operacionOrigen?.inmueble_direccion&&<span style={{display:"block",marginTop:4,color:"var(--muted)"}}>Inmueble: {operacionOrigen.inmueble_direccion}</span>}
       </div>}
