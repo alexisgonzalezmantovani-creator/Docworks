@@ -60,6 +60,21 @@ for(const select of document.querySelectorAll('select')){const props=select[Obje
  assert.ok(!a.getCamposFaltantesDetalle(comodato).some(f=>f.campo==='comodato_plazo'),'el plazo narrado por el editor de comodato debe ser válido');checks++;
  for(const patch of [{inmueble_tipo:'otro',inmueble_tipo_otro:''},{tipo:'alquiler',alquiler_actualizacion:'otro',alquiler_actualizacion_otro:''},{tipo:'alquiler',alquiler_periodo_actualizacion:'otro',alquiler_periodo_otro:''}]){assert.ok(a.getCamposFaltantesDetalle({...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,...patch}).some(f=>f.campo.endsWith('_otro')));checks++;}
  const garante=a.getCamposFaltantesDetalle({...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo:'alquiler',alquiler_garantia_tipo:'propietario',alquiler_garantia_titular:'',alquiler_garantia_dni:'',alquiler_garantia_inmueble:''}).filter(f=>f.campo.startsWith('alquiler_garantia_'));assert.equal(garante.length,3);assert.ok(garante.every(f=>f.paso===6));checks++;
+ // Regresión de navegación: los documentos hijos pueden saltar los datos heredados,
+ // pero nunca eliminan su edición ni las validaciones del resumen.
+ for(const [tipo,pasoCondiciones] of [['boleto',5],['alquiler',5],['refuerzo_reserva',4],['devolucion_reserva',4]]){
+  const parent={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,id:'reserva-padre-'+tipo,tipo:tipo==='alquiler'?'reserva_alquiler':'reserva',estado:'activo',comprador_nombre:'Comprador QA',vendedor_nombre:'Vendedor QA',inmueble_direccion:'Inmueble QA'};
+  const child={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,id:'hijo-'+tipo,tipo,parent_id:parent.id,estado:'borrador'};
+  const snapshotRef={current:null};
+  await a.act(async()=>root.render(a.createElement(a.OperacionForm,{key:'vinculado-'+tipo,initial:child,snapshotRef,clausulas:[],perfil:{nombre:'Inmobiliaria QA',rol:'dueno',plantillas:{}},equipo:[],operaciones:[parent],onSave:async()=>({}),onCancel:()=>{},onTipoChange:()=>{},reportSave:()=>{}})));
+  assert.ok(document.body.textContent.includes('Datos recuperados de'),'Debe explicar el origen para '+tipo);
+  const salto=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Ir a condiciones'));
+  assert.ok(salto,'Debe haber atajo para '+tipo);
+  await a.act(async()=>salto.click());
+  assert.equal(snapshotRef.current?.navigation?.step,pasoCondiciones,'El atajo debe ir a condiciones para '+tipo);
+  assert.ok(!document.body.textContent.includes('Ir a condiciones'),'El atajo no debe persistir en otras pantallas');
+  checks+=3;
+ }
  const {enfocarCampoOperacion}=require(tmp+'/operaciones.cjs');
  await a.act(async()=>root.unmount());document.getElementById('test').innerHTML='<details><summary>Opciones</summary><input id="dw-field-ejemplo"></details>';
  assert.equal(enfocarCampoOperacion('ejemplo'),true);assert.ok(document.querySelector('details').open);assert.equal(document.activeElement.id,'dw-field-ejemplo');checks++;
