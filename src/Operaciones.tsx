@@ -6235,7 +6235,7 @@ export function crearOperacionForm(deps){
  const {camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
-function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeNavigation=undefined,initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
+function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeNavigation=undefined,initial,modoEdicion=!!initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
   const [grupo,setGrupo]=useState(initial ? (
     ["reserva","boleto"].includes(initial.tipo)?"compra":
     ["alquiler","reserva_alquiler"].includes(initial.tipo)?"alquiler":
@@ -6269,21 +6269,17 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       );
     }
   },[initial,focusCampo]);
-  // Al editar una operación ya guardada, se resaltan en rojo (en la barra de
-  // pasos y en el campo puntual) los datos críticos que todavía faltan. En
-  // una operación nueva no se muestra nada en rojo hasta que se guarde.
-  const modoEdicion = !!initial;
   const [revisando,setRevisando]=useState(false);
   const camposTecladoRef=useRef(null);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
-    if(initial) return;
+    if(modoEdicion) return;
     if(["reserva","boleto","exclusividad"].indexOf(data.tipo)<0) return;
     setData(function(d){
       if(String(d.comision_vendedor_valor||"").trim()||String(d.comision_vendedor_texto||"").trim()||d.comision_vendedor) return d;
       return Object.assign({},d,{comision_vendedor_modo:"porcentaje",comision_vendedor_valor:"3"});
     });
-  },[data.tipo]);
+  },[data.tipo,modoEdicion]);
   const esAlq=data.tipo==="alquiler",esResAlq=data.tipo==="reserva_alquiler";
   const esComodato=data.tipo==="comodato",esExclusividad=data.tipo==="exclusividad";
   const esRefuerzo=data.tipo==="refuerzo_reserva",esDevolucion=data.tipo==="devolucion_reserva";
@@ -6438,7 +6434,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
         next.comprador_telefono = perfil && perfil.telefono ? perfil.telefono : (d.comprador_telefono||"");
         next.exclusividad_inmobiliaria_autofill = true;
       }
-      if(!initial && (!d.clausulas_ids||!d.clausulas_ids.length)){
+      if(!modoEdicion && (!d.clausulas_ids||!d.clausulas_ids.length)){
         // En operaciones nuevas se agregan automáticamente las cláusulas obligatorias
         // del modelo. Las opcionales quedan disponibles para que el asesor las elija.
         var plantillaCfg=obtenerPlantillaConfig(perfil,v,clausulas);
@@ -6452,7 +6448,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       }
     }
     return next;
-  });},[onTipoChange,perfil,clausulas,initial]);
+  });},[onTipoChange,perfil,clausulas,modoEdicion]);
   const setBulk=useCallback(function(patch){
     // También las cargas agrupadas quedan disponibles para pagehide sin esperar efectos.
     dataRef.current=Object.assign({},dataRef.current,patch);
@@ -6611,7 +6607,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   async function handleFinalizarAccion(accion,estadoFinal=undefined){
     // Una operación nueva sin datos no debe convertirse en registro ni papelera.
     // Tampoco iniciar un guardado duplicado por doble toque en móvil.
-    if(!initial && !draftTieneContenido(dataRef.current)) return;
+    if(!modoEdicion && !draftTieneContenido(dataRef.current)) return;
     if(guardandoFormRef.current) return;
     guardandoFormRef.current = true;
     try{

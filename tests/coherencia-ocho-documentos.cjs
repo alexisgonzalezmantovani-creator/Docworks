@@ -60,6 +60,25 @@ check('la conformidad cita la posición efectiva de la cláusula de incumplimien
  assert.ok(!sinIncumplimiento.secciones.some(s=>s._bloqueId==='reserva.incumplimiento'));
  assert.doesNotMatch(sinIncumplimiento.conformidad.items[0],/cláusula \d+ de la Reserva/i);
 });
+check('la referencia por chip ignora una cláusula de borrador que no se imprime',()=>{
+ const op=a.opParaDocumento({...base,tipo:'reserva'});
+ const bloques=a.getDefaultBodyBlocks('reserva');
+ const borrador={id:'qa.borrador',titulo:'NUEVA CLÁUSULA',
+  contenido:'Escribí acá la redacción de esta cláusula.',activo:true,orden:1};
+ const referencia={id:'qa.referencia',titulo:'REFERENCIA DE PRUEBA',
+  contenido:'Ver cláusula {{NUM_RESERVA_INCUMPLIMIENTO}}.',activo:true,orden:99};
+ const conBorrador=[borrador,...bloques.map(b=>({...b,orden:b.orden+1})),referencia];
+ const doc=a.buildDocSections(op,[],'reserva',conBorrador);
+ const numero=doc.secciones.findIndex(s=>s._bloqueId==='reserva.incumplimiento')+1;
+ assert.ok(numero>0);
+ assert.ok(!doc.secciones.some(s=>s._bloqueId===borrador.id));
+ assert.deepEqual(doc.secciones.find(s=>s._bloqueId===referencia.id).items,['Ver cláusula '+numero+'.']);
+});
+check('la devolución sin motivo no afirma que se reintegra la reserva íntegra',()=>{
+  const {texto}=render('devolucion_reserva',{precio:'5000',devolucion_motivo:''});
+  assert.doesNotMatch(texto,/devoluci[oó]n [íi]ntegra/i);
+  assert.match(texto,/importe indicado/i);
+});
 check('boleto obliga a vender, sin declarar transmisión de dominio por su firma',()=>{
  const {texto}=render('boleto');
  assert.match(texto,/se obliga a vender/);

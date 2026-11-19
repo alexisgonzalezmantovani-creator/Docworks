@@ -893,7 +893,7 @@ function derivedTokensGenerales(op) {
     refuerzo_trayectoria: antecedentesRefuerzo(op),
     reserva_refuerzo_plazo:textoPlazoRefuerzoReserva(op),
     reserva_refuerzo_monto:esMontoMayorACero(op.reserva_refuerzo_monto)?fmt$L(op.reserva_refuerzo_monto,op.moneda):"___",
-    devolucion_motivo_texto: op.devolucion_motivo || "Por mutuo acuerdo entre las partes, y ante la no concreción de la operación, se procede a la devolución íntegra del monto de reserva oportunamente entregado.-"
+    devolucion_motivo_texto: op.devolucion_motivo || "Las partes dejan constancia de la devolución del importe indicado en este instrumento, sin presumir que sea la totalidad de la reserva ni que se extingan otras obligaciones pendientes.-"
   };
   Object.assign(__tg,datosAdicionalesInmueble(op));
   // Tokens propios de la Reserva de Compra (plazo de aceptación, vigencia, honorarios): sin esto los
@@ -2002,6 +2002,27 @@ function parseMontoAR(valor){
   var n=Number(s); return isFinite(n)?n:NaN;
 }
 function esMontoMayorACero(valor){ var n=parseMontoAR(valor); return isFinite(n) && n>0; }
+// Una devolución parcial no debe rechazar ni cerrar automáticamente la reserva vinculada.
+// Solo se infiere devolución total con moneda e importe idénticos a lo recibido,
+// sin refuerzos, devoluciones previas ni otros indicios de saldo pendiente.
+function devolucionCubreTotalReserva(devolucion,reserva,operaciones){
+  if(!devolucion||!reserva||devolucion.tipo!=="devolucion_reserva"||reserva.tipo!=="reserva"
+     ||String(devolucion.parent_id||"")!==String(reserva.id||""))return false;
+  if(reserva.estado==="cerrado"&&reserva.proceso_estado!=="pendiente_cierre_devolucion")return false;
+  var monedaDev=String(devolucion.moneda||"").trim().toUpperCase();
+  var monedaReserva=String(reserva.moneda||"").trim().toUpperCase();
+  if(!monedaDev||monedaDev!==monedaReserva)return false;
+  var pagado=parseMontoAR(reserva.anticipo),devuelto=parseMontoAR(devolucion.precio);
+  if(!(pagado>0&&devuelto>0&&Math.round(pagado*100)===Math.round(devuelto*100)))return false;
+  if(esMontoMayorACero(reserva.reserva_refuerzo_monto))return false;
+  if(/(?:devoluci[oó]n|reintegro) parcial|saldo pendiente|a cuenta de (?:la )?reserva/i.test(String(devolucion.devolucion_motivo||"")))return false;
+  return !(operaciones||[]).some(function(otra){
+    return otra&&otra.id!==devolucion.id&&String(otra.parent_id||"")===String(reserva.id)
+       &&((otra.tipo==="refuerzo_reserva"&&otra.estado!=="borrador")||
+          (otra.tipo==="devolucion_reserva"&&otra.estado!=="borrador"));
+  });
+}
+
 // 4.29: el paso depende del tipo de documento (en Reserva de alquiler el locatario va primero; en documentos simples todo lo demás está en el paso 4).
 function getPasoDeCampo(campo,tipo){
   if(tipo==="alquiler"&&(campo==="alquiler_seguro_dias"||campo==="alquiler_incluye_seguro"))return 7;
@@ -2278,6 +2299,13 @@ function revisarRiesgosContractuales(op,doc) {
     if(op.reserva_aceptacion_modo==="fecha" && /^\d{4}-\d{2}-\d{2}$/.test(String(op.reserva_aceptacion_vencimiento||""))
        && fechaDoc && String(op.reserva_aceptacion_vencimiento)<String(fechaDoc)){
       errores.push("El plazo de aceptación ya venció antes de la fecha del documento. Revisá el vencimiento antes de exportar.");
+    }
+    if(op.reserva_aceptacion_modo==="fecha"&&op.reserva_vigencia_modo==="fecha"){
+      var aceptacion=parseISOLocal(op.reserva_aceptacion_vencimiento);
+      var vigencia=parseISOLocal(op.reserva_vigencia_fecha);
+      if(aceptacion&&vigencia&&aceptacion>vigencia){
+        errores.push("El vencimiento de aceptación es posterior a la vigencia de la reserva. Revisá las dos fechas antes de exportar.");
+      }
     }
     // La referencia estándar a la seña del art. 1059 es información contextual
     // del modelo, no un hallazgo nuevo que deba interrumpir cada descarga.
@@ -4353,22 +4381,18 @@ function buildDocSectionsFromEditableBody(op, clausulasLib, tipo, bloquesPlantil
   var doc = buildDocSectionsStandard(op, clausulasLib, tipo);
   if(!Array.isArray(bloquesPlantilla) || !bloquesPlantilla.length) return doc;
   var sorted=armonizarClausulasPosesionDeFabrica(bloquesPlantilla.map(normalizarBodyBlock),tipo).filter(function(b){return b.activo!==false&&evalBodyCondition(b.condicion,op)&&!bloqueComisionOculto(b,op);}).sort(function(a,b){return a.orden-b.orden;});
+  // Excluir el borrador del modelo antes de asignar números y resolver referencias.
+  sorted=sorted.filter(function(b){
+    var texto=String(b.contenido||"").trim();
+    return !(/^NUEVA CL[AÁ]USULA$/i.test(nombreClausulaModelo(b))&&
+      (!texto||/^Escrib[ií] ac[aá] la redacci[oó]n de esta cl[aá]usula\./i.test(texto)));
+  });
   var extras=tokensPagoCompra(op);
   sorted.forEach(function(b,i){extras[tokenNumeroBloque(b.id)]=String(i+1);});
   var secciones=sorted.map(function(b,i){
     var txt=String(b.contenido||"");
     var items=txt.split(/\n\n/).map(function(p){return resolveVars(p,op,Object.assign({},extras,derivedTokensGenerales(op)));}).filter(function(p){return String(p||"").trim()!=="";});
     return {titulo:(i+1)+". "+nombreClausulaModelo(b),items:items,_bloqueId:b.id};
-  });
-  // Los bloques creados con «Agregar cláusula» no forman parte del contrato
-  // hasta que tengan contenido real. Evita imprimir el borrador «NUEVA CLÁUSULA».
-  secciones=secciones.filter(function(sec){
-    var texto=(sec.items||[]).join(" ").trim();
-    var titulo=String(sec.titulo||"").replace(/^\d+\.\s*/,"").trim();
-    return !(/^NUEVA CL[AÁ]USULA$/i.test(titulo)&&
-      (!texto||/^Escrib[ií] ac[aá] la redacci[oó]n de esta cl[aá]usula\./i.test(texto)));
-  }).map(function(sec,i){
-    return Object.assign({},sec,{titulo:String(sec.titulo||"").replace(/^\d+\./,String(i+1)+".")});
   });
   if(tipo==="comodato") secciones.forEach(function(sec){
     sec.items=(sec.items||[]).map(function(item){return String(item).replace(/PARTE\s+VENDEDORA\s*\(\s*o\s+LOCADORA\s*\)/gi,"PARTE COMODANTE");});
@@ -4634,7 +4658,7 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
       ],
       secciones:[
         {titulo:"1. ANTECEDENTES", items:["Las partes habían suscripto una Reserva de Compra para el inmueble ubicado en "+(op.inmueble_direccion||"___")+", "+(op.inmueble_partido||"___")+".-"]},
-        {titulo:"2. MOTIVO DE LA DEVOLUCIÓN", items:[(op.devolucion_motivo||"Por mutuo acuerdo entre las partes, y ante la no concreción de la operación, se procede a la devolución íntegra del monto de reserva oportunamente entregado.-")]},
+        {titulo:"2. MOTIVO DE LA DEVOLUCIÓN", items:[(op.devolucion_motivo||"Las partes dejan constancia de la devolución del importe indicado en este instrumento, sin presumir que sea la totalidad de la reserva ni que se extingan otras obligaciones pendientes.-")]},
         {titulo:"3. DEVOLUCIÓN", items:["El VENDEDOR devuelve en este acto al COMPRADOR / OFERENTE la suma de "+fmt$L(op.precio,op.moneda)+", recibiendo el COMPRADOR plena conformidad respecto de la devolución.-"]},
         {titulo:"4. FINIQUITO", items:["Las partes dejan constancia de la devolución del importe aquí indicado. El alcance de cualquier liberación o renuncia de reclamos se limita a los conceptos expresamente identificados y aceptados en este instrumento, sin afectar derechos irrenunciables.-"]},
       ],
@@ -6072,6 +6096,11 @@ function StepCondicionesReservaAlq({data,onChange,equipo,faltantes}){
 
 function StepDocSimple({data,onChange}){
   var tipo=data.tipo;
+  function cambiarFechaComprobante(e){
+    var fecha=e.target.value;
+    onChange("fecha_posesion",fecha);
+    onChange("fecha_documento",fecha);
+  }
   return(
     <div>
       
@@ -6110,13 +6139,13 @@ function StepDocSimple({data,onChange}){
         {tipo==="refuerzo_reserva"&&<>
           <Inp id="dw-field-precio" label="Monto del refuerzo" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="10.000" money/>
           <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
-          <Inp id="dw-field-fecha_posesion" label="Fecha del refuerzo" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2"/>
+          <Inp id="dw-field-fecha_posesion" label="Fecha del refuerzo" value={data.fecha_posesion||data.fecha_documento||""} onChange={cambiarFechaComprobante} type="date" className="col2"/>
           <Txa id="dw-field-refuerzo_trayectoria" label="Trayectoria de la operación" value={data.refuerzo_trayectoria||""} onChange={function(e){onChange("refuerzo_trayectoria",e.target.value);}} placeholder="Con fecha XX se firmó reserva por $XX..." rows={3} className="col2"/>
         </>}
         {tipo==="devolucion_reserva"&&<>
           <Inp id="dw-field-precio" label="Monto a devolver" value={data.precio||""} onChange={function(e){onChange("precio",e.target.value);}} placeholder="10.000" money/>
           <Slt id="dw-field-moneda" label="Moneda" value={data.moneda||"USD"} onChange={function(e){onChange("moneda",e.target.value);}}><option value="USD">USD</option><option value="ARS">ARS</option></Slt>
-          <Inp id="dw-field-fecha_posesion" label="Fecha de devolución" value={data.fecha_posesion||""} onChange={function(e){onChange("fecha_posesion",e.target.value);}} type="date" className="col2"/>
+          <Inp id="dw-field-fecha_posesion" label="Fecha de devolución" value={data.fecha_posesion||data.fecha_documento||""} onChange={cambiarFechaComprobante} type="date" className="col2"/>
           <Txa id="dw-field-devolucion_motivo" label="Motivo de la devolución" value={data.devolucion_motivo||""} onChange={function(e){onChange("devolucion_motivo",e.target.value);}} placeholder="Por mutuo acuerdo..." rows={2} className="col2"/>
         </>}
       </div>
@@ -9672,7 +9701,8 @@ function DocWorksApp(){
     // Una operación nueva queda asociada a la versión de plantilla vigente.
     // Al editar un contrato existente conservamos la versión histórica.
     opGuardada=sellarVersionPlantillaOperacion(opGuardada,perfil,!editOp||editOp.tipo!==opGuardada.tipo,clausulas,bloquesReserva);
-    var parentParaCerrar=(opGuardada.tipo==="devolucion_reserva" && opGuardada.parent_id && opGuardada.estado!=="borrador") ? operaciones.find(function(o){return o.id===opGuardada.parent_id;}) : null;
+    var parentParaCerrar=(opGuardada.tipo==="devolucion_reserva"&&opGuardada.parent_id&&opGuardada.estado!=="borrador")
+      ? operaciones.find(function(o){return o.id===opGuardada.parent_id&&devolucionCubreTotalReserva(opGuardada,o,operaciones);}) : null;
     if(parentParaCerrar&&!permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,parentParaCerrar).editar){
       var errorPermiso={message:"No tenés permiso para cerrar la reserva vinculada."};dwNotify("error",errorPermiso.message);return {error:errorPermiso};
     }
@@ -9699,10 +9729,12 @@ function DocWorksApp(){
       }
       if(res&&res.contextoObsoleto)return res;
       if(res&&res.operacion)opGuardada=res.operacion;
+      if(opGuardada.tipo==="devolucion_reserva"&&opGuardada.parent_id&&opGuardada.estado!=="borrador"&&!parentParaCerrar)
+        dwNotify("warning","La devolución se guardó, pero la reserva vinculada permanece sin cierre automático. Revisá si existe saldo pendiente y cerrala por separado cuando corresponda.");
       devolucionConfirmada=!!parentParaCerrar;
       setOperaciones(function(ops){
         var base = esNueva ? [opGuardada].concat(ops.filter(function(o){return o.id!==opGuardada.id;})) : ops.map(function(o){return o.id===editOp.id?opGuardada:o;});
-        if(opGuardada.tipo==="devolucion_reserva" && opGuardada.parent_id && opGuardada.estado!=="borrador") {
+        if(parentParaCerrar) {
           return base.map(function(o){return o.id===opGuardada.parent_id?Object.assign({},o,{proceso_estado:"rechazada",estado:"cerrado"}):o;});
         }
         return base;
@@ -9808,7 +9840,7 @@ function DocWorksApp(){
     try{
     var pendientes=(operaciones||[]).filter(function(o){
       return o && o.id && o.proceso_estado==="pendiente_cierre_devolucion"
-        && (operaciones||[]).some(function(h){return h && h.tipo==="devolucion_reserva" && h.parent_id===o.id && h.estado!=="borrador";});
+        && (operaciones||[]).some(function(h){return devolucionCubreTotalReserva(h,o,operaciones);});
     });
     for(var i=0;i<pendientes.length;i++){
       var padre=pendientes[i],marca=null;
@@ -10264,7 +10296,7 @@ function DocWorksApp(){
                     <div><div className="dw-operation-page-breadcrumb">Operaciones</div><h1>{editOp?((formTipo||editOp.tipo)==="alquiler"?"Contrato de locación":TIPOS[formTipo||editOp.tipo]||"Editar operación"):(TITULOS_NUEVA_OPERACION[formTipo]||"Nueva operación")}</h1></div>
                     <button type="button" aria-label="Volver a operaciones" className="btn btn-secondary btn-sm" onClick={cerrarFormularioSeguro}>← Volver</button>
                   </div>
-                  <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} resumeNavigation={formResumeNavigation} initial={editOp||formInitialOverride} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
+                  <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} resumeNavigation={formResumeNavigation} initial={editOp||formInitialOverride} modoEdicion={!!editOp} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
                 </section>
               ) : (<>
               {ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks-landing.vercel.app/#planes" style={{color:"inherit"}}>Ver planes</a></div>}

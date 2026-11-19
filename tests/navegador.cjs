@@ -240,7 +240,8 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.goto('http://127.0.0.1:'+server.address().port+'/aspecto');
   if(width<600)await page.getByRole('group',{name:'Vista del aspecto del documento'}).getByRole('button',{name:'Vista previa',exact:true}).click();
   const pdfCanvas=page.locator('.dw-pdf-preview > .dw-pdf-sheet canvas');
-  await page.waitForFunction(()=>document.querySelector('.dw-pdf-preview > .dw-pdf-sheet canvas')?.width>100);
+  // El canvas vacío ya tiene 300px de ancho; esperar el render de la hoja.
+  await page.locator('.dw-pdf-preview[aria-busy="false"] > .dw-pdf-sheet canvas').waitFor();
   assert.equal(await page.getByRole('tab',{name:/Ubicación/}).count(),0);checks++;
   assert.equal(await page.locator('.dw-aspecto-nav [role=tab]').count(),3);checks++;
   assert.ok(await pdfCanvas.evaluate(c=>Math.abs(c.width/c.height-595/842)<.005));checks++;

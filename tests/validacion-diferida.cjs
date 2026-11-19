@@ -24,7 +24,7 @@ assert.match(form,/setStep\(function\(s\)\{return Math\.min\(s\+1,total\+1\);\}\
 assert.match(form,/Revisar →/,'Conservar revisión final compacta');
 assert.match(form,/draftTieneContenido\(data\) \? \{ data:data/,'No persistir un formulario vacío como borrador');
 assert.match(form,/dw-operation-save-slot/,'Indicador de guardado junto a siguiente');
-assert.match(form,/if\(!initial && !draftTieneContenido\(dataRef\.current\)\) return;/,'Impedir guardar operaciones nuevas vacías');
+assert.match(form,/if\(!modoEdicion && !draftTieneContenido\(dataRef\.current\)\) return;/,'Impedir guardar operaciones nuevas vacías');
 const app=fs.readFileSync(path.join(__dirname,'../src/App.tsx'),'utf8');
 const resumen=app.slice(app.indexOf('function PasoResumenFinal('),app.indexOf('\nfunction ',app.indexOf('function PasoResumenFinal(')+25));
 assert.match(resumen,/aria-label="Datos para completar"/,'Mostrar lista accesible de faltantes solo en revisión');

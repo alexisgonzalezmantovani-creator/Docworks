@@ -328,14 +328,14 @@ await check('respuesta vacía en sincronización conserva el borrador offline',a
 });
 await check('reintento de cierre sin confirmación conserva la reserva pendiente',async()=>{
  const padre={...data,id:'padre-pendiente',estado:'cerrado',proceso_estado:'pendiente_cierre_devolucion'};
- const devolucion={...data,id:'devolucion-pendiente',tipo:'devolucion_reserva',parent_id:padre.id,estado:'activo'};
+ const devolucion={...data,id:'devolucion-pendiente',tipo:'devolucion_reserva',precio:'15000',parent_id:padre.id,estado:'activo'};
  const h=a.crearGuardadoPrueba({guardar:async()=>({})},{operaciones:[padre,devolucion]});
  await h.reintentarCierresDevolucion();
  assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
 });
 await check('cierre pendiente: respuesta de otra reserva no confirma ni borra el pendiente',async()=>{
  const padre={...data,id:'padre-cierre-id-erroneo',estado:'cerrado',proceso_estado:'pendiente_cierre_devolucion'};
- const devolucion={...data,id:'devolucion-cierre-id-erroneo',tipo:'devolucion_reserva',parent_id:padre.id,estado:'activo'};
+ const devolucion={...data,id:'devolucion-cierre-id-erroneo',tipo:'devolucion_reserva',precio:'15000',parent_id:padre.id,estado:'activo'};
  let intentos=0;const h=a.crearGuardadoPrueba({guardar:async op=>{
   intentos++;
   return {operacion:intentos===1?{...op,id:'otra-reserva'}:op};
@@ -348,7 +348,7 @@ await check('cierre pendiente: respuesta de otra reserva no confirma ni borra el
 });
 await check('reintentos simultáneos de cierre solo realizan una solicitud',async()=>{
  const padre={...data,id:'padre-concurrente',estado:'cerrado',proceso_estado:'pendiente_cierre_devolucion'};
- const devolucion={...data,id:'devolucion-concurrente',tipo:'devolucion_reserva',parent_id:padre.id,estado:'activo'};
+ const devolucion={...data,id:'devolucion-concurrente',tipo:'devolucion_reserva',precio:'15000',parent_id:padre.id,estado:'activo'};
  let resolve;const pending=new Promise(r=>{resolve=r});let calls=0;
  const h=a.crearGuardadoPrueba({guardar:async op=>{calls++;await pending;return {operacion:op}}},{operaciones:[padre,devolucion]});
  const primero=h.reintentarCierresDevolucion();const segundo=h.reintentarCierresDevolucion();
@@ -358,7 +358,7 @@ await check('reintentos simultáneos de cierre solo realizan una solicitud',asyn
 });
 await check('cambio de inmobiliaria durante el cierre no modifica operaciones de la sesión nueva',async()=>{
  const padre={...data,id:'padre-cambio-tenant',estado:'cerrado',proceso_estado:'pendiente_cierre_devolucion'};
- const devolucion={...data,id:'devolucion-cambio-tenant',tipo:'devolucion_reserva',parent_id:padre.id,estado:'activo'};
+ const devolucion={...data,id:'devolucion-cambio-tenant',tipo:'devolucion_reserva',precio:'15000',parent_id:padre.id,estado:'activo'};
  let resolve;const pending=new Promise(r=>{resolve=r});
  const h=a.crearGuardadoPrueba({guardar:async op=>{await pending;return {operacion:op}}},{operaciones:[padre,devolucion]});
  const guardando=h.reintentarCierresDevolucion();
@@ -368,7 +368,7 @@ await check('cambio de inmobiliaria durante el cierre no modifica operaciones de
 });
 await check('devolución confirmada y cierre sin respuesta conserva marca de reintento',async()=>{
  const padre={...data,id:'padre-respuesta-vacia',tipo:'reserva',estado:'activo'};
- const devolucion={...data,id:'devolucion-respuesta-vacia',tipo:'devolucion_reserva',parent_id:padre.id};
+ const devolucion={...data,id:'devolucion-respuesta-vacia',tipo:'devolucion_reserva',precio:'15000',parent_id:padre.id};
  const h=a.crearGuardadoPrueba({guardar:async op=>op.id===padre.id?{}:{operacion:op}},{operaciones:[padre]});
  await h.saveOp(devolucion,'guardar','activo');
  const estado=h.estado();
@@ -378,7 +378,7 @@ await check('devolución confirmada y cierre sin respuesta conserva marca de rei
 });
 await check('devolución confirmada con cierre de otra reserva conserva cierre pendiente',async()=>{
  const padre={...data,id:'padre-cierre-ajeno',tipo:'reserva',estado:'activo'};
- const devolucion={...data,id:'devolucion-cierre-ajeno',tipo:'devolucion_reserva',parent_id:padre.id};
+ const devolucion={...data,id:'devolucion-cierre-ajeno',tipo:'devolucion_reserva',precio:'15000',parent_id:padre.id};
  const h=a.crearGuardadoPrueba({guardar:async op=>({operacion:op.id===padre.id?{...op,id:'otra-reserva'}:op})},{operaciones:[padre]});
  await h.saveOp(devolucion,'guardar','activo');
  assert.equal(h.estado().showForm,false,'la devolución confirmada permite salir');
@@ -386,9 +386,18 @@ await check('devolución confirmada con cierre de otra reserva conserva cierre p
  assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
  assert.ok(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),'deja el reintento marcado');
 });
+await check('devolución parcial confirmada no cierra ni rechaza la reserva original',async()=>{
+  const padre={...data,id:'padre-devolucion-parcial',tipo:'reserva',estado:'activo',anticipo:'15000'};
+  const devolucion={...data,id:'devolucion-parcial',tipo:'devolucion_reserva',parent_id:padre.id,precio:'5000',devolucion_motivo:''};
+  const llamadas=[],h=a.crearGuardadoPrueba({guardar:async op=>{llamadas.push(op.id);return {operacion:op};}},{operaciones:[padre]});
+  await h.saveOp(devolucion,'guardar','activo');
+  assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).estado,'activo');
+  assert.equal(llamadas.filter(id=>id===padre.id).length,0);
+  assert.equal(h.estado().operaciones.filter(o=>o.id===devolucion.id).length,1);
+});
 await check('devolución confirmada deja reserva cerrada y rechazada según servidor',async()=>{
  const padre={...data,id:'padre-cierre-ok',tipo:'reserva',estado:'activo'};
- const devolucion={...data,id:'devolucion-cierre-ok',tipo:'devolucion_reserva',parent_id:padre.id};
+ const devolucion={...data,id:'devolucion-cierre-ok',tipo:'devolucion_reserva',precio:'15000',parent_id:padre.id};
  const h=a.crearGuardadoPrueba({guardar:async op=>({operacion:op.id===padre.id?{...op,proceso_estado:'rechazada',estado:'cerrado'}:op})},{operaciones:[padre]});
  await h.saveOp(devolucion,'guardar','activo');
  assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).estado,'cerrado');
@@ -412,7 +421,7 @@ await check('un fallo antes de confirmar la devolución no marca la reserva para
 });
 await check('si se confirmó la devolución, reintentar el cierre solo actualiza la reserva',async()=>{
  const padre={...data,id:'padre-con-cierre',estado:'activo'},calls=[];let fallaPadre=true;const h=a.crearGuardadoPrueba({guardar:async op=>{calls.push({...op});return op.id===padre.id&&fallaPadre?{error:{message:'Cierre rechazado temporalmente'}}:{operacion:op}}},{operaciones:[padre]});
- await h.saveOp({...data,tipo:'devolucion_reserva',parent_id:padre.id},'guardar','activo');assert.equal(h.estado().operaciones.filter(o=>o.tipo==='devolucion_reserva').length,1);assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
+ await h.saveOp({...data,tipo:'devolucion_reserva',parent_id:padre.id,precio:'15000'},'guardar','activo');assert.equal(h.estado().operaciones.filter(o=>o.tipo==='devolucion_reserva').length,1);assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'pendiente_cierre_devolucion');
  fallaPadre=false;await h.reintentarCierresDevolucion();assert.equal(calls.filter(o=>o.tipo==='devolucion_reserva').length,1);assert.equal(h.estado().operaciones.find(o=>o.id===padre.id).proceso_estado,'rechazada');assert.equal(a.lsGet('docworks:devolucion:cierre-pendiente:'+padre.id,null),null);
 });
 await check('una respuesta tardía no altera el listado ni el borrador de otra sesión',async()=>{

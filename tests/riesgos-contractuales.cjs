@@ -19,6 +19,16 @@ check('aceptación con fecha anterior: alerta comprobable',()=>{
  const v=a.revisarRiesgosContractuales({...base,tipo:'reserva',reserva_aceptacion_modo:'fecha',reserva_aceptacion_vencimiento:'2026-11-10'},doc('Texto.'));
  assert.match(v.errores.join(' '),/aceptación/i);
 });
+check('la vigencia de la reserva no puede vencer antes del plazo para aceptarla',()=>{
+ const baseFechas={...base,tipo:'reserva',reserva_aceptacion_modo:'fecha',
+  reserva_aceptacion_vencimiento:'2026-12-01',reserva_vigencia_modo:'fecha'};
+ const errores=fecha=>a.revisarRiesgosContractuales({...baseFechas,reserva_vigencia_fecha:fecha},doc('Texto.')).errores;
+ assert.match(errores('2026-11-28').join(' '),/aceptación.*posterior.*vigencia/i);
+ assert.deepEqual(errores('2026-12-01'),[]);
+ assert.deepEqual(errores('2026-12-03'),[]);
+ assert.deepEqual(a.revisarRiesgosContractuales({...baseFechas,reserva_vigencia_modo:'dias',
+  reserva_vigencia_fecha:'2026-11-28'},doc('Texto.')).errores,[]);
+});
 check('seña informativa no interrumpe exportación, renuncia amplia sí se advierte',()=>{
  const v=a.revisarRiesgosContractuales({...base,tipo:'reserva'},
  doc('Con efectos del art. 1059: el oferente perderá la reserva. Renunciando a invocar imprevisión o fuerza mayor.'));

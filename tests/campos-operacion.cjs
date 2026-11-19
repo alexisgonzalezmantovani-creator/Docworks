@@ -221,6 +221,21 @@ async function click(el){assert.ok(el);await a.act(async()=>el.click());}
   console.log('RENDER escribanía '+tipo);check(tipo+' no pide escribanía en creación',()=>assert.equal(!!document.getElementById('dw-field-escribania'),false));
   state={...state,id:'guardada-qa'};console.log('ANTES render guardada '+tipo);await a.act(async()=>render(a.StepEconomicoCompra,{mostrarEscribania:true}));console.log('DESPUÉS render guardada '+tipo);const panel=[...document.querySelectorAll('details')].find(x=>x.querySelector('#dw-field-escribania'));assert.ok(panel);await click(panel.querySelector('summary'));await fill(document.getElementById('dw-field-escribania'),'');check(tipo+' permite reemplazar escribanía sin cerrar el panel',()=>assert.equal(panel.open,true));await fill(document.getElementById('dw-field-escribania'),'Escribanía asignada después');check(tipo+' permite cargar escribanía más adelante',()=>{assert.equal(state.escribania,'Escribanía asignada después');assert.ok(!a.getCamposFaltantesDetalle(state).some(f=>f.campo==='escribania'));});
  }
+ for(const tipo of ['refuerzo_reserva','devolucion_reserva']){
+  state={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,tipo,created_at:'2026-11-19T14:00:00Z',fecha_documento:'',fecha_posesion:''};
+  await a.act(async()=>render(a.StepDocSimple));
+  const fecha=document.getElementById('dw-field-fecha_posesion');
+  const texto=()=>a.docToPlainText(a.buildDocSections(a.opParaDocumento(state),[],tipo,a.getDefaultBodyBlocks(tipo)));
+  await fill(fecha,'2026-12-22');
+  check(tipo+' imprime la fecha que se carga en el comprobante',()=>{
+    assert.equal(state.fecha_posesion,'2026-12-22');
+    assert.match(texto(),/22 de diciembre de 2026/);
+  });
+  await fill(fecha,'2027-01-08');
+  check(tipo+' sustituye la fecha anterior al editarla',()=>assert.match(texto(),/8 de enero de 2027/));
+  await fill(fecha,'');
+  check(tipo+' al borrar la fecha vuelve a la fecha de creación',()=>assert.match(texto(),/19 de noviembre de 2026/));
+ }
  state={...a.EMPTY_OP,tipo:'reserva',comprador_telefono:'',comprador_email:'',comprador_telefono_en_doc:false,comprador_email_en_doc:false};
  await a.act(async()=>render(a.StepPersona,{prefix:'comprador',titulo:'Comprador'}));
  check('los interruptores de teléfono y correo se ven antes de escribir',()=>{
