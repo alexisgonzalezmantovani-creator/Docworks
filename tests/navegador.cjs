@@ -156,6 +156,13 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    await page.getByRole('button',{name:'Abrir vista previa de prueba'}).click();
    const previa=page.getByTestId('dw-fullpage-preview');
    await previa.waitFor();
+   if(tipo==='alquiler'){
+    const contrato=await previa.locator('.dw-model-preview-text').textContent();
+    assert.match(contrato,/31\/10\/2028/);
+    assert.match(contrato,/el departamento ubicado/i);
+    assert.doesNotMatch(await previa.textContent(),/La plantilla no menciona fecha de fin del contrato/);
+    checks+=3;
+   }
    assert.ok(await previa.evaluate(el=>{
      const texto=el.querySelector('.dw-model-preview-text'),cierre=el.querySelector('button');
      const rect=texto.getBoundingClientRect();

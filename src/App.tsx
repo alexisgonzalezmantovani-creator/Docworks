@@ -718,7 +718,7 @@ const VAR_GROUPS = [
 const VAR_MONEY_FIELDS = { precio:"moneda", anticipo:"moneda", saldo:"moneda", reserva_refuerzo_monto:"moneda", alquiler_monto_inicial:"alquiler_moneda", res_alq_monto_reserva:"res_alq_moneda", res_alq_monto_mensual:"res_alq_monto_mensual_moneda" };
 const VAR_DATE_FIELDS = ["fecha_posesion","alquiler_inicio","alquiler_fin","res_alq_inicio_estimado"];
 function fmtVarValue(key, op) {
-  var v = op[key];
+  var v = key==="alquiler_fin"?finAlquilerISO(op):op[key];
   if (v===undefined||v===null||String(v).trim()==="") return "___";
   if (VAR_MONEY_FIELDS[key]) return fmt$(v, op[VAR_MONEY_FIELDS[key]]);
   if (VAR_DATE_FIELDS.indexOf(key)!==-1) return fmtD(v);
@@ -1829,9 +1829,8 @@ function tokenExisteEnResolver(token,op){
 function tokenTieneFuenteCargada(token,op){
   var campos=FUENTE_TOKEN_OBLIGATORIO[token];
   if(!campos) return true;
-  // Para el vencimiento del alquiler alcanza con fecha de inicio y plazo: el
-  // generador calcula el vencimiento mediante finAlquilerISO.
-  if(token==="alquiler_fin") return !!(op&&(String(op.alquiler_fin||"").trim() || (String(op.alquiler_inicio||"").trim() && Number(op.alquiler_plazo_meses||0)>0)));
+  // El validador y el documento usan el mismo vencimiento, incluso si el campo guardado está desactualizado.
+  if(token==="alquiler_fin") return !!finAlquilerISO(op);
   return campos.every(function(campo){
     if(op&&op[campo]!==undefined&&op[campo]!==null&&String(op[campo]).trim()!=="") return true;
     var m=String(campo).match(/^(comprador|vendedor|locador|locatario)_nombre$/);
@@ -1865,8 +1864,8 @@ function variantesCoberturaObligatoria(token,valor,op){
     }
   }
   var campoFecha=CAMPOS_FECHA_TOKEN_OBLIGATORIO[token];
-  if(campoFecha&&op&&op[campoFecha]){
-    var iso=String(op[campoFecha]).trim();
+  if(campoFecha&&op){
+    var iso=campoFecha==="alquiler_fin"?finAlquilerISO(op):String(op[campoFecha]||"").trim();
     if(/^\d{4}-\d{2}-\d{2}$/.test(iso)){
       out.push(iso,fmtD(iso),fmtDLarga(iso));
     }
@@ -7449,7 +7448,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     devolucion_motivo:"Devolución de ejemplo por mutuo acuerdo",refuerzo_trayectoria:"Operación de ejemplo vinculada a una reserva previa",
     alquiler_plazo_meses:"24",alquiler_inicio:"2026-11-01",alquiler_fin:"2028-11-01",
     res_alq_inicio_estimado:"2026-11-01",res_alq_monto_reserva:"100000",res_alq_monto_mensual:"350000",
-    inmueble_partido:"Pilar",inmueble_provincia:"Buenos Aires",inmueble_direccion:"EJEMPLO · Av. del Libertador 5678",
+    inmueble_partido:"Pilar",inmueble_provincia:"Buenos Aires",inmueble_direccion:"EJEMPLO · Av. del Libertador 5678",inmueble_tipo:"departamento",
     precio:"150000",anticipo:"15000",saldo:"135000",fecha_posesion:"2026-12-15"
   });
   var docPruebaPlantilla=previewVisible?aplicarEncabezadoPersonalizado(buildDocSections(opParaDocumento(opEjemploPlantilla),clausulas||[],tipo,draft),opEjemploPlantilla,tipo,perfil):null;

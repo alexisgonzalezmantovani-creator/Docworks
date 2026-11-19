@@ -1,7 +1,7 @@
 // Casos de negocio: carga -> documento estructurado -> PDF/Word. Sin servicios externos.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),cp=require('node:child_process');
 const dir=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-logica-'));
-const names=['EMPTY_OP','SAMPLE_OP_PREVIEW','finContratoISO','finAlquilerISO','finReservaAlquilerISO','sumarDiasISO','fechaHoyISO','fechaDocumentoISO','fmtD','fmtDLarga','plazoReservaAlquiler','plazoComodatoDesdeFechas','derivedTokensGenerales','getCamposFaltantesDetalle','getDefaultBodyBlocks','buildDocSections','opParaDocumento','docToPlainText','generarPDF','generarDOCX','getTokensSinReemplazar'];
+const names=['EMPTY_OP','SAMPLE_OP_PREVIEW','finContratoISO','finAlquilerISO','finReservaAlquilerISO','sumarDiasISO','fechaHoyISO','fechaDocumentoISO','fmtD','fmtDLarga','plazoReservaAlquiler','plazoComodatoDesdeFechas','derivedTokensGenerales','getCamposFaltantesDetalle','getDefaultBodyBlocks','buildDocSections','opParaDocumento','docToPlainText','generarPDF','generarDOCX','getTokensSinReemplazar','analizarDatosObligatorios','resolveVars'];
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(dir+'/src/App.tsx','utf8')+'\nexport {'+names.join(',')+'};',resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
 global.document={querySelector:()=>({}),title:''};const a=require(tmp+'/app.cjs');delete global.document;let n=0;
 const check=(name,fn)=>{fn();n++;console.log('OK',name);};const normalize=s=>s.normalize('NFKC').replace(/\s+/g,' ').trim();
@@ -19,6 +19,30 @@ for(const [tz,today]of [['America/Argentina/Buenos_Aires','2026-11-06'],['UTC','
  const result=JSON.parse(cp.execFileSync(process.execPath,['-e',code],{env:{...process.env,TZ:tz},encoding:'utf8'}));check('calendario estable en '+tz,()=>assert.deepEqual(result,{hoy:today,fechaDocumento:'2026-11-06',fechaCalendario:'2026-11-06',vencimiento:'2026-11-11',fin:'2028-04-10'}));
 }
 const base={...a.EMPTY_OP,...a.SAMPLE_OP_PREVIEW,fecha_documento:'2026-11-06',fecha_posesion:'2026-12-20',comprador_nombre:'Ana Compradora',vendedor_nombre:'Bruno Vendedor',locador_nombre:'Diego Locador',locatario_nombre:'Carla Locataria',inmueble_direccion:'Calle de Prueba 765',inmobiliaria_nombre:'Inmobiliaria Prueba',inmobiliaria_matricula:'1234',precio:'100000.75',anticipo:'10000.25',saldo:'90000.5',moneda:'USD',alquiler_inicio:'2026-04-01',alquiler_plazo_meses:'24',alquiler_plazo_dias:'10',alquiler_fin:'2099-01-01',alquiler_monto_inicial:'1900.25',alquiler_moneda:'USD',alquiler_dia_pago:'1-10',res_alq_monto_reserva:'12345.67',res_alq_moneda:'ARS',res_alq_monto_mensual:'1900.25',res_alq_monto_mensual_moneda:'USD',res_alq_inicio_estimado:'2026-04-01',res_alq_plazo_cantidad:'2',res_alq_plazo_unidad:'años',comodato_inicio:'2026-04-01',comodato_fin:'2027-04-01',comodato_plazo:'TEXTO VIEJO QUE NO DEBE SALIR',refuerzo_trayectoria:'Reserva original de prueba',devolucion_motivo:'Motivo particular de prueba',comprador_email:'interno@example.test',comprador_email_en_doc:false,locatario_email:'privado@example.test',locatario_email_en_doc:false};
+const alquiler={...base,tipo:'alquiler'};
+const docAlquiler=a.buildDocSections(a.opParaDocumento(alquiler),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+const pendientes=(doc,op)=>a.analizarDatosObligatorios(doc,'alquiler',op);
+check('valida el vencimiento impreso aunque el dato guardado haya quedado viejo',()=>{
+ assert.ok(!pendientes(docAlquiler,alquiler).faltaPlantilla.some(x=>x.token==='alquiler_fin'));
+ assert.equal(a.resolveVars('{{alquiler_fin}} / {{alquiler_fin_formateado}}',alquiler),'10/04/2028 / 10/04/2028');
+});
+check('la fecha vieja en una plantilla personalizada no reemplaza el vencimiento calculado',()=>{
+ const docViejo={...docAlquiler,secciones:docAlquiler.secciones.map(s=>({...s,items:s.items.map(t=>t.replaceAll('10/04/2028','01/01/2099'))}))};
+ assert.ok(pendientes(docViejo,alquiler).faltaPlantilla.some(x=>x.token==='alquiler_fin'));
+});
+check('el chip también admite contratos históricos con fecha de fin explícita',()=>{
+ const op={...alquiler,alquiler_fin:'2028-03-31'};
+ delete op.alquiler_plazo_meses;
+ delete op.alquiler_plazo_dias;
+ assert.equal(a.resolveVars('{{alquiler_fin}}',op),'31/03/2028');
+});
+check('los plazos en días se validan con la fecha calculada y los plazos borrados siguen pendientes',()=>{
+ const dias={...alquiler,alquiler_plazo_meses:'0',alquiler_plazo_dias:'10',alquiler_fin:''};
+ const docDias=a.buildDocSections(a.opParaDocumento(dias),[],'alquiler',a.getDefaultBodyBlocks('alquiler'));
+ assert.ok(!pendientes(docDias,dias).faltaFormulario.some(x=>x.token==='alquiler_fin'));
+ assert.ok(!pendientes(docDias,dias).faltaPlantilla.some(x=>x.token==='alquiler_fin'));
+ assert.ok(pendientes(docDias,{...alquiler,alquiler_plazo_meses:''}).faltaFormulario.some(x=>x.token==='alquiler_fin'));
+});
 for(const tipo of ['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva'])for(const snapshot of [false,true]){
  const op={...base,tipo,...(snapshot?{plantilla_snapshot:{tipo,body_blocks:a.getDefaultBodyBlocks(tipo)}}:{})},before=JSON.stringify(op),doc=a.buildDocSections(a.opParaDocumento(op),[],tipo),text=normalize(a.docToPlainText(doc));
  let expected=['Calle de Prueba 765','viernes 6 de noviembre de 2026'];if(['alquiler','reserva_alquiler'].includes(tipo))expected.push('Diego Locador','Carla Locataria','1.900,25');else expected.push('Bruno Vendedor',tipo==='exclusividad'?'Inmobiliaria Prueba':'Ana Compradora');
