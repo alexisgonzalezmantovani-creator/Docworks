@@ -233,12 +233,12 @@ export const GS = `
   .sidebar-bottom-icon svg{position:relative;z-index:1;}
 
 
-  /* Brand header 5.45: centered vertically with comfortable breathing room. */
+  /* Marca DocWorks: 18-20% mas ancha, sin alterar la altura del encabezado. */
   .topbar-logo{width:clamp(255px,29vw,405px);gap:10px;overflow:visible;margin-left:-15px;align-items:center;}
-  .topbar-logo .dw-header-brand-img{height:auto;max-height:47px;max-width:min(295px,calc(100% - 55px));width:auto;object-fit:contain;display:block;filter:none;flex-shrink:1;min-width:0;}
+  .topbar-logo .dw-header-brand-img{width:202px;height:47px;max-width:calc(100% - 55px);object-fit:fill;display:block;filter:none;flex-shrink:1;min-width:0;}
   .dw-header-version{font:600 12px 'DM Sans',sans-serif;white-space:nowrap;color:#e7c57e;letter-spacing:.02em;flex-shrink:0;}
   .mobile-topbar-logo{min-width:0;gap:7px;margin-left:-7px;}
-  .mobile-topbar-logo .dw-header-brand-img{display:block;height:auto;max-height:39px;max-width:min(56vw,205px);width:auto;object-fit:contain;min-width:0;}
+  .mobile-topbar-logo .dw-header-brand-img{display:block;width:166px;height:39px;max-width:min(56vw,166px);object-fit:fill;flex-shrink:1;min-width:0;}
   .mobile-topbar-logo .dw-header-version{font-size:11px;}
 
   /* ── Main content ── */
