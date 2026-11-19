@@ -159,7 +159,7 @@ if(width>=1101){
    const documents=side.querySelector('.op-docs-count').getBoundingClientRect();
    const progress=side.querySelector('.op-side-progress').getBoundingClientRect();
    const actions=side.querySelector('.op-action-zone').getBoundingClientRect();
-   const buttons=[...actions.querySelectorAll('button')].map(b=>({rect:b.getBoundingClientRect(),truncated:b.scrollWidth>b.clientWidth+1}));
+   const buttons=[...side.querySelector('.op-action-zone').querySelectorAll('button')].map(b=>({rect:b.getBoundingClientRect(),truncated:b.scrollWidth>b.clientWidth+1}));
    return {count:side.querySelector('.op-docs-count').textContent.trim(),
      withDoc:!!side.querySelector('.op-action-doc'),
      sideWidth:sr.width,dividerOffset:Math.round(cr.right-sr.left),
