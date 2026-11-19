@@ -10352,7 +10352,7 @@ function DocWorksApp(){
         onClose={cerrarOnboarding}
         onCreate={function(tipo){setView("dashboard");setFormFocusCampo(null);setEditOp(null);setFormTipo(tipo);setFormInitialOverride(Object.assign({},EMPTY_OP,{tipo:tipo}));setFormResumeNavigation({step:2});setShowForm(true);}}/>}
 
-      <Modal open={!!viewDoc} onClose={function(){cerrarVisorSeguro();}} title={viewDoc?<OperationViewerHeading op={viewDoc}/>:"DocWorks"} wide={true} viewerMode={true}
+      <Modal open={!!viewDoc} onClose={function(){cerrarVisorSeguro();}} title={viewDoc?"":"DocWorks"} wide={true} viewerMode={true}
         headerExtra={null}
         headerRight={viewDoc?<DocumentHeaderActions
           onEdit={permisosOperacion(docworksAuth.contexto&&docworksAuth.contexto.usuario,viewDoc).editar?function(){var op=viewDoc;cerrarVisorSeguro(function(){setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);});}:undefined}
