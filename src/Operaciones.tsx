@@ -2425,6 +2425,11 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
+/* Tipografía exclusiva de la hoja en el visor: no cambia PDF, Word ni modelos. */
+.modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-text{
+  font-size:clamp(13px,1.05vw + 9px,14.5px);
+  line-height:1.53;
+}
 /* La pestaña Ajustes manuales utiliza el espacio completo del visor;
    no conserva los límites de altura del antiguo desplegable sobre la hoja. */
 .modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][data-vista-ajustes="1"]{
@@ -2461,11 +2466,11 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .viewer-modal .reserva-mini-timeline{margin-top:4px}
 .viewer-modal details[data-testid="dw-ajustes-manuales"]{padding:4px 12px;margin-bottom:6px}
 @media (min-width:641px){
-  .modal-overlay-viewer{align-items:flex-start!important;padding:max(6px,env(safe-area-inset-top)) 8px!important}
+  .modal-overlay-viewer{align-items:flex-start!important;justify-content:center!important;padding:max(2px,env(safe-area-inset-top)) 6px!important}
   .modal-overlay-viewer .viewer-modal{
-    width:min(1320px,100%)!important;
+    width:min(900px,100%)!important;
     max-width:100%!important;
-    height:calc(100dvh - max(6px,env(safe-area-inset-top)) - 6px)!important;
+    height:calc(100dvh - max(2px,env(safe-area-inset-top)) - 2px)!important;
     max-height:none!important;
     min-height:0!important;
   }
