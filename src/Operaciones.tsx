@@ -6103,12 +6103,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           mostrarAjustes={!!onUpdateOperation&&!tabActual.esRecibo&&bloquesParaAjustes().length>0&&!((op.plantilla_snapshot||{}).documento_propio)}
           ajustesActivo={vistaAjustes}
           onAjustes={function(){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(!vistaAjustes);}}/>
-        {getCamposFaltantesDetalle&&getCamposFaltantesDetalle(op,perfil).length>0&&
-          <button type="button" onClick={function(){if(onCompleteData)onCompleteData(op,getCamposFaltantesDetalle(op,perfil)[0].campo);}}
-            title="Revisar los datos pendientes" disabled={!onCompleteData}
-            style={{marginLeft:"auto",padding:"4px 7px",alignSelf:"center",fontSize:10.5,borderRadius:7,background:"rgba(234,179,8,.07)",color:"var(--muted)",border:"1px solid var(--border2)",cursor:onCompleteData?"pointer":"default",whiteSpace:"nowrap"}}>
-            ⚠ {getCamposFaltantesDetalle(op,perfil).length} pendientes
-          </button>}
+}
       </div>
       <div className={(tabActual.esResumen||tabActual.esFicha||tabActual.esTareas||tabActual.esNegociacion)?"doc-viewer-tab-content doc-tab-static":"doc-viewer-tab-content"}>
       {tabActual.esTareas ? (
@@ -6165,7 +6160,13 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           <div className="pdf-preview" style={{marginBottom:14}}>
             <div className="pdf-chrome">
               <div className="pdf-dot" style={{background:"#ff5f57"}}/><div className="pdf-dot" style={{background:"#ffbd2e"}}/><div className="pdf-dot" style={{background:"#28c840"}}/>
-              <span style={{fontSize:13,color:"#f8fafc",fontWeight:700,marginLeft:9,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{tabActual.icon} {vistaConformidadSeparada&&disponeConformidadSeparada?"Conformidad del vendedor":tabActual.label}{tabActual.id&&TIPOS[tabActual.id]&&!vistaConformidadSeparada?" — "+TIPOS[tabActual.id]:""}</span>
+              <span style={{fontSize:12.5,color:"#f8fafc",fontWeight:700,marginLeft:9,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Vista previa</span>
+              {getCamposFaltantesDetalle&&getCamposFaltantesDetalle(op,perfil).length>0&&
+                <button type="button" onClick={function(){if(onCompleteData)onCompleteData(op,getCamposFaltantesDetalle(op,perfil)[0].campo);}}
+                  disabled={!onCompleteData} title="Ir al primer dato pendiente"
+                  style={{marginLeft:"auto",padding:"3px 7px",fontSize:10.5,borderRadius:6,background:"rgba(251,191,36,.12)",border:"1px solid rgba(251,191,36,.3)",color:"#fde68a",fontWeight:650,cursor:onCompleteData?"pointer":"default",whiteSpace:"nowrap"}}>
+                  ⚠ {getCamposFaltantesDetalle(op,perfil).length} pendientes
+                </button>}
               {tabActual.esRecibo&&<span style={{marginLeft:"auto",fontSize:12,padding:"2px 8px",borderRadius:10,background:"rgba(74,222,128,0.1)",color:"var(--green)",border:"1px solid rgba(74,222,128,0.2)"}}>Recibo de honorarios</span>}
             </div>
             <div className="pdf-content pdf-content-lg">
