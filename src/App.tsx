@@ -6809,7 +6809,7 @@ function getDocTabs(op){
   return {TABS:TABS,TAB_RESUMEN:TAB_FICHA,TAB_FICHA:TAB_FICHA,TABS_ALL:TABS_ALL,TABS_BARRA:TABS_BARRA};
 }
 // Fila de pestañas (Resumen + documento principal) para el header del modal.
-function DocTabsBar({op,tab,onChange}){
+function DocTabsBar({op,tab,onChange,mostrarAjustes=false,ajustesActivo=false,onAjustes}){
   var TABS_BARRA=getDocTabs(op).TABS_BARRA;
   return(
     <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
@@ -6817,7 +6817,8 @@ function DocTabsBar({op,tab,onChange}){
         var active=tab===t.id||(tab==="resumen"&&t.esFicha);
         var isResumen=t.esResumen;
         return(
-          <button key={t.id} onClick={function(){onChange(t.id);}}
+          <React.Fragment key={t.id}>
+          <button onClick={function(){onChange(t.id);}}
             style={{padding:"5px 11px",borderRadius:8,fontSize:12,fontFamily:"DM Sans,sans-serif",cursor:"pointer",whiteSpace:"nowrap",
               border:"1px solid "+(active?((isResumen||t.esFicha)?"rgba(96,165,250,0.5)":"var(--gold)"):((isResumen||t.esFicha)?"rgba(96,165,250,0.2)":"var(--border2)")),
               background:active?((isResumen||t.esFicha)?"rgba(96,165,250,0.12)":"rgba(212,168,83,0.1)"):((isResumen||t.esFicha)?"rgba(96,165,250,0.05)":"transparent"),
@@ -6826,6 +6827,14 @@ function DocTabsBar({op,tab,onChange}){
             }}>
             {t.icon} {t.label}
           </button>
+          {mostrarAjustes&&t.id===op.tipo&&<button type="button" onClick={onAjustes} aria-pressed={ajustesActivo}
+            style={{padding:"5px 11px",borderRadius:8,fontSize:12,fontWeight:ajustesActivo?700:500,cursor:"pointer",whiteSpace:"nowrap",
+              border:"1px solid "+(ajustesActivo?"rgba(96,165,250,.72)":"rgba(96,165,250,.28)"),
+              background:ajustesActivo?"rgba(96,165,250,.22)":"rgba(96,165,250,.06)",
+              color:ajustesActivo?"#e0f2fe":"#93c5fd"}}>
+            ✎ Ajustes manuales
+          </button>}
+        </React.Fragment>
         );
       })}
     </div>
@@ -8778,7 +8787,7 @@ const TareasChecklist = crearTareasPanel({Btn, genId, getTareasDeOp, useState});
 function TareasPanel(props){return <><TareasChecklist {...props}/><RecordatoriosPanel key={String(props.op?.id||"")} op={props.op} loadClient={loadSupabaseJs}/></>;}
 const NegociacionPanel = crearNegociacionPanel({Btn, Inp, Slt, Txa, fechaHoyISO, fmt$, fmtD, genId, useState});
 const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
-const DocumentViewer = crearDocumentViewer({construirDocumentoConformidadReserva, modoConformidadReserva, canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
+const DocumentViewer = crearDocumentViewer({construirDocumentoConformidadReserva, modoConformidadReserva, canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, getCamposFaltantesDetalle, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
 const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
 const OperacionForm = crearOperacionForm({camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
