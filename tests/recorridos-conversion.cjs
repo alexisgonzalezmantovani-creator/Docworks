@@ -46,7 +46,7 @@ check('las reservas vinculadas no se pierden al entrar directamente a Refuerzo',
  }
 }
 check('el selector no muestra el botón redundante del paso 1',()=>{
- assert.match(operacionesSource,/\{step>1&&<div className="dw-operation-next-action">/);
+ assert.match(operacionesSource,/\{step>1&&!revisando&&<div className="dw-operation-next-action">/);
  assert.match(operacionesSource,/step<total\?<Btn onClick=\{avanzarConAviso\}>Continuar/);
 });
 

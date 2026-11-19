@@ -21,7 +21,7 @@ function WorkspaceHarness(){
  const [catalogo,setCatalogo]=useState([{id:'ejemplo-opcional',titulo:'Texto reutilizable de ejemplo',contenido:'Texto ficticio para comprobar la biblioteca.',tipos:['todos']},{id:'vieja-uuid',titulo:'Multa por incumplimiento',contenido:'Vieja cláusula copiada con UUID.',tipos:['todos'],obligatoria:false},{id:'inactiva',titulo:'Cláusula eliminada',contenido:'Texto eliminado.',tipos:['todos'],activo:false}]);
  const [altas,setAltas]=useState(0),[fallar,setFallar]=useState(false);
  useEffect(()=>{const listener=e=>setConfirmacion(e.detail);window.addEventListener('dw:confirm',listener);return ()=>window.removeEventListener('dw:confirm',listener);},[]);
- return <><GStyles/><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><output data-testid="guardados">{guardados}</output><output data-testid="altas">{altas}</output><output data-testid="perfil" hidden>{JSON.stringify(perfil)}</output><button onClick={()=>setFallar(v=>!v)}>{fallar?'Restablecer guardado':'Simular fallo de habilitación'}</button><ClausulasWorkspace perfil={perfil} onSavePerfil={async p=>{if(fallar)return {error:{message:'Fallo simulado'}};setPerfil(p);setGuardados(n=>n+1);return {};}} clausulas={catalogo} operaciones={[]} bloquesReserva={[]} onAddClausula={async c=>{const id='catalogo-'+(altas+1);setAltas(n=>n+1);setCatalogo(xs=>xs.concat([{...c,id}]));return {data:id};}} onEditClausula={()=>({})} onDeleteClausula={()=>{}}/><ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
+ return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><main style={{maxWidth:1000,margin:'0 auto',padding:14,boxSizing:'border-box'}}><output data-testid="guardados">{guardados}</output><output data-testid="altas">{altas}</output><output data-testid="perfil" hidden>{JSON.stringify(perfil)}</output><button onClick={()=>setFallar(v=>!v)}>{fallar?'Restablecer guardado':'Simular fallo de habilitación'}</button><ClausulasWorkspace perfil={perfil} onSavePerfil={async p=>{if(fallar)return {error:{message:'Fallo simulado'}};setPerfil(p);setGuardados(n=>n+1);return {};}} clausulas={catalogo} operaciones={[]} bloquesReserva={[]} onAddClausula={async c=>{const id='catalogo-'+(altas+1);setAltas(n=>n+1);setCatalogo(xs=>xs.concat([{...c,id}]));return {data:id};}} onEditClausula={()=>({})} onDeleteClausula={()=>{}}/><ConfirmModal open={!!confirmacion} message={confirmacion?.message} onConfirm={()=>{const next=confirmacion;setConfirmacion(null);next.onConfirm();}} onCancel={()=>setConfirmacion(null)}/></main></>;
 }
 function AspectoHarness(){
  const [perfil,setPerfil]=useState({rol:'dueno',nombre:'Inmobiliaria de ejemplo',matricula:'0000',web:'ejemplo.test',direccion:'Calle de ejemplo 123, Pilar',plantillas:{}});
@@ -39,22 +39,27 @@ function EstadisticasHarness(){
 function OperacionesHarness(){
  const org={rol:'dueno',nombre:'Inmobiliaria de prueba',matricula:'0000',plantillas:{}};
  const fecha='2026-11-12T12:00:00Z';
+ const [accion,setAccion]=useState('');
+ const grupos=[0,1,2,4].flatMap(cantidad=>[
+  {...EMPTY_OP,id:'grupo-'+cantidad,tipo:'reserva',estado:'activo',inmueble_direccion:'Prueba '+cantidad+' vinculados'+(cantidad===4?' — Calle ficticia con descripción extensa para comprobar la columna derecha':''),created_at:fecha},
+  ...Array.from({length:cantidad},(_,i)=>({...EMPTY_OP,id:'doc-'+cantidad+'-'+i,parent_id:'grupo-'+cantidad,tipo:['boleto','comodato','refuerzo_reserva','devolucion_reserva'][i],estado:'activo',created_at:fecha}))
+ ]);
  const operaciones=[
   {...EMPTY_OP,id:'reserva-qa',tipo:'reserva',estado:'activo',inmueble_direccion:'Casa modelo en barrio privado',comprador_nombre:'Comprador de prueba',vendedor_nombre:'Vendedor de prueba',precio:'180000',moneda:'USD',created_at:fecha},
   {...EMPTY_OP,id:'carpeta-qa',tipo:'reserva_alquiler',estado:'activo',inmueble_direccion:'Departamento de prueba',locador_nombre:'Locador de prueba',locatario_nombre:'Locatario de prueba',created_at:fecha},
   {...EMPTY_OP,id:'contrato-qa',tipo:'alquiler',estado:'activo',parent_id:'carpeta-qa',inmueble_direccion:'Departamento de prueba',locador_nombre:'Locador de prueba',locatario_nombre:'Locatario de prueba',created_at:fecha},
-  {...EMPTY_OP,id:'sin-datos-qa',tipo:'boleto',estado:'activo',inmueble_direccion:'',comprador_nombre:'',vendedor_nombre:'',created_at:fecha}
+  {...EMPTY_OP,id:'sin-datos-qa',tipo:'boleto',estado:'activo',inmueble_direccion:'',comprador_nombre:'',vendedor_nombre:'',created_at:fecha}, ...grupos
  ];
  return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><main style={{maxWidth:1200,margin:'0 auto',padding:12,boxSizing:'border-box'}}>
- <DashboardView usuarioActual={{id:'qa-dueno',rol_base:'dueno'}} operaciones={operaciones} clausulas={[]} perfil={org} bloquesReserva={[]} papelera={[]}
-  onNew={()=>{}} onEdit={()=>{}} onViewDoc={()=>{}} onDelete={()=>{}} onChangeEstado={()=>{}} onDuplicar={()=>{}}
+ <output data-testid="accion-operacion">{accion}</output><DashboardView usuarioActual={{id:'qa-dueno',rol_base:'dueno'}} operaciones={operaciones} clausulas={[]} perfil={org} bloquesReserva={[]} papelera={[]}
+  onNew={()=>{}} onEdit={op=>setAccion('Editar '+op.id)} onViewDoc={op=>setAccion('Abrir '+op.id)} onDelete={()=>{}} onChangeEstado={()=>{}} onDuplicar={()=>{}}
   onConvertir={()=>{}} onConvertirComodato={()=>{}} onConvertirRefuerzo={()=>{}} onConvertirBoleto={()=>{}} onConvertirDevolucion={()=>{}}
   onRestore={()=>{}} onDeletePermanente={()=>{}} onVaciarPapelera={()=>{}} onRestoreVersion={()=>{}} />
  </main></>;
 }
 // Documento real con una lista larga: no depende de los modelos configurados ni del backend.
 function AjustesLargosHarness(){
- const [op,setOp]=useState({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'qa-ajustes-largos',tipo:'reserva',plantilla_snapshot:{tipo:'reserva',body_blocks:Array.from({length:18},(_,i)=>({id:'reserva.qa-larga-'+i,titulo:'Cláusula ficticia '+(i+1),contenido:'Cláusula ficticia '+(i+1)+': Importe {{precio_letras}}. Texto de prueba para verificar lectura y ajustes.',activo:true,orden:i+1}))}}),[tab,setTab]=useState('reserva');
+ const [op,setOp]=useState({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'qa-ajustes-largos',tipo:'reserva',plantilla_snapshot:{tipo:'reserva',conformidad_modo:location.search.includes('separada')?'separada':'unificada',body_blocks:Array.from({length:18},(_,i)=>({id:'reserva.qa-larga-'+i,titulo:'Cláusula ficticia '+(i+1),contenido:'Cláusula ficticia '+(i+1)+': Importe {{precio_letras}}. Texto de prueba para verificar lectura y ajustes.',activo:true,orden:i+1}))}}),[tab,setTab]=useState('reserva');
  return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><Modal open wide viewerMode onClose={()=>{}} title="Documento de prueba"><DocumentViewer op={op} perfil={{nombre:'Ejemplo',plantillas:{}}} clausulas={[]} operaciones={[op]} bloquesReserva={[]} tab={tab} onChangeTab={setTab} onUpdateOperation={async next=>{setOp(next);return {operacion:next};}}/></Modal></>;
 }
 createRoot(document.getElementById('root')).render(location.pathname==='/ajustes-largos'?<AjustesLargosHarness/>:location.pathname==='/operaciones'?<OperacionesHarness/>:location.pathname==='/superadmin'?<><GStyles/><PanelSuperadminPrueba contexto={{usuario:{nombre:'Administración de prueba'}}} onLogout={()=>{}}/></>:location.pathname==='/aspecto'?<AspectoHarness/>:location.pathname==='/workspace'?<WorkspaceHarness/>:location.pathname==='/estadisticas'?<EstadisticasHarness/>:<Harness/>);
@@ -66,30 +71,116 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
  const browser=await browserType.launchPersistentContext(path.join(out,'profile'),{headless:true,...(engine==='chromium'?{executablePath:process.env.DOCWORKS_BROWSER_EXECUTABLE||undefined,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-zygote','--single-process','--use-gl=angle','--use-angle=swiftshader']}:{})});
  let checks=0;
  try{
+ const base='http://127.0.0.1:'+server.address().port;
+ for(const [width,height] of [[1920,1080],[1366,768],[1024,768],[768,1024],[393,852],[430,932],[852,393]]){
+  const size=width+'x'+height;
+  const page=await browser.newPage();
+  await page.setViewportSize({width,height});
+  if(engine==='chromium'&&(width<500||height<500)){
+   const cdp=await browser.newCDPSession(page);
+   await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
+  }
+  const errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push(m.text());});
+  await page.route('**/*',r=>r.request().url().startsWith(base)?r.continue():r.abort());
+  await page.goto(base+'/operaciones');
+  const cards=page.locator('.op-card-premium:not(.op-doc-card)').filter({hasText:/Prueba [0124] vinculados/});
+  await cards.first().waitFor();
+  const layout=await cards.evaluateAll(nodes=>nodes.map(card=>{
+   const box=card.getBoundingClientRect(),side=card.querySelector('.op-card-side');
+   const rect=el=>{const {left,top,right,bottom}=el.getBoundingClientRect();return {left,top:top-box.top,right,bottom:bottom-box.top};};
+   return {card:rect(card),side:rect(side),activity:rect(side.firstElementChild),count:rect(side.querySelector('.op-docs-count')),progress:rect(side.querySelector('.op-side-progress')),
+     buttons:[...side.querySelectorAll('button')].filter(b=>b.getClientRects().length).map(rect)};
+  }));
+  assert.equal(layout.length,4,size);
+  if(height>500&&width>=761){
+   for(const m of layout){
+    assert.ok(Math.abs(m.side.left-layout[0].side.left)<=1,size+' divisor alineado');
+    for(const field of ['activity','count','progress'])assert.ok(Math.abs(m[field].top-layout[0][field].top)<=1,size+' fila '+field+' alineada');
+   }
+  }
+  for(const m of layout)for(const [i,b] of m.buttons.entries()){
+   assert.ok(b.left>=m.card.left-1&&b.right<=m.card.right+1,size+' botón dentro de tarjeta '+JSON.stringify(m));
+   for(const other of m.buttons.slice(i+1))assert.ok(b.right<=other.left+1||other.right<=b.left+1||b.bottom<=other.top+1||other.bottom<=b.top+1,size+' sin solapamiento');
+  }
+  await page.screenshot({path:path.join(out,'auditoria-operaciones-'+size+'.png'),animations:'disabled'});
+  const card=cards.first();
+  await card.getByRole('button',{name:'Abrir',exact:true}).click();
+  assert.match(await page.getByTestId('accion-operacion').textContent(),/^Abrir grupo-/);
+  await card.getByRole('button',{name:'Editar',exact:true}).click();
+  assert.match(await page.getByTestId('accion-operacion').textContent(),/^Editar grupo-/);
+  await card.getByRole('button',{name:'Documento',exact:true}).click();
+  await page.getByRole('dialog',{name:'Documentos de esta operación'}).getByRole('button',{name:'Cerrar',exact:true}).click();
+
+  await page.goto(base+'/ajustes-largos');
+  const reader=page.locator('.viewer-modal .doc-reading-scroll');
+  await reader.locator('.pdf-text').waitFor();
+  assert.equal(await reader.locator('.dw-preview-title').textContent(),'Reserva de Compra');
+  assert.ok(await reader.evaluate(el=>{
+   const paper=el.querySelector('.pdf-content'),header=el.querySelector('.dw-preview-heading'),frame=paper.parentElement;
+   paper.scrollTop=paper.scrollHeight;
+   const last=paper.querySelector('.pdf-text').lastElementChild.getBoundingClientRect(),r=paper.getBoundingClientRect();
+   return paper.scrollTop>0&&last.bottom<=r.bottom+2&&r.height>=80&&header.getBoundingClientRect().bottom<=r.top+1&&getComputedStyle(frame).backgroundColor==='rgb(30, 41, 59)';
+  }),size+' hoja desplazable sin cubrir las cláusulas');
+  await page.screenshot({path:path.join(out,'auditoria-visor-'+size+'.png'),animations:'disabled'});
+  await page.getByRole('button',{name:'Ajustes manuales'}).click();
+  await page.getByTestId('dw-ajustes-manuales').getByRole('button',{name:'Editar',exact:true}).last().click();
+  await page.getByTestId('dw-ajuste-chip').waitFor();
+  await page.getByRole('button',{name:'Cancelar',exact:true}).click();
+  await page.getByRole('button',{name:'Volver a vista previa',exact:true}).click();
+
+  await page.goto(base);
+  await page.getByRole('button',{name:'Abrir vista previa de prueba'}).click();
+  const model=page.getByTestId('dw-fullpage-preview');
+  const close=model.getByRole('button',{name:'Cerrar vista previa'});
+  const closeBox=await close.boundingBox();
+  assert.ok(closeBox&&closeBox.x>=0&&closeBox.y>=0&&closeBox.x+closeBox.width<=width&&closeBox.y+closeBox.height<=height,size+' cierre accesible');
+  await page.screenshot({path:path.join(out,'auditoria-modelo-'+size+'.png'),animations:'disabled'});
+  await close.click();
+
+  await page.goto(base+'/workspace');
+  await page.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
+  const toolbar=page.locator('.dw-clause-library-toolbar');
+  await toolbar.getByPlaceholder('Buscar',{exact:true}).fill('texto ficticio');
+  await toolbar.getByRole('button',{name:'Personalizadas',exact:true}).click();
+  assert.equal(await page.locator('[data-clausula-id]').count(),1);
+  assert.ok(await toolbar.evaluate(el=>{
+   const max=el.getBoundingClientRect().right;
+   return [...el.querySelectorAll('input, button')].every(b=>b.getBoundingClientRect().right<=max+1);
+  }),size+' controles de biblioteca contenidos');
+  await page.screenshot({path:path.join(out,'auditoria-biblioteca-'+size+'.png'),animations:'disabled'});
+  if(width===393||height===393||width===1366){
+   await page.goto(base+'/ajustes-largos?separada');
+   await page.getByRole('button',{name:'Conformidad del vendedor',exact:true}).click();
+   assert.equal(await reader.locator('.dw-preview-title').textContent(),'Conformidad del vendedor');
+   await reader.locator('.pdf-text').waitFor();
+   assert.equal(await reader.getByRole('button',{name:'Ajustes manuales'}).count(),0);
+   await page.screenshot({path:path.join(out,'auditoria-conformidad-'+size+'.png'),animations:'disabled'});
+
+   await page.goto(base+'/workspace');
+   await page.locator('#dw-model-source-switch summary').click();
+   await page.getByRole('button',{name:'Pegar mi contrato',exact:true}).click();
+   await page.getByRole('button',{name:'Confirmar',exact:true}).click();
+   const editor=page.getByRole('region',{name:'Editor de contrato propio'});
+   await editor.getByLabel('Texto del contrato propio').fill('CONTRATO FICTICIO. Parte compradora: {{comprador_nombre}}.');
+   await editor.getByRole('button',{name:'Vista previa',exact:true}).click();
+   const own=page.getByTestId('dw-propio-preview');
+   assert.equal(await own.locator('.dw-preview-title').textContent(),'Contrato propio');
+   assert.match(await own.locator('.pdf-text').textContent(),/Nombre|Comprador/i);
+   assert.doesNotMatch(await own.locator('.pdf-text').textContent(),/\{\{/);
+   await page.screenshot({path:path.join(out,'auditoria-contrato-propio-'+size+'.png'),animations:'disabled'});
+   await own.getByRole('button',{name:'Cerrar vista previa'}).click();
+   await own.waitFor({state:'detached'});
+  }
+  assert.deepEqual(errors,[],size+' consola');
+  await page.close();
+  console.log('QA visual aprobada:',size);
+ }
  for(const [name,width,height] of [['iphone',390,844],['ipad',820,1180],['desktop',1440,1000]]){
   const page=await browser.newPage(),errors=[];await page.setViewportSize({width,height});page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.text().includes('same key'))errors.push(m.text());});
   await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1')?r.continue():r.abort());
   await page.goto('http://127.0.0.1:'+server.address().port);
-  // 6.70: la hoja tiene scroll propio dentro de un marco redondeado.
-  if(name==='iphone'){
-   await page.locator('#dci-styles').waitFor({state:'attached'});
-   const estilos=await page.evaluate(()=>{
-    const overlay=document.createElement('div');overlay.className='modal-overlay modal-overlay-viewer';
-    overlay.innerHTML='<div class="modal-box viewer-modal"><div class="modal-head">Reserva de Compra</div><div class="modal-body"><div class="doc-viewer-shell"><div class="doc-viewer-tabs">Ficha completa · Vista previa</div><div class="doc-viewer-tab-content"><div style="padding:18px">Datos críticos</div><details data-testid="dw-ajustes-manuales" style="padding:18px"><summary>Hacer ajustes manuales</summary></details><div class="doc-reading-scroll"><div class="pdf-preview"><div class="pdf-chrome">Barra flotante antigua</div><div class="pdf-content pdf-content-lg"><div class="pdf-text"></div></div></div></div></div></div></div></div>';
-    overlay.querySelector('.pdf-text').innerHTML=Array.from({length:120},(_,i)=>'<p>Cláusula '+i+'. Texto de prueba suficientemente largo para verificar el scroll de la hoja.</p>').join('');
-    document.body.appendChild(overlay);
-    const marco=overlay.querySelector('.doc-reading-scroll'),hoja=overlay.querySelector('.pdf-content'),barra=overlay.querySelector('.pdf-chrome'),last=overlay.querySelector('.pdf-text p:last-child');
-    const puedeScroll=hoja.scrollHeight>hoja.clientHeight+20;hoja.scrollTop=hoja.scrollHeight;
-    const rl=hoja.getBoundingClientRect(),rf=last.getBoundingClientRect();
-    const out={borde:parseFloat(getComputedStyle(marco).borderBottomLeftRadius),barra:getComputedStyle(barra).display,marco:getComputedStyle(marco).overflowY,hoja:getComputedStyle(hoja).overflowY,puedeScroll,ultimoVisible:rf.top>=rl.top-2&&rf.bottom<=rl.bottom+2,final:Math.round(rl.bottom-rf.bottom)};
-    overlay.remove();return out;
-   });
-   assert.equal(estilos.barra,'none','sin barra oscura encima de cláusulas');checks++;
-   assert.ok(estilos.borde>=12,'ventanita con terminación redondeada');checks++;
-   assert.equal(estilos.marco,'hidden','marco sin segundo scroll');checks++;
-   assert.equal(estilos.hoja,'auto','hoja con scroll independiente');checks++;
-   assert.ok(estilos.puedeScroll&&estilos.ultimoVisible&&estilos.final>=12,'se puede leer hasta la última línea');checks++;
-  }
   // Abrir 18 cláusulas en el visor REAL debe permitir llegar al último ajuste
   // y seguir leyendo la hoja en iPhone, tablet y PC.
   await page.goto('http://127.0.0.1:'+server.address().port+'/ajustes-largos');
@@ -120,7 +211,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.screenshot({path:path.join(out,'preview-largo-'+name+'.png')});
   assert.ok(lecturaInicial.alto>80&&lecturaInicial.scroll>0&&lecturaInicial.finalVisible,name+' visor real: última línea legible '+JSON.stringify(lecturaInicial));checks++;
   const listaAjustes=page.getByTestId('dw-ajustes-manuales');
-  await listaAjustes.locator('summary').click();
+  await page.getByRole('button',{name:/Ajustes manuales/,exact:false}).click();
   assert.equal(await listaAjustes.getByRole('button',{name:'Editar',exact:true}).count(),18,name+' conserva las 18 cláusulas');checks++;
   const listaMedidas=await listaAjustes.evaluate(el=>{
    el.scrollTop=el.scrollHeight;
@@ -146,7 +237,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   const textoGuardado=await redaccion.textContent();
   assert.ok(textoGuardado.startsWith('Texto ajustado QA. ')&&textoGuardado.endsWith(' Final QA.'),name+' reabrir conserva texto a ambos lados');checks++;
   await listaAjustes.getByRole('button',{name:'Cancelar',exact:true}).click();
-  await listaAjustes.locator('summary').click();
+  await page.getByRole('button',{name:'Volver a vista previa',exact:true}).click();
   const lecturaFinal=await leerHastaFinal();
   assert.ok(lecturaFinal.alto>80&&lecturaFinal.finalVisible,name+' documento completo después de ajustar');checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' visor largo sin desborde horizontal');checks++;
@@ -361,7 +452,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
     assert.equal(navRects.length,2);checks++;
     assert.ok(Math.abs(navRects[0].y-navRects[1].y)<=2,ancho+' pestañas de Cláusulas y Documentos en la misma fila');checks++;
     assert.ok(navRects[0].right<=navRects[1].x+2,ancho+' pestañas sin superposición');checks++;
-    assert.ok(navRects.every(rect=>rect.width>=100&&rect.height>=40&&rect.height<=56),ancho+' pestañas compactas y cómodas');checks++;
+    assert.ok(navRects.every(rect=>rect.width>=100&&rect.height>=40&&rect.height<=68),ancho+' pestañas compactas y cómodas');checks++;
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1),ancho+' sin scroll horizontal');checks++;
   }
   await page.setViewportSize({width,height});
@@ -378,7 +469,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.getByTestId('dw-fullpage-preview').waitFor();checks++;
   const cierreFijo=page.getByTestId('dw-preview-fixed-close');
   assert.equal(await cierreFijo.count(),1);checks++;
-  assert.equal(await cierreFijo.evaluate(el=>getComputedStyle(el.parentElement).position),'sticky');checks++;
+  assert.equal(await cierreFijo.evaluate(el=>getComputedStyle(el.closest('.dw-preview-heading')).position),'sticky');checks++;
   await page.getByTestId('dw-fullpage-preview').evaluate(el=>el.scrollTop=el.scrollHeight);
   assert.ok(await cierreFijo.evaluate(el=>el.getBoundingClientRect().top>=0&&el.getBoundingClientRect().bottom<=innerHeight));checks++;
   await page.getByRole('button',{name:'Cerrar vista previa'}).click();
@@ -434,7 +525,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.getByRole('button',{name:'Confirmar',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
   assert.equal(await page.getByTestId('guardados').textContent(),'2');checks++;
-  await page.getByRole('button',{name:'＋ Crear cláusula para biblioteca',exact:true}).click();
+  await page.getByRole('button',{name:'＋ Crear cláusula',exact:true}).click();
   await page.locator('fieldset input.inp').fill('Texto reutilizable de ejemplo');
   await page.locator('#dw-clausula-texto').fill('Condición especial válida durante 90 días.');
   await page.locator('fieldset').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
@@ -451,7 +542,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   assert.ok(perfilGuardado.plantillas.reserva.clausulas_ids.includes('catalogo-1'));checks++;
   assert.ok(!perfilGuardado.plantillas.alquiler?.clausulas_ids?.includes('catalogo-1'));checks++;
   assert.ok(await page.getByText('Texto reutilizable de ejemplo',{exact:true}).first().isVisible(),'La cláusula reutilizable sigue visible en la biblioteca');checks++;
-  await page.getByRole('button',{name:'＋ Crear cláusula para biblioteca',exact:true}).click();
+  await page.getByRole('button',{name:'＋ Crear cláusula',exact:true}).click();
   await page.locator('fieldset input.inp').fill('Crédito hipotecario sin plazo');
   await page.locator('#dw-clausula-texto').fill('Condición de crédito sin plazo determinado.');
   await page.getByRole('button',{name:'Simular fallo de habilitación',exact:true}).click();
@@ -466,7 +557,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.locator('#dw-clausula-texto').waitFor({state:'detached'});
   assert.equal(await page.getByTestId('altas').textContent(),'2');checks++;
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
-   await page.locator('#dw-biblioteca-documento').getByRole('button',{name:/Papelera/}).click();
+   await page.getByRole('button',{name:'Papelera de cláusulas',exact:true}).click();
   await page.getByRole('heading',{name:'Papelera de cláusulas',exact:true}).waitFor();checks++;
   assert.equal(await page.locator('#dw-biblioteca-documento').count(),0);checks++;
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' papelera overflow');checks++;

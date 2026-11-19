@@ -1,3 +1,4 @@
+import { EncabezadoVistaPrevia } from './EncabezadoVistaPrevia';
 import { RedaccionClausula } from "./RedaccionClausula";
 import { solicitarCaptcha } from './Captcha';
 import { UsoInmobiliarias } from './UsoInmobiliarias';
@@ -723,16 +724,23 @@ export const GS = `
   /* ── PDF preview: ventana Mac dentro del área de lectura ── */
    .pdf-preview{background:#1e293b;border:1px solid rgba(96,165,250,.45);border-radius:14px;padding:10px;box-shadow:0 10px 34px rgba(15,42,82,.16);display:flex;flex-direction:column;min-height:0;}
    .pdf-chrome{display:flex;align-items:center;gap:5px;margin:0;padding:4px 5px 9px;flex:0 0 auto;position:sticky;top:0;z-index:3;background:#1e293b;border-radius:9px;}
-   .pdf-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+   .dw-preview-heading{min-width:0;gap:6px 10px;flex-wrap:wrap;padding:3px 4px 9px}
+   .dw-preview-title{flex:1 1 110px;min-width:0;overflow-wrap:anywhere;color:#f8fafc;font-size:13px;line-height:1.25}
+   .dw-preview-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:5px;margin-left:auto;min-width:0}
+   .dw-preview-sample{font-size:11px;color:#cbd5e1}
+   .dw-preview-actions button{min-height:32px}
+   .dw-preview-actions .btn{background:#334155;color:#f8fafc;border-color:#64748b}
+   .dw-preview-actions .dw-preview-close{flex:none;min-width:40px;min-height:36px;font-size:20px;padding:4px 10px}
    .pdf-content{background:white;border-radius:9px;padding:12px;max-height:none;overflow:auto;min-height:0;flex:1 1 auto;box-shadow:0 1px 0 rgba(255,255,255,.5) inset;}
    .pdf-content-lg{max-height:none;padding:18px 16px;}
    .doc-reading-scroll{display:flex;flex-direction:column;min-height:0;overflow:hidden;}
    .doc-reading-scroll>.pdf-preview{height:100%;min-height:0;}
    .doc-reading-scroll>.pdf-preview>.pdf-content{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
-.doc-reading-scroll .pdf-text,.dw-model-preview-text{
+.pdf-preview .pdf-text{
   font-family:Georgia,"Times New Roman",serif;
-  font-size:clamp(14px,calc(12.8px + .23vw),16px);
-  line-height:1.58;
+  font-size:16px;
+  line-height:1.53;
+  color:#1f2937;
   overflow-wrap:anywhere;
 }
 .dw-model-preview{
@@ -741,15 +749,15 @@ export const GS = `
   padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));box-sizing:border-box;
 }
 .dw-model-preview-frame.pdf-preview{width:min(850px,100%);height:100%;max-height:100%;min-height:0;min-width:0;margin:0;overflow:hidden;box-shadow:0 18px 65px rgba(0,0,0,.35);}
-.dw-model-preview-header.pdf-chrome{display:flex;min-height:40px;gap:6px;padding:5px 5px 10px;}
-.dw-model-preview-header button{flex:0 0 auto;margin-left:auto;min-width:40px;min-height:36px;font-size:20px;padding:4px 10px;}
-.dw-model-preview-sheet.pdf-content-lg{flex:1 1 0%;height:0;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:clamp(14px,2.2vw,28px) clamp(12px,3vw,38px) 32px;}
-.dw-model-preview .pdf-text,.dw-propio-preview .pdf-text{font-size:clamp(13px,1.05vw + 9px,14.5px);line-height:1.53;}
-.dw-model-preview-text{color:#1f2937;white-space:pre-wrap;overflow-wrap:anywhere;}
-.dw-propio-preview{margin:10px 0;max-height:min(70dvh,760px);}
-.dw-propio-preview .pdf-chrome{gap:6px;min-height:38px;}
-.dw-propio-preview .pdf-content{overflow-y:auto;}
-@media(max-width:600px){.dw-model-preview-frame.pdf-preview{width:100%;padding:7px;border-radius:11px;}.dw-model-preview-sheet.pdf-content-lg{padding:14px 12px 24px;}.dw-propio-preview{max-height:65dvh;}}
+.dw-model-preview-sheet.pdf-content-lg{flex:1 1 0%;height:0;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.pdf-preview .pdf-content-lg{padding:clamp(12px,1.6vw,22px) clamp(12px,2.4vw,32px) 22px}
+.dw-model-preview-text{white-space:pre-wrap}
+.dw-propio-preview{margin:10px 0;max-height:min(70dvh,760px)}
+.dw-propio-preview .pdf-content{overflow-y:auto;overscroll-behavior:contain}
+@media(max-width:640px){
+  .pdf-preview{padding:7px;border-radius:11px}
+  .dw-propio-preview{max-height:65dvh}
+}
 .dw-redaccion-clausula.inp{
   min-height:90px;
   min-width:0;
@@ -915,20 +923,20 @@ export const GS = `
   .dw-location-toggle:has(input:disabled),.dw-aspecto-field-toggle:has(input:disabled){opacity:.55;cursor:not-allowed}
   .dw-location-toggle:has(input:checked),.dw-aspecto-field-toggle:has(input:checked){border-color:var(--gold)}
   
-  .dw-pdf-preview{position:sticky;top:12px;border-radius:14px;padding:14px;background:var(--surface2,var(--card));border:1px solid var(--border);min-width:0}
-  .dw-pdf-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--text)}
+  .dw-pdf-preview{position:sticky;top:12px;border-radius:14px;padding:14px;background:#1e293b;border:1px solid rgba(96,165,250,.45);min-width:0}
   .dw-pdf-description{font-size:11px;color:var(--muted);margin:8px 0 12px;line-height:1.5}
-  .dw-pdf-toolbar strong{display:flex;align-items:center;gap:8px}
-  .dw-pdf-updating{width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:dw-preview-spin .7s linear infinite}
+  .dw-pdf-updating{display:inline-block;margin-left:8px;width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:dw-preview-spin .7s linear infinite}
   @keyframes dw-preview-spin{to{transform:rotate(360deg)}}
   @media(prefers-reduced-motion:reduce){.dw-pdf-updating{animation:none}}
-  .dw-pdf-sheet{margin-top:10px;display:flex;justify-content:center;align-items:center;padding:12px;min-width:0;background:rgba(100,116,139,.09);border-radius:10px}
+  .dw-pdf-sheet{margin-top:10px;display:flex;justify-content:center;align-items:center;padding:12px;min-width:0;background:#fff;border-radius:10px}
   .dw-pdf-sheet canvas{display:block;background:white;box-shadow:0 4px 18px #0002;max-width:100%;height:auto}
-  .dw-pdf-pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:8px;font-size:11px;color:var(--muted)}
-  .dw-pdf-status{min-height:260px;display:flex;align-items:center;justify-content:center;gap:10px;flex-direction:column;font-size:12px;color:var(--muted)}
+  .dw-pdf-pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:8px;font-size:11px;color:#e2e8f0}
+  .dw-pdf-pagination .btn,.dw-pdf-status{color:#e2e8f0}
+  .dw-pdf-status{min-height:260px;display:flex;align-items:center;justify-content:center;gap:10px;flex-direction:column;font-size:12px}
   .dw-pdf-overlay{position:fixed;inset:0;z-index:100000;background:#071020c9;display:flex;align-items:center;justify-content:center;padding:20px}
-  .dw-pdf-expanded{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;width:min(980px,100%);max-height:95dvh;overflow:auto}
-  .dw-pdf-expanded .dw-pdf-toolbar{margin-bottom:12px}
+  .dw-pdf-expanded{background:#1e293b;border:1px solid rgba(96,165,250,.45);border-radius:14px;padding:0 12px 12px;width:min(980px,100%);max-height:calc(100dvh - 40px);overflow:auto;overscroll-behavior:contain}
+  .dw-pdf-expanded .dw-preview-heading{padding-top:9px}
+  @media(max-width:600px){.dw-pdf-expanded{max-height:calc(100dvh - 20px)}}
   .dw-aspecto-mobile-nav{display:none}
   @media(max-width:600px){.dw-aspecto-mobile-nav{display:flex;gap:8px}.dw-aspecto-mobile-nav button{flex:1}.dw-aspecto-mobile-nav button[aria-pressed=true]{border-color:var(--gold);background:rgba(212,168,83,.12)}.dw-aspecto-layout[data-mobile-view=ajustes]>.dw-pdf-preview,.dw-aspecto-layout[data-mobile-view=preview]>.dw-aspecto-controls{display:none}}
   @media(max-width:900px){.plantilla-appearance-grid.dw-aspecto-layout{grid-template-columns:minmax(220px,.9fr) minmax(230px,1.1fr)!important;gap:12px}.dw-aspecto-controls{padding:10px}.dw-aspecto-layout .dw-aspecto-nav-copy strong{font-size:11px}}
@@ -2154,10 +2162,13 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 
 /* Operaciones PC: división y alturas fijas entre tarjetas, haya o no botón
    Documento y sin importar si hay 1, 4 o más documentos vinculados. */
-@media (min-width:1101px){
+@media (min-width:761px) and (min-height:501px), (min-width:1101px){
+  .dw-dashboard-root .op-folder-wrap{padding:0;border:0}
+  .dw-dashboard-root .op-folder-wrap>.op-card{border-color:var(--gold-line)}
+  .dw-dashboard-root .op-folder-docs{margin:9px 10px 10px}
   .dw-dashboard-root .op-card-premium .op-card-inner{
     display:grid!important;
-    grid-template-columns:minmax(0,1fr) 333px!important;
+    grid-template-columns:minmax(0,1fr) min(45%, 333px)!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side{
     display:flex!important;
@@ -2165,24 +2176,21 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     justify-content:flex-start!important;
     align-items:stretch!important;
     box-sizing:border-box!important;
-    width:333px!important;
-    min-width:333px!important;
-    max-width:333px!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    gap:5px!important;
   }
   .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side>.op-side-extra:first-child{
-    flex:0 0 32px!important;
-    height:32px!important;
-    min-height:32px!important;
+    flex:0 0 28px!important;
+    min-height:28px!important;
   }
   .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side>div:has(>.op-docs-count){
-    flex:0 0 19px!important;
-    height:19px!important;
-    min-height:19px!important;
+    flex:0 0 17px!important;
+    min-height:17px!important;
   }
   .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side>.op-side-progress{
-    flex:0 0 32px!important;
-    height:32px!important;
-    min-height:32px!important;
+    min-height:25px!important;
     width:100%!important;
   }
   .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side>div:has(>.op-action-zone){
@@ -2396,11 +2404,6 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
-/* Tipografía exclusiva de la hoja en el visor: no cambia PDF, Word ni modelos. */
-.modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-text{
-  font-size:clamp(13px,1.05vw + 9px,14.5px);
-  line-height:1.53;
-}
 /* La pestaña Ajustes manuales utiliza el espacio completo del visor;
    no conserva los límites de altura del antiguo desplegable sobre la hoja. */
 .modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][data-vista-ajustes="1"]{
@@ -2437,11 +2440,11 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .viewer-modal .reserva-mini-timeline{margin-top:4px}
 .viewer-modal details[data-testid="dw-ajustes-manuales"]{padding:4px 12px;margin-bottom:6px}
 @media (min-width:641px){
-  .modal-overlay-viewer{align-items:flex-start!important;justify-content:center!important;padding:max(2px,env(safe-area-inset-top)) 6px!important}
+  .modal-overlay-viewer{align-items:flex-start!important;justify-content:center!important;padding:max(2px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(2px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left))!important}
   .modal-overlay-viewer .viewer-modal{
     width:min(900px,100%)!important;
     max-width:100%!important;
-    height:calc(100dvh - max(2px,env(safe-area-inset-top)) - 2px)!important;
+    height:calc(100dvh - max(2px,env(safe-area-inset-top)) - max(2px,env(safe-area-inset-bottom)))!important;
     max-height:none!important;
     min-height:0!important;
   }
@@ -2463,11 +2466,8 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     overscroll-behavior:contain;
   }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
-    padding:0;
-    border:0;
-    background:#fff;
+    padding:7px;
   }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{display:flex;flex-wrap:wrap;gap:5px;padding:8px}
 }
 
 /* En horizontal corto, dejar más alto útil para la hoja y conservar los controles. */
@@ -2477,8 +2477,25 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .viewer-modal .reserva-compact-summary{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
   .viewer-modal .reserva-status-strip{flex:1 0 auto}
   .viewer-modal .reserva-mini-timeline{flex:1 1 auto;margin-top:0}
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{flex-basis:175px;min-height:175px}
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{display:flex;flex-wrap:wrap;gap:5px;padding:8px}
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{flex-basis:138px;min-height:138px}
+}
+
+/* Legibilidad de estados y avisos sobre las tarjetas claras. */
+:root:not([data-theme="dark"]) .dw-dashboard-root :is(.op-type-badge,.op-folder-chip,.op-address-missing,.op-missing-role),
+:root:not([data-theme="dark"]) .dw-dashboard-root .op-status-hero.borrador{color:#805510}
+:root:not([data-theme="dark"]) .dw-dashboard-root .op-status-hero.cerrado{color:#475569}
+:root:not([data-theme="dark"]) .dw-dashboard-root .op-status-hero.activo,
+:root:not([data-theme="dark"]) .dw-clause-library-card .badge-activo{color:#166534}
+.dw-clause-library-toolbar,.dw-clause-library-filters,.dw-clause-library-actions{display:flex;align-items:center;gap:8px;min-width:0}
+.dw-clause-library-toolbar{justify-content:space-between;flex-wrap:wrap;row-gap:8px}
+.dw-clause-library-filters{max-width:100%}
+.dw-clause-library-search.inp{width:min(175px,42vw);min-width:0;min-height:40px;font-size:13px}
+.dw-clause-library-actions{margin-left:auto}
+@media(max-width:640px){
+  .dw-clause-workspace-nav .btn{gap:7px!important;padding:8px!important}
+  .dw-clause-workspace-nav .btn>span:first-child{width:26px!important;height:26px!important}
+  .dw-clause-workspace-nav .btn>span:first-child svg{width:18px;height:18px}
+  .dw-clause-workspace-nav .btn>span:nth-child(2)>span{display:none}
 }
 
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
@@ -4985,7 +5002,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
 
     const acciones=(
       <div className="op-action-zone">
-        {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<div className="op-action-doc"><Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={12}/> <span className="op-doc-label-desktop">{hijosOp.length>0?"Documentos ("+hijosOp.length+")":"Documento"}</span><span className="op-doc-label-mobile">Documento</span></Btn></div>}
+        {!nested&&(esReserva||esResAlq)&&permisos.convertir&&<div className="op-action-doc"><Btn v="secondary" s="md" className="op-add-doc-action" onClick={function(){setAddDocFor(op);}}><DWIcon name="plus" size={12}/> <span className="op-doc-label-desktop">Documento</span><span className="op-doc-label-mobile">Documento</span></Btn></div>}
         <div className="op-actions" role="group" aria-label="Acciones de la operación">
           <Btn v="primary" s="md" onClick={function(){onViewDoc(op);}} className="op-open-action" style={{fontWeight:800}}><DWIcon name="open" size={13} strokeWidth={2}/> Abrir</Btn>
           {permisos.editar&&<Btn v="secondary" s="md" onClick={function(){onEdit(op);}} className="op-edit-action" style={{fontWeight:700}}><DWIcon name="edit" size={13}/> Editar</Btn>}
@@ -6125,20 +6142,17 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           </details>}
         <div className="doc-reading-scroll" style={{order:0,flex:vistaAjustes?"0 0 auto":undefined,flexBasis:vistaAjustes?"auto":undefined,minHeight:vistaAjustes?0:undefined,overflow:vistaAjustes?"visible":undefined}}> 
           <div className="pdf-preview" style={{marginBottom:vistaAjustes?0:14,height:vistaAjustes?"auto":undefined,flex:vistaAjustes?"0 0 auto":undefined}}> 
-            <div className="pdf-chrome">
-              <div className="pdf-dot" style={{background:"#ff5f57"}}/><div className="pdf-dot" style={{background:"#ffbd2e"}}/><div className="pdf-dot" style={{background:"#28c840"}}/>
-              <span style={{fontSize:12.5,color:"#f8fafc",fontWeight:700,marginLeft:9,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Vista previa · {vistaConformidadSeparada?"Conformidad del vendedor":TIPOS[op.tipo]||op.tipo}</span>
+            <EncabezadoVistaPrevia titulo={vistaAjustes?"Ajustes manuales":vistaConformidadSeparada?"Conformidad del vendedor":tabActual.esRecibo?"Recibo de honorarios":TIPOS[op.tipo]||op.tipo}>
               {getCamposFaltantesDetalle&&getCamposFaltantesDetalle(op,perfil).length>0&&
                 <button type="button" onClick={function(){if(onCompleteData)onCompleteData(op,getCamposFaltantesDetalle(op,perfil)[0].campo);}}
                   disabled={!onCompleteData} title="Ir al primer dato pendiente"
-                  style={{marginLeft:"auto",padding:"3px 7px",fontSize:10.5,borderRadius:6,background:"rgba(251,191,36,.12)",border:"1px solid rgba(251,191,36,.3)",color:"#fde68a",fontWeight:650,cursor:onCompleteData?"pointer":"default",whiteSpace:"nowrap"}}>
+                  style={{padding:"3px 7px",fontSize:10.5,borderRadius:6,background:"rgba(251,191,36,.12)",border:"1px solid rgba(251,191,36,.3)",color:"#fde68a",fontWeight:650,cursor:onCompleteData?"pointer":"default",whiteSpace:"nowrap"}}>
                   ⚠ {getCamposFaltantesDetalle(op,perfil).length} pendientes
                 </button>}
-              {!!onUpdateOperation&&!tabActual.esRecibo&&bloquesParaAjustes().length>0&&!((op.plantilla_snapshot||{}).documento_propio)&&
+              {!!onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&bloquesParaAjustes().length>0&&!((op.plantilla_snapshot||{}).documento_propio)&&
                 <button type="button" aria-pressed={vistaAjustes} onClick={function(){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(!vistaAjustes);}}
-                  style={{marginLeft:getCamposFaltantesDetalle(op,perfil).length?4:"auto",padding:"3px 7px",borderRadius:6,background:vistaAjustes?"rgba(96,165,250,.3)":"rgba(96,165,250,.13)",border:"1px solid rgba(96,165,250,.4)",color:"#bfdbfe",fontSize:10.5,fontWeight:650,cursor:"pointer",whiteSpace:"nowrap"}}>✎ Ajustes manuales</button>}
-              {tabActual.esRecibo&&<span style={{marginLeft:"auto",fontSize:12,padding:"2px 8px",borderRadius:10,background:"rgba(74,222,128,0.1)",color:"var(--green)",border:"1px solid rgba(74,222,128,0.2)"}}>Recibo de honorarios</span>}
-            </div>
+                  style={{padding:"3px 7px",borderRadius:6,background:vistaAjustes?"rgba(96,165,250,.3)":"rgba(96,165,250,.13)",border:"1px solid rgba(96,165,250,.4)",color:"#bfdbfe",fontSize:10.5,fontWeight:650,cursor:"pointer",whiteSpace:"nowrap"}}>{vistaAjustes?"Volver a vista previa":"✎ Ajustes manuales"}</button>}
+            </EncabezadoVistaPrevia>
             <div className="pdf-content pdf-content-lg" style={{display:vistaAjustes?"none":undefined}}> 
               <div className="pdf-text">
                 {previewBlocks().map(function(bl,i){
@@ -6373,21 +6387,20 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     // El botón Siguiente siempre avanza. Los pendientes se revisan al final.
     setStep(function(s){return Math.min(s+1,total+1);});
   }
-  // Sólo al editar un documento existente: identificar los datos que faltan,
-  // sin mostrar alarmas rojas durante la creación de una operación nueva.
-  const camposFaltantes = modoEdicion ? faltantesDetalle.filter(function(f){return f.paso===step;}) : [];
-  const pasosFaltantes = (revisando && step>total ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
+  // Marcar pendientes al volver al campo desde la revisión final.
+  const camposFaltantes = revisando ? faltantesDetalle.filter(function(f){return f.paso===step;}) : [];
+  const pasosFaltantes = (step>total ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
   useEffect(function(){
     var contenedor=camposTecladoRef.current;
     if(!contenedor)return;
     contenedor.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");el.removeAttribute("aria-invalid");});
-    if(!modoEdicion||step>total)return;
-    faltantesDetalle.filter(function(f){return f.paso===step;}).forEach(function(f){
+    if(!revisando||step>total)return;
+    camposFaltantes.forEach(function(f){
       var el=contenedor.querySelector('[id="dw-field-'+f.campo+'"]');
       if(!el&&f.campo==="comodato_fin")el=contenedor.querySelector("#dw-field-comodato_plazo");
       if(el){el.setAttribute("data-falta","1");el.setAttribute("aria-invalid","true");}
     });
-  },[modoEdicion,step,data,grupo,perfil]);
+  },[revisando,step,data,grupo,perfil,total]);
   const focoPendienteRef=useRef(null);
   useEffect(function(){return function(){if(focoPendienteRef.current!=null)window.clearInterval(focoPendienteRef.current);};},[]);
   function irACampo(campo){
@@ -6603,8 +6616,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     setStep(2);
   }
 
-  // Declarar total antes de usarlo en dependencias: evita ReferenceError en tablet/iPhone.
-  useEffect(function(){setRevisando(step>total);},[step,total]);
+  useEffect(function(){if(step>total)setRevisando(false);},[step,total]);
   // If no group selected yet (new op), show group picker
   if(!grupo){
     return(
@@ -6720,7 +6732,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
           <div style={{height:"100%",width:pct+"%",background:pct===100?"linear-gradient(90deg,#22c55e,#4ade80)":"linear-gradient(90deg,#c9962a,var(--gold),var(--gold2))",borderRadius:10,transition:"width 0.4s cubic-bezier(0.4,0,0.2,1)"}}/>
         </div>
       </div>
-      {modoEdicion&&step<=total&&camposFaltantes.length>0&&<div role="status" style={{marginBottom:12,padding:"9px 12px",borderRadius:9,border:"1px solid rgba(239,68,68,.35)",background:"rgba(239,68,68,.06)",fontSize:12.5,color:"var(--text)"}}>⚠ {camposFaltantes.length===1?"Hay un dato pendiente en este apartado":"Hay "+camposFaltantes.length+" datos pendientes en este apartado"}. Los campos están señalados en rojo para que puedas completarlos.</div>}
+      {revisando&&step<=total&&camposFaltantes.length>0&&<div role="status" style={{marginBottom:12,padding:"9px 12px",borderRadius:9,border:"1px solid rgba(239,68,68,.35)",background:"rgba(239,68,68,.06)",fontSize:12.5,color:"var(--text)"}}>⚠ {camposFaltantes.length===1?"Hay un dato pendiente en este apartado":"Hay "+camposFaltantes.length+" datos pendientes en este apartado"}. Los campos están señalados en rojo para que puedas completarlos.</div>}
       <div ref={camposTecladoRef} data-dw-operation-fields style={{minHeight:260}}
         onFocusCapture={function(e){prepararTecladoOperacion(e.currentTarget);}}
         onKeyDown={function(e){avanzarConEnterOperacion(e,e.currentTarget);}}>

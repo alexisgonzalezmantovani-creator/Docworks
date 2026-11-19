@@ -1,3 +1,4 @@
+import { EncabezadoVistaPrevia } from './EncabezadoVistaPrevia';
 import React, { useEffect, useRef, useState } from "react";
 import DatosCompactos from "./DatosCompactos";
 
@@ -411,18 +412,14 @@ export default function DocumentoPropioEditor({
     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       {ultimaAccionChip&&texto===ultimaAccionChip.textoPosterior&&<button type="button" className="btn btn-secondary" disabled={estado==="saving"} onClick={deshacerUltimoChip}>↶ Deshacer</button>}
       <button type="button" className="btn btn-secondary" onClick={()=>{setRevisar(true);setMostrarVista(false);}}>Revisar</button>
-      <button type="button" className="btn btn-secondary" onClick={()=>setMostrarVista(v=>!v)}>{mostrarVista?"Cerrar vista previa":"Vista previa"}</button>
+      <button type="button" className="btn btn-secondary" aria-expanded={mostrarVista} onClick={()=>setMostrarVista(v=>!v)}>Vista previa</button>
       <button type="button" className="btn btn-primary" disabled={estado==="saving"||!necesitaGuardar} onClick={guardar}>{estado==="saving"?"Guardando…":"Guardar cambios"}</button>
       {estado==="saved"&&<span role="status" style={{fontSize:12,color:"var(--green)",alignSelf:"center"}}>✓ Guardado para próximas operaciones</span>}
     </div>
     {mostrarVista&&<div className="pdf-preview dw-propio-preview" data-testid="dw-propio-preview">
-      <div className="pdf-chrome">
-        <span className="pdf-dot" style={{background:"#ff5f57"}}/>
-        <span className="pdf-dot" style={{background:"#ffbd2e"}}/>
-        <span className="pdf-dot" style={{background:"#28c840"}}/>
-        <span style={{fontSize:12.5,color:"#f8fafc",fontWeight:700,marginLeft:9}}>Vista previa · Contrato propio</span>
-        <button type="button" className="btn btn-secondary btn-sm" style={{marginLeft:"auto"}} onClick={()=>setMostrarVista(false)} aria-label="Cerrar vista previa">✕</button>
-      </div>
+      <EncabezadoVistaPrevia titulo="Contrato propio">
+        <button type="button" className="btn btn-secondary dw-preview-close" onClick={()=>setMostrarVista(false)} aria-label="Cerrar vista previa">×</button>
+      </EncabezadoVistaPrevia>
       <div className="pdf-content pdf-content-lg">
         <div className="pdf-text dw-model-preview-text">
       <div style={{fontSize:11,color:"#64748b",marginBottom:12}}>VISTA DEL TEXTO · los chips se completarán con los datos reales</div>

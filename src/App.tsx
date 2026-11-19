@@ -1,3 +1,4 @@
+import { EncabezadoVistaPrevia } from './EncabezadoVistaPrevia';
 import { RedaccionClausula } from "./RedaccionClausula";
 import { accionEnlaceCuenta, errorEnlaceCuenta, urlSinCredenciales } from './RetornoCuenta';
 import DatosCompactos from './DatosCompactos';
@@ -1459,14 +1460,11 @@ function VistaModeloDocumento({onClose,children,titulo="Modelo del documento"}){
     <div role="dialog" aria-modal="true" aria-label="Vista previa del modelo" data-testid="dw-fullpage-preview"
       className="dw-model-preview" onKeyDown={function(e){if(e.key==="Escape"){e.stopPropagation();onClose();}}}>
       <div className="dw-model-preview-frame pdf-preview">
-        <div className="dw-model-preview-header pdf-chrome">
-          <span className="pdf-dot" style={{background:"#ff5f57"}}/>
-          <span className="pdf-dot" style={{background:"#ffbd2e"}}/>
-          <span className="pdf-dot" style={{background:"#28c840"}}/>
-          <strong style={{fontSize:12.5,color:"#f8fafc",fontWeight:700,marginLeft:9,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Vista previa · {titulo} · Datos de ejemplo</strong>
-          <button type="button" ref={cerrar} data-testid="dw-preview-fixed-close" className="btn btn-secondary"
+        <EncabezadoVistaPrevia titulo={titulo}>
+          <span className="dw-preview-sample">Datos de ejemplo</span>
+          <button type="button" ref={cerrar} data-testid="dw-preview-fixed-close" className="btn btn-secondary dw-preview-close"
             onClick={onClose} aria-label="Cerrar vista previa">×</button>
-        </div>
+        </EncabezadoVistaPrevia>
         <div className="dw-model-preview-sheet pdf-content pdf-content-lg">
           <div className="pdf-text">{children}</div>
         </div>

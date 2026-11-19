@@ -65,13 +65,17 @@ const open=async()=>{await add();await page.locator('.dw-grupo-alquiler').click(
 const selectStep=n=>page.locator('.step-dot').nth(n-1).click();
 await page.goto(url+'/?primer-documento=1');
 await page.locator('#dw-field-comprador_nombre').waitFor();
+assert.equal(await page.locator('[data-dw-operation-fields] [data-falta]').count(),0,'La carga inicial no marca campos en rojo');
 assert.equal(await page.getByRole('button',{name:/Guardar cambios/}).count(),0,'El primer documento inicia en modo creación');
 await selectStep(5);
 await page.getByRole('button',{name:'Ir a revisión',exact:true}).click();
 assert.equal(await page.getByRole('button',{name:/Guardar o emitir/}).isDisabled(),true,'La revisión directa no permite guardar sin datos');
 await page.getByRole('list',{name:'Datos para completar'}).getByRole('button',{name:/Dirección/}).click();
 await page.locator('#dw-field-inmueble_direccion:focus').waitFor();
-checks++;
+assert.equal(await page.locator('#dw-field-inmueble_direccion').getAttribute('aria-invalid'),'true');
+await page.getByRole('button',{name:'← Volver a revisión',exact:true}).click();
+await page.getByRole('list',{name:'Datos para completar'}).waitFor();
+checks+=3;
 checks+=2;
 await fresh();if(width<640)await navOp();assert.ok(await page.evaluate(async()=>{await document.fonts.load('15px "DM Sans"');return document.fonts.check('15px "DM Sans"')&&getComputedStyle(document.body).fontSize==='15px';}));checks++;await page.getByRole('button',{name:'Ayuda',exact:true}).click();await page.getByRole('menuitem',{name:'Asistente IA',exact:true}).click();await page.getByRole('button',{name:'Cerrar asistente',exact:true}).click();assert.equal(await page.getByRole('menu',{name:'Ayuda',exact:true}).count(),0);checks++;if(width<640){await page.evaluate(()=>window.scrollTo({top:400,behavior:'instant'}));assert.ok(await page.locator('.fab').evaluate(el=>{const r=el.getBoundingClientRect();return getComputedStyle(el).opacity!=='0'&&r.bottom<=innerHeight;}));checks++;}
 await add();assert.equal(await page.locator('.fab').count(),0);checks++;await page.getByRole('button',{name:'Volver a operaciones',exact:true}).click();assert.ok(await page.getByRole('heading',{name:'Operaciones de prueba'}).isVisible());checks++;
@@ -198,7 +202,7 @@ await page.locator('.modal-head').screenshot({path:out+'/editar-'+width+'.png'})
 
 // Regresión: el cierre real del modal y Editar deben conservar ajustes cancelados.
 await page.goto(url+'/?manualviewer=1');
-const ajustes=page.getByTestId('dw-ajustes-manuales');await ajustes.locator('summary').click();await ajustes.getByRole('button',{name:'Editar',exact:true}).click();
+const ajustes=page.getByTestId('dw-ajustes-manuales');await page.getByRole('button',{name:'Ajustes manuales'}).click();await ajustes.getByRole('button',{name:'Editar',exact:true}).click();
 await ajustes.locator('.dw-redaccion-clausula').first().fill('Texto manual conservado QA.');
 page.once('dialog',d=>d.dismiss());await page.locator('.modal-head .modal-close').click();assert.equal(await ajustes.locator('.dw-redaccion-clausula').first().textContent(),'Texto manual conservado QA.');checks++;
 page.once('dialog',d=>d.dismiss());await page.locator('.modal-head').getByRole('button',{name:'Editar',exact:true}).click();assert.equal(await page.getByTestId('destino-manual').textContent(),'visor');assert.ok(await ajustes.locator('.dw-redaccion-clausula').first().isVisible());checks++;

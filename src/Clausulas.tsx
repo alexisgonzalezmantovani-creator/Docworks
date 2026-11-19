@@ -123,7 +123,6 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
   const [guardandoClausula,setGuardandoClausula]=useState(false);
   const [errorGuardadoClausula,setErrorGuardadoClausula]=useState("");
   const [filtroTexto,setFiltroTexto]=useState("");
-  const [filtroCategoria,setFiltroCategoria]=useState("todas");
   const [soloPersonalizadas,setSoloPersonalizadas]=useState(false);
   const [clausulaTab,setClausulaTab]=useState("biblioteca");
   const [clausulaExpandida,setClausulaExpandida]=useState(null);
@@ -202,7 +201,6 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
   });
   var filtradas=bibliotecaVisible.filter(function(c){
     if(soloPersonalizadas&&!esPersonalizada(c))return false;
-    if(filtroCategoria!=="todas"&&c.categoria!==filtroCategoria)return false;
     if(filtroTexto.trim()){
       var q=filtroTexto.trim().toLowerCase();
       if(((c.titulo&&String(c.titulo).trim())?String(c.titulo).trim():"Cláusula sin título").toLowerCase().indexOf(q)===-1&&(c.contenido||"").toLowerCase().indexOf(q)===-1)return false;
@@ -211,9 +209,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
   });
   return(
     <div>
-      <div className="section-header">
-        {!modoIntegrado&&<div><div className="section-title">Biblioteca de cláusulas</div><div className="section-sub">Condiciones especiales reutilizables para cada documento.</div></div>}
-      </div>
+      {!modoIntegrado&&<div className="section-header"><div><div className="section-title">Biblioteca de cláusulas</div><div className="section-sub">Condiciones especiales reutilizables para cada documento.</div></div></div>}
       {error && <div style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.25)",color:"var(--red)",fontSize:12.5}}>{error} {onRetry&&<button type="button" onClick={onRetry} className="btn btn-secondary btn-sm" style={{marginLeft:8}}>Reintentar</button>}</div>}
       {loading && <div style={{marginBottom:16,fontSize:12.5,color:"var(--muted)"}}>Cargando cláusulas…</div>}
       {!editable&&(
@@ -228,7 +224,6 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
           {editable&&<button type="button" onClick={function(){abrirNueva();}} style={{flex:1,border:0,borderBottom:clausulaTab==="editor"?"2px solid var(--gold)":"2px solid transparent",background:"transparent",color:clausulaTab==="editor"?"var(--text)":"var(--muted)",padding:"10px 12px",cursor:"pointer",fontSize:12,fontWeight:clausulaTab==="editor"?700:500}}>{editId?"Modificar cláusula":"Crear cláusula"}</button>}
         </div>
       </div>}
-      {modoIntegrado&&clausulaTab!=="editor"&&selectorDocumento&&<div style={{marginBottom:12}}>{selectorDocumento(null)}</div>}
       {clausulaTab==="editor"&&editable&&onAbrirPapelera&&<div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}><button type="button" className="btn btn-secondary btn-sm" onClick={function(){onAbrirPapelera();}}><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v6m4-6v6"/></svg> Papelera</button></div>}
       {clausulaTab==="editor"&&editable&&<div className="card" style={{padding:18,marginBottom:10}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14}}>
@@ -248,13 +243,15 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
         <ClausulaFormBody form={form} setForm={setForm} editId={editId} onSubmit={submit} guardando={guardandoClausula} habilitarParaAsesores={modoIntegrado&&!editId?habilitarParaAsesores:undefined} onHabilitarChange={setHabilitarParaAsesores} soloHabilitar={!!clausulaCreadaId||creacionSinConfirmar} bloquearGuardado={creacionSinConfirmar} guardarLabel={clausulaCreadaId?"Reintentar habilitación":modoIntegrado&&!editId&&habilitarParaAsesores?"Guardar y habilitar":undefined} advertencia={similares.length>0&&!clausulaCreadaId?<div role="status" style={{padding:12,border:"1px solid var(--gold)",borderRadius:10,fontSize:12.5,lineHeight:1.5}}><b>Hay títulos parecidos en la biblioteca</b><p style={{margin:"5px 0"}}>Podrían tener condiciones o plazos diferentes. Revisá el texto; podés guardar esta cláusula igualmente.</p>{similares.map(function(c){return <details key={c.id} style={{marginTop:6}}><summary style={{cursor:"pointer",fontWeight:650}}>{c.titulo}</summary><div style={{whiteSpace:"pre-wrap",marginTop:5}}>{c.contenido}</div></details>;})}</div>:null} onCancel={function(){solicitarSalida(cerrarEditor);}}/>
       </div>}
       {clausulaTab==="biblioteca"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
-          <div className="dw-clause-library-toolbar" style={{display:"flex",gap:9,flexWrap:"wrap",alignItems:"center",width:"100%"}}>
-            <input className="inp" aria-label="Buscar cláusulas por título o texto" style={{flex:"0 1 240px",width:"min(240px,100%)",minWidth:130,minHeight:40,fontSize:13}} value={filtroTexto} onChange={function(e){setFiltroTexto(e.target.value);}} placeholder="⌕ Buscar..."/>
+          <div className="dw-clause-library-toolbar">
+            <div className="dw-clause-library-filters">
+            <input className="inp dw-clause-library-search" aria-label="Buscar cláusulas por título o texto" value={filtroTexto} onChange={function(e){setFiltroTexto(e.target.value);}} placeholder="Buscar"/>
             <button type="button" aria-pressed={soloPersonalizadas} onClick={function(){setSoloPersonalizadas(function(v){return !v;});}}
               style={{display:"inline-flex",alignItems:"center",gap:6,minHeight:40,padding:"8px 12px",borderRadius:9,border:"1px solid "+(soloPersonalizadas?"var(--gold)":"var(--border2)"),background:soloPersonalizadas?"rgba(212,175,55,.12)":"var(--surface2)",color:soloPersonalizadas?"var(--gold)":"var(--text)",fontSize:13,fontFamily:"inherit",fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",userSelect:"none"}}>
               {soloPersonalizadas?"✓ ":""}Personalizadas
             </button>
-            {editable&&<div className="dw-clause-library-actions" style={{marginLeft:"auto",display:"flex",alignItems:"center",justifyContent:"flex-end",gap:8,flexWrap:"wrap"}}>
+            </div>
+            {editable&&<div className="dw-clause-library-actions">
               <button type="button" className="btn btn-primary" style={{minHeight:40,padding:"8px 14px",fontSize:13,fontWeight:700,whiteSpace:"nowrap"}} onClick={abrirNueva}>＋ Crear cláusula</button>
               {onAbrirPapelera&&<button type="button" className="btn btn-secondary" title="Papelera de cláusulas" aria-label="Papelera de cláusulas" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:42,minHeight:40,padding:"8px 10px"}} onClick={onAbrirPapelera}>
                 <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v6m4-6v6"/></svg>
@@ -262,6 +259,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
             </div>}
           </div>
 
+          {modoIntegrado&&selectorDocumento&&selectorDocumento(null)}
           <div style={{fontSize:12,color:"var(--dim)"}}>{filtradas.length} de {bibliotecaVisible.length} cláusula{bibliotecaVisible.length===1?"":"s"}</div>
           <div style={{display:"flex",flexDirection:"column",gap:7}}>
             {bibliotecaVisible.length===0&&<div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:13}}>No hay cláusulas visibles para este rol.</div>}
@@ -270,9 +268,9 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
               var esTodos=!c.tipos||!c.tipos.length||c.tipos.indexOf("todos")!==-1;
               var expandida=clausulaExpandida===c.id;
               return(
-                <div key={c.id} data-clausula-id={c.id} className="op-card">
+                <div key={c.id} data-clausula-id={c.id} className="op-card dw-clause-library-card">
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                    <div style={{flex:1}}>
+                    <div style={{flex:1,minWidth:0,overflowWrap:"anywhere"}}>
                       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap"}}>
                         <span style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{(c.titulo&&String(c.titulo).trim())?String(c.titulo).trim():"Cláusula sin título"}</span>
                         <span className={"badge "+(c.categoria==="alquiler"?"badge-tipo":"badge-gold")} style={{textTransform:"capitalize"}}>{c.categoria}</span>
@@ -287,7 +285,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
                       {puedeVerHistorial&&<button type="button" onClick={function(){setHistorialSeleccionado(c);}} className="btn btn-ghost btn-sm" style={{padding:"2px 6px",fontSize:10,lineHeight:1.2,minHeight:24,height:24,whiteSpace:"nowrap",flexShrink:0}}>Historial</button>}
                     {editable&&(
                       <div style={{display:"flex",gap:3,flexShrink:0}}>
-                        <button onClick={function(){abrirEdicion(c);}} style={{padding:"4px 7px",borderRadius:6,background:"rgba(255,255,255,0.04)",border:"1px solid var(--border)",color:"var(--muted)",cursor:"pointer",fontSize:12,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><DWIcon name="edit" size={14}/></button>
+                        <button type="button" title="Editar cláusula" aria-label={"Editar cláusula: "+c.titulo} onClick={function(){abrirEdicion(c);}} style={{minWidth:36,minHeight:36,padding:"4px 7px",borderRadius:6,background:"rgba(255,255,255,0.04)",border:"1px solid var(--border)",color:"var(--muted)",cursor:"pointer",fontSize:12,display:"inline-flex",alignItems:"center",justifyContent:"center"}}><DWIcon name="edit" size={14}/></button>
                         <button type="button" title="Mover a papelera" aria-label={"Mover a papelera: "+c.titulo} onClick={function(){onDelete(c.id);}} style={{padding:"4px 7px",borderRadius:6,background:"rgba(248,113,113,0.05)",border:"1px solid rgba(248,113,113,0.15)",color:"var(--red)",cursor:"pointer",display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:36,minHeight:36}}><svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg></button>
                       </div>
                     )}
@@ -444,18 +442,17 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var hayClausulasAdicionalesConfigurables=cantidadAdicionalesEditables>0;
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     <div className="section-header"><div><h1 className="section-title" style={{margin:0}}>{seccion==="modelos"?"Modelos de documentos":seccion==="papelera"?"Papelera de cláusulas":"Biblioteca de cláusulas"}</h1><div className="section-sub">{seccion==="papelera"?"Recuperá cláusulas eliminadas.":seccion==="adicionales"?"Textos adicionales para tus operaciones.":"Configurá el modelo que usarán los asesores."}</div></div></div>
-    {puedeEditar&&<nav aria-label="Cláusulas y documentos" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,minWidth:0}}>
-      <button type="button" aria-label="Biblioteca de cláusulas" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:68,width:"100%",display:"flex",justifyContent:"flex-start",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:12,textAlign:"left"}} onClick={function(){setSeccion("adicionales");}}>
+    {puedeEditar&&<nav className="dw-clause-workspace-nav" aria-label="Cláusulas y documentos" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,minWidth:0}}>
+      <button type="button" aria-label="Biblioteca de cláusulas" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:54,minWidth:0,width:"100%",display:"flex",justifyContent:"flex-start",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:12,textAlign:"left"}} onClick={function(){setSeccion("adicionales");}}>
         <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:38,height:38,flexShrink:0,borderRadius:10,background:"rgba(147,197,253,.12)"}}><svg aria-hidden="true" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 3.5l2.2 1.3 2.3-.8 1.7 2.2-.4 2.2 2.2 1.5 2.7-.3 1.3 2.3-1.8 2-.1 2.7-2.5.7-1.8-1.5-2.4.9-.9 2.4-2.7.2-1.4-2.2-2.7-.3-.7-2.6 1.5-1.8-.8-2.5-2.3-.8-.3-2.6 2.2-1.3z"/><path d="M11 10h2v2h-2z"/></svg></span>
         <span style={{minWidth:0,display:"flex",flexDirection:"column",gap:2}}><strong style={{fontSize:15,lineHeight:1.2}}>Cláusulas</strong><span style={{fontSize:11.5,fontWeight:450,opacity:.85,lineHeight:1.3}}>Biblioteca y textos</span></span>
       </button>
-      <button type="button" aria-label="Modelos de documentos" aria-pressed={seccion==="modelos"} className={seccion==="modelos"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:68,width:"100%",display:"flex",justifyContent:"flex-start",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:12,textAlign:"left"}} onClick={function(){setSeccion("modelos");}}>
+      <button type="button" aria-label="Modelos de documentos" aria-pressed={seccion==="modelos"} className={seccion==="modelos"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:54,minWidth:0,width:"100%",display:"flex",justifyContent:"flex-start",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:12,textAlign:"left"}} onClick={function(){setSeccion("modelos");}}>
         <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:38,height:38,flexShrink:0,borderRadius:10,background:"rgba(147,197,253,.12)"}}><svg aria-hidden="true" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="7" y="3" width="13" height="16" rx="2"/><path d="M4 7v13a2 2 0 0 0 2 2h11M10 8h7M10 12h7M10 16h4"/></svg></span>
         <span style={{minWidth:0,display:"flex",flexDirection:"column",gap:2}}><strong style={{fontSize:15,lineHeight:1.2}}>Documentos</strong><span style={{fontSize:11.5,fontWeight:450,opacity:.85,lineHeight:1.3}}>Modelos y estructura</span></span>
       </button>
     </nav>}
     {seccion==="adicionales"&&<div className="card" style={{padding:14}}>
-      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,marginBottom:11}}>Guardá cláusulas para volver a usarlas. Si las habilitás, los asesores podrán agregarlas al final de sus documentos.</div>
       <ClausulasView selectorDocumento={function(){return <SelectorDocumento id="dw-biblioteca-documento" tipos={PLANTILLA_TIPOS} nombres={TIPOS} iconos={TIPO_ICON} value={filtroAdicional} onChange={function(tipo){navegarConProteccionModelo(function(){setFiltroAdicional(tipo);});}} todas={true}/>;}} clausulas={adicionalesVisibles} clausulasParaComparar={clausulas} onAbrirPapelera={puedeEditar?function(){setSeccion("papelera");}:null} tipoFiltro={filtroAdicional==="todas"?null:filtroAdicional} onAdd={crearYHabilitar} onEdit={onEditClausula} onDelete={onDeleteClausula} puedeEditar={puedeEditar} rolLabel={rolLabel} error={clausulasError} loading={!!clausulasLoading} onRetry={onRetryClausulas} modoIntegrado={true} ocultarProtegidasIds={protegidas} puedeVerHistorial={puedeEditar}/>
     </div>}
       {puedeEditar&&seccion==="papelera"&&<section className="card" aria-labelledby="dw-papelera-titulo" style={{padding:14}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:12}}><h2 id="dw-papelera-titulo" style={{fontSize:20,fontWeight:750,fontFamily:"DM Serif Display,serif",margin:0}}>Cláusulas eliminadas</h2><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setSeccion("adicionales");}}>Volver a biblioteca</button></div><div style={{fontSize:12,color:"var(--muted)",marginBottom:10}}>Podés restaurar cláusulas durante 30 días desde su eliminación. Las anteriores a esta función no tienen fecha verificable.</div>{(errorPapeleraClausulas||papeleraClausulasError)&&<div role="alert" style={{color:"var(--danger,#c94a4a)",fontSize:12,marginBottom:8}}>{errorPapeleraClausulas||papeleraClausulasError} <button type="button" onClick={onRecargarPapeleraClausulas}>Reintentar</button></div>}{papeleraClausulasLoading?<div style={{fontSize:12,color:"var(--muted)"}}>Cargando papelera…</div>:!(papeleraClausulas||[]).length?<div style={{fontSize:12,color:"var(--muted)"}}>La papelera está vacía. No hay cláusulas recuperables.</div>:(papeleraClausulas||[]).map(function(c){return <div key={c.id} style={{display:"flex",gap:10,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",padding:"12px 0",borderBottom:"1px solid var(--border)"}}><div style={{minWidth:0,flex:"1 1 200px",overflowWrap:"anywhere"}}><div style={{fontSize:13,fontWeight:650}}>{c.titulo||"Cláusula sin título"}</div><div style={{fontSize:11,color:"var(--muted)"}}>Eliminada: {c.eliminado_en?new Date(c.eliminado_en).toLocaleDateString("es-AR"):"sin fecha"}</div>{c.contenido&&<details style={{fontSize:12,marginTop:8}}><summary style={{cursor:"pointer"}}>Ver texto de la cláusula</summary><div style={{whiteSpace:"pre-wrap",lineHeight:1.6,marginTop:8}}>{c.contenido}</div></details>}</div><button type="button" disabled={restaurandoClausula!==null} onClick={async function(){setRestaurandoClausula(c.id);setErrorPapeleraClausulas("");try{var r=await onRestaurarClausula(c.id);if(r&&r.error)throw r.error;}catch(e){setErrorPapeleraClausulas(e&&e.message?e.message:"No se pudo restaurar.");}finally{setRestaurandoClausula(null);}}} style={{padding:"7px 10px",borderRadius:8,border:"1px solid var(--border)",background:"var(--card)",color:"var(--text)",cursor:"pointer"}}>{restaurandoClausula===c.id?"Restaurando…":"Restaurar"}</button></div>;})}</section>}
