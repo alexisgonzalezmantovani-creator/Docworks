@@ -744,31 +744,35 @@ export async function generarDOCXModulo(doc, perfil, deps) {
     // Secciones — rótulo en negrita + texto corrido en el mismo párrafo, justificado.
     // Todos los tipos de documento. El espacio tras ":" va al inicio de la base
     // (más confiable en Word que un espacio al final del run en negrita).
-    if (doc.secciones && doc.secciones.length) {
-      doc.secciones.forEach(function(sec) {
+    var seccionesConTexto=(doc.secciones||[]).filter(function(sec){return (sec.items||[]).some(Boolean);});
+    var clausulasDocx=doc.clausulas||[];
+    if (seccionesConTexto.length) {
+      seccionesConTexto.forEach(function(sec, indiceSeccion) {
         var prefix = String(prefijoClausulaFormal(sec.titulo)||"").replace(/\s+$/,"");
-        (sec.items||[]).forEach(function(item, idx) {
-          if (!item) return;
+        var items=(sec.items||[]).filter(Boolean);
+        items.forEach(function(item, idx) {
+          var juntoAFirmas=!doc.documentoPropio&&!clausulasDocx.length&&
+            indiceSeccion===seccionesConTexto.length-1&&idx===items.length-1;
           if (idx === 0) {
             body += pxRuns([
               {text: prefix, bold:true, size:10.5, color:DOCX_COLOR_PRIM},
               {text: " "+cuerpoTrasRotulo(item), size:10.5},
-            ], {justify:true, spacing:{before:210, after:135}});
+            ], {keepNext:juntoAFirmas, justify:true, spacing:{before:210, after:135}});
           } else {
-            body += px(normalizarTextoDocumento(item), {size:10.5, spacing:{before:70, after:135}, justify:true});
+            body += px(normalizarTextoDocumento(item), {keepNext:juntoAFirmas,size:10.5, spacing:{before:70, after:135}, justify:true});
           }
         });
       });
     }
 
     // Cláusulas (continúan la numeración de las secciones, sin encabezado separado)
-    if (doc.clausulas && doc.clausulas.length) {
-      doc.clausulas.forEach(function(c) {
+    if (clausulasDocx.length) {
+      clausulasDocx.forEach(function(c, idx) {
         var label = String(prefijoClausulaDesdeNumTitulo(c.num, c.titulo||"")||"").replace(/\s+$/,"");
         body += pxRuns([
           {text: label, bold:true, size:10.5, color:DOCX_COLOR_PRIM},
           {text: " "+cuerpoTrasRotulo(c.texto||""), size:10.5},
-        ], {justify:true, spacing:{before:210, after:135}});
+        ], {keepNext:!doc.documentoPropio&&idx===clausulasDocx.length-1,justify:true, spacing:{before:210, after:135}});
       });
     }
 
@@ -795,7 +799,8 @@ export async function generarDOCXModulo(doc, perfil, deps) {
       return xml+'</w:tbl>';
     }
     if(!doc.documentoPropio){
-      body+=px("",{border:true,spacing:{before:140,after:100}});
+      // Enlazar el cierre del cuerpo, el separador y el título con la tabla.
+      body+=px("",{keepNext:true,border:true,spacing:{before:140,after:100}});
       body+=px("FIRMAS",{keepNext:true,bold:true,size:DOC_EXPORT_LAYOUT.signatureSize+3,center:true,spacing:{before:100,after:90}});
       var firmantesBase=(doc.firmas&&doc.firmas.length)?doc.firmas:(doc.partes||[]);
       body+=tablaFirmasDocx(organizarFilasFirmas(firmantesBase,true),false);
@@ -805,7 +810,7 @@ export async function generarDOCXModulo(doc, perfil, deps) {
       body+=px("PRESTA CONFORMIDAD",{keepNext:true,bold:true,size:11,spacing:{before:80,after:120}});
       doc.conformidad.items.forEach(function(txt,i){
         body+=pxRuns([{text:(i+1)+". ",bold:true,size:10.5,color:DOCX_COLOR_PRIM},{text:txt,size:10.5}],
-          {justify:true,spacing:{before:180,after:130}});
+          {keepNext:i===doc.conformidad.items.length-1,justify:true,spacing:{before:180,after:130}});
       });
       var conformantesDocx=(doc.conformidad.firmantes&&doc.conformidad.firmantes.length)?doc.conformidad.firmantes:
         [{nombre:doc.conformidad.firmante,dni:doc.conformidad.dni}];

@@ -474,7 +474,10 @@ delete global.document;
      assert.deepEqual(app.getTokensSinReemplazar(docAjustado),[]);
      assert.equal(JSON.stringify(snap),original);
    });
-   const pdf=await app.generarPDF(docAjustado,null,{}),word=await app.generarDOCX(docAjustado,{});
+   const extraFinal=tipo==='boleto'?'CIERRELEGALWORD':null;
+   const docExportado=extraFinal?{...docAjustado,clausulas:[...docAjustado.clausulas,
+     {num:2,titulo:'CIERRE',texto:extraFinal+' acompaña las firmas.'}]}:docAjustado;
+   const pdf=await app.generarPDF(docExportado,null,{}),word=await app.generarDOCX(docExportado,{});
    const datosPDF=Buffer.from(await pdf.blob.arrayBuffer()).toString('latin1');
    const datosWord=Buffer.from(await word.blob.arrayBuffer());
    let xml='';
@@ -487,6 +490,19 @@ delete global.document;
    check(tipo+' ajuste manual está en PDF y Word',()=>{
      assert.ok(datosPDF.includes(marca),'PDF no refleja ajuste');
      assert.ok(xml.includes(marca),'Word no refleja ajuste');
+   });
+   check(tipo+' Word enlaza el último párrafo legal con el bloque de firmas',()=>{
+     const parrafos=xml.match(/<w:p(?:\s[^>]*)?>.*?<\/w:p>/gs)||[];
+     const firmas=parrafos.findIndex(p=>p.includes('>FIRMAS<'));
+     assert.ok(firmas>1);
+     const cierre=parrafos[firmas-2];
+     assert.match(cierre,/<w:keepNext\/>/);
+     assert.match(cierre,/<w:t[^>]*>[^<]*\S[^<]*<\/w:t>/);
+     assert.match(parrafos[firmas-1],/<w:keepNext\/>/);
+     if(extraFinal){
+       assert.ok(cierre.includes(extraFinal));
+       assert.doesNotMatch(parrafos.find(p=>p.includes(marca))||'',/<w:keepNext\/>/);
+     }
    });
  }
 
