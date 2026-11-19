@@ -6724,7 +6724,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           {revisando&&<Btn v="secondary" onClick={function(){setStep(total+1);}}>← Volver a revisión</Btn>}
           {puedeOmitirClausulas&&!revisando&&<Btn v="secondary" onClick={avanzarConAviso}>Agregar cláusulas</Btn>}
-          {step>1&&<div className="dw-operation-next-action">
+          {step>1&&!revisando&&<div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
             {puedeOmitirClausulas&&!revisando?<Btn v="success" onClick={function(){setStep(total+1);}}>Ir a revisión</Btn>:step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
           </div>}
