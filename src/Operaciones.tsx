@@ -6376,15 +6376,21 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     // El botón Siguiente siempre avanza. Los pendientes se revisan al final.
     setStep(function(s){return Math.min(s+1,total+1);});
   }
-  // Los campos se validan en el resumen final, nunca se pintan en rojo durante la carga o edición.
-  const camposFaltantes = [];
+  // Sólo al editar un documento existente: identificar los datos que faltan,
+  // sin mostrar alarmas rojas durante la creación de una operación nueva.
+  const camposFaltantes = modoEdicion ? faltantesDetalle.filter(function(f){return f.paso===step;}) : [];
   const pasosFaltantes = (revisando && step>total ? faltantesDetalle : []).reduce(function(acc,f){if(f.paso!=null)acc[f.paso]=(acc[f.paso]||0)+1;return acc;},{});
-  // Limpiar marcas heredadas de versiones anteriores, incluso al volver del resumen.
-  // La revisión final informa los pendientes sin teñir los campos durante la carga.
   useEffect(function(){
-    if(typeof document==="undefined") return;
-    document.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");});
-  },[step,data,grupo,revisando]);
+    var contenedor=camposTecladoRef.current;
+    if(!contenedor)return;
+    contenedor.querySelectorAll("[data-falta]").forEach(function(el){el.removeAttribute("data-falta");el.removeAttribute("aria-invalid");});
+    if(!modoEdicion||step>total)return;
+    faltantesDetalle.filter(function(f){return f.paso===step;}).forEach(function(f){
+      var el=contenedor.querySelector('[id="dw-field-'+f.campo+'"]');
+      if(!el&&f.campo==="comodato_fin")el=contenedor.querySelector("#dw-field-comodato_plazo");
+      if(el){el.setAttribute("data-falta","1");el.setAttribute("aria-invalid","true");}
+    });
+  },[modoEdicion,step,data,grupo,perfil]);
   const focoPendienteRef=useRef(null);
   useEffect(function(){return function(){if(focoPendienteRef.current!=null)window.clearInterval(focoPendienteRef.current);};},[]);
   function irACampo(campo){
@@ -6717,6 +6723,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
           <div style={{height:"100%",width:pct+"%",background:pct===100?"linear-gradient(90deg,#22c55e,#4ade80)":"linear-gradient(90deg,#c9962a,var(--gold),var(--gold2))",borderRadius:10,transition:"width 0.4s cubic-bezier(0.4,0,0.2,1)"}}/>
         </div>
       </div>
+      {modoEdicion&&step<=total&&camposFaltantes.length>0&&<div role="status" style={{marginBottom:12,padding:"9px 12px",borderRadius:9,border:"1px solid rgba(239,68,68,.35)",background:"rgba(239,68,68,.06)",fontSize:12.5,color:"var(--text)"}}>⚠ {camposFaltantes.length===1?"Hay un dato pendiente en este apartado":"Hay "+camposFaltantes.length+" datos pendientes en este apartado"}. Los campos están señalados en rojo para que puedas completarlos.</div>}
       <div ref={camposTecladoRef} data-dw-operation-fields style={{minHeight:260}}
         onFocusCapture={function(e){prepararTecladoOperacion(e.currentTarget);}}
         onKeyDown={function(e){avanzarConEnterOperacion(e,e.currentTarget);}}>
