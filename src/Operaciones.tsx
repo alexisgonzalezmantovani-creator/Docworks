@@ -2113,13 +2113,19 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
-/* Operaciones PC: acotar el indicador al ancho de la zona Documento / Abrir / Editar,
-   en vez de ocupar los 420px del panel derecho. Sin afectar móvil ni tablet. */
+/* Operaciones PC: correr toda la columna derecha, con divisor y acciones,
+   para alinearla con el progreso. Sin afectar móvil ni tablet. */
 @media (min-width:1101px){
+  .dw-dashboard-root .op-card-premium .op-card-side{
+    flex:0 0 334px!important;
+    width:334px!important;
+    min-width:334px!important;
+    max-width:334px!important;
+  }
   .dw-dashboard-root .op-card-premium .op-card-side>.op-side-progress{
-    width:min(100%,320px)!important;
-    max-width:320px!important;
-    align-self:flex-end!important;
+    width:100%!important;
+    max-width:100%!important;
+    align-self:stretch!important;
     flex:0 0 auto!important;
   }
 }

@@ -132,10 +132,16 @@ await page.getByRole('button',{name:'Vista de tarjetas',exact:true}).click();
    const alineado=await page.locator('.op-card-premium:not(.op-doc-card) .op-card-side').first().evaluate(el=>{
      const progreso=el.querySelector('.op-side-progress')?.getBoundingClientRect();
      const acciones=el.querySelector('.op-actions')?.getBoundingClientRect();
-     return !!progreso&&!!acciones&&progreso.width>=200&&progreso.width<=321
-       &&Math.abs(progreso.right-acciones.right)<8;
+     const panel=el.getBoundingClientRect();
+     const contador=el.querySelector('.op-docs-count')?.getBoundingClientRect();
+     return !!progreso&&!!acciones&&!!contador
+       &&panel.width>=333&&panel.width<=336
+       &&progreso.width>=315&&progreso.width<=321
+       &&Math.abs(progreso.right-acciones.right)<8
+       &&Math.abs(progreso.left-contador.left)<4
+       &&Math.abs(progreso.left-panel.left-14)<3;
    });
-   assert.ok(alineado,'En PC la barra de progreso debe terminar alineada con Documento / Abrir / Editar');
+   assert.ok(alineado,'En PC el panel, divisor, documentos, progreso y acciones deben estar alineados');
    checks++;
  }
 if(width<640){assert.ok(await page.locator('.op-actions').first().evaluate(el=>{const b=el.lastElementChild.getBoundingClientRect(),r=el.getBoundingClientRect();return Math.abs(b.right-r.right)<2;}));checks++;}

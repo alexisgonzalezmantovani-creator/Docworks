@@ -6,7 +6,7 @@ global.IS_REACT_ACT_ENVIRONMENT=true;
 global.MessageChannel=class {constructor(){this.port1={onmessage:null};this.port2={postMessage:()=>setTimeout(()=>this.port1.onmessage&&this.port1.onmessage({data:undefined}),0)};}};
 let confirmations=0,autoConfirm=true,pendingConfirm=null;window.addEventListener('dw:confirm',e=>{confirmations++;if(autoConfirm)e.detail.onConfirm();else pendingConfirm=e.detail.onConfirm;});
 const rootDir=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-ui-'));
-require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(rootDir,'src/App.tsx'),'utf8')+'\nimport {act} from "react"; import {createRoot} from "react-dom/client"; export {act,createRoot,CuerpoPlantillaPanel,getDefaultBodyBlocks,PLANTILLA_TIPOS,getBodyBlocksConfig,getBodyBlocksForDocument,crearSnapshotPlantillaOperacion,navegarConProteccionModelo};',resolveDir:path.join(rootDir,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'ui.cjs')});
+require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(rootDir,'src/App.tsx'),'utf8')+'\nimport {act} from "react"; import {createRoot} from "react-dom/client"; export {act,createRoot,CuerpoPlantillaPanel,PrecioNarrativaEditor,normalizarNarrativaPrecio,htmlNarrativaPrecioDocWorks,getDefaultBodyBlocks,PLANTILLA_TIPOS,getBodyBlocksConfig,getBodyBlocksForDocument,crearSnapshotPlantillaOperacion,navegarConProteccionModelo};',resolveDir:path.join(rootDir,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'ui.cjs')});
 const app=require(path.join(tmp,'ui.cjs'));
 let count=0;function check(label,fn){fn();count++;console.log('OK',label);}
 const buttons=()=>Array.from(document.querySelectorAll('button'));
@@ -72,6 +72,30 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
   check(tipo+' edición protegida',()=>assert.ok(!buttons().some(b=>['Editar','＋ Escribir cláusula del modelo'].includes(b.textContent.trim()))));
   await app.act(async()=>readOnly.unmount());
  }
+ check('un solo chip de precio, con moneda incluida, para plantillas heredadas',()=>{
+   assert.equal(app.normalizarNarrativaPrecio('El oferente ofrece {{moneda_txt}} {{precio_letras}} para comprar.'),'El oferente ofrece {{precio_letras}} para comprar.');
+   assert.equal((app.htmlNarrativaPrecioDocWorks('{{moneda_txt}} {{precio_letras}}').match(/data-dw-token/g)||[]).length,1);
+ });
+ const precioRoot=app.createRoot(document.getElementById('test'));
+ let precioGuardado=null;
+ await app.act(async()=>precioRoot.render(require('react').createElement(app.PrecioNarrativaEditor,{
+   bloque:{titulo:'PRECIO',contenido:'El oferente ofrece {{moneda_txt}} {{precio_letras}} por el inmueble.'},
+   onSave:async cambios=>{precioGuardado=cambios;return {};},onCancel:()=>{},onSaved:()=>{}
+ })));
+ check('editar precio presenta una sola redacción con chip intercalado',()=>{
+   const editor=document.querySelector('[role="textbox"][aria-label="Editar redacción del precio"]');
+   assert.ok(editor);
+   assert.equal(editor.querySelectorAll('[data-dw-token="precio_letras"]').length,1);
+   assert.equal(editor.querySelectorAll('[data-dw-token="moneda_txt"]').length,0);
+   assert.ok(editor.textContent.includes('por el inmueble'));
+   assert.equal(buttons().some(b=>b.textContent.trim()==='+ Moneda'),false);
+ });
+ await click(button('Guardar'));
+ check('precio se guarda sin obligar un segundo chip de moneda',()=>{
+   assert.ok(precioGuardado);
+   assert.equal(precioGuardado.contenido,'El oferente ofrece {{precio_letras}} por el inmueble.');
+ });
+ await app.act(async()=>precioRoot.unmount());
  check('confirmación de descarte en ocho documentos',()=>assert.equal(confirmations,24));
  const legacy=[{id:'reserva.precio',titulo:'Precio propio',contenido:'Texto propio de la inmobiliaria',orden:1}];
  check('Reserva hereda texto de tabla histórica',()=>assert.equal(app.getBodyBlocksConfig({},'reserva',legacy)[0].contenido,legacy[0].contenido));
