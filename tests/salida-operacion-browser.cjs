@@ -128,6 +128,16 @@ await page.locator('.op-table-wrap').screenshot({path:out+'/tabla-'+width+'.png'
 if(width<640){assert.ok(await page.locator('.op-table td:nth-child(3)').first().evaluate(el=>getComputedStyle(el).display==='none'));checks++;}
 await page.locator('.op-table').getByRole('button',{name:'Abrir',exact:true}).first().click();assert.equal(await page.getByTestId('conversion').textContent(),'ver');checks++;
 await page.getByRole('button',{name:'Vista de tarjetas',exact:true}).click();
+ if(width>=1101){
+   const alineado=await page.locator('.op-card-premium:not(.op-doc-card) .op-card-side').first().evaluate(el=>{
+     const progreso=el.querySelector('.op-side-progress')?.getBoundingClientRect();
+     const acciones=el.querySelector('.op-actions')?.getBoundingClientRect();
+     return !!progreso&&!!acciones&&progreso.width>=200&&progreso.width<=321
+       &&Math.abs(progreso.right-acciones.right)<8;
+   });
+   assert.ok(alineado,'En PC la barra de progreso debe terminar alineada con Documento / Abrir / Editar');
+   checks++;
+ }
 if(width<640){assert.ok(await page.locator('.op-actions').first().evaluate(el=>{const b=el.lastElementChild.getBoundingClientRect(),r=el.getBoundingClientRect();return Math.abs(b.right-r.right)<2;}));checks++;}
 await page.locator('.dw-dashboard-root').getByRole('button',{name:/^Documentos?\s*(?:\(\d+\))?$/}).first().click();
 const dialog=page.getByRole('dialog',{name:'Documentos de esta operación',exact:true});await dialog.waitFor();

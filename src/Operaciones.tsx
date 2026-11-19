@@ -2113,6 +2113,17 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
+/* Operaciones PC: acotar el indicador al ancho de la zona Documento / Abrir / Editar,
+   en vez de ocupar los 420px del panel derecho. Sin afectar móvil ni tablet. */
+@media (min-width:1101px){
+  .dw-dashboard-root .op-card-premium .op-card-side>.op-side-progress{
+    width:min(100%,320px)!important;
+    max-width:320px!important;
+    align-self:flex-end!important;
+    flex:0 0 auto!important;
+  }
+}
+
 /* Botones táctiles cómodos sin moverlos debajo de la tarjeta en iPhone. */
 @media (max-width:760px), (orientation:landscape) and (max-height:500px) and (hover:none) and (pointer:coarse) and (max-width:1100px){
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn,
