@@ -72,7 +72,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.goto('http://127.0.0.1:'+server.address().port);
   // 6.70: la hoja tiene scroll propio dentro de un marco redondeado.
   if(name==='iphone'){
-   await page.waitForFunction(()=>[...document.querySelectorAll('style')].some(s=>s.textContent?.includes('6.70')));
+   await page.locator('#dci-styles').waitFor({state:'attached'});
    const estilos=await page.evaluate(()=>{
     const overlay=document.createElement('div');overlay.className='modal-overlay modal-overlay-viewer';
     overlay.innerHTML='<div class="modal-box viewer-modal"><div class="modal-head">Reserva de Compra</div><div class="modal-body"><div class="doc-viewer-shell"><div class="doc-viewer-tabs">Ficha completa · Vista previa</div><div class="doc-viewer-tab-content"><div style="padding:18px">Datos críticos</div><details data-testid="dw-ajustes-manuales" style="padding:18px"><summary>Hacer ajustes manuales</summary></details><div class="doc-reading-scroll"><div class="pdf-preview"><div class="pdf-chrome">Barra flotante antigua</div><div class="pdf-content pdf-content-lg"><div class="pdf-text"></div></div></div></div></div></div></div></div>';
@@ -132,23 +132,19 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   assert.ok(['auto','scroll'].includes(listaMedidas.overflow)&&listaMedidas.total>listaMedidas.alto+10&&listaMedidas.scroll>0,name+' listado largo tiene scroll utilizable: '+JSON.stringify(listaMedidas));checks++;
   assert.ok(listaMedidas.ultimoVisible,name+' último botón Editar alcanzable: '+JSON.stringify(listaMedidas));checks++;
   await listaAjustes.getByRole('button',{name:'Editar',exact:true}).last().click();
-  const fragmentos=listaAjustes.locator('textarea');
-  await fragmentos.first().fill('Texto ajustado QA. Importe ');
-  assert.equal(await listaAjustes.getByTestId('dw-ajuste-chip').count(),1,name+' chip automático conservado al editar');checks++;
-  const flujo=await listaAjustes.getByTestId('dw-ajuste-editor-flujo').evaluate(el=>{
-    const campos=[...el.querySelectorAll('textarea')],chips=[...el.querySelectorAll('[data-testid="dw-ajuste-chip"]')];
-    const style=getComputedStyle(el);
-    const internos=campos.every(c=>getComputedStyle(c).overflowY==='hidden'&&c.scrollHeight<=c.clientHeight+3);
-    const alineados=campos.every(c=>c.getBoundingClientRect().width>el.getBoundingClientRect().width*.8);
-    return {direccion:style.flexDirection,internos,alineados,chips:chips.length};
-  });
-  assert.ok(flujo.direccion==='column'&&flujo.internos&&flujo.alineados&&flujo.chips===1,name+' ajustes apilados sin doble scroll: '+JSON.stringify(flujo));checks++;
-
+  const redaccion=listaAjustes.locator('.dw-redaccion-clausula');
+  await redaccion.press('Control+Home');
+  await page.keyboard.insertText('Texto ajustado QA. ');
+  await redaccion.press('Control+End');
+  await page.keyboard.insertText(' Final QA.');
+  assert.equal(await redaccion.getByTestId('dw-ajuste-chip').count(),1,name+' chip intercalado y texto a ambos lados');checks++;
+  assert.equal(await listaAjustes.locator('[contenteditable="true"]').count(),1);checks++;
   await listaAjustes.getByRole('button',{name:'Guardar ajuste',exact:true}).click();
-  await fragmentos.first().waitFor({state:'detached'});
+  await redaccion.waitFor({state:'detached'});
   assert.ok((await page.locator('.pdf-text').textContent()).includes('Texto ajustado QA.'),name+' guardar actualiza el documento');checks++;
   await listaAjustes.getByRole('button',{name:'Editar',exact:true}).last().click();
-  assert.equal(await listaAjustes.locator('textarea').first().inputValue(),'Texto ajustado QA. Importe ',name+' reabrir conserva el ajuste guardado');checks++;
+  const textoGuardado=await redaccion.textContent();
+  assert.ok(textoGuardado.startsWith('Texto ajustado QA. ')&&textoGuardado.endsWith(' Final QA.'),name+' reabrir conserva texto a ambos lados');checks++;
   await listaAjustes.getByRole('button',{name:'Cancelar',exact:true}).click();
   await listaAjustes.locator('summary').click();
   const lecturaFinal=await leerHastaFinal();
@@ -158,27 +154,36 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   for(const tipo of ['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva']){
    await page.getByLabel('Documento de prueba').selectOption(tipo);
    await page.getByRole('button',{name:'Abrir vista previa de prueba'}).click();
-   await page.getByTestId('dw-fullpage-preview').waitFor();
+   const previa=page.getByTestId('dw-fullpage-preview');
+   await previa.waitFor();
+   assert.ok(await previa.evaluate(el=>{
+     const texto=el.querySelector('.dw-model-preview-text'),cierre=el.querySelector('button');
+     const rect=texto.getBoundingClientRect();
+     return parseFloat(getComputedStyle(texto).fontSize)>=16 && rect.top<180 &&
+       rect.left>=0 && rect.right<=innerWidth && el.scrollWidth<=el.clientWidth+1 &&
+       cierre.getBoundingClientRect().bottom<=innerHeight;
+   }),name+' '+tipo+' vista previa legible y cierre dentro del viewport');checks++;
+   await page.screenshot({path:path.join(out,'modelo-'+tipo+'-'+name+'.png'),animations:'disabled'});
    await page.getByRole('button',{name:'Cerrar vista previa'}).click();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' '+tipo+' overflow');checks++;
    await page.getByRole('button',{name:'＋ Escribir cláusula del modelo',exact:true}).click();
-   await page.locator('textarea').fill('Texto de prueba móvil.');
+   await page.locator('.dw-redaccion-clausula').fill('Texto de prueba móvil.');
    const chips=await page.getByRole('button',{name:/^\+/}).allTextContents();
    assert.equal(new Set(chips).size,chips.length,name+' '+tipo+' etiquetas de chips');checks++;
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' '+tipo+' chips overflow');checks++;
 
    await page.getByRole('button',{name:'Guardar cláusula',exact:true}).click();
-   await page.locator('textarea').waitFor({state:'detached'});checks++;
+   await page.locator('.dw-redaccion-clausula').waitFor({state:'detached'});checks++;
    await page.getByRole('button',{name:'＋ Escribir cláusula del modelo',exact:true}).click();
-   await page.locator('textarea').fill('Borrador que debe sobrevivir al cancelar la salida.');
+   await page.locator('.dw-redaccion-clausula').fill('Borrador que debe sobrevivir al cancelar la salida.');
    await page.getByRole('button',{name:'Salir del modelo',exact:true}).click();
    await page.getByRole('button',{name:'Cancelar',exact:true}).last().dispatchEvent('click');
-   assert.ok((await page.locator('textarea').inputValue()).includes('sobrevivir'));checks++;
+   assert.ok((await page.locator('.dw-redaccion-clausula').textContent()).includes('sobrevivir'));checks++;
    await page.getByRole('button',{name:'Salir del modelo',exact:true}).click();
    await page.getByRole('button',{name:'Confirmar',exact:true}).click();
-   await page.locator('textarea').waitFor({state:'detached'});checks++;
+   await page.locator('.dw-redaccion-clausula').waitFor({state:'detached'});checks++;
    await page.getByRole('button',{name:'Abrir modelo',exact:true}).click();
-   assert.equal(await page.locator('textarea').count(),0);checks++;
+   assert.equal(await page.locator('.dw-redaccion-clausula').count(),0);checks++;
    if(tipo==='boleto')await page.screenshot({path:path.join(out,name+'.png'),fullPage:true});
   }
   // Regresión 6.56: barra de progreso y acciones compactas sin solaparse,
@@ -357,9 +362,9 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.getByTestId('dw-fullpage-preview').waitFor();checks++;
   const cierreFijo=page.getByTestId('dw-preview-fixed-close');
   assert.equal(await cierreFijo.count(),1);checks++;
-  assert.equal(await cierreFijo.evaluate(el=>getComputedStyle(el).position),'fixed');checks++;
+  assert.equal(await cierreFijo.evaluate(el=>getComputedStyle(el.parentElement).position),'sticky');checks++;
   await page.getByTestId('dw-fullpage-preview').evaluate(el=>el.scrollTop=el.scrollHeight);
-  assert.ok(await cierreFijo.isVisible());checks++;
+  assert.ok(await cierreFijo.evaluate(el=>el.getBoundingClientRect().top>=0&&el.getBoundingClientRect().bottom<=innerHeight));checks++;
   await page.getByRole('button',{name:'Cerrar vista previa'}).click();
   await page.getByTestId('dw-fullpage-preview').waitFor({state:'detached'});checks++;
   assert.equal(await page.getByRole('button',{name:'Publicar para asesores'}).count(),0);checks++;
@@ -395,10 +400,10 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await nav.getByRole('button',{name:'Modelos de documentos',exact:true}).click();
   await page.locator('#dw-model-clauses > summary').click();
   await page.getByRole('button',{name:'＋ Escribir cláusula del modelo',exact:true}).click();
-  await page.locator('textarea').fill('Borrador conservado al cambiar de sección.');
+  await page.locator('.dw-redaccion-clausula').fill('Borrador conservado al cambiar de sección.');
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
   await page.getByRole('button',{name:'Cancelar',exact:true}).last().click();
-  assert.ok((await page.locator('textarea').inputValue()).includes('Borrador conservado'));checks++;
+  assert.ok((await page.locator('.dw-redaccion-clausula').textContent()).includes('Borrador conservado'));checks++;
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
   await page.getByRole('button',{name:'Confirmar',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;

@@ -1,3 +1,4 @@
+import { RedaccionClausula } from "./RedaccionClausula";
 import { accionEnlaceCuenta, errorEnlaceCuenta, urlSinCredenciales } from './RetornoCuenta';
 import DatosCompactos from './DatosCompactos';
 import { AnaliticaVisitas } from './Analitica';
@@ -922,7 +923,7 @@ function resolveVars(text, op, extra=undefined) {
   // En plantillas anteriores, "vigencia de {{reserva_vigencia_texto}}"
   // debe leerse "vigencia hasta el DD/MM/AAAA" cuando se eligió fecha fija.
   // La corrección actúa al renderizar: no reescribe modelos ni snapshots.
-  var textoBase=String(text);
+  var textoBase=unificarMonedaPrecio(text);
   // Compatibilidad editorial con las frases estándar anteriores.
   // No modifica modelos personalizados ni datos guardados.
   if(op&&op.tipo==="reserva_alquiler"){
@@ -1361,106 +1362,65 @@ function TokensProtegidosDocWorks({tokens, compact}){
   </div>;
 }
 
-function normalizarNarrativaPrecio(texto){
-  var t=String(texto||"").trim();
-  if(!t) return "El Oferente ofrece la suma de {{precio_letras}} para la compra del Inmueble, en adelante el Precio.-";
-  // precio_letras incluye la moneda; moneda_txt junto al precio era redundante.
-  return t.replace(/\{\{\s*moneda_txt\s*\}\}\s+(?=\{\{\s*precio_letras\s*\}\})/g,"");
+function unificarMonedaPrecio(texto){
+  var moneda=String.raw`(?:\{\{\s*moneda_txt\s*\}\}|\[\s*moneda\s*\])`;
+  var precio=String.raw`(?:\{\{\s*precio_letras\s*\}\}|\[\s*precio(?:\s+de\s+venta)?\s+en\s+letras\s*\])`;
+  // Quitar solo la moneda adyacente. En otro lugar puede expresar una
+  // condición contractual independiente del importe.
+  return String(texto||"")
+    .replace(new RegExp(moneda+"\\s*(?="+precio+")","gi"),"")
+    .replace(new RegExp("("+precio+")\\s*"+moneda,"gi"),"$1");
 }
 
 function escaparHtmlDocWorks(texto){
   return String(texto||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");
 }
-function htmlNarrativaPrecioDocWorks(texto){
-  var t=escaparHtmlDocWorks(normalizarNarrativaPrecio(texto||""));
-  t=t.replace(/\{\{\s*moneda_txt\s*\}\}/g,'<span data-dw-token="moneda_txt" contenteditable="false" style="display:inline-block;padding:1px 5px;border-radius:5px;background:rgba(70,180,230,.13);color:#59c7f3;font-weight:800;cursor:pointer;user-select:none">Moneda</span>');
-  t=t.replace(/\{\{\s*precio_letras\s*\}\}/g,'<span data-dw-token="precio_letras" contenteditable="false" style="display:inline-block;padding:1px 5px;border-radius:5px;background:rgba(70,180,230,.13);color:#59c7f3;font-weight:800;cursor:pointer;user-select:none">Precio en letras</span>');
-  return t;
-}
-function textoNarrativaPrecioDocWorks(root){
-  if(!root) return "";
-  var out="";
-  function recorrer(n){
-    if(n.nodeType===3){out+=n.nodeValue||"";return;}
-    if(n.nodeType!==1) return;
-    var token=n.getAttribute&&n.getAttribute("data-dw-token");
-    if(token){out+="{{"+token+"}}";return;}
-    for(var i=0;i<n.childNodes.length;i++) recorrer(n.childNodes[i]);
-  }
-  for(var i=0;i<root.childNodes.length;i++) recorrer(root.childNodes[i]);
-  return out;
-}
 function PrecioNarrativaEditor({bloque, onSave, onCancel, onSaved=onCancel}){
-  const [texto,setTexto]=useState(normalizarNarrativaPrecio(bloque&&bloque.contenido||""));
+  var original=canonizarChipsHeredados(bloque&&bloque.contenido||"")||PRECIO_NARRATIVAS_PRESET[0].texto;
+  const [texto,setTexto]=useState(original);
   const [titulo,setTitulo]=useState(bloque&&bloque.titulo||"PRECIO");
   const [status,setStatus]=useState(null);
-  const [faltantes,setFaltantes]=useState([]);
   const editorRef=useRef(null);
-  useEffect(function(){
-    if(editorRef.current) editorRef.current.innerHTML=htmlNarrativaPrecioDocWorks(texto);
-  },[]);
-  function syncTexto(){
-    if(editorRef.current) setTexto(textoNarrativaPrecioDocWorks(editorRef.current));
-  }
-  function insertarToken(k){
-    if(tokensDeTextoDocWorks(textoEncabezadoDesdeDom(editorRef.current)).indexOf(k)!==-1)return;
-    var root=editorRef.current;
-    if(!root) return;
-    root.focus();
-    var sel=window.getSelection&&window.getSelection();
-    var range=sel&&sel.rangeCount?sel.getRangeAt(0):null;
-    if(!range || !root.contains(range.commonAncestorContainer)){
-      range=document.createRange(); range.selectNodeContents(root); range.collapse(false);
+  const tokensOriginales=tokensProtegidosAjuste(original);
+  const teniaPrecio=tokensOriginales.includes("{{precio_letras}}");
+  const puedeUsarPresets=tokensOriginales.length===0||tokensOriginales.length===1&&teniaPrecio;
+  const faltaPrecio=!tokensDeTextoDocWorks(texto).includes("precio_letras");
+  async function guardar(){
+    if(status==="saving")return;
+    var contenido=canonizarChipsHeredados(texto.trim());
+    var tokensNuevos=tokensProtegidosAjuste(contenido);
+    // Un modelo que antes no tenía chip puede incorporarlo en cualquier posición.
+    var tokensAComparar=teniaPrecio?tokensNuevos:tokensNuevos.filter(function(t){return t!=="{{precio_letras}}";});
+    if(!titulo.trim()||sintaxisChipInvalida(contenido)||!tokensNuevos.includes("{{precio_letras}}")||
+      (!teniaPrecio&&tokensNuevos.length!==tokensOriginales.length+1)||
+      JSON.stringify(tokensOriginales)!==JSON.stringify(tokensAComparar)){
+      setStatus("missing");return;
     }
-    var span=document.createElement("span");
-    span.setAttribute("data-dw-token",k); span.setAttribute("contenteditable","false");
-    span.style.cssText="display:inline-block;padding:1px 5px;border-radius:5px;background:rgba(70,180,230,.13);color:#59c7f3;font-weight:800;cursor:pointer;user-select:none";
-    span.textContent=k==="moneda_txt"?"Moneda":"Precio en letras";
-    range.deleteContents(); range.insertNode(span);
-    var space=document.createTextNode(" "); span.parentNode.insertBefore(space,span.nextSibling);
-    range.setStartAfter(space); range.collapse(true);
-    sel.removeAllRanges(); sel.addRange(range);
-    syncTexto(); setFaltantes(function(xs){return xs.filter(function(x){return x!==k;});}); setStatus(null);
-  }
-  function guardar(){
-    var contenido=normalizarNarrativaPrecio(editorRef.current?textoNarrativaPrecioDocWorks(editorRef.current):texto);
-    var falt=[];
-    if(contenido.indexOf("{{precio_letras}}")===-1) falt.push("precio_letras");
-    if(falt.length){setFaltantes(falt);setStatus("missing");return;}
     setStatus("saving");
     try{
-      Promise.resolve(onSave({titulo:titulo,contenido:contenido})).then(function(res){
-        if(res&&res.error){setStatus("error");return;}
-        setStatus("saved"); setTimeout(function(){onSaved();},350);
-      }).catch(function(){setStatus("error");});
+      var res=await onSave({titulo:titulo,contenido:contenido});
+      if(res&&res.error){setStatus("error");return;}
+      setStatus("saved");onSaved();
     }catch(e){setStatus("error");}
   }
-  return (
-    <div style={{marginTop:8,padding:12,borderRadius:10,background:"rgba(212,168,83,0.055)",border:"1px solid rgba(212,168,83,0.22)"}}>
-      <div style={{fontSize:12.5,fontWeight:700,color:"var(--text)",marginBottom:4}}>Cómo querés que aparezca el precio</div>
-      <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.45,marginBottom:9}}>Editá toda la oración en un solo campo. El chip celeste <b style={{color:"#59c7f3"}}>Precio en letras</b> se completa automáticamente e incluye la moneda.</div>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:9}}>
-        {PRECIO_NARRATIVAS_PRESET.map(function(preset){return <button key={preset.label} type="button" onClick={function(){if(editorRef.current) editorRef.current.innerHTML=htmlNarrativaPrecioDocWorks(preset.texto);setTexto(preset.texto);setFaltantes([]);setStatus(null);}} style={{padding:"6px 9px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--muted)",cursor:"pointer",fontSize:12}}>{preset.label}</button>;})}
-      </div>
-      <label className="field-label" style={{display:"block",marginBottom:5}}>Redacción del precio</label>
-      <div ref={editorRef} contentEditable suppressContentEditableWarning role="textbox" aria-label="Editar redacción del precio" aria-multiline="true" onInput={syncTexto} style={{width:"100%",minHeight:86,padding:"9px 10px",boxSizing:"border-box",resize:"vertical",overflowY:"auto",border:"1px solid var(--border2)",borderRadius:8,background:"var(--input)",color:"var(--text)",fontSize:16,WebkitTextSizeAdjust:"100%",lineHeight:1.5,outline:"none"}} />
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
-        {!tokensDeTextoDocWorks(texto).includes("precio_letras")&&<button type="button" onMouseDown={function(e){e.preventDefault();}} onClick={function(){insertarToken("precio_letras");}} style={{padding:"6px 9px",borderRadius:8,border:"1px solid rgba(89,199,243,.4)",background:"rgba(89,199,243,.1)",color:"#59c7f3",fontWeight:800,cursor:"pointer",fontSize:12}}>+ Precio en letras</button>}
-      </div>
-      <div style={{fontSize:12,color:"var(--dim)",marginTop:5}}>El chip celeste es el precio completo con su moneda. Si lo eliminás, DocWorks te pedirá volver a insertarlo antes de guardar.</div>
-      {status==="missing"&&<div style={{marginTop:8,padding:"8px 9px",borderRadius:8,border:"1px solid rgba(240,170,60,.35)",background:"rgba(240,170,60,.08)",color:"var(--text)",fontSize:12}}>
-        <b>Falta completar este documento:</b> {faltantes.map(function(k){return <button key={k} type="button" onClick={function(){insertarToken(k);}} style={{marginLeft:6,marginTop:4,padding:"5px 8px",borderRadius:7,border:"1px solid rgba(89,199,243,.4)",background:"rgba(89,199,243,.1)",color:"#59c7f3",fontWeight:800,cursor:"pointer"}}>Insertar {k==="moneda_txt"?"Moneda":"Precio en letras"}</button>;})}
-      </div>}
-      <label className="field-label" style={{display:"block",marginTop:9,marginBottom:5}}>Título de la cláusula</label>
-      <input className="inp" value={titulo} onChange={function(e){setTitulo(e.target.value);}} />
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:10}}>
-        <div style={{fontSize:12,color:status==="error"?"var(--red)":"var(--dim)"}}>{status==="saving"?"Guardando…":status==="saved"?"Guardado ✓":status==="error"?"No se pudo guardar. Intentá de nuevo.":status==="missing"?"Antes de guardar, insertá los campos que faltan.":""}</div>
-        <div style={{display:"flex",gap:7}}><Btn s="sm" v="ghost" onClick={onCancel}>Cancelar</Btn><Btn s="sm" onClick={guardar} disabled={status==="saving"}>Guardar</Btn></div>
-      </div>
+  return <div style={{marginTop:8,padding:12,borderRadius:10,background:"rgba(212,168,83,0.055)",border:"1px solid rgba(212,168,83,0.22)"}}>
+    <div style={{fontSize:12,color:"var(--text)",marginBottom:9}}>Editá la redacción. El chip <b>Precio en letras</b> incluye la moneda.</div>
+    {puedeUsarPresets&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:9}}>
+      {PRECIO_NARRATIVAS_PRESET.map(function(preset){return <button key={preset.label} type="button" className="btn btn-secondary btn-sm" disabled={status==="saving"} onClick={function(){setTexto(preset.texto);setStatus(null);}}>{preset.label}</button>;})}
+    </div>}
+    <RedaccionClausula ref={editorRef} value={texto} onChange={setTexto} label="Editar redacción del precio" labelToken={tokenLabelDocWorks} disabled={status==="saving"}/>
+    {faltaPrecio&&<button type="button" className="btn btn-secondary btn-sm" onMouseDown={function(e){e.preventDefault();}} onClick={function(){editorRef.current.insertarToken("precio_letras");}}>+ Precio en letras</button>}
+    <label className="field-label" style={{display:"block",marginTop:9,marginBottom:5}}>Título de la cláusula
+      <input className="inp" value={titulo} disabled={status==="saving"} onChange={function(e){setTitulo(e.target.value);}}/>
+    </label>
+    {status==="missing"&&<div role="alert">Completá el título y conservá los campos automáticos, incluido Precio en letras.</div>}
+    {status==="error"&&<div role="alert">No se pudo guardar la cláusula.</div>}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:8,marginTop:10}}>
+      <Btn s="sm" v="ghost" onClick={onCancel} disabled={status==="saving"}>Cancelar</Btn>
+      <Btn s="sm" v="success" onClick={guardar} disabled={status==="saving"}>{status==="saving"?"Guardando…":"Guardar"}</Btn>
     </div>
-  );
+  </div>;
 }
-
 var PRECIO_NARRATIVAS_PRESET = [
   {label:"Estándar", texto:"El Oferente ofrece la suma de {{precio_letras}} para la compra del Inmueble, en adelante el Precio.-"},
   {label:"Precio total", texto:"El precio total de la operación se fija en {{precio_letras}}, que las partes reconocen como justo y conveniente.-"},
@@ -1485,6 +1445,26 @@ function HistorialClausulaModal({titulo,source,entidadTipo=undefined,entidadId=u
   },[source,entidadTipo,entidadId,JSON.stringify(historial||[]),JSON.stringify(actual||{})]);
   async function restaurar(v){if(!v||!v.restaurable||typeof onRestore!=="function")return;setRestoring(true);try{var r=await onRestore(v);if(r&&r.error)throw r.error;dwNotify("success","Se solicitó restaurar la versión. El cambio queda registrado mediante el guardado habitual.");onClose();}catch(e){setError("No se pudo restaurar esta versión. "+String(e&&e.message||"Revisá los permisos y la conexión."));}finally{setRestoring(false);}}
   return createPortal(<div role="dialog" aria-modal="true" aria-label={"Historial de cláusula: "+(titulo||"")} style={{position:"fixed",inset:0,zIndex:10050,background:"rgba(4,10,20,.72)",display:"flex",alignItems:"center",justifyContent:"center",padding:12}} onMouseDown={function(e){if(e.target===e.currentTarget)onClose();}}><div style={{width:"min(680px,100%)",maxHeight:"88dvh",overflowY:"auto",background:"var(--card)",color:"var(--text)",border:"1px solid var(--border)",borderRadius:16,padding:16,boxShadow:"0 18px 60px rgba(0,0,0,.35)",boxSizing:"border-box"}}><div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:12}}><div style={{minWidth:0}}><div style={{fontFamily:"DM Serif Display,serif",fontSize:18}}>Historial de cláusula</div><div style={{fontSize:12,color:"var(--dim)",marginTop:4,overflowWrap:"anywhere"}}>{titulo||"Cláusula sin título"}</div></div><button type="button" onClick={onClose} className="btn btn-ghost btn-sm" aria-label="Cerrar historial">✕</button></div>{loading&&<div style={{fontSize:12,color:"var(--dim)",padding:12}}>Cargando historial…</div>}{error&&<div role="alert" style={{padding:10,borderRadius:8,background:"rgba(248,113,113,.08)",border:"1px solid rgba(248,113,113,.25)",color:"var(--red)",fontSize:12,marginBottom:10}}>{error}</div>}{!loading&&!error&&entries.length===0&&<div style={{padding:18,textAlign:"center",border:"1px dashed var(--border)",borderRadius:10,fontSize:12,color:"var(--dim)"}}>Sin cambios registrados.{source==="auditoria"?" Si esperabas ver versiones, revisá los permisos de lectura de auditoría para este rol.":""}</div>}{!loading&&entries.map(function(v){var esActual=v.tipoVersion==="actual";return <div key={v.id} style={{border:"1px solid "+(esActual?"rgba(212,168,83,.55)":"var(--border)"),borderRadius:10,padding:11,marginBottom:8,background:esActual?"rgba(212,168,83,.06)":"transparent"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:6}}><div style={{fontSize:12,fontWeight:750}}>{v.fecha?new Date(v.fecha).toLocaleString("es-AR",{dateStyle:"medium",timeStyle:"short"}):"Estado actual"} · {v.usuario||"—"}</div>{esActual&&<span className="badge badge-gold">Versión actual</span>}</div><div style={{fontSize:12.5,fontWeight:700,marginBottom:4,overflowWrap:"anywhere"}}>{v.titulo||"Cláusula sin título"}</div><div style={{fontSize:12,lineHeight:1.55,color:"var(--muted)",whiteSpace:"pre-wrap",overflowWrap:"anywhere",maxHeight:150,overflowY:"auto"}}>{v.contenido||"(Sin contenido)"}</div>{!esActual&&v.restaurable&&<div style={{display:"flex",justifyContent:"flex-end",marginTop:9}}><button type="button" className="btn btn-secondary btn-sm" disabled={restoring} onClick={function(){requestDwConfirm("¿Restaurar esta versión de la cláusula? Se guardará mediante el mecanismo habitual y quedará registrada como un nuevo cambio.",function(){restaurar(v);});}}>Restaurar esta versión</button></div>}</div>;})}<div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}><button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>Cerrar</button></div></div></div>,document.body);
+}
+
+function VistaModeloDocumento({onClose,children}){
+  const cerrar=useRef<HTMLButtonElement>(null);
+  useBodyScrollLock(true);
+  useEffect(function(){
+    var anterior=document.activeElement as HTMLElement;
+    cerrar.current?.focus({preventScroll:true});
+    return function(){anterior?.focus({preventScroll:true});};
+  },[]);
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label="Vista previa del modelo" data-testid="dw-fullpage-preview"
+      className="dw-model-preview" onKeyDown={function(e){if(e.key==="Escape"){e.stopPropagation();onClose();}}}>
+      <div className="dw-model-preview-header">
+        <strong>Vista previa · Datos de ejemplo</strong>
+        <button type="button" ref={cerrar} data-testid="dw-preview-fixed-close" className="btn btn-secondary"
+          onClick={onClose} aria-label="Cerrar vista previa">×</button>
+      </div>
+      <div className="dw-model-preview-sheet">{children}</div>
+    </div>,document.body);
 }
 
 function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operaciones, puedeEditar, perfil, onSavePerfil, previewOpen, onPreviewChange, puedeVerHistorial, onAgregarClausula}){
@@ -1585,7 +1565,8 @@ function ReservaBloquesPanel({bloques, onUpdate, onMove, clausulasLib, operacion
       </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:6,flexWrap:"wrap",marginBottom:8}}>{puedeEditar&&<><button type="button" onClick={restaurarTodosReserva} className="btn btn-ghost btn-sm">↺ Restaurar todas las cláusulas</button>{perfil&&perfil.plantillas&&perfil.plantillas.reserva&&perfil.plantillas.reserva.restauracionAnterior&&<button type="button" onClick={deshacerRestauracionReserva} className="btn btn-secondary btn-sm">Deshacer restauración</button>}</>}</div>
       {puedeEditar&&<div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 12px",border:"1px solid var(--border)",borderRadius:10,background:"var(--card)",marginBottom:12}}><button type="button" className="btn btn-primary btn-sm" onClick={onAgregarClausula}>＋ Agregar cláusula</button><span style={{fontSize:12,color:"var(--dim)",lineHeight:1.45}}>Agregá una cláusula opcional desde la biblioteca. Las cláusulas obligatorias existentes se editan acá.</span></div>}
-      {previewVisible&&createPortal(<div role="dialog" aria-modal="true" aria-label="Vista previa del modelo" data-testid="dw-fullpage-preview" style={{position:"fixed",inset:0,zIndex:10050,background:"rgba(8,16,30,.88)",overflowY:"auto",overscrollBehavior:"contain",padding:"max(52px,calc(env(safe-area-inset-top) + 18px)) 8px max(12px,env(safe-area-inset-bottom))"}}><button type="button" data-testid="dw-preview-fixed-close" onClick={togglePreview} aria-label="Cerrar vista previa" style={{position:"fixed",top:"max(10px,env(safe-area-inset-top))",right:"max(12px,env(safe-area-inset-right))",zIndex:10052,width:44,height:44,borderRadius:14,border:"1px solid rgba(255,255,255,.28)",background:"#fff",color:"#142a4d",fontSize:25,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 18px rgba(0,0,0,.3)"}}>×</button><div style={{maxWidth:980,margin:"0 auto",background:"#fff",color:"#1f2937",borderRadius:8,boxShadow:"0 18px 65px rgba(0,0,0,.35)",padding:"clamp(16px,3vw,38px)",minHeight:"min(100vh,1050px)",boxSizing:"border-box"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14,borderBottom:"1px solid #e5e7eb",paddingBottom:12}}><strong style={{fontSize:14}}>Vista previa · Datos de ejemplo</strong><button type="button" className="btn btn-secondary btn-sm" onClick={togglePreview} aria-label="Cerrar desde el documento">✕ Cerrar</button></div><div style={{fontSize:12,fontWeight:800,color:"#59c7f3",marginBottom:5}}>VISTA PREVIA CON DATOS DE EJEMPLO · EJEMPLO FICTICIO</div><div style={{fontSize:11.5,color:"var(--dim)",marginBottom:9}}>Solo lectura: usa el constructor del documento con las cláusulas visibles en memoria. No guarda, no modifica operaciones y no exporta el ejemplo.</div>{analisisEjemploReserva&&(analisisEjemploReserva.faltaFormulario.length||analisisEjemploReserva.faltaPlantilla.length||analisisEjemploReserva.tokensNoResueltos.length)?<div style={{marginBottom:9,padding:9,borderRadius:8,background:"rgba(248,113,113,.07)",border:"1px solid rgba(248,113,113,.2)"}}><div style={{fontSize:12,fontWeight:800,color:"var(--red)",marginBottom:4}}>Datos faltantes / avisos</div>{analisisEjemploReserva.faltaFormulario.concat(analisisEjemploReserva.faltaPlantilla).map(function(x,i){return <div key={x.token+"-"+i} style={{fontSize:12,marginTop:3}}>• {x.mensaje}</div>;})}{analisisEjemploReserva.tokensNoResueltos.map(function(x,i){return <div key={x.token+"-r-"+i} style={{fontSize:12,color:"var(--red)",marginTop:3}}>• {x.mensaje}</div>;})}</div>:<div style={{fontSize:12,color:"var(--green)",marginBottom:9}}>✓ Los datos obligatorios configurados aparecen en el documento de ejemplo.</div>}{tokensEjemploReserva.length>0&&<div style={{fontSize:12,color:"var(--red)",marginBottom:8}}>Tokens sin resolver: {tokensEjemploReserva.join(", ")}</div>}<div style={{padding:11,background:"#fff",color:"#1f2937",borderRadius:8,border:"1px solid #d1d5db",fontSize:"clamp(14px,1.1vw,16px)",lineHeight:1.75,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{textoEjemploReserva.split(/(\{\{[^}]+\}\})/g).map(function(part,i){return /\{\{[^}]+\}\}/.test(part)?<span key={i} style={{background:"#fee2e2",color:"#b91c1c",fontWeight:800,borderRadius:3,padding:"0 2px"}}>{part}</span>:<span key={i}>{part}</span>;})}</div></div></div>,document.body)}
+      {previewVisible&&<VistaModeloDocumento onClose={togglePreview}>
+      {analisisEjemploReserva&&(analisisEjemploReserva.faltaFormulario.length||analisisEjemploReserva.faltaPlantilla.length||analisisEjemploReserva.tokensNoResueltos.length)?<div style={{marginBottom:9,padding:9,borderRadius:8,background:"rgba(248,113,113,.07)",border:"1px solid rgba(248,113,113,.2)"}}><div style={{fontSize:12,fontWeight:800,color:"var(--red)",marginBottom:4}}>Datos faltantes / avisos</div>{analisisEjemploReserva.faltaFormulario.concat(analisisEjemploReserva.faltaPlantilla).map(function(x,i){return <div key={x.token+"-"+i} style={{fontSize:12,marginTop:3}}>• {x.mensaje}</div>;})}{analisisEjemploReserva.tokensNoResueltos.map(function(x,i){return <div key={x.token+"-r-"+i} style={{fontSize:12,color:"var(--red)",marginTop:3}}>• {x.mensaje}</div>;})}</div>:<div style={{fontSize:12,color:"var(--green)",marginBottom:9}}>✓ Los datos obligatorios configurados aparecen en el documento de ejemplo.</div>}{tokensEjemploReserva.length>0&&<div style={{fontSize:12,color:"var(--red)",marginBottom:8}}>Tokens sin resolver: {tokensEjemploReserva.join(", ")}</div>}<div className="dw-model-preview-text">{textoEjemploReserva.split(/(\{\{[^}]+\}\})/g).map(function(part,i){return /\{\{[^}]+\}\}/.test(part)?<span key={i} style={{background:"#fee2e2",color:"#b91c1c",fontWeight:800,borderRadius:3,padding:"0 2px"}}>{part}</span>:<span key={i}>{part}</span>;})}</div></VistaModeloDocumento>}
 
       {ordenados.length===0&&(
         <div style={{padding:"12px",borderRadius:9,border:"1px solid var(--border)",color:"var(--dim)",fontSize:12}}>
@@ -4749,7 +4730,7 @@ function normalizarInstrumentoAChips(texto){
     .replace(/\b(?:al\s+)?(?:momento\s+de\s+)?(?:la\s+)?firma\s+{{compra_instrumento_de_firma}}\s*,?\s*lo\s+que\s+ocurra\s+primero/gi,function(m){return m.replace(/,?\s*lo\s+que\s+ocurra\s+primero/i,"");})
     .replace(/(\{\{compra_instrumento_(?:firma|de_firma|a_firma)\}\})\s*,?\s*lo\s+que\s+ocurra\s+primero/gi,"$1");
 }
-function canonizarMarcadoresAjuste(texto){
+function canonizarChipsHeredados(texto){
   var normal=String(texto||"")
     .replace(/\[\s*precio(?:\s+de\s+venta)?\s+en\s+letras\s*\]/gi,"{{precio_letras}}")
     .replace(/\[\s*(?:anticipo|seña|reserva)\s+en\s+letras\s*\]/gi,"{{anticipo_letras}}")
@@ -4757,22 +4738,23 @@ function canonizarMarcadoresAjuste(texto){
     .replace(/\[\s*(?:precio|importe\s+de\s+venta)\s*\]/gi,"{{precio_letras}}")
     .replace(/\[\s*(?:importe|monto)\s+de\s+(?:la\s+)?reserva\s*\]/gi,"{{anticipo_letras}}")
     .replace(/\[\s*(?:instrumento(?:\s+de\s+firma)?|escritura\s+o\s+boleto)\s*\]/gi,"{{compra_instrumento_firma}}");
-  return normalizarInstrumentoAChips(normal);
+  return unificarMonedaPrecio(normal);
+}
+function canonizarMarcadoresAjuste(texto){
+  return normalizarInstrumentoAChips(canonizarChipsHeredados(texto));
 }
 
 function tokensProtegidosAjuste(texto){
   return (String(texto||"").match(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g)||[])
     .map(function(token){return token.replace(/\s+/g,"");});
 }
+function sintaxisChipInvalida(texto){
+  return /\{\{|\}\}/.test(texto.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g,""));
+}
 function conservaChipsAjuste(original,nuevo){
-  // El precio y los demás campos automáticos son inmutables: no se pueden
-  // quitar, sustituir, duplicar ni reordenar mediante ajustes manuales.
-  // Una edición legada también puede traer un chip mal cerrado (por ejemplo
-  // "{{precio" o "}}"). No imprimirlo aunque los otros chips coincidan.
+  // Mantener orden y multiplicidad de los campos automáticos del modelo.
   var textoNuevo=canonizarMarcadoresAjuste(nuevo);
-  var textoSinChips=textoNuevo.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g,"");
-  if(/\{\{|\}\}/.test(textoSinChips))return false;
-  return JSON.stringify(tokensProtegidosAjuste(canonizarMarcadoresAjuste(original)))===
+  return !sintaxisChipInvalida(textoNuevo)&&JSON.stringify(tokensProtegidosAjuste(canonizarMarcadoresAjuste(original)))===
     JSON.stringify(tokensProtegidosAjuste(textoNuevo));
 }
 
@@ -7569,19 +7551,13 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
     ["escribania_clausula","Escribanía"],["exclusividad_vigencia","Vigencia"],["exclusividad_modalidad_texto","Modalidad"],["alquiler_canon_clause","Canon y actualización"],["alquiler_deposito_desc","Depósito"],["alquiler_garantia_detalle","Garantía"],["alquiler_plazo_texto","Plazo"],["devolucion_motivo_texto","Motivo devolución · con texto de respaldo"],["refuerzo_trayectoria","Antecedentes"],["reserva_alquiler_reserva","Reserva alquiler · importe en letras"],["reserva_alquiler_canon","Alquiler mensual · importe en letras"]
   ];
   var tokens=tokensBase.concat(VAR_GROUPS.flatMap(function(g){return g.fields.map(function(f){return [f.key,f.label];});})).filter(function(t,i,arr){return arr.findIndex(function(x){return x[0]===t[0];})===i;});
+  function updateContenido(id,contenido){
+    setDraft(function(prev){return prev.map(function(b){return b.id===id?Object.assign({},b,{contenido:contenido}):b;});});
+  }
   function insertToken(token){
-    if(editId==null)return;
     var actual=draft.find(function(b){return b.id===editId;});
-    var texto=String(actual&&actual.contenido||"");
-    if(!puedeEditar||tokensDeTextoDocWorks(texto).indexOf(token)!==-1)return;
-    var el=contenidoEditorRef.current;
-    var inicio=el&&typeof el.selectionStart==="number"?el.selectionStart:texto.length;
-    var fin=el&&typeof el.selectionEnd==="number"?el.selectionEnd:inicio;
-    var insertar="{{"+token+"}}";
-    var nuevoTexto=texto.slice(0,inicio)+insertar+texto.slice(fin);
-    var arr=draft.map(function(b){return b.id===editId?Object.assign({},b,{contenido:nuevoTexto}):b;});
-    setDraft(arr);
-    setTimeout(function(){if(contenidoEditorRef.current){contenidoEditorRef.current.focus();contenidoEditorRef.current.setSelectionRange(inicio+insertar.length,inicio+insertar.length);}},0);
+    if(puedeEditar&&actual&&!tokensDeTextoDocWorks(actual.contenido).includes(token))
+      contenidoEditorRef.current?.insertarToken(token);
   }
   return <div>
     {editId!=null&&<AvisoClausulasPersonalizadas/>}
@@ -7589,13 +7565,11 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
       <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}><div style={{fontFamily:"DM Serif Display,serif",fontSize:15,color:"var(--text)"}}>Cláusulas del documento · {draft.filter(function(b){return b.activo!==false;}).length} activas</div>{draft.some(function(b){return b.activo===false;})&&<button type="button" className="btn btn-secondary btn-sm" aria-expanded={mostrarInactivas} onClick={function(){setMostrarInactivas(function(v){return !v;});}}>{mostrarInactivas?"Ocultar inactivas":"Ver inactivas ("+draft.filter(function(b){return b.activo===false;}).length+")"}</button>}</div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{puedeEditar&&<>{DW_MODELOS_ESENCIALES_IDS[tipo]&&<button type="button" className="btn btn-secondary btn-sm" onClick={usarModeloEsencial} disabled={!!editId||status==="saving"} title="Conservar todas las cláusulas, pero usar solo las esenciales en el documento">✓ Usar modelo esencial</button>}{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].copiaAnteriorEsencial&&<Btn s="sm" v="secondary" onClick={recuperarModeloAnterior}>Recuperar modelo anterior</Btn>}<button type="button" className="btn btn-secondary btn-sm dw-restore-all-clauses" onClick={reset} disabled={!!editId||status==="saving"} title="Recuperar el modelo original de este documento (con copia para deshacer)">↺ Restaurar todas las cláusulas</button>{perfil&&perfil.plantillas&&perfil.plantillas[tipo]&&perfil.plantillas[tipo].restauracionAnterior&&<Btn s="sm" v="secondary" onClick={deshacerRestauracion}>Deshacer restauración</Btn>}</>}</div>
     </div>
-    {previewVisible&&createPortal(<div role="dialog" aria-modal="true" aria-label="Vista previa del modelo" data-testid="dw-fullpage-preview" style={{position:"fixed",inset:0,zIndex:10050,background:"rgba(8,16,30,.88)",overflowY:"auto",overscrollBehavior:"contain",padding:"max(52px,calc(env(safe-area-inset-top) + 18px)) 8px max(12px,env(safe-area-inset-bottom))"}}><button type="button" data-testid="dw-preview-fixed-close" onClick={togglePreview} aria-label="Cerrar vista previa" style={{position:"fixed",top:"max(10px,env(safe-area-inset-top))",right:"max(12px,env(safe-area-inset-right))",zIndex:10052,width:44,height:44,borderRadius:14,border:"1px solid rgba(255,255,255,.28)",background:"#fff",color:"#142a4d",fontSize:25,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 18px rgba(0,0,0,.3)"}}>×</button><div style={{maxWidth:980,margin:"0 auto",background:"#fff",color:"#1f2937",borderRadius:8,boxShadow:"0 18px 65px rgba(0,0,0,.35)",padding:"clamp(16px,3vw,38px)",minHeight:"min(100vh,1050px)",boxSizing:"border-box"}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14,borderBottom:"1px solid #e5e7eb",paddingBottom:12}}><strong style={{fontSize:14}}>Vista previa · Datos de ejemplo</strong><button type="button" className="btn btn-secondary btn-sm" onClick={togglePreview} aria-label="Cerrar desde el documento">✕ Cerrar</button></div>
-      <div style={{fontSize:12,fontWeight:800,letterSpacing:".04em",color:"#59c7f3",marginBottom:5}}>VISTA PREVIA CON DATOS DE EJEMPLO · EJEMPLO FICTICIO</div>
-      <div style={{fontSize:11.5,color:"var(--dim)",marginBottom:10}}>Solo lectura. Usa el mismo constructor del documento con el borrador en memoria. No guarda en Supabase, no modifica operaciones reales y no exporta el ejemplo.</div>
+    {previewVisible&&<VistaModeloDocumento onClose={togglePreview}>
       {analisisPruebaPlantilla&&(analisisPruebaPlantilla.faltaFormulario.length||analisisPruebaPlantilla.faltaPlantilla.length||analisisPruebaPlantilla.tokensNoResueltos.length)?<div style={{marginBottom:10,padding:9,borderRadius:8,background:"rgba(248,113,113,.07)",border:"1px solid rgba(248,113,113,.2)"}}><div style={{fontSize:12,fontWeight:800,color:"var(--red)",marginBottom:5}}>Datos faltantes / avisos</div>{analisisPruebaPlantilla.faltaFormulario.concat(analisisPruebaPlantilla.faltaPlantilla).map(function(x,i){return <div key={x.token+"-"+i} style={{fontSize:12,color:"var(--text)",marginTop:3}}>• {x.mensaje}</div>;})}{analisisPruebaPlantilla.tokensNoResueltos.map(function(x,i){return <div key={x.token+"-resolver-"+i} style={{fontSize:12,color:"var(--red)",marginTop:3}}>• {x.mensaje}</div>;})}</div>:<div style={{fontSize:12,color:"var(--green)",marginBottom:10}}>✓ Los datos obligatorios configurados aparecen en el documento de ejemplo.</div>}
       {tokensPruebaPlantilla.length>0&&<div style={{fontSize:12,color:"var(--red)",marginBottom:8}}>Tokens sin resolver: {tokensPruebaPlantilla.join(", ")}</div>}
-      <div style={{padding:12,background:"#fff",color:"#1f2937",borderRadius:8,border:"1px solid #d1d5db",fontSize:"clamp(14px,1.1vw,16px)",lineHeight:1.75,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{textoPruebaPlantilla.split(/(\{\{[^}]+\}\})/g).map(function(part,i){return /\{\{[^}]+\}\}/.test(part)?<span key={i} style={{background:"#fee2e2",color:"#b91c1c",fontWeight:800,borderRadius:3,padding:"0 2px"}}>{part}</span>:<span key={i}>{part}</span>;})}</div>
-    </div></div>,document.body)}
+      <div className="dw-model-preview-text">{textoPruebaPlantilla.split(/(\{\{[^}]+\}\})/g).map(function(part,i){return /\{\{[^}]+\}\}/.test(part)?<span key={i} style={{background:"#fee2e2",color:"#b91c1c",fontWeight:800,borderRadius:3,padding:"0 2px"}}>{part}</span>:<span key={i}>{part}</span>;})}</div>
+    </VistaModeloDocumento>}
     {status&&<div style={{marginBottom:9,fontSize:12,color:status==="error"?"var(--red)":status==="saved"?"var(--green)":"var(--gold)"}}>{status==="saving"?"Guardando cambios…":status==="saved"?"Cambios guardados ✓":"No se pudo guardar el modelo del documento."}</div>}
     <div style={{display:"flex",flexDirection:"column",gap:7}}>
       
@@ -7613,7 +7587,7 @@ function CuerpoPlantillaPanel({perfil,tipo,puedeEditar,onChange,clausulas,previe
             <span>{b.activo===false?"—":numeroActivo}</span>
           </div>
           <div style={{flex:1,minWidth:0}}>
-            {editing&&tipo==="reserva"&&b.id==="reserva.precio" ? <PrecioNarrativaEditor bloque={b} onSave={function(cambios){return persist(draft.map(function(x){return x.id===b.id?Object.assign({},x,cambios):x;}));}} onCancel={cancelarBorrador} onSaved={function(){setEditId(null);}}/> : editing ? <div style={{display:"flex",flexDirection:"column",gap:7}}><input className="inp" value={b.titulo} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{titulo:e.target.value}):x;}));}}/><textarea ref={contenidoEditorRef} className="inp" style={{minHeight:120,resize:"vertical",lineHeight:1.6}} value={b.contenido} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{contenido:e.target.value}):x;}));}}/><SelectorCamposClausula tokens={tokens} tipo={tipo} titulo={b.titulo} contenido={b.contenido} onInsert={insertToken}/><div style={{display:"flex",justifyContent:"flex-end",gap:6,flexWrap:"wrap"}}><Btn s="sm" v="ghost" onClick={function(){restaurarBloque(editId);}}>↺ Restaurar esta cláusula</Btn><Btn s="sm" v="ghost" onClick={cancelarBorrador}>Cancelar</Btn><Btn s="sm" v="success" onClick={function(){guardarClausula();}}>Guardar cláusula</Btn></div></div> : <><div className="dw-model-clause-row" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:modoVistaClausulas==="simple"?"nowrap":"wrap",gap:7,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap",flex:"1 1 auto",minWidth:0,overflow:"hidden"}}><button type="button" className="dw-clause-toggle" onClick={function(){setClausulasAbiertas(function(prev){var next=Object.assign({},prev);next[b.id]=!filaAbierta;return next;});}} aria-expanded={filaAbierta} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} style={{fontSize:12.2,fontWeight:650,color:"var(--text)",border:0,padding:"6px 0",background:"transparent",textAlign:"left",cursor:"pointer",whiteSpace:modoVistaClausulas==="simple"?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}><span className="dw-clause-name">{b.titulo||"Cláusula sin título"}</span></button>{esClausulaEsencialModelo(b)&&<span className="dw-essential-label" title="Cláusula esencial del documento: se puede editar, pero no desactivar ni eliminar"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{!esClausulaEsencialModelo(b)&&b.obligatoria===true&&<span className="dw-essential-label dw-essential-label-soft" title="Cláusula obligatoria configurada por la inmobiliaria"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{esCondicional&&modoVistaClausulas!=="simple"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:999,background:"rgba(89,199,243,.10)",color:"#59c7f3",border:"1px solid rgba(89,199,243,.18)"}}>Según la operación</span>}{b.activo===false&&modoVistaClausulas!=="simple"&&<span className="badge">Inactiva</span>}<button type="button" className={"dw-clause-chevron dw-clause-text-toggle "+(filaAbierta?"is-open":"")} aria-label={(filaAbierta?"Ocultar texto de ":"Ver texto de ")+(b.titulo||"cláusula")} aria-expanded={filaAbierta} onClick={function(){setClausulasAbiertas(function(prev){return Object.assign({},prev,{[b.id]:!filaAbierta});});}}><span aria-hidden="true">{filaAbierta?"−":"+"}</span></button></div><div className="dw-clause-actions" style={{display:"flex",gap:4,flex:"0 1 auto",flexWrap:"nowrap",alignItems:"center"}}><button type="button" title="Subir" aria-label={"Mover arriba: "+(b.titulo||"cláusula")} onClick={function(){move(idx,"up");}} disabled={!puedeEditar||idx===0} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button><button type="button" title="Bajar" aria-label={"Mover abajo: "+(b.titulo||"cláusula")} onClick={function(){move(idx,"down");}} disabled={!puedeEditar||idx===draft.length-1} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>{puedeVerHistorial&&<button type="button" title="Historial de la cláusula" onClick={function(){setHistorialSeleccionado(b);}} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<select aria-label={"Estado de la cláusula "+(b.titulo||"")} value={b.activo===false?"apagada":(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&b.obligatoria!==true?"asesor":b.obligatoria===true?"obligatoria":"apagada"} onChange={function(e){var estado=e.target.value;update(b.id,estado==="apagada"?{activo:false}:estado==="asesor"?{activo:true,obligatoria:false}:{activo:true,obligatoria:true});}} style={{maxWidth:155,minWidth:0,width:"100%",fontSize:11,padding:"5px 4px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option>{(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&<option value="asesor">Opcional para el asesor</option>}<option value="apagada">Apagada</option></select>}{puedeEditar&&<button type="button" title="Editar" onClick={function(){if(!editId&&status!=="saving")setEditId(b.id);}} style={{border:"1px solid rgba(212,168,83,.25)",background:"rgba(212,168,83,.06)",color:"var(--gold)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>Editar</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<button type="button" title="Eliminar" onClick={function(){removeBlock(b.id);}} style={{border:"1px solid rgba(248,113,113,.2)",background:"transparent",color:"var(--red)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>×</button>}</div></div>{filaAbierta&&<div className="dw-clause-content" style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginTop:7,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}><span className="dw-clause-inline-number" aria-hidden="true">{b.activo===false?"—":(b.obligatoria?numeroActivo:"—")}</span><span>{mostrarTokensDocWorks(b.contenido)}</span></div>}</>}
+            {editing&&tipo==="reserva"&&b.id==="reserva.precio" ? <PrecioNarrativaEditor bloque={b} onSave={function(cambios){return persist(draft.map(function(x){return x.id===b.id?Object.assign({},x,cambios):x;}));}} onCancel={cancelarBorrador} onSaved={function(){setEditId(null);}}/> : editing ? <div style={{display:"flex",flexDirection:"column",gap:7}}><input className="inp" value={b.titulo} disabled={!puedeEditar} onChange={function(e){setDraft(draft.map(function(x){return x.id===b.id?Object.assign({},x,{titulo:e.target.value}):x;}));}}/><RedaccionClausula ref={contenidoEditorRef} label={"Redacción de "+b.titulo} labelToken={function(token){return tokens.find(function(t){return t[0]===token;})?.[1]||tokenLabelDocWorks(token);}} value={b.contenido} disabled={!puedeEditar||status==="saving"} onChange={function(texto){updateContenido(b.id,texto);}}/><SelectorCamposClausula tokens={tokens} tipo={tipo} titulo={b.titulo} contenido={b.contenido} onInsert={insertToken}/><div style={{display:"flex",justifyContent:"flex-end",gap:6,flexWrap:"wrap"}}><Btn s="sm" v="ghost" onClick={function(){restaurarBloque(editId);}}>↺ Restaurar esta cláusula</Btn><Btn s="sm" v="ghost" onClick={cancelarBorrador}>Cancelar</Btn><Btn s="sm" v="success" onClick={function(){guardarClausula();}}>Guardar cláusula</Btn></div></div> : <><div className="dw-model-clause-row" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:modoVistaClausulas==="simple"?"nowrap":"wrap",gap:7,minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"nowrap",flex:"1 1 auto",minWidth:0,overflow:"hidden"}}><button type="button" className="dw-clause-toggle" onClick={function(){setClausulasAbiertas(function(prev){var next=Object.assign({},prev);next[b.id]=!filaAbierta;return next;});}} aria-expanded={filaAbierta} aria-label={(filaAbierta?"Contraer ":"Desplegar ")+(b.titulo||"cláusula")} style={{fontSize:12.2,fontWeight:650,color:"var(--text)",border:0,padding:"6px 0",background:"transparent",textAlign:"left",cursor:"pointer",whiteSpace:modoVistaClausulas==="simple"?"nowrap":"normal",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}><span className="dw-clause-name">{b.titulo||"Cláusula sin título"}</span></button>{esClausulaEsencialModelo(b)&&<span className="dw-essential-label" title="Cláusula esencial del documento: se puede editar, pero no desactivar ni eliminar"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{!esClausulaEsencialModelo(b)&&b.obligatoria===true&&<span className="dw-essential-label dw-essential-label-soft" title="Cláusula obligatoria configurada por la inmobiliaria"><span aria-hidden="true">🔒</span><span>Obligatoria</span></span>}{esCondicional&&modoVistaClausulas!=="simple"&&<span style={{fontSize:10,padding:"2px 6px",borderRadius:999,background:"rgba(89,199,243,.10)",color:"#59c7f3",border:"1px solid rgba(89,199,243,.18)"}}>Según la operación</span>}{b.activo===false&&modoVistaClausulas!=="simple"&&<span className="badge">Inactiva</span>}<button type="button" className={"dw-clause-chevron dw-clause-text-toggle "+(filaAbierta?"is-open":"")} aria-label={(filaAbierta?"Ocultar texto de ":"Ver texto de ")+(b.titulo||"cláusula")} aria-expanded={filaAbierta} onClick={function(){setClausulasAbiertas(function(prev){return Object.assign({},prev,{[b.id]:!filaAbierta});});}}><span aria-hidden="true">{filaAbierta?"−":"+"}</span></button></div><div className="dw-clause-actions" style={{display:"flex",gap:4,flex:"0 1 auto",flexWrap:"nowrap",alignItems:"center"}}><button type="button" title="Subir" aria-label={"Mover arriba: "+(b.titulo||"cláusula")} onClick={function(){move(idx,"up");}} disabled={!puedeEditar||idx===0} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button><button type="button" title="Bajar" aria-label={"Mover abajo: "+(b.titulo||"cláusula")} onClick={function(){move(idx,"down");}} disabled={!puedeEditar||idx===draft.length-1} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer"}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>{puedeVerHistorial&&<button type="button" title="Historial de la cláusula" onClick={function(){setHistorialSeleccionado(b);}} style={{border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:10.5,whiteSpace:"nowrap"}}>Historial</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<select aria-label={"Estado de la cláusula "+(b.titulo||"")} value={b.activo===false?"apagada":(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&b.obligatoria!==true?"asesor":b.obligatoria===true?"obligatoria":"apagada"} onChange={function(e){var estado=e.target.value;update(b.id,estado==="apagada"?{activo:false}:estado==="asesor"?{activo:true,obligatoria:false}:{activo:true,obligatoria:true});}} style={{maxWidth:155,minWidth:0,width:"100%",fontSize:11,padding:"5px 4px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}><option value="obligatoria">Obligatoria</option>{(b.id==="reserva.refuerzo"||b.id==="alquiler.seguro")&&<option value="asesor">Opcional para el asesor</option>}<option value="apagada">Apagada</option></select>}{puedeEditar&&<button type="button" title="Editar" onClick={function(){if(!editId&&status!=="saving"){updateContenido(b.id,canonizarChipsHeredados(b.contenido));setEditId(b.id);}}} style={{border:"1px solid rgba(212,168,83,.25)",background:"rgba(212,168,83,.06)",color:"var(--gold)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>Editar</button>}{puedeEditar&&!esClausulaEsencialModelo(b)&&<button type="button" title="Eliminar" onClick={function(){removeBlock(b.id);}} style={{border:"1px solid rgba(248,113,113,.2)",background:"transparent",color:"var(--red)",borderRadius:6,padding:"3px 7px",cursor:"pointer"}}>×</button>}</div></div>{filaAbierta&&<div className="dw-clause-content" style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginTop:7,whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}><span className="dw-clause-inline-number" aria-hidden="true">{b.activo===false?"—":(b.obligatoria?numeroActivo:"—")}</span><span>{mostrarTokensDocWorks(b.contenido)}</span></div>}</>}
           </div>
         </div>
       </div>;})}

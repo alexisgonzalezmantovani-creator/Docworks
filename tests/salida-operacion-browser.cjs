@@ -56,7 +56,7 @@ createRoot(document.getElementById('root')).render(new URLSearchParams(location.
 require('esbuild').buildSync({stdin:{contents:source+harness,resolveDir:dir+'/src',loader:'tsx'},bundle:true,jsx:'automatic',format:'iife',outfile:out+'/qa.js'});
 const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.woff2'){res.setHeader('Content-Type','font/woff2');res.end(fs.readFileSync(path.join(dir,'public/fonts/dm-sans-latin.woff2')));}else if(req.url==='/qa.js'){res.setHeader('Content-Type','application/javascript');res.end(fs.readFileSync(out+'/qa.js'));}else{res.setHeader('Content-Type','text/html');res.end('<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script src="/qa.js"></script></body></html>')}});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const engine=process.argv.includes('--webkit')?'webkit':'chromium';const browser=await require('playwright')[engine].launchPersistentContext(path.join(out,'profile'),{headless:true,hasTouch:true,...(engine==='chromium'?{executablePath:process.env.DOCWORKS_BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-zygote','--single-process','--use-gl=angle','--use-angle=swiftshader']}: {})});let checks=0;
-try{for(const [width,height] of [[320,694],[390,844],[430,932],[820,1180],[844,390],[1440,1000]].filter(([w,h])=>!process.argv.includes("--landscape-only")||w===844&&h===390)){const page=await browser.newPage(),errors=[];await page.setViewportSize({width,height});page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:')?r.continue():r.abort());page.setDefaultTimeout(15000);const url='http://127.0.0.1:'+server.address().port;
+try{for(const [width,height] of [[320,694],[390,844],[430,932],[820,1180],[844,390],[1280,800],[1440,1000],[1920,1080]].filter(([w,h])=>!process.argv.includes("--landscape-only")||w===844&&h===390)){const page=await browser.newPage(),errors=[];await page.setViewportSize({width,height});page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:')?r.continue():r.abort());page.setDefaultTimeout(15000);const url='http://127.0.0.1:'+server.address().port;
 const fresh=async()=>{await page.goto(url);await page.getByRole('heading',{name:'Operaciones de prueba',exact:true}).waitFor({timeout:20000});await page.evaluate(()=>localStorage.clear());};const add=async()=>{if(width<760){if(await page.locator('.fab').count()===0)await navOp();await page.locator('.fab').click();}else await page.getByRole('button',{name:'Crear operación de prueba',exact:true}).click();};const navOp=()=>page.locator('.mobile-nav').getByRole('button',{name:'Operaciones',exact:true}).click();
 const open=async()=>{await add();await page.locator('.dw-grupo-alquiler').click();};
 const selectStep=n=>page.locator('.step-dot').nth(n-1).click();
@@ -129,19 +129,23 @@ if(width<640){assert.ok(await page.locator('.op-table td:nth-child(3)').first().
 await page.locator('.op-table').getByRole('button',{name:'Abrir',exact:true}).first().click();assert.equal(await page.getByTestId('conversion').textContent(),'ver');checks++;
 await page.getByRole('button',{name:'Vista de tarjetas',exact:true}).click();
  if(width>=1101){
-   const alineado=await page.locator('.op-card-premium:not(.op-doc-card) .op-card-side').first().evaluate(el=>{
-     const progreso=el.querySelector('.op-side-progress')?.getBoundingClientRect();
-     const acciones=el.querySelector('.op-actions')?.getBoundingClientRect();
+   const layout=await page.locator('.op-card-premium:not(.op-doc-card) .op-card-side').first().evaluate(el=>{
+     const progreso=el.querySelector('.op-side-progress').getBoundingClientRect();
+     const acciones=el.querySelector('.op-action-zone').getBoundingClientRect();
      const panel=el.getBoundingClientRect();
-     const contador=el.querySelector('.op-docs-count')?.getBoundingClientRect();
-     return !!progreso&&!!acciones&&!!contador
-       &&panel.width>=333&&panel.width<=336
-       &&progreso.width>=315&&progreso.width<=321
-       &&Math.abs(progreso.right-acciones.right)<8
-       &&Math.abs(progreso.left-contador.left)<4
-       &&Math.abs(progreso.left-panel.left-14)<3;
+     const contador=el.querySelector('.op-docs-count').getBoundingClientRect();
+     const botones=[...el.querySelectorAll('.op-action-zone button')].map(b=>{
+       const rect=b.getBoundingClientRect();
+       return {texto:b.textContent.trim(),encaja:b.scrollWidth<=b.clientWidth+1&&rect.left>=panel.left&&rect.right<=panel.right+1,
+         centro:Math.round(rect.top+rect.height/2)};
+     });
+     return {ancho:panel.width,anchoProgreso:progreso.width,botones,derecha:Math.abs(progreso.right-acciones.right),
+       izqContador:Math.abs(progreso.left-contador.left),izqPanel:progreso.left-panel.left};
    });
-   assert.ok(alineado,'En PC el panel, divisor, documentos, progreso y acciones deben estar alineados');
+   assert.ok(layout.ancho<334&&layout.anchoProgreso>0&&layout.botones.length>=4&&
+     layout.botones.every(b=>b.encaja&&Math.abs(b.centro-layout.botones[0].centro)<=2)&&
+     layout.derecha<8&&layout.izqContador<4&&Math.abs(layout.izqPanel-14)<3,
+     'Panel de PC alineado y sin recortes: '+JSON.stringify(layout));
    checks++;
  }
 if(width<640){assert.ok(await page.locator('.op-actions').first().evaluate(el=>{const b=el.lastElementChild.getBoundingClientRect(),r=el.getBoundingClientRect();return Math.abs(b.right-r.right)<2;}));checks++;}
@@ -161,10 +165,10 @@ await page.locator('.modal-head').screenshot({path:out+'/editar-'+width+'.png'})
 // Regresión: el cierre real del modal y Editar deben conservar ajustes cancelados.
 await page.goto(url+'/?manualviewer=1');
 const ajustes=page.getByTestId('dw-ajustes-manuales');await ajustes.locator('summary').click();await ajustes.getByRole('button',{name:'Editar',exact:true}).click();
-await ajustes.locator('textarea').first().fill('Texto manual conservado QA.');
-page.once('dialog',d=>d.dismiss());await page.locator('.modal-head .modal-close').click();assert.equal(await ajustes.locator('textarea').first().inputValue(),'Texto manual conservado QA.');checks++;
-page.once('dialog',d=>d.dismiss());await page.locator('.modal-head').getByRole('button',{name:'Editar',exact:true}).click();assert.equal(await page.getByTestId('destino-manual').textContent(),'visor');assert.ok(await ajustes.locator('textarea').first().isVisible());checks++;
-await ajustes.getByRole('button',{name:'Guardar ajuste',exact:true}).click();await ajustes.locator('textarea').waitFor({state:'detached'});assert.ok((await page.locator('.pdf-text').textContent()).includes('Texto manual conservado QA.'));checks++;
+await ajustes.locator('.dw-redaccion-clausula').first().fill('Texto manual conservado QA.');
+page.once('dialog',d=>d.dismiss());await page.locator('.modal-head .modal-close').click();assert.equal(await ajustes.locator('.dw-redaccion-clausula').first().textContent(),'Texto manual conservado QA.');checks++;
+page.once('dialog',d=>d.dismiss());await page.locator('.modal-head').getByRole('button',{name:'Editar',exact:true}).click();assert.equal(await page.getByTestId('destino-manual').textContent(),'visor');assert.ok(await ajustes.locator('.dw-redaccion-clausula').first().isVisible());checks++;
+await ajustes.getByRole('button',{name:'Guardar ajuste',exact:true}).click();await ajustes.locator('.dw-redaccion-clausula').waitFor({state:'detached'});assert.ok((await page.locator('.pdf-text').textContent()).includes('Texto manual conservado QA.'));checks++;
 await page.locator('.modal-head .modal-close').click();await page.getByRole('dialog').waitFor({state:'detached'});checks++;
 await page.goto(url+'/?fullviewer=1');
 assert.equal(await page.getByRole('button',{name:/Ficha completa/}).count(),1);checks++;

@@ -37,7 +37,7 @@ function simularDescarga(formato,modo='ok'){
    const tabActual={label:'Reserva'},op={inmueble_direccion:'Inmueble ficticio'};
    const exportacionCompartida=async()=>{estado.generados++;return {blob:{},filename:'test'};};
    const descargarArchivo=async()=>{estado.intentos++;
-     if(estado.modo==='pendiente-descarga')await new Promise(r=>estado.liberar=r);
+     if(estado.modo==='pendiente-descarga'&&estado.intentos===1)await new Promise(r=>estado.liberar=r);
      else if(estado.intentos===1)throw Error('Descarga simulada interrumpida');};
    const dwNotify=()=>{};
    const entregarArchivo=async()=>{estado.intentos++;
@@ -59,7 +59,7 @@ const a=require(tmp+'/app.cjs');let root,checks=0;
 const botones=()=>[...document.querySelectorAll('button')],boton=t=>{const el=botones().find(b=>b.textContent.trim()===t);assert.ok(el,'botón '+t);return el};
 async function click(el){await a.act(async()=>el.click())}
 async function iniciar(abrirEditor=true){if(root)await a.act(async()=>root.unmount());root=a.createRoot(document.getElementById('root'));await a.act(async()=>{root.render(a.createElement(a.AjustesHarness));await new Promise(r=>setTimeout(r,30))});if(abrirEditor){document.querySelector('[data-testid="dw-ajustes-manuales"]').open=true;await click(document.querySelector('[data-testid="dw-ajustes-manuales"] button'));}}
-async function escribir(valor){const el=document.querySelector('textarea');assert.ok(el);await a.act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,valor);el.dispatchEvent(new Event('input',{bubbles:true}))});}
+async function escribir(valor){const el=document.querySelector('.dw-redaccion-clausula');assert.ok(el);await a.act(async()=>{const primero=el.firstChild;if(primero?.nodeType===Node.TEXT_NODE)primero.nodeValue=valor;else el.prepend(document.createTextNode(valor));el.dispatchEvent(new Event('input',{bubbles:true}))});}
 async function check(label,fn){await fn();checks++;console.log('OK',label)}
 (async()=>{
  await check('PDF, Word y WhatsApp nunca abren dos entregas a la vez',async()=>{
@@ -127,15 +127,15 @@ async function check(label,fn){await fn();checks++;console.log('OK',label)}
   await a.act(async()=>new Promise(r=>setTimeout(r,360)));
   assert.match(document.querySelector('.doc-viewer-tab-content')?.textContent||'',/Guardá o descartá los ajustes manuales/);
   assert.equal(document.body.textContent.includes('Generar documento final'),false);
-  assert.equal(document.querySelector('textarea')?.value,'Texto manual que debe conservarse.','no perdió el borrador');
+  assert.equal(document.querySelector('.dw-redaccion-clausula')?.textContent,'Texto manual que debe conservarse.','no perdió el borrador');
  });
- await check('cancelar cierre conserva el texto manual sin guardar',async()=>{const antes=preguntas;await click(boton('Cerrar visor QA'));assert.equal(preguntas,antes+1);assert.equal(document.querySelector('textarea')?.value,'Texto manual que debe conservarse.');});
- await check('cancelar paso al formulario conserva visor y borrador',async()=>{await click(boton('Editar operación QA'));assert.equal(document.querySelector('#destino').textContent,'visor');assert.ok(document.querySelector('textarea'));});
- await check('cancelar cambio de pestaña conserva el borrador',async()=>{await click(botones().find(b=>b.textContent.includes('Ficha completa')));assert.ok(document.querySelector('textarea'));});
- await check('fallo al guardar conserva texto y muestra error',async()=>{a.modoAjustes('error');await click(boton('Guardar ajuste'));assert.ok(document.querySelector('[role="alert"]').textContent.includes('Error de guardado de prueba'));assert.equal(document.querySelector('textarea').value,'Texto manual que debe conservarse.');});
- await check('respuesta nula no cierra el editor ni informa éxito',async()=>{a.modoAjustes('sin_respuesta');await click(boton('Guardar ajuste'));assert.match(document.querySelector('[role="alert"]').textContent,/no confirmó/);assert.equal(document.querySelector('textarea').value,'Texto manual que debe conservarse.');});
- await check('respuesta vacía conserva los cambios para reintentar',async()=>{a.modoAjustes('vacia');await click(boton('Guardar ajuste'));assert.match(document.querySelector('[role="alert"]').textContent,/no confirmó/);assert.equal(document.querySelector('textarea').value,'Texto manual que debe conservarse.');});
- await check('no permite salir mientras se confirma el guardado',async()=>{a.modoAjustes('demora');await click(boton('Guardar ajuste'));await click(boton('Cerrar visor QA'));assert.ok(document.querySelector('textarea'));assert.equal(document.querySelector('textarea').disabled,true);await a.act(async()=>{a.resolverAjustes();await new Promise(r=>setTimeout(r,30))});assert.equal(document.querySelector('textarea'),null);assert.ok(Object.values(a.estadoAjustes().ultimoGuardado.ajustes_manuales.reserva).includes('Texto manual que debe conservarse.'));});
+ await check('cancelar cierre conserva el texto manual sin guardar',async()=>{const antes=preguntas;await click(boton('Cerrar visor QA'));assert.equal(preguntas,antes+1);assert.equal(document.querySelector('.dw-redaccion-clausula')?.textContent,'Texto manual que debe conservarse.');});
+ await check('cancelar paso al formulario conserva visor y borrador',async()=>{await click(boton('Editar operación QA'));assert.equal(document.querySelector('#destino').textContent,'visor');assert.ok(document.querySelector('.dw-redaccion-clausula'));});
+ await check('cancelar cambio de pestaña conserva el borrador',async()=>{await click(botones().find(b=>b.textContent.includes('Ficha completa')));assert.ok(document.querySelector('.dw-redaccion-clausula'));});
+ await check('fallo al guardar conserva texto y muestra error',async()=>{a.modoAjustes('error');await click(boton('Guardar ajuste'));assert.ok(document.querySelector('[role="alert"]').textContent.includes('Error de guardado de prueba'));assert.equal(document.querySelector('.dw-redaccion-clausula').textContent,'Texto manual que debe conservarse.');});
+ await check('respuesta nula no cierra el editor ni informa éxito',async()=>{a.modoAjustes('sin_respuesta');await click(boton('Guardar ajuste'));assert.match(document.querySelector('[role="alert"]').textContent,/no confirmó/);assert.equal(document.querySelector('.dw-redaccion-clausula').textContent,'Texto manual que debe conservarse.');});
+ await check('respuesta vacía conserva los cambios para reintentar',async()=>{a.modoAjustes('vacia');await click(boton('Guardar ajuste'));assert.match(document.querySelector('[role="alert"]').textContent,/no confirmó/);assert.equal(document.querySelector('.dw-redaccion-clausula').textContent,'Texto manual que debe conservarse.');});
+ await check('no permite salir mientras se confirma el guardado',async()=>{a.modoAjustes('demora');await click(boton('Guardar ajuste'));await click(boton('Cerrar visor QA'));assert.ok(document.querySelector('.dw-redaccion-clausula'));assert.equal(document.querySelector('.dw-redaccion-clausula').getAttribute('contenteditable'),'false');await a.act(async()=>{a.resolverAjustes();await new Promise(r=>setTimeout(r,30))});assert.equal(document.querySelector('.dw-redaccion-clausula'),null);assert.ok(Object.values(a.estadoAjustes().ultimoGuardado.ajustes_manuales.reserva).includes('Texto manual que debe conservarse.'));});
  await check('archivo PDF y Word contienen el ajuste confirmado y no el texto anterior',async()=>{
   const op=a.estadoAjustes().ultimoGuardado;
   assert.ok(op?.ajustes_manuales?.reserva?.['reserva.qa'],'debe existir el ajuste confirmado');
@@ -194,7 +194,7 @@ async function check(label,fn){await fn();checks++;console.log('OK',label)}
   const llamadasAntes=a.estadoAjustes().llamadas;
   await click(boton('Guardar ajuste'));
   assert.equal(a.estadoAjustes().llamadas,llamadasAntes,'no se debe enviar ningún cambio artificial');
-  assert.equal(document.querySelector('textarea'),null,'el editor se cierra si no hubo cambios');
+  assert.equal(document.querySelector('.dw-redaccion-clausula'),null,'el editor se cierra si no hubo cambios');
   assert.equal(document.querySelector('[data-ajuste-id="reserva.legado"]').textContent.includes('Ajuste guardado'),false);
  });
  await a.act(async()=>root.unmount());dom.window.close();console.log('APROBADAS',checks,'pruebas del visor y ajustes manuales con servicios simulados.');

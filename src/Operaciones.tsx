@@ -1,3 +1,4 @@
+import { RedaccionClausula } from "./RedaccionClausula";
 import { solicitarCaptcha } from './Captcha';
 import { UsoInmobiliarias } from './UsoInmobiliarias';
 import { crearAccesoCuenta } from './AccesoCuenta';
@@ -728,7 +729,74 @@ export const GS = `
    .doc-reading-scroll{display:flex;flex-direction:column;min-height:0;overflow:hidden;}
    .doc-reading-scroll>.pdf-preview{height:100%;min-height:0;}
    .doc-reading-scroll>.pdf-preview>.pdf-content{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;}
-   @media (max-width:640px){ .pdf-content-lg{max-height:none;padding:14px 12px;} .pdf-content-lg .pdf-text{font-size:12px;} }
+.doc-reading-scroll .pdf-text,.dw-model-preview-text{
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:clamp(16px,calc(14px + .34vw),19px);
+  line-height:1.65;
+  overflow-wrap:anywhere;
+}
+.dw-model-preview{
+  position:fixed;
+  inset:0;
+  z-index:10050;
+  background:rgba(8,16,30,.88);
+  overflow:auto;
+  overscroll-behavior:contain;
+  padding:env(safe-area-inset-top) max(8px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+}
+.dw-model-preview-header{
+  position:sticky;
+  top:0;
+  z-index:1;
+  max-width:1040px;
+  margin:0 auto;
+  padding:4px clamp(12px,2.7vw,36px);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  color:#1f2937;
+  background:#fff;
+  border-bottom:1px solid #e5e7eb;
+}
+.dw-model-preview-header button{
+  flex:none;
+  width:44px;
+  height:44px;
+  font-size:22px;
+  padding:0;
+}
+.dw-model-preview-sheet{
+  max-width:1040px;
+  margin:0 auto;
+  padding:12px clamp(12px,2.7vw,36px) 24px;
+  background:#fff;
+  color:#1f2937;
+  border-radius:0 0 9px 9px;
+  box-shadow:0 18px 65px rgba(0,0,0,.35);
+}
+.dw-model-preview-text{
+  color:#1f2937;
+  white-space:pre-wrap;
+}
+.dw-redaccion-clausula.inp{
+  min-height:90px;
+  min-width:0;
+  font-size:16px;
+  line-height:1.65;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  cursor:text;
+}
+.dw-redaccion-chip{
+  display:inline-block;
+  max-width:100%;
+  border-radius:5px;
+  padding:0 5px;
+  background:#d8efff;
+  color:#07547b;
+  font:700 .84em/1.55 "DM Sans",sans-serif;
+}
    .monto-tag{font-family:'DM Serif Display',serif;font-size:16px;color:var(--gold);}
 
    /* ── Dropdown ── */
@@ -2113,21 +2181,29 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
-/* Operaciones PC: correr toda la columna derecha, con divisor y acciones,
-   para alinearla con el progreso. Sin afectar móvil ni tablet. */
+/* En PC el contenido de los controles determina la posición del divisor. */
 @media (min-width:1101px){
+  .dw-dashboard-root .op-card-premium .op-card-inner{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) fit-content(46%);
+  }
   .dw-dashboard-root .op-card-premium .op-card-side{
-    flex:0 0 334px!important;
-    width:334px!important;
-    min-width:334px!important;
-    max-width:334px!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions{
+    justify-content:flex-start!important;
+    gap:5px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side .op-actions>.btn{
+    padding-inline:8px!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side>.op-side-progress{
     width:100%!important;
-    max-width:100%!important;
-    align-self:stretch!important;
     flex:0 0 auto!important;
   }
+  .dw-dashboard-root .op-card-premium .op-card-side>.op-side-extra:last-child:not(:first-child){contain:inline-size}
 }
 
 /* Botones táctiles cómodos sin moverlos debajo de la tarjeta en iPhone. */
@@ -2314,133 +2390,76 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
-/* iPad/tablet: dar protagonismo a la hoja del documento.
-   Mantener el scroll interior independiente, sin modificar el diseño iPhone. */
-@media (min-width:641px) and (max-width:1180px){
-  .modal-overlay-viewer{padding:10px!important;}
-  .modal-overlay-viewer .viewer-modal{
-    width:calc(100vw - 20px)!important;
-    max-width:1100px!important;
-    height:calc(100dvh - 20px)!important;
-    max-height:calc(100dvh - 20px)!important;
-  }
-  .modal-overlay-viewer .viewer-modal .modal-body{padding:12px 14px 14px;}
-  .modal-overlay-viewer .viewer-modal .doc-viewer-tab-content:not(.doc-tab-static){
-    min-height:0!important;
-    overflow-y:auto!important;
-    overflow-x:hidden!important;
-  }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
-    flex:0 0 auto!important;
-    height:min(59vh,650px)!important; /* fallback para WebKit sin dvh */
-    height:min(59dvh,650px)!important;
-    min-height:0!important;
-    max-height:min(59vh,650px)!important;
-    max-height:min(59dvh,650px)!important;
-    margin:4px 0 8px!important;
-    padding:0!important;
-    overflow:hidden!important;
-    border-radius:13px;
-  }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
-    display:flex!important;
-    flex-direction:column!important;
-    flex:1 1 0%!important;
-    height:100%!important;
-    min-height:0!important;
-    max-height:100%!important;
-    overflow:hidden!important;
-  }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview>.pdf-content{
-    display:block!important;
-    flex:1 1 0%!important;
-    height:0!important;
-    min-height:0!important;
-    max-height:100%!important;
-    overflow-y:auto!important;
-    overflow-x:hidden!important;
-    -webkit-overflow-scrolling:touch;
-    overscroll-behavior:contain;
-  }
+/* Lectura en pantalla. La maquetación de PDF y Word usa sus propios estilos. */
+.modal-overlay-viewer .viewer-modal .doc-reading-scroll{
+  flex:1 0 155px;
+  min-height:155px;
+  margin:4px 0 0;
+  padding:0;
+  overflow:hidden;
+  border-radius:13px;
 }
-
-/* 6.70 — visor iPhone: ventana de lectura con borde y scroll propio.
-   La operación conserva su flujo; al abrir Ajustes, el listado puede
-   desplazarse sin tapar el documento ni perder la terminación inferior. */
-@media (max-width:640px){
-  .modal-overlay-viewer .viewer-modal .modal-body{
-    min-height:0!important;
-    padding:12px 12px calc(14px + env(safe-area-inset-bottom,0px))!important;
-    background:var(--card)!important;
-  }
-  .modal-overlay-viewer .viewer-modal .doc-viewer-tab-content:not(.doc-tab-static){
-    flex:1 1 auto!important;
-    min-height:0!important;
-    overflow-y:auto!important;
-    overflow-x:hidden!important;
-    padding:0 2px 8px!important;
-    overscroll-behavior-y:contain;
-    -webkit-overflow-scrolling:touch;
-  }
-  .modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][open]{
-    flex:0 1 auto!important;
-    max-height:min(31dvh,270px)!important;
-    min-height:72px;
-    overflow-y:auto!important;
-    overflow-x:hidden!important;
-    overscroll-behavior:contain;
-    -webkit-overflow-scrolling:touch;
-  }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
-    display:flex!important;
-    flex:1 0 205px!important;
-    min-height:190px!important;
-    max-height:min(50dvh,460px)!important;
-    margin:14px 0 6px!important;
-    padding:6px!important;
-    border:1px solid var(--border2)!important;
-    border-radius:16px!important;
-    background:var(--surface2)!important;
-    box-shadow:0 6px 22px rgba(15,35,60,.10)!important;
-    overflow:hidden!important;
-    overscroll-behavior:contain;
-  }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
-    display:flex!important;
-    flex:1 1 auto!important;
-    flex-direction:column!important;
-    height:100%!important;
-    min-height:0!important;
-    max-height:100%!important;
-    margin:0!important;
-    padding:0!important;
-    border:0!important;
-    border-radius:10px!important;
-    background:#fff!important;
-    box-shadow:none!important;
-    overflow:hidden!important;
-  }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{
-    display:none!important;
-    position:static!important;
-  }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview>.pdf-content{
-    display:block!important;
-    flex:1 1 auto!important;
-    height:auto!important;
+.modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
+  flex:1 1 0%;
+  height:auto;
+  min-height:0;
+  overflow:hidden;
+  margin-bottom:0!important;
+}
+.modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-content-lg{
+  flex:1 1 0%;
+  height:0;
+  overflow-x:hidden;
+  padding:clamp(12px,2vw,26px) clamp(12px,3.4vw,48px) 24px;
+}
+.viewer-modal .doc-viewer-tabs{margin-bottom:8px}
+.viewer-modal .reserva-compact-summary{margin-bottom:6px}
+.viewer-modal .reserva-status-strip{padding:6px 10px}
+.viewer-modal .reserva-mini-timeline{margin-top:4px}
+.viewer-modal details[data-testid="dw-ajustes-manuales"]{padding:4px 12px;margin-bottom:6px}
+@media (min-width:641px){
+  .modal-overlay-viewer{align-items:flex-start!important;padding:max(6px,env(safe-area-inset-top)) 8px!important}
+  .modal-overlay-viewer .viewer-modal{
+    width:min(1200px,100%)!important;
+    max-width:100%!important;
+    height:calc(100dvh - max(6px,env(safe-area-inset-top)) - 6px)!important;
     max-height:none!important;
     min-height:0!important;
-    margin:0!important;
+  }
+}
+@media (max-width:640px){
+  .modal-overlay-viewer .viewer-modal .modal-body{
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px))!important;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-viewer-tab-content:not(.doc-tab-static){
     overflow-y:auto!important;
     overflow-x:hidden!important;
-    border:0!important;
-    border-radius:10px!important;
-    padding:20px 14px 32px!important;
-    background:#fff!important;
-    box-shadow:none!important;
-    overscroll-behavior:contain;
-    -webkit-overflow-scrolling:touch;
+    padding:0 2px 4px!important;
   }
+  .modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][open]{
+    flex:0 0 auto;
+    max-height:min(31dvh,270px);
+    min-height:72px;
+    overflow:auto;
+    overscroll-behavior:contain;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
+    padding:0;
+    border:0;
+    background:#fff;
+  }
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{display:none}
+}
+
+/* En horizontal corto, dejar más alto útil para la hoja y conservar los controles. */
+@media (orientation:landscape) and (max-height:500px){
+  .viewer-modal .modal-body{padding-top:6px;padding-bottom:8px}
+  .viewer-modal .doc-viewer-tabs{margin-bottom:5px;padding-bottom:4px}
+  .viewer-modal .reserva-compact-summary{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+  .viewer-modal .reserva-status-strip{flex:1 0 auto}
+  .viewer-modal .reserva-mini-timeline{flex:1 1 auto;margin-top:0}
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll{flex-basis:175px;min-height:175px}
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{display:none}
 }
 
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
@@ -5611,7 +5630,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   // Editor opcional de ajustes finales. Cada chip es una pieza de solo lectura.
   const [ajusteEditando,setAjusteEditando]=useState(null);
   const [editorEnVistaPrevia,setEditorEnVistaPrevia]=useState(false);
-  const [partesAjuste,setPartesAjuste]=useState([]);
+  const [redaccionAjuste,setRedaccionAjuste]=useState("");
   const [guardandoAjuste,setGuardandoAjuste]=useState(false);
   const [errorAjuste,setErrorAjuste]=useState("");
   function bloquesParaAjustes(){
@@ -5637,12 +5656,12 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     setEditorEnVistaPrevia(true);
   }
   function cerrarEdicionAjuste(){
-    setAjusteEditando(null);setPartesAjuste([]);setErrorAjuste("");
+    setAjusteEditando(null);setRedaccionAjuste("");setErrorAjuste("");
     setEditorEnVistaPrevia(false);
   }
   const ajusteOriginalRef=useRef("");
   function hayCambiosAjuste(){
-    return ajusteEditando!==null&&partesAjuste.map(function(p){return p.chip||p.texto||"";}).join("")!==ajusteOriginalRef.current;
+    return ajusteEditando!==null&&redaccionAjuste!==ajusteOriginalRef.current;
   }
   function permitirDescartarAjuste(){
     if(guardandoAjuste){dwNotify("info","Primero debe finalizar el guardado de la cláusula.");return false;}
@@ -5654,32 +5673,29 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     if(!salidaGuardRef)return;
     salidaGuardRef.current=permitirDescartarAjuste;
     return function(){salidaGuardRef.current=null;};
-  },[salidaGuardRef,ajusteEditando,partesAjuste,guardandoAjuste]);
+  },[salidaGuardRef,ajusteEditando,redaccionAjuste,guardandoAjuste]);
   // Evitar perder cambios al recargar o cerrar la pestaña.
   useEffect(function(){
     if(!hayCambiosAjuste()&&!guardandoAjuste)return;
     function advertirSalida(e){e.preventDefault();e.returnValue="";}
     window.addEventListener("beforeunload",advertirSalida);
     return function(){window.removeEventListener("beforeunload",advertirSalida);};
-  },[ajusteEditando,partesAjuste,guardandoAjuste]);
+  },[ajusteEditando,redaccionAjuste,guardandoAjuste]);
   // Una operación nueva nunca debe heredar el borrador visual de otra.
   useEffect(function(){cerrarEdicionAjuste();ajusteOriginalRef.current="";},[op&&op.id]);
   function abrirAjuste(b){
     var guardado=op&&op.ajustes_manuales&&op.ajustes_manuales[tab]&&op.ajustes_manuales[tab][b.id];
     var contenido=canonizarMarcadoresAjuste(typeof guardado==="string"?guardado:String(b.contenido||""));
-    setPartesAjuste(contenido.split(/(\{\{\s*[a-zA-Z0-9_]+\s*\}\})/g).map(function(p){
-      return /^\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(p)?{chip:p}:{texto:p};
-    }));
+    setRedaccionAjuste(contenido);
     ajusteOriginalRef.current=contenido;
     setAjusteEditando(b.id);setErrorAjuste("");
   }
   function renderAjusteEditor(b,vigente){
     return <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
-      <div style={{display:"flex",flexDirection:"column",gap:8,alignItems:"stretch",minWidth:0}} data-testid="dw-ajuste-editor-flujo">
-        {partesAjuste.map(function(p,i){return p.chip
-          ?<span key={i} data-testid="dw-ajuste-chip" data-token={p.chip.replace(/[{}]/g,"").trim()} title="Campo automático protegido: se completa con los datos de esta operación" style={{display:"inline-flex",alignSelf:"flex-start",alignItems:"center",gap:5,borderRadius:999,padding:"7px 10px",fontSize:11.5,fontWeight:750,background:"rgba(56,189,248,.16)",color:"#0284c7",border:"1px solid rgba(56,189,248,.55)",maxWidth:"100%",overflowWrap:"anywhere"}}><span aria-hidden="true">🔒</span>{tokenLabelDocWorks(p.chip.replace(/[{}]/g,"").trim())}</span>
-          :<textarea key={i} className="inp" aria-label={"Editar "+(b.titulo||"cláusula")+" · fragmento "+(i+1)} rows={2} ref={function(el){if(el){el.style.height="auto";el.style.height=Math.max(72,el.scrollHeight+2)+"px";}}} style={{display:"block",width:"100%",minWidth:0,maxWidth:"100%",overflowY:"hidden",resize:"none",lineHeight:1.5,boxSizing:"border-box"}} value={p.texto} disabled={guardandoAjuste} onChange={function(e){var valor=e.target.value;e.target.style.height="auto";e.target.style.height=Math.max(72,e.target.scrollHeight+2)+"px";setPartesAjuste(function(prev){return prev.map(function(item,j){return j===i?{texto:valor}:item;});});}}/>;})}
-      </div>
+      <RedaccionClausula value={redaccionAjuste} onChange={setRedaccionAjuste} disabled={guardandoAjuste}
+        label={"Redacción de "+(b.titulo||"la cláusula")} labelToken={function(token){
+          return token==="precio_letras"?tokenLabelDocWorks(token):labelTokenObligatorio(token)||tokenLabelDocWorks(token);
+        }}/>
       {errorAjuste&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorAjuste}</div>}
       <div style={{display:"flex",gap:7,justifyContent:"flex-end",flexWrap:"wrap"}}>
         {vigente&&<button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){restaurarAjuste(b);}}>Restaurar original</button>}
@@ -5690,11 +5706,9 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   }
   async function guardarAjuste(b){
     if(!onUpdateOperation||guardandoAjuste)return;
-    var contenido=partesAjuste.map(function(p){return p.chip||p.texto||"";}).join("");
-    if(!contenido.trim()||partesAjuste.some(function(p){
-      return typeof p.texto==="string"&&(p.texto.includes("{{")||p.texto.includes("}}"));
-    })){
-      setErrorAjuste("Revisá el texto: no debe estar vacío ni contener chips escritos manualmente.");return;
+    var contenido=redaccionAjuste;
+    if(!contenido.trim()){
+      setErrorAjuste("Completá la redacción de la cláusula.");return;
     }
     if(!conservaChipsAjuste(b.contenido,contenido)){
       setErrorAjuste("Los campos automáticos son obligatorios: no se pueden eliminar, cambiar de orden ni reemplazar.");return;
@@ -5961,8 +5975,8 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
     var doc=getDoc();
     var b=[];
     if(!doc.documentoPropio){
-      b.push({t:doc.titulo,bold:true,size:13.5,center:true});
-      if(doc.subtitulo) b.push({t:doc.subtitulo,dim:true,size:10.5,center:true});
+      b.push({t:doc.titulo,bold:true,size:"1.15em",center:true});
+      if(doc.subtitulo) b.push({t:doc.subtitulo,dim:true,size:".88em",center:true});
       if(doc.nroRecibo) b.push({t:"N° "+doc.nroRecibo,bold:true,center:true});
       b.push({blank:true});
       b.push({t:"Lugar: "+(doc.ciudad||"")+"  |  Fecha: "+(doc.fecha||""),dim:true});
@@ -6065,7 +6079,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
         {onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
-          <details className="card" style={{padding:12,marginBottom:12,flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
+          <details className="card" style={{flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
               ✎ Ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
             </summary>
@@ -6096,7 +6110,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
             <div className="pdf-content pdf-content-lg">
               <div className="pdf-text">
                 {previewBlocks().map(function(bl,i){
-                  if(bl.blank) return <div key={i} style={{height:16}}/>;
+                  if(bl.blank) return <div key={i} style={{height:9}}/>;
                   if(bl.firmaRow) return <div key={i} data-testid="dw-preview-firmas-row" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",columnGap:22,margin:"34px 2px 24px",alignItems:"start"}}>
                     {bl.firmaRow.map(function(f,j){return f?<div key={j} style={{gridColumn:bl.firmaRow.length===1?"1 / -1":undefined,width:bl.firmaRow.length===1?"48%":"100%",justifySelf:"center",minWidth:0,textAlign:"center",color:"#1f2937",fontSize:11}}>
                       <div style={{borderTop:"1px solid #64748b",margin:"0 8px 10px"}}/>
@@ -6109,7 +6123,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                   if(bl.sep) return <div key={i} style={{borderTop:"1px solid #d1d5db",margin:"10px 0"}}/>;
                   if(bl.clause && bl.prefix){
                     return (
-                      <div key={i} style={{textAlign:"justify",marginBottom:15,color:"#1f2937",lineHeight:1.62}}>
+                      <div key={i} style={{textAlign:"justify",marginBottom:8,color:"#1f2937",lineHeight:1.62}}>
                         <strong style={{color:(perfil&&perfil.plantillaEstilo==="clasico")?"#1a1a1a":((perfil&&perfil.colorPrimario)||"#142a4d")}}>{bl.prefix}</strong>
                         {bl.bloqueId&&onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().some(function(b){return b.id===bl.bloqueId;})&&<button type="button" data-testid="dw-editar-desde-preview" aria-label={"Editar cláusula "+bl.prefix} title="Editar esta cláusula aquí mismo" onClick={function(){editarDesdeVistaPrevia(bl.bloqueId);}} style={{margin:"0 6px",border:"1px solid #bcd7e8",borderRadius:5,padding:"2px 7px",background:"#eef7fd",color:"#17618d",fontSize:11,fontWeight:700,cursor:"pointer"}}>{editorEnVistaPrevia&&ajusteEditando===bl.bloqueId?"Cerrar edición":"✎ Editar"}</button>}
                         {bl.infoSena&&<details style={{display:"inline-block",position:"relative",margin:"0 5px",verticalAlign:"middle",textAlign:"left"}}>

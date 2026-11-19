@@ -6,13 +6,13 @@ global.IS_REACT_ACT_ENVIRONMENT=true;
 global.MessageChannel=class {constructor(){this.port1={onmessage:null};this.port2={postMessage:()=>setTimeout(()=>this.port1.onmessage&&this.port1.onmessage({data:undefined}),0)};}};
 let confirmations=0,autoConfirm=true,pendingConfirm=null;window.addEventListener('dw:confirm',e=>{confirmations++;if(autoConfirm)e.detail.onConfirm();else pendingConfirm=e.detail.onConfirm;});
 const rootDir=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'docworks-ui-'));
-require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(rootDir,'src/App.tsx'),'utf8')+'\nimport {act} from "react"; import {createRoot} from "react-dom/client"; export {act,createRoot,CuerpoPlantillaPanel,PrecioNarrativaEditor,normalizarNarrativaPrecio,htmlNarrativaPrecioDocWorks,getDefaultBodyBlocks,PLANTILLA_TIPOS,getBodyBlocksConfig,getBodyBlocksForDocument,crearSnapshotPlantillaOperacion,navegarConProteccionModelo};',resolveDir:path.join(rootDir,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'ui.cjs')});
+require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.join(rootDir,'src/App.tsx'),'utf8')+'\nimport {act} from "react"; import {createRoot} from "react-dom/client"; export {act,createRoot,CuerpoPlantillaPanel,PrecioNarrativaEditor,canonizarMarcadoresAjuste,resolveVars,getDefaultBodyBlocks,PLANTILLA_TIPOS,getBodyBlocksConfig,getBodyBlocksForDocument,crearSnapshotPlantillaOperacion,navegarConProteccionModelo};',resolveDir:path.join(rootDir,'src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'ui.cjs')});
 const app=require(path.join(tmp,'ui.cjs'));
 let count=0;function check(label,fn){fn();count++;console.log('OK',label);}
 const buttons=()=>Array.from(document.querySelectorAll('button'));
 function button(text){const b=buttons().find(b=>b.textContent.trim()===text);assert.ok(b,'botón '+text);return b;}
 async function click(el){await app.act(async()=>{el.click();});}
-async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));});}
+async function fill(el,value){assert.ok(el);await app.act(async()=>{if(el.matches('.dw-redaccion-clausula')){el.textContent=value;el.dispatchEvent(new Event('input',{bubbles:true}));return;}const proto=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));});}
 (async()=>{
  for(const tipo of app.PLANTILLA_TIPOS){
   let profile={rol:'dueno',plantillas:{}},saves=0,fail=false;
@@ -33,12 +33,12 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
    await fill(busqueda,'Reserva alquiler');
    await click(button('+Reserva alquiler · importe numérico'));
    await click(button('+Reserva alquiler · importe en letras'));
-   check('chips distinguen monto y redacción legal',()=>{const texto=document.querySelector('textarea').value;assert.ok(texto.includes('{{res_alq_monto_reserva}}'));assert.ok(texto.includes('{{reserva_alquiler_reserva}}'));assert.ok(!buttons().some(b=>b.textContent.trim()==='+Reserva alquiler · importe en letras'));});
+   check('chips distinguen monto y redacción legal',()=>{const editor=document.querySelector('.dw-redaccion-clausula');assert.ok(editor.querySelector('[data-dw-token=res_alq_monto_reserva]'));assert.ok(editor.querySelector('[data-dw-token=reserva_alquiler_reserva]'));assert.ok(!buttons().some(b=>b.textContent.trim()==='+Reserva alquiler · importe en letras'));});
    // El buscador del catálogo conserva el filtro anterior: limpiarlo antes de buscar otro chip.
    await fill(busqueda,'');
   }
 
-  await fill(document.querySelector('textarea'),'Texto de prueba con redacción propia.');
+  await fill(document.querySelector('.dw-redaccion-clausula'),'Texto de prueba con redacción propia.');
   let chip=buttons().find(b=>b.textContent.trim()==='+Comprador');
   if(!chip){await abrirTodos();chip=buttons().find(b=>b.textContent.trim()==='+Comprador');}
   assert.ok(chip,'chip de comprador accesible como sugerido o en el catálogo');await click(chip);
@@ -48,23 +48,23 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
   check(tipo+' navegación espera confirmación',()=>{assert.equal(navigated,0);assert.ok(pendingConfirm);});
   // Cancelar el modal conserva el editor y el borrador.
   pendingConfirm=null;
-  check(tipo+' cancelar navegación conserva borrador',()=>assert.ok(document.querySelector('textarea').value.includes('Texto de prueba')));
+  check(tipo+' cancelar navegación conserva borrador',()=>assert.ok(document.querySelector('.dw-redaccion-clausula').textContent.includes('Texto de prueba')));
   await app.act(async()=>app.navegarConProteccionModelo(()=>navigated++));
   await app.act(async()=>pendingConfirm());
-  check(tipo+' confirmar navegación descarta sin persistir',()=>{assert.equal(navigated,1);assert.equal(saves,0);assert.equal(document.querySelector('textarea'),null);});
+  check(tipo+' confirmar navegación descarta sin persistir',()=>{assert.equal(navigated,1);assert.equal(saves,0);assert.equal(document.querySelector('.dw-redaccion-clausula'),null);});
   autoConfirm=true;await click(button('＋ Escribir cláusula del modelo'));
 
   await click(button('Cancelar'));
-  check(tipo+' cancelar confirma y descarta',()=>{assert.equal(document.querySelector('textarea'),null);assert.equal(saves,0);});
+  check(tipo+' cancelar confirma y descarta',()=>{assert.equal(document.querySelector('.dw-redaccion-clausula'),null);assert.equal(saves,0);});
   await click(button('＋ Escribir cláusula del modelo'));
   await fill(document.querySelector('input.inp'),'Cláusula personalizada');
-  await fill(document.querySelector('textarea'),'Texto guardado de prueba.');
+  await fill(document.querySelector('.dw-redaccion-clausula'),'Texto guardado de prueba.');
   fail=true;await click(button('Guardar cláusula'));
-  check(tipo+' error conserva editor',()=>assert.ok(document.querySelector('textarea')));
+  check(tipo+' error conserva editor',()=>assert.ok(document.querySelector('.dw-redaccion-clausula')));
   fail=false;await click(button('Guardar cláusula'));
   check(tipo+' guarda solo explícitamente',()=>{assert.equal(saves,2);assert.ok(profile.plantillas[tipo].body_blocks.some(b=>b.contenido==='Texto guardado de prueba.'));});
   const edits=buttons().filter(b=>b.textContent.trim()==='Editar');await click(edits[edits.length-1]);
-  await fill(document.querySelector('textarea'),'Segunda versión.');await click(button('Guardar cláusula'));
+  await fill(document.querySelector('.dw-redaccion-clausula'),'Segunda versión.');await click(button('Guardar cláusula'));
   check(tipo+' historial conserva versión anterior',()=>{const hist=profile.plantillas[tipo].historial_clausulas;assert.ok(Object.values(hist).flat().some(v=>v.contenido==='Texto guardado de prueba.'));});
   await app.act(async()=>root.unmount());
   const readOnly=app.createRoot(document.getElementById('test'));
@@ -73,8 +73,14 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{const proto=
   await app.act(async()=>readOnly.unmount());
  }
  check('un solo chip de precio, con moneda incluida, para plantillas heredadas',()=>{
-   assert.equal(app.normalizarNarrativaPrecio('El oferente ofrece {{moneda_txt}} {{precio_letras}} para comprar.'),'El oferente ofrece {{precio_letras}} para comprar.');
-   assert.equal((app.htmlNarrativaPrecioDocWorks('{{moneda_txt}} {{precio_letras}}').match(/data-dw-token/g)||[]).length,1);
+   assert.equal(app.canonizarMarcadoresAjuste('El oferente ofrece {{moneda_txt}} {{precio_letras}} para comprar.'),'El oferente ofrece {{precio_letras}} para comprar.');
+   assert.equal(app.canonizarMarcadoresAjuste('[Precio en letras]{{moneda_txt}}'), '{{precio_letras}}');
+   assert.equal(app.canonizarMarcadoresAjuste('[Moneda] [Precio en letras]'), '{{precio_letras}}');
+   assert.equal(app.canonizarMarcadoresAjuste('{{precio_letras}}. Moneda de pago: {{moneda_txt}}'), '{{precio_letras}}. Moneda de pago: {{moneda_txt}}');
+   for(const moneda of ['USD','ARS']){
+     const res=app.resolveVars('{{precio_letras}} {{moneda_txt}}',{precio:'150000',moneda});
+     assert.equal((res.match(new RegExp(moneda==='USD'?'DÓLARES ESTADOUNIDENSES':'PESOS ARGENTINOS','gi'))||[]).length,1);
+   }
  });
  const precioRoot=app.createRoot(document.getElementById('test'));
  let precioGuardado=null;
