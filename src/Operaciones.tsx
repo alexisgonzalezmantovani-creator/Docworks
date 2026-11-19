@@ -6103,7 +6103,6 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           mostrarAjustes={!!onUpdateOperation&&!tabActual.esRecibo&&bloquesParaAjustes().length>0&&!((op.plantilla_snapshot||{}).documento_propio)}
           ajustesActivo={vistaAjustes}
           onAjustes={function(){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(!vistaAjustes);}}/>
-}
       </div>
       <div className={(tabActual.esResumen||tabActual.esFicha||tabActual.esTareas||tabActual.esNegociacion)?"doc-viewer-tab-content doc-tab-static":"doc-viewer-tab-content"}>
       {tabActual.esTareas ? (
