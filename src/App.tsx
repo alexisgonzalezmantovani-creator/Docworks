@@ -36,7 +36,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, dwHaySesionGuardada, dwCrearCliente, d
 import { contactosDocumento, DOC_EXPORT_LAYOUT, docxTwipsFromPt, pdfStr } from './Exportaciones';
 // DocWorks 5.37 — Descargas con liberación segura del estado y cola de exportación.
 // Conserva los controles documentales y de interfaz de la versión anterior.
-import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef, Component } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef, Component, Fragment } from "react";
 import { createPortal } from "react-dom";
 
 // Iconos DocWorks (navegación y tipos de documento): trazo fino de una sola tinta.
@@ -6817,7 +6817,7 @@ function DocTabsBar({op,tab,onChange,mostrarAjustes=false,ajustesActivo=false,on
         var active=tab===t.id||(tab==="resumen"&&t.esFicha);
         var isResumen=t.esResumen;
         return(
-          <React.Fragment key={t.id}>
+          <Fragment key={t.id}>
           <button onClick={function(){onChange(t.id);}}
             style={{padding:"5px 11px",borderRadius:8,fontSize:12,fontFamily:"DM Sans,sans-serif",cursor:"pointer",whiteSpace:"nowrap",
               border:"1px solid "+(active?((isResumen||t.esFicha)?"rgba(96,165,250,0.5)":"var(--gold)"):((isResumen||t.esFicha)?"rgba(96,165,250,0.2)":"var(--border2)")),
@@ -6834,7 +6834,7 @@ function DocTabsBar({op,tab,onChange,mostrarAjustes=false,ajustesActivo=false,on
               color:ajustesActivo?"#e0f2fe":"#93c5fd"}}>
             ✎ Ajustes manuales
           </button>}
-        </React.Fragment>
+        </Fragment>
         );
       })}
     </div>
