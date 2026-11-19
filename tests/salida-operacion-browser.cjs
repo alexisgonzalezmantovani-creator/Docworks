@@ -33,7 +33,10 @@ function SalidaHarness(){
 }
 function DocumentosVinculadosHarness(){
  const [resultado,setResultado]=useState('');
- const ops=['reserva','reserva_alquiler'].map((tipo,i)=>({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'ejemplo-'+i,tipo,estado:'activo',inmueble_direccion:'Inmueble ficticio '+i,created_at:'2026-11-04T12:00:00Z'}));
+ const raices=['reserva','reserva_alquiler','boleto'].map((tipo,i)=>({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'ejemplo-'+i,tipo,estado:'activo',inmueble_direccion:'Inmueble ficticio '+i,created_at:'2026-11-04T12:00:00Z'}));
+ // Una reserva tiene tres documentos vinculados: cuatro documentos en total.
+ const vinculados=Array.from({length:3},(_,i)=>({...EMPTY_OP,...SAMPLE_OP_PREVIEW,id:'vinculado-'+i,tipo:'refuerzo_reserva',estado:'activo',parent_id:'ejemplo-0',inmueble_direccion:'Vinculado ficticio '+i,created_at:'2026-11-04T12:00:00Z'}));
+ const ops=raices.concat(vinculados);
  return <><GStyles/><style>{MOBILE_STABILITY_CSS}</style><header style={{position:'fixed',top:0,left:0,right:0,zIndex:500,height:56,background:'#142a4d',color:'white'}}>Barra superior de prueba</header><output data-testid="conversion">{resultado}</output><div style={{transform:'translateZ(0)',padding:12}}><div style={{height:900}}>Contenido de prueba antes de las operaciones</div><DashboardView usuarioActual={{id:'qa',rol_base:'dueno'}} operaciones={ops} clausulas={[]} perfil={{rol:'dueno'}} bloquesReserva={[]} papelera={[]} onNew={()=>{}} onEdit={()=>setResultado('abrir')} onViewDoc={()=>setResultado('ver')} onDelete={()=>{}} onConvertir={()=>setResultado('alquiler')} onConvertirBoleto={()=>setResultado('boleto')} onConvertirComodato={()=>setResultado('comodato')} onConvertirRefuerzo={()=>setResultado('refuerzo')} onConvertirDevolucion={()=>setResultado('devolucion')}/></div></>;
 }
 function ViewerHeaderHarness(){
@@ -121,7 +124,7 @@ await page.locator('.dw-operation-page-heading').scrollIntoViewIfNeeded();await 
 await page.screenshot({path:out+'/formulario-'+width+'.png',fullPage:true});await page.locator('.dw-operation-form-footer').screenshot({path:out+'/guardado-'+width+'.png'});assert.deepEqual(errors,[]);checks++;console.log('OK '+engine+' '+width+'px: menú, cierre, recuperación, error, espera y botón +');await page.goto(url+'/?docs=1');await page.evaluate(()=>localStorage.clear());
 await page.getByRole('button',{name:'Vista de tabla',exact:true}).click();
 assert.ok(await page.locator('.op-table-wrap').evaluate(el=>el.scrollWidth<=el.clientWidth+1||innerWidth>640));checks++;
-assert.equal(await page.locator('.op-table tbody tr').count(),2);checks++;
+assert.equal(await page.locator('.op-table tbody tr').count(),3);checks++;
 assert.ok(await page.locator('.op-table').evaluate(el=>{const row=el.querySelector('tr').getBoundingClientRect(),table=el.getBoundingClientRect();return Math.abs(row.width-table.width)<3;}));checks++;
 if(width<640){assert.ok(await page.locator('.op-table-partes').first().isVisible());checks++;}
 await page.locator('.op-table-wrap').screenshot({path:out+'/tabla-'+width+'.png'});
@@ -148,6 +151,34 @@ await page.getByRole('button',{name:'Vista de tarjetas',exact:true}).click();
      'Panel de PC alineado y sin recortes: '+JSON.stringify(layout));
    checks++;
  }
+if(width>=1101){
+ const layouts=await page.locator('.op-card-premium:not(.op-doc-card)').evaluateAll(cards=>cards.map(card=>{
+   const side=card.querySelector('.op-card-side');
+   const cr=card.getBoundingClientRect(),sr=side.getBoundingClientRect();
+   const activity=side.querySelector('.op-side-extra:first-child').getBoundingClientRect();
+   const documents=side.querySelector('.op-docs-count').getBoundingClientRect();
+   const progress=side.querySelector('.op-side-progress').getBoundingClientRect();
+   const actions=side.querySelector('.op-action-zone').getBoundingClientRect();
+   const buttons=[...actions.querySelectorAll('button')].map(b=>({rect:b.getBoundingClientRect(),truncated:b.scrollWidth>b.clientWidth+1}));
+   return {count:side.querySelector('.op-docs-count').textContent.trim(),
+     withDoc:!!side.querySelector('.op-action-doc'),
+     sideWidth:sr.width,dividerOffset:Math.round(cr.right-sr.left),
+     activityY:Math.round(activity.top-cr.top),docY:Math.round(documents.top-cr.top),
+     progressY:Math.round(progress.top-cr.top),buttonsY:Math.round(actions.top-cr.top),
+     buttonCenters:buttons.map(b=>Math.round((b.rect.top+b.rect.bottom)/2)),
+     noOverflow:buttons.every(b=>!b.truncated&&b.rect.left>=sr.left&&b.rect.right<=sr.right+1)};
+ }));
+ assert.ok(layouts.length===3&&layouts.some(x=>x.count==='4 documentos')&&layouts.some(x=>!x.withDoc)&&layouts.some(x=>x.withDoc),
+   'Pruebas de 4 documentos, 1 documento y sin botón Documento: '+JSON.stringify(layouts));
+ assert.ok(layouts.every(x=>x.sideWidth>332&&x.sideWidth<334
+   &&Math.abs(x.dividerOffset-layouts[0].dividerOffset)<=2
+   &&Math.abs(x.activityY-layouts[0].activityY)<=2
+   &&Math.abs(x.docY-layouts[0].docY)<=2
+   &&Math.abs(x.progressY-layouts[0].progressY)<=2
+   &&Math.abs(x.buttonsY-layouts[0].buttonsY)<=2
+   &&x.noOverflow&&x.buttonCenters.every(y=>Math.abs(y-x.buttonCenters[0])<=2)),
+   'Divisor, última actividad, documentos, progreso y botones deben quedar a igual altura: '+JSON.stringify(layouts));checks++;
+}
 if(width<640){assert.ok(await page.locator('.op-actions').first().evaluate(el=>{const b=el.lastElementChild.getBoundingClientRect(),r=el.getBoundingClientRect();return Math.abs(b.right-r.right)<2;}));checks++;}
 await page.locator('.dw-dashboard-root').getByRole('button',{name:/^Documentos?\s*(?:\(\d+\))?$/}).first().click();
 const dialog=page.getByRole('dialog',{name:'Documentos de esta operación',exact:true});await dialog.waitFor();

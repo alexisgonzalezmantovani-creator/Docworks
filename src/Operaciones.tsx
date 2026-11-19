@@ -2181,16 +2181,51 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
-/* En PC el contenido de los controles determina la posición del divisor. */
+/* Operaciones PC: división y alturas fijas entre tarjetas, haya o no botón
+   Documento y sin importar si hay 1, 4 o más documentos vinculados. */
 @media (min-width:1101px){
   .dw-dashboard-root .op-card-premium .op-card-inner{
     display:grid!important;
-    grid-template-columns:minmax(0,1fr) fit-content(46%);
+    grid-template-columns:minmax(0,1fr) 333px!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side{
-    width:auto!important;
-    min-width:0!important;
-    max-width:none!important;
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:flex-start!important;
+    align-items:stretch!important;
+    box-sizing:border-box!important;
+    width:333px!important;
+    min-width:333px!important;
+    max-width:333px!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side>.op-side-extra:first-child{
+    flex:0 0 32px!important;
+    height:32px!important;
+    min-height:32px!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side>div:has(>.op-docs-count){
+    flex:0 0 19px!important;
+    height:19px!important;
+    min-height:19px!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side>.op-side-progress{
+    flex:0 0 32px!important;
+    height:32px!important;
+    min-height:32px!important;
+    width:100%!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side>div:has(>.op-action-zone){
+    flex:0 0 auto!important;
+    min-height:38px!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-side-extra:first-child .op-side-label,
+  .dw-dashboard-root .op-card-premium .op-docs-count{
+    white-space:nowrap!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-action-zone{
+    flex-wrap:nowrap!important;
+    width:100%!important;
+    justify-content:flex-end!important;
   }
   .dw-dashboard-root .op-card-premium .op-card-side .op-actions{
     justify-content:flex-start!important;
