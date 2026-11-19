@@ -6684,8 +6684,24 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       guardandoFormRef.current = false;
     }
   }
+  // La operación vinculada ya trae datos del origen; explicar qué se debe revisar
+  // sin bloquear la carga ni volver a pedir la información heredada.
+  const operacionOrigen= data.parent_id && Array.isArray(operaciones)
+    ? operaciones.find(function(o){return o.id===data.parent_id;})
+    : null;
+  const avisoDatosVinculados= data.parent_id && ({
+    boleto:"Se copiaron partes, inmueble y datos de la reserva. Confirmá fecha de posesión, saldo y condiciones del boleto.",
+    alquiler:"Se recuperaron datos de la reserva de alquiler. Revisá canon, plazo, garantía y honorarios antes de firmar.",
+    refuerzo_reserva:"Se recuperaron partes, inmueble y antecedentes. Completá el importe y las condiciones de este refuerzo.",
+    devolucion_reserva:"Se recuperaron partes, inmueble y la seña informada. Confirmá cuánto se devuelve y el motivo."
+  })[data.tipo];
   return(
     <div style={{paddingBottom:4}}>
+      {avisoDatosVinculados&&(step===2||step>total)&&<div role="status" style={{padding:"11px 13px",marginBottom:12,borderRadius:10,border:"1px solid var(--border2)",background:"var(--card)",fontSize:12.5,lineHeight:1.55,color:"var(--text)"}}>
+        <strong style={{display:"block",marginBottom:3}}>✓ Datos recuperados de ${operacionOrigen?.tipo==="reserva_alquiler"?"la reserva de alquiler":"la operación anterior"}</strong>
+        <span>{avisoDatosVinculados}</span>
+        {operacionOrigen?.inmueble_direccion&&<span style={{display:"block",marginTop:4,color:"var(--muted)"}}>Inmueble: {operacionOrigen.inmueble_direccion}</span>}
+      </div>}
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
