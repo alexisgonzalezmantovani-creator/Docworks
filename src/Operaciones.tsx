@@ -2496,7 +2496,7 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     border:0;
     background:#fff;
   }
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{display:none}
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{display:flex;flex-wrap:wrap;gap:5px;padding:8px}
 }
 
 /* En horizontal corto, dejar más alto útil para la hoja y conservar los controles. */
@@ -2507,7 +2507,7 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .viewer-modal .reserva-status-strip{flex:1 0 auto}
   .viewer-modal .reserva-mini-timeline{flex:1 1 auto;margin-top:0}
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll{flex-basis:175px;min-height:175px}
-  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{display:none}
+  .modal-overlay-viewer .viewer-modal .doc-reading-scroll .pdf-chrome{display:flex;flex-wrap:wrap;gap:5px;padding:8px}
 }
 
 /* Encabezado de operación opaco, incluyendo el espacio de seguridad superior. */
