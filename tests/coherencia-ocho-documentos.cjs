@@ -48,6 +48,18 @@ check('vigencia de reserva con fecha exacta no duplica preposición',()=>{
  assert.match(texto,/vigencia hasta el 20\/01\/2027/);
  assert.doesNotMatch(texto,/vigencia de hasta el/);
 });
+check('la conformidad cita la posición efectiva de la cláusula de incumplimiento',()=>{
+ const op={...base,tipo:'reserva'};
+ const bloques=a.getDefaultBodyBlocks('reserva');
+ const ordenados=bloques.map(b=>({...b,orden:b.id==='reserva.incumplimiento'?1:b.orden+1}));
+ const reserva=a.buildDocSections(a.opParaDocumento(op),[],'reserva',ordenados);
+ assert.equal(reserva.secciones[0]._bloqueId,'reserva.incumplimiento');
+ assert.match(reserva.conformidad.items[0],/conforme a la cláusula 1 de la Reserva Ad Referéndum/);
+ const sinIncumplimiento=a.buildDocSections(a.opParaDocumento(op),[],'reserva',
+  bloques.map(b=>b.id==='reserva.incumplimiento'?{...b,activo:false}:b));
+ assert.ok(!sinIncumplimiento.secciones.some(s=>s._bloqueId==='reserva.incumplimiento'));
+ assert.doesNotMatch(sinIncumplimiento.conformidad.items[0],/cláusula \d+ de la Reserva/i);
+});
 check('boleto obliga a vender, sin declarar transmisión de dominio por su firma',()=>{
  const {texto}=render('boleto');
  assert.match(texto,/se obliga a vender/);
@@ -61,6 +73,15 @@ check('reserva de alquiler imprime pesos de reserva y no anticipo de venta',()=>
 check('alquiler incluye roles, canon y fechas consistentes',()=>{
  const {texto}=render('alquiler');
  for(const x of ['Locador Ejemplo','Locatario Ejemplo','ARS 700.000','01/12/2026','30/11/2028'])assert.ok(texto.includes(x),x);
+});
+check('el depósito del modelo actual y del guardado conserva una narración correcta',()=>{
+ const anterior='Las partes pactan un depósito en garantía de {{alquiler_deposito_desc}}.';
+ for(const [datos,detalle] of [[{alquiler_deposito:'1'},'el equivalente a 1 mes'],[{alquiler_deposito:'otro',alquiler_deposito_otro_monto:'123456'},'un monto fijo de']]){
+  const {texto,op}=render('alquiler',datos);
+  assert.ok(texto.includes('Como depósito en garantía, las partes pactan '+detalle));
+  assert.ok(a.resolveVars(anterior,op).includes('Como depósito en garantía, las partes pactan '+detalle));
+  assert.ok(a.resolveVars('El recibo documenta {{alquiler_deposito_desc}}.',op).startsWith('El recibo documenta '+detalle));
+ }
 });
 check('comodato gratuito con fechas de inicio y vencimiento',()=>{
  const {texto}=render('comodato');

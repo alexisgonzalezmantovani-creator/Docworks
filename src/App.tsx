@@ -933,6 +933,10 @@ function resolveVars(text, op, extra=undefined) {
     textoBase=textoBase.replace("El VENDEDOR {{vendedor_nombre}} vende, cede y transfiere al COMPRADOR {{comprador_nombre}}, quien compra y acepta, el inmueble ubicado en",
       "El VENDEDOR {{vendedor_nombre}} se obliga a vender al COMPRADOR {{comprador_nombre}}, quien se obliga a comprar, el inmueble ubicado en");
   }
+  if(op&&op.tipo==="alquiler"){
+    textoBase=textoBase.replace("Las partes pactan un depósito en garantía de {{alquiler_deposito_desc}}.",
+      "Como depósito en garantía, las partes pactan {{alquiler_deposito_desc}}.");
+  }
   if(op&&op.tipo==="devolucion_reserva"){
     textoBase=textoBase.replace("El VENDEDOR devuelve en este acto al COMPRADOR / OFERENTE la suma de {{precio_letras}}, recibiendo el COMPRADOR plena conformidad respecto de la devolución.-",
       "Se deja constancia de la entrega al COMPRADOR / OFERENTE de la suma de {{precio_letras}} en concepto de devolución de reserva. El COMPRADOR / OFERENTE declara recibir el importe indicado y prestar conformidad con esta devolución.-");
@@ -2762,6 +2766,16 @@ function textoComision(op, prefix, rol, baseLabel, base, monedaBase, legacyKey, 
   var pct=(c.valor!==""?c.valor:"___");
   return "El "+actor+" abonará el "+pct+"% del "+baseLabel+" en concepto de honorarios por la labor de intermediación inmobiliaria.-";
 }
+function textoComisionConformidadReserva(op){
+  if(op.comision_vendedor_ocultar_doc)return "";
+  var comision=getComisionConfig(op,"comision_vendedor",parseMontoAR(op.precio||0),
+    op.moneda||"USD","comision_vendedor",valorComisionPredeterminado(op.comision_porcentaje,""));
+  var importe=comision.modo==="fijo"
+    ?"la suma de "+fmt$L(comision.valor,comision.moneda)
+    :"el "+(comision.valor||"___")+"% del Precio";
+  return "Asimismo, manifiesto expresamente que me obligo a abonar a la inmobiliaria interviniente "+
+    importe+" en concepto de honorarios por labor de intermediación cumplimentada, al momento de firmarse la Escritura Traslativa de Dominio y/o el Boleto de Compraventa, lo que ocurra primero.-";
+}
 function resumenComision(op,prefix,rol,baseLabel,base,monedaBase,legacyKey,defaultValue){
   var c=getComisionConfig(op,prefix,base,monedaBase,legacyKey,defaultValue);
   if(c.modo==="fijo") return (rol||"")+" "+fmt$(c.valor,c.moneda);
@@ -3903,9 +3917,9 @@ function buildDocSectionsPorBloques(op, bloques, clausulasLib) {
     conformidad: {
       items:[
         "Presto plena conformidad a la oferta efectuada por el Oferente en la presente y demás condiciones pactadas, aceptando todos y cada uno de sus términos, comprometiéndome, en caso de no presentarme a la firma de la Escritura Traslativa de Dominio en la fecha convenida, a reintegrar al Oferente la suma recibida en virtud de la presente, más otro tanto igual en concepto de única y total indemnización, conforme Cláusula "+numIncumplimiento+" de la Reserva Ad Referéndum.-",
-        derivedTokensReserva(op).comision_reserva_texto,
+        textoComisionConformidadReserva(op),
         "En caso de incumplimiento o arrepentimiento de alguna de Las Partes, una vez cumplidos todos los Ad Referéndum de la presente Reserva, la parte incumplidora deberá abonar los honorarios pactados en concepto de labor de intermediación realizada hasta el momento, sin necesidad de formalidad judicial alguna.-",
-      ],
+      ].filter(Boolean),
       firmante: op.vendedor_nombre||"",
       dni: op.vendedor_dni||"",
     },
@@ -4050,7 +4064,7 @@ var BODY_TEMPLATE_PRESETS = {
     {id:"alquiler.estado",titulo:"ESTADO DEL INMUEBLE",contenido:"El estado del inmueble al momento de la entrega material se acreditará mediante acta de entrega e inventario, si los hubiere, o constancia suscripta por las partes. El LOCATARIO se obliga a restituirlo en condiciones equivalentes a las de su efectiva recepción, salvo el desgaste normal por el uso regular y el transcurso del tiempo."},
     {id:"alquiler.subalquiler",titulo:"PROHIBICIÓN DE SUBALQUILAR",contenido:"El LOCATARIO no podrá subalquilar, ceder ni transferir total o parcialmente el uso del inmueble sin el consentimiento expreso y por escrito del LOCADOR."},
     {id:"alquiler.obras",titulo:"OBRAS Y MEJORAS",contenido:"El LOCATARIO deberá solicitar autorización escrita al LOCADOR antes de realizar modificaciones u obras no urgentes. El tratamiento de mejoras, reparaciones necesarias y eventuales compensaciones se ajustará a lo pactado válidamente y a la normativa aplicable."},
-    {id:"alquiler.deposito",titulo:"DEPÓSITO EN GARANTÍA",contenido:"Las partes pactan un depósito en garantía de {{alquiler_deposito_desc}}. Su entrega efectiva se acreditará mediante recibo o medio de pago verificable; la firma del presente contrato no presume por sí sola la percepción del importe. La moneda, forma y condiciones de restitución serán las expresamente convenidas por las partes conforme a la normativa aplicable.-"},
+    {id:"alquiler.deposito",titulo:"DEPÓSITO EN GARANTÍA",contenido:"Como depósito en garantía, las partes pactan {{alquiler_deposito_desc}}. Su entrega efectiva se acreditará mediante recibo o medio de pago verificable; la firma del presente contrato no presume por sí sola la percepción del importe. La moneda, forma y condiciones de restitución serán las expresamente convenidas por las partes conforme a la normativa aplicable.-"},
     {id:"alquiler.mora",titulo:"MORA Y PENALIDADES",contenido:"El incumplimiento de cualquier obligación a cargo del LOCATARIO, incluida la falta de pago de un (1) mes de alquiler, lo constituirá en mora en forma automática, sin necesidad de interpelación judicial o extrajudicial alguna.-\n\nLa mora contractual no elimina la intimación fehaciente previa a una demanda de desalojo por falta de pago cuando el destino sea habitacional, conforme al artículo 1222 del Código Civil y Comercial de la Nación.-\n\nLa mora en el pago del canon locativo devengará un interés punitorio del {{alquiler_interes_punitorio}}% mensual hasta su efectivo pago.-\n\nSi el LOCATARIO no restituyera el inmueble al vencimiento del contrato, deberá abonar en concepto de cláusula penal una suma equivalente a {{alquiler_penalidad_meses}} {{alquiler_penalidad_veces}} el canon locativo mensual vigente, por cada mes o fracción de demora en la restitución.-"},
     {id:"alquiler.seguro",titulo:"SEGURO",contenido:"El LOCATARIO se obliga a contratar, dentro de los {{alquiler_seguro_dias}} días corridos de la firma del presente, un seguro de Responsabilidad Civil e Incendio sobre el inmueble, designando como beneficiario al LOCADOR, debiendo acreditar su vigencia durante toda la duración del contrato.-"},
     {id:"alquiler.rescision",titulo:"RESOLUCIÓN ANTICIPADA",contenido:"El LOCATARIO podrá resolver anticipadamente la locación conforme al artículo 1221 del Código Civil y Comercial de la Nación, según el régimen aplicable a la fecha de celebración del contrato. Para contratos comprendidos en la redacción vigente de dicho artículo, la indemnización equivale al diez por ciento (10%) del saldo del canon locativo futuro, calculado desde la notificación de la rescisión hasta la finalización pactada. La notificación deberá ser fehaciente, sin que este modelo establezca un plazo mínimo adicional de preaviso.-"},
@@ -4374,7 +4388,12 @@ function buildDocSectionsFromEditableBody(op, clausulasLib, tipo, bloquesPlantil
   // cláusulas adicionales deben continuar DESPUÉS de las secciones efectivas.
   out.clausulas=(out.clausulas||[]).map(function(c,i){return Object.assign({},c,{num:secciones.length+i+1});});
   if(out.conformidad&&Array.isArray(out.conformidad.items)){
-    out.conformidad.items=out.conformidad.items.map(function(t){return resolveVars(t,op,extras);});
+    var numeroIncumplimiento=secciones.findIndex(function(sec){return sec._bloqueId==="reserva.incumplimiento";})+1;
+    var referenciaIncumplimiento=numeroIncumplimiento
+      ?", conforme a la cláusula "+numeroIncumplimiento+" de la Reserva Ad Referéndum":"";
+    out.conformidad.items=out.conformidad.items.map(function(t){
+      return resolveVars(t.replace(", conforme Cláusula 7 de la Reserva Ad Referéndum",referenciaIncumplimiento),op,extras);
+    });
   }
   return finalizeDoc(out,op,clausulasLib);
 }
@@ -4460,9 +4479,9 @@ function buildDocSectionsStandard(op, clausulasLib, tipo) {
       conformidad: {
         items:[
           "Presto plena conformidad a la oferta efectuada por el Oferente en la presente y demás condiciones pactadas, aceptando todos y cada uno de sus términos, comprometiéndome, en caso de no presentarme a la firma de la Escritura Traslativa de Dominio en la fecha convenida, a reintegrar al Oferente la suma recibida en virtud de la presente, más otro tanto igual en concepto de única y total indemnización, conforme Cláusula "+numIncumplimiento+" de la Reserva Ad Referéndum.-",
-          (function(){var c=getComisionConfig(op,"comision_comprador",parseMontoAR(op.precio||0),op.moneda||"USD","comision_comprador",valorComisionPredeterminado(op.comision_porcentaje,""));return c.modo==="fijo"?"Asimismo, manifiesto expresamente que me obligo a abonar a la inmobiliaria interviniente la suma de "+fmt$L(c.valor,c.moneda)+" en concepto de honorarios por labor de intermediación cumplimentada, al momento de firmarse la Escritura Traslativa de Dominio y/o el Boleto de Compraventa, lo que ocurra primero.-":"Asimismo, manifiesto expresamente que me obligo a abonar a la inmobiliaria interviniente el "+(c.valor!=="" && c.valor!==null && c.valor!==undefined ? c.valor : "___")+"% del Precio en concepto de honorarios por labor de intermediación cumplimentada, al momento de firmarse la Escritura Traslativa de Dominio y/o el Boleto de Compraventa, lo que ocurra primero.-";})(),
+          textoComisionConformidadReserva(op),
           "En caso de incumplimiento o arrepentimiento de alguna de Las Partes, una vez cumplidos todos los Ad Referéndum de la presente Reserva, la parte incumplidora deberá abonar los honorarios pactados en concepto de labor de intermediación realizada hasta el momento, sin necesidad de formalidad judicial alguna.-",
-        ],
+        ].filter(Boolean),
         firmante: op.vendedor_nombre||"",
         dni: op.vendedor_dni||"",
       },

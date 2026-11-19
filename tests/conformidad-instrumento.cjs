@@ -11,6 +11,26 @@ global.document={querySelector:()=>({}),title:''};const a=require(tmp+'/app.cjs'
   check(mode+' se conserva en snapshot y configuración',()=>{assert.equal(snap.conformidad_modo,mode);assert.equal(a.modoConformidadReserva(perfil,op),mode);assert.equal(a.modoConformidadReserva(perfil,{...op,plantilla_snapshot:snap}),mode);});
  }
  check('sin configurar, mantiene documentos unificados',()=>assert.equal(a.modoConformidadReserva({},op),'unificada'));
+ check('la conformidad toma honorarios del vendedor y respeta su visibilidad',()=>{
+  const importes={...op,comision_comprador_valor:'4',comision_vendedor_valor:'2'};
+  function generar(datos){
+   return a.buildDocSections(a.opParaDocumento(datos),[],'reserva');
+  }
+  const unido=generar(importes);
+  assert.match(a.docToPlainText(unido),/El Oferente abonará el 4%/);
+  assert.match(unido.conformidad.items.join(' '),/me obligo a abonar a la inmobiliaria interviniente el 2%/);
+  const fijo={...importes,comision_vendedor_modo:'fijo',comision_vendedor_valor:'1250',comision_vendedor_moneda:'ARS'};
+  const acta=a.construirDocumentoConformidadReserva(generar(fijo),fijo);
+  assert.match(a.docToPlainText(acta),/ARS 1\.250/);
+  const oculto=generar({...importes,comision_vendedor_ocultar_doc:true});
+  assert.match(a.docToPlainText(oculto),/El Oferente abonará el 4%/);
+  assert.equal(oculto.conformidad.items.length,2);
+  assert.doesNotMatch(oculto.conformidad.items.join(' '),/me obligo a abonar/);
+  const historico=generar({...op,comision_vendedor:'',comision_comprador:'',
+   comision_comprador_valor:'',comision_comprador_valor_editado:false,
+   comision_vendedor_valor:'',comision_vendedor_valor_editado:false,comision_porcentaje:'3'});
+  assert.match(historico.conformidad.items.join(' '),/me obligo a abonar a la inmobiliaria interviniente el 3%/);
+ });
  for(const [tipo,expected] of [['escritura','la Escritura Traslativa de Dominio'],['boleto','el Boleto de Compraventa'],['cesion_boleto','la Cesión de Derechos Emergentes de Boleto de Compraventa']]){
   const actual={...op,compra_instrumento:tipo,compra_boleto_origen:'Boleto antecedente'};
   const d=a.buildDocSections(a.opParaDocumento(actual),[],'reserva');
