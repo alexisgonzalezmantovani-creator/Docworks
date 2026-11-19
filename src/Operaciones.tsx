@@ -5631,7 +5631,7 @@ function CalendarioView({operaciones,onViewOp}){
 }
 
 export function crearDocumentViewer(deps){
- const {construirDocumentoConformidadReserva, modoConformidadReserva, canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
+ const {construirDocumentoConformidadReserva, modoConformidadReserva, canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, getCamposFaltantesDetalle, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport} = deps;
 
 
 function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggleTarea,onUpdateOperation,onActionWorkflow,onCompleteData,onSavePerfil,onAuditExport,onUpdateBloqueReserva,tab,onChangeTab,autoAction,onAutoActionDone,salidaGuardRef=undefined}){
@@ -5665,6 +5665,8 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   // Editor opcional de ajustes finales. Cada chip es una pieza de solo lectura.
   const [ajusteEditando,setAjusteEditando]=useState(null);
   const [editorEnVistaPrevia,setEditorEnVistaPrevia]=useState(false);
+  const [vistaAjustes,setVistaAjustes]=useState(false);
+  useEffect(function(){setVistaAjustes(false);},[tab,op&&op.id]);
   const [redaccionAjuste,setRedaccionAjuste]=useState("");
   const [guardandoAjuste,setGuardandoAjuste]=useState(false);
   const [errorAjuste,setErrorAjuste]=useState("");
@@ -6083,7 +6085,18 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
 
   return(
     <div className="doc-viewer-shell">
-      <div className="doc-viewer-tabs"><DocTabsBar op={op} tab={tab} onChange={setTab}/></div>
+      <div className="doc-viewer-tabs">
+        <DocTabsBar op={op} tab={tab} onChange={setTab}
+          mostrarAjustes={!!onUpdateOperation&&!tabActual.esRecibo&&bloquesParaAjustes().length>0&&!((op.plantilla_snapshot||{}).documento_propio)}
+          ajustesActivo={vistaAjustes}
+          onAjustes={function(){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(!vistaAjustes);}}/>
+        {getCamposFaltantesDetalle&&getCamposFaltantesDetalle(op,perfil).length>0&&
+          <button type="button" onClick={function(){if(onCompleteData)onCompleteData(op,getCamposFaltantesDetalle(op,perfil)[0].campo);}}
+            title="Revisar los datos pendientes" disabled={!onCompleteData}
+            style={{marginLeft:"auto",padding:"4px 7px",alignSelf:"center",fontSize:10.5,borderRadius:7,background:"rgba(234,179,8,.07)",color:"var(--muted)",border:"1px solid var(--border2)",cursor:onCompleteData?"pointer":"default",whiteSpace:"nowrap"}}>
+            ⚠ {getCamposFaltantesDetalle(op,perfil).length} pendientes
+          </button>}
+      </div>
       <div className={(tabActual.esResumen||tabActual.esFicha||tabActual.esTareas||tabActual.esNegociacion)?"doc-viewer-tab-content doc-tab-static":"doc-viewer-tab-content"}>
       {tabActual.esTareas ? (
         <TareasPanel op={op} onToggleTarea={onToggleTarea} onUpdateOperation={onUpdateOperation}/>
@@ -6114,7 +6127,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
         {onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
-          <details className="card" style={{flex:"0 0 auto"}} data-testid="dw-ajustes-manuales">
+          <details className="card" open={vistaAjustes} style={{flex:vistaAjustes?"1 1 auto":"0 0 auto",minHeight:0,overflowY:"auto",display:vistaAjustes?"block":"none"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
               ✎ Ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
             </summary>
@@ -6135,7 +6148,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
               </div>;
             })}
           </details>}
-        <div className="doc-reading-scroll">
+        <div className="doc-reading-scroll" style={{display:vistaAjustes?"none":undefined}}>
           <div className="pdf-preview" style={{marginBottom:14}}>
             <div className="pdf-chrome">
               <div className="pdf-dot" style={{background:"#ff5f57"}}/><div className="pdf-dot" style={{background:"#ffbd2e"}}/><div className="pdf-dot" style={{background:"#28c840"}}/>
