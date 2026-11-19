@@ -2425,6 +2425,14 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
+/* La pestaña Ajustes manuales utiliza el espacio completo del visor;
+   no conserva los límites de altura del antiguo desplegable sobre la hoja. */
+.modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][data-vista-ajustes="1"]{
+  flex:1 1 auto!important;
+  max-height:none!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+}
 /* Lectura en pantalla. La maquetación de PDF y Word usa sus propios estilos. */
 .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
   flex:1 0 155px;
@@ -6127,7 +6135,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
         {onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
-          <details className="card" open={vistaAjustes} style={{flex:vistaAjustes?"1 1 auto":"0 0 auto",minHeight:0,overflowY:"auto",display:vistaAjustes?"block":"none"}} data-testid="dw-ajustes-manuales">
+          <details className="card" open={vistaAjustes} data-vista-ajustes={vistaAjustes?"1":"0"} style={{flex:vistaAjustes?"1 1 auto":"0 0 auto",minHeight:0,overflowY:"auto",display:vistaAjustes?"block":"none"}} data-testid="dw-ajustes-manuales">
             <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
               ✎ Ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
             </summary>
