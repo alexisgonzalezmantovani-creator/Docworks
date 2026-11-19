@@ -6932,6 +6932,12 @@ function campoDesdeTextoFaltante(texto,op,indice=0){
     /\b(?:correo(?: electr[oó]nico)?|e-?mail)\b[^\w]*$/.test(contexto)?"email":
     /\b(?:nombre|raz[oó]n social|locador|locatario|comprador|vendedor|oferente|comodante|comodatario|autorizante|entre)\b[^\w]*$/.test(contexto)?"nombre":"";
   if(rol&&campo)return rol+"_"+campo;
+  // Resolver primero los espacios vinculados a ubicación para que "lugar"
+  // no envíe por error al nombre de una persona.
+  if(/(?:direcci[oó]n|ubicaci[oó]n|domicilio)\s+del\s+inmueble|inmueble\s+(?:sito|ubicado)|calle\s*$/.test(contexto))return "inmueble_direccion";
+  if(/(?:localidad|partido|municipio)\s*$/.test(contexto))return "inmueble_partido";
+  if(/provincia\s*$/.test(contexto))return "inmueble_provincia";
+  if(/(?:lugar\s+(?:de\s+)?(?:celebraci[oó]n|firma)|en\s+la\s+(?:ciudad|localidad)\s+de)\s*$/.test(contexto))return "inmueble_partido";
   var campoGeneral=t.indexOf("dni")>=0||t.indexOf("cuit")>=0?"dni":(t.indexOf("domicilio")>=0?"domicilio":(t.indexOf("teléfono")>=0||t.indexOf("telefono")>=0?"telefono":(t.indexOf("correo")>=0||t.indexOf("mail")>=0||t.indexOf("email")>=0?"email":(t.indexOf("nombre")>=0||t.indexOf("razón social")>=0?"nombre":""))));
   if(rol&&marca)return rol+"_nombre";
   if(rol&&campoGeneral)return rol+"_"+campoGeneral;
