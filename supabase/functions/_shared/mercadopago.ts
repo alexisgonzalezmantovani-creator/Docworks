@@ -81,7 +81,13 @@ export function crearManejadorSuscripciones(deps: Dependencies) {
       }
       // Cambiar de plan requiere un flujo de migración: abrir un checkout no habilita beneficios.
       if (membership.plan_id !== p.id) throw new ErrorHTTP(409, 'El plan solicitado no coincide con la membresía. Solicitá el cambio de plan antes de iniciar el pago.');
-      const back = retornoSeguro(body.back_url, deps.env('DOCWORKS_APP_URL') || 'https://docworks-eight.vercel.app/');
+      // Migración: una configuración antigua de Vercel no debe llevar los pagos al hosting anterior.
+      const configurada = deps.env('DOCWORKS_APP_URL') || '';
+      let hostConfigurado = '';
+      try { hostConfigurado = new URL(configurada).hostname; } catch (_) {}
+      const baseActual = !configurada || hostConfigurado.endsWith('.vercel.app')
+        ? 'https://docworks.com.ar/app/' : configurada;
+      const back = retornoSeguro(body.back_url, baseActual);
       requerido(deps.env, 'MERCADOPAGO_WEBHOOK_SECRET');
       // Checkout alojado sin tarjeta previa: suscripción pending SIN plan de MP asociado.
       // El plan comercial de DocWorks sigue siendo el de la membresía y fija el importe.

@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
 const rootDir=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-retorno-'));
-const dom=new JSDOM('<div id="root"></div>',{url:'https://docworks-eight.vercel.app/'});
+const dom=new JSDOM('<div id="root"></div>',{url:'https://docworks.com.ar/login/'});
 for(const k of ['window','document','HTMLElement','CustomEvent','Event','Node','localStorage'])global[k]=dom.window[k];global.IS_REACT_ACT_ENVIRONMENT=true;
 let listener,initial,contexts=[],dashboards=[],rpcCalls=0;
 const session=id=>id?{user:{id}}:null;
