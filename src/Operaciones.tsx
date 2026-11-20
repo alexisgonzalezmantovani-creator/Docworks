@@ -2495,6 +2495,68 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .dw-operation-page-heading::before{content:"";position:absolute;inset:-30px -28px 0;background:var(--bg);z-index:-1;pointer-events:none}
 @media(max-width:640px){.dw-operation-page-heading::before{left:-16px;right:-16px}}
 
+/* Operaciones: estados pastel y montos con contraste en ambos temas. */
+:root:not([data-theme="dark"]) .dw-dashboard-root .op-card-premium.dw-op-state-activo{background:#f3faf5;border-color:#d6ebdd}
+:root:not([data-theme="dark"]) .dw-dashboard-root .op-card-premium.dw-op-state-borrador{background:#fffaf1;border-color:#f1e4cb}
+:root:not([data-theme="dark"]) .dw-dashboard-root .op-card-premium.dw-op-state-cerrado{background:#f4f7fb;border-color:#dce4ee}
+:root[data-theme="dark"] .dw-dashboard-root .op-card-premium.dw-op-state-activo{background:linear-gradient(rgba(52,168,99,.09),rgba(52,168,99,.09)),var(--card);border-color:rgba(85,193,125,.24)}
+:root[data-theme="dark"] .dw-dashboard-root .op-card-premium.dw-op-state-borrador{background:linear-gradient(rgba(225,160,54,.08),rgba(225,160,54,.08)),var(--card);border-color:rgba(222,165,70,.25)}
+:root[data-theme="dark"] .dw-dashboard-root .op-card-premium.dw-op-state-cerrado{background:linear-gradient(rgba(124,147,177,.10),rgba(124,147,177,.10)),var(--card);border-color:rgba(150,171,197,.23)}
+:root:not([data-theme="dark"]) .dw-dashboard-root .monto-tag{color:#96621b}
+:root[data-theme="dark"] .dw-dashboard-root .monto-tag{color:#f2c76c}
+:root:not([data-theme="dark"]) .dw-dashboard-root .op-status-hero.activo{color:#216b40;background:#e0f2e6;border-color:#c9e8d3}
+:root:not([data-theme="dark"]) .dw-dashboard-root .op-status-hero.borrador{color:#906019;background:#fff0d7;border-color:#efdab8}
+:root:not([data-theme="dark"]) .dw-dashboard-root .op-status-hero.cerrado{color:#50657d;background:#e6edf5;border-color:#d5dfea}
+:root[data-theme="dark"] .dw-dashboard-root .op-status-hero.activo{color:#93e6b3;background:rgba(51,172,99,.17);border-color:rgba(82,190,126,.30)}
+:root[data-theme="dark"] .dw-dashboard-root .op-status-hero.borrador{color:#f5cb80;background:rgba(223,163,58,.16);border-color:rgba(223,163,58,.30)}
+:root[data-theme="dark"] .dw-dashboard-root .op-status-hero.cerrado{color:#c3d2e6;background:rgba(142,163,193,.15);border-color:rgba(142,163,193,.27)}
+/* Estado del filtro: Todas y Papelera conservan la apariencia neutra. */
+:root:not([data-theme="dark"]) .dw-dashboard-root .dw-overview-activo{background:#e8f5ed;border-color:#d3e9da}
+:root:not([data-theme="dark"]) .dw-dashboard-root .dw-overview-borrador{background:#fff4e3;border-color:#f1e4c9}
+:root:not([data-theme="dark"]) .dw-dashboard-root .dw-overview-cerrado{background:#e9eff6;border-color:#dae3ee}
+:root:not([data-theme="dark"]) .dw-dashboard-root .dw-overview-activo :is(.dw-overview-label,.dw-overview-value){color:#226a40}
+:root:not([data-theme="dark"]) .dw-dashboard-root .dw-overview-borrador :is(.dw-overview-label,.dw-overview-value){color:#895d1c}
+:root:not([data-theme="dark"]) .dw-dashboard-root .dw-overview-cerrado :is(.dw-overview-label,.dw-overview-value){color:#50657d}
+:root:not([data-theme="dark"]) .dw-dashboard-root .dw-overview-activo.is-selected{background:#dbefdf;border-color:#69aa7d}
+:root:not([data-theme="dark"]) .dw-dashboard-root .dw-overview-borrador.is-selected{background:#ffebca;border-color:#d4a45b}
+:root:not([data-theme="dark"]) .dw-dashboard-root .dw-overview-cerrado.is-selected{background:#dde7f1;border-color:#8fa4bc}
+:root[data-theme="dark"] .dw-dashboard-root .dw-overview-activo{background:linear-gradient(rgba(52,168,99,.14),rgba(52,168,99,.14)),var(--card);border-color:rgba(85,193,125,.25)}
+:root[data-theme="dark"] .dw-dashboard-root .dw-overview-borrador{background:linear-gradient(rgba(225,160,54,.13),rgba(225,160,54,.13)),var(--card);border-color:rgba(222,165,70,.24)}
+:root[data-theme="dark"] .dw-dashboard-root .dw-overview-cerrado{background:linear-gradient(rgba(124,147,177,.15),rgba(124,147,177,.15)),var(--card);border-color:rgba(150,171,197,.24)}
+:root[data-theme="dark"] .dw-dashboard-root .dw-overview-activo :is(.dw-overview-label,.dw-overview-value){color:#a1e5ba}
+:root[data-theme="dark"] .dw-dashboard-root .dw-overview-borrador :is(.dw-overview-label,.dw-overview-value){color:#f5cf8a}
+:root[data-theme="dark"] .dw-dashboard-root .dw-overview-cerrado :is(.dw-overview-label,.dw-overview-value){color:#c8d5e7}
+:root[data-theme="dark"] .dw-dashboard-root .dw-overview-activo.is-selected{border-color:#72cb95}
+:root[data-theme="dark"] .dw-dashboard-root .dw-overview-borrador.is-selected{border-color:#eac07e}
+:root[data-theme="dark"] .dw-dashboard-root .dw-overview-cerrado.is-selected{border-color:#a3b9d1}
+/* Progreso: barra más fina y corta, sin alterar el porcentaje ni las alturas fijas. */
+@media(min-width:761px){
+ .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-side-progress{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start;gap:8px!important;min-width:0!important}
+ .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-progress-heading{display:contents}
+ .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-progress-heading .op-side-label{order:1;font-size:9px;white-space:nowrap}
+ .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-progress-row{order:2;display:flex;flex:0 1 106px;min-width:0!important;max-width:106px!important;margin:0!important}
+ .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-progress-heading .op-progress-pct{order:3;font-size:10px;min-width:0}
+}
+.dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-progress-row .op-progress{width:100%;min-width:0!important;max-width:106px!important;height:4px!important;border:0;border-radius:99px}
+@media(max-width:760px){
+ .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-progress-row{max-width:95px!important}
+ .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-side-progress .op-side-label{font-size:9px!important}
+ .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-side-progress .op-progress-pct{font-size:10px!important}
+}
+/* Paginación: una carpeta (con documentos derivados) cuenta como una sola operación. */
+.dw-dashboard-root .dw-ops-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:13px;padding:12px 4px 20px;border-top:1px solid var(--border2)}
+.dw-dashboard-root .dw-ops-pagination-caption{color:var(--dim);font-size:11.5px;font-weight:600}
+.dw-dashboard-root .dw-ops-pagination-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dw-dashboard-root .dw-ops-pagination-controls .btn{min-height:38px;font-size:11.5px}
+.dw-dashboard-root .dw-ops-pagination-controls .btn:disabled{opacity:.42;cursor:default}
+.dw-dashboard-root .dw-ops-pagination-count{white-space:nowrap;font-size:11.5px;font-weight:750;color:var(--text)}
+@media(max-width:640px){
+ .dw-dashboard-root .dw-ops-pagination{justify-content:center;padding-bottom:18px;gap:8px}
+ .dw-dashboard-root .dw-ops-pagination-caption{flex:1 1 100%;text-align:center}
+ .dw-dashboard-root .dw-ops-pagination-controls{gap:7px;justify-content:center;flex-wrap:nowrap}
+ .dw-dashboard-root .dw-ops-pagination-controls .btn{min-height:40px;padding:8px;font-size:11px}
+}
+
 /* 6.78 — iPhone vertical: una sola geometría para las áreas seguras.
    El menú cubre hasta el borde físico y el listado conserva scroll por encima. */
 @media (max-width:640px) and (orientation:portrait){
@@ -4862,17 +4924,20 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   const [estadoTab,setEstadoTab]=useState(function(){return lsGet("dashboard_estado_tab_v1","activo");});
   useEffect(function(){lsSet("dashboard_estado_tab_v1",estadoTab||"activo");},[estadoTab]);
   const [modoVista,setModoVista]=useState(function(){return lsGet("dashboard_modo_vista_v1","tarjetas");});
+  const [paginaOperaciones,setPaginaOperaciones]=useState(1);
   // Orden independiente de los filtros. Se recuerda en este dispositivo.
   const [ordenOperaciones,setOrdenOperaciones]=useState(function(){
-    var guardado=lsGet("dashboard_orden_v1","ultima_modificacion");
-    return ["ultima_modificacion","creacion","pendientes"].includes(guardado)?guardado:"ultima_modificacion";
+    var guardado=lsGet("dashboard_orden_v2","creacion");
+    return ["ultima_modificacion","creacion","pendientes"].includes(guardado)?guardado:"creacion";
   });
-  useEffect(function(){lsSet("dashboard_orden_v1",ordenOperaciones);},[ordenOperaciones]);
+  useEffect(function(){lsSet("dashboard_orden_v2",ordenOperaciones);},[ordenOperaciones]);
   useEffect(function(){lsSet("dashboard_modo_vista_v1",modoVista);},[modoVista]);
   const [filtrosAbiertos,setFiltrosAbiertos]=useState(function(){return lsGet("dashboard_filtros_abiertos_v1",false);});
   const [filtros,setFiltros]=useState(function(){return lsGet("dashboard_filtros_v1",{desde:"",hasta:"",agente:"todos",montoMin:"",montoMax:"",sucursal:"todos"});});
   useEffect(function(){lsSet("dashboard_filtros_v1",filtros);},[filtros]);
   useEffect(function(){lsSet("dashboard_filtros_abiertos_v1",filtrosAbiertos);},[filtrosAbiertos]);
+  // La paginación no se altera al abrir o editar; solo al cambiar criterios.
+  useEffect(function(){setPaginaOperaciones(1);},[estadoTab,modoVista,search,searchOverride,filtroTipo,filtros,ordenOperaciones]);
 
   // Permite que el ícono de papelera del topbar mobile salte directo a la
   // pestaña "Papelera" sin depender de una vista/ruta aparte.
@@ -4932,6 +4997,20 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     var diferencia=fechaOrdenOperacion(b,modo)-fechaOrdenOperacion(a,modo);
     return diferencia||fechaOrdenOperacion(b,"creacion")-fechaOrdenOperacion(a,"creacion");
   });
+  const OPERACIONES_POR_PAGINA=10;
+  const totalPaginas=Math.max(1,Math.ceil(filtered.length/OPERACIONES_POR_PAGINA));
+  const paginaActual=Math.min(Math.max(1,paginaOperaciones),totalPaginas);
+  const primeraVisible=(paginaActual-1)*OPERACIONES_POR_PAGINA;
+  const operacionesPagina=filtered.slice(primeraVisible,primeraVisible+OPERACIONES_POR_PAGINA);
+  function cambiarPaginaOperaciones(n){
+    setPaginaOperaciones(Math.min(totalPaginas,Math.max(1,n)));
+    if(typeof document!=="undefined"){
+      const cabecera=document.querySelector(".dw-dashboard-root .dw-dashboard-toolbar");
+      if(cabecera&&typeof cabecera.scrollIntoView==="function"){
+        cabecera.scrollIntoView({behavior:"smooth",block:"start"});
+      }
+    }
+  }
   var total=raices.length;
   var activas=raices.filter(function(o){return estadoCarpetaOperacion(o,childrenMap[o.id])==="activo";}).length;
   var alq=raices.filter(function(o){return grupoDe(o).some(function(x){return x.tipo==="alquiler"||x.tipo==="reserva_alquiler";});}).length;
@@ -5071,7 +5150,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       var ultN=op.actualizado_en||op.updated_at||op.created_at;
       var dirN=op.inmueble_direccion||"";
       return(
-        <div key={op.id} className="op-card op-card-premium op-doc-card fade-up" style={Object.assign({position:"relative" as const},removiendo?{opacity:0,transform:"translateX(24px) scale(0.97)",pointerEvents:"none" as const,transition:"opacity .22s ease,transform .22s ease"}:{})}>
+        <div key={op.id} className={"op-card op-card-premium op-doc-card fade-up dw-op-state-"+(op.estado||"borrador")} style={Object.assign({position:"relative" as const},removiendo?{opacity:0,transform:"translateX(24px) scale(0.97)",pointerEvents:"none" as const,transition:"opacity .22s ease,transform .22s ease"}:{})}>
           <div className="op-card-inner" style={{display:"flex",gap:15,alignItems:"stretch"}}>
             <div style={{flex:1,minWidth:0,paddingLeft:2}}>
               <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginBottom:8}}>
@@ -5112,7 +5191,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     function haceFecha(v){if(!v)return "Sin actividad";var d=new Date(v);if(!Number.isFinite(d.getTime()))return "Fecha no disponible";var ms=Math.max(0,Date.now()-d.getTime()),min=Math.floor(ms/60000),hor=Math.floor(min/60),dias=Math.floor(hor/24);if(min<1)return "Ahora";if(min<60)return "Hace "+min+" min";if(hor<24)return "Hace "+hor+" h";if(dias<30)return "Hace "+dias+" día"+(dias===1?"":"s");return d.toLocaleDateString("es-AR");}
     var direccion=op.inmueble_direccion||"";
     return(
-      <div key={op.id} className="op-card op-card-premium fade-up" style={Object.assign({position:"relative" as const,marginTop:0},removiendo?{opacity:0,transform:"translateX(24px) scale(0.97)",pointerEvents:"none" as const,transition:"opacity .22s ease,transform .22s ease"}:{})}>
+      <div key={op.id} className={"op-card op-card-premium fade-up dw-op-state-"+estadoClase} style={Object.assign({position:"relative" as const,marginTop:0},removiendo?{opacity:0,transform:"translateX(24px) scale(0.97)",pointerEvents:"none" as const,transition:"opacity .22s ease,transform .22s ease"}:{})}>
         <div className={"op-state-rail "+estadoClase}/><div className="op-card-inner" style={{display:"flex",gap:15,alignItems:"stretch"}}>
           <div style={{flex:1,minWidth:0,paddingLeft:2}}>
             <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginBottom:8}}>
@@ -5157,7 +5236,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
         {!enPapelera&&permisosGenerales.crear&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
       </div>
       <div className="dw-dashboard-overview" aria-label="Resumen de operaciones">
-        {[{label:"Todas",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"},{label:"Papelera",value:papelera.length,icon:"trash",tab:"papelera"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat"+(estadoTab===item.tab?" is-selected":"")+(item.tab==="papelera"?" dw-overview-trash":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab} aria-label={item.tab==="papelera"?"Abrir papelera":item.label}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value" aria-busy={loading&&operaciones.length===0}>{loading&&operaciones.length===0?"—":item.value}</span></button>;})}
+        {[{label:"Todas",value:total,icon:"folder",tab:"todas"},{label:"Activas",value:activas,icon:"clock",tab:"activo"},{label:"Borradores",value:nuevasCount,icon:"edit",tab:"borrador"},{label:"Cerradas",value:cerradasCount,icon:"check",tab:"cerrado"},{label:"Papelera",value:papelera.length,icon:"trash",tab:"papelera"}].map(function(item){return <button key={item.tab} type="button" className={"dw-overview-stat dw-overview-"+item.tab+(estadoTab===item.tab?" is-selected":"")+(item.tab==="papelera"?" dw-overview-trash":"")} onClick={function(){setEstadoTab(item.tab);}} aria-pressed={estadoTab===item.tab} aria-label={item.tab==="papelera"?"Abrir papelera":item.label}><span className="dw-overview-label"><DWIcon name={item.icon} size={15}/>{item.label}</span><span className="dw-overview-value" aria-busy={loading&&operaciones.length===0}>{loading&&operaciones.length===0?"—":item.value}</span></button>;})}
       </div>
       <div className="dw-mobile-trash-link"><button type="button" className="btn btn-secondary btn-sm" onClick={function(){setEstadoTab(enPapelera?"todas":"papelera");}}><DWIcon name="trash" size={13}/> {enPapelera?"Volver a operaciones":"Papelera"}</button></div>
       {error && <div role="alert" style={{marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(248,113,113,0.08)",border:"1px solid rgba(248,113,113,0.25)",color:"var(--red)",fontSize:12.5}}>{error} {onRetry&&<button type="button" className="btn btn-secondary btn-sm" onClick={onRetry} style={{marginLeft:8}}>Reintentar</button>}</div>}
@@ -5184,8 +5263,8 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
         <label className="dw-sort-control" title="Ordenar operaciones: creación, última modificación o pendientes primero">
           <span className="dw-sort-icon" aria-hidden="true">↕</span>
           <select aria-label="Ordenar operaciones" value={ordenOperaciones} onChange={function(e){setOrdenOperaciones(e.target.value);}}>
+            <option value="creacion">Fecha de creación</option>
             <option value="ultima_modificacion">Última modificación</option>
-            <option value="creacion">Más recientes (creación)</option>
             <option value="pendientes">Pendientes primero</option>
           </select>
         </label>
@@ -5207,12 +5286,12 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       {!perfil.nombre&&<div className="notice notice-gold" style={{marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}><span>Configurá el perfil de tu inmobiliaria para agregar logo en los PDFs.</span><Btn v="ghost" s="sm" onClick={onPerfil} style={{color:"var(--gold)",flexShrink:0}}>⚙ Configurar</Btn></div>}
       {modoVista==="tabla" ? (
         <div className="op-table-wrap">
-          {filtered.length===0?<div style={{padding:44,textAlign:"center",color:"var(--dim)",fontSize:13}}>{loading?"Cargando operaciones…":"No hay operaciones en esta vista."}</div>:<table className="op-table"><thead><tr><th>Estado</th><th>Operación</th><th>Partes</th><th>Monto</th><th>Fecha</th><th>Agente</th><th></th></tr></thead><tbody>{filtered.map(function(op){return <tr key={op.id}><td><span className={"op-status-badge "+(op.estado||"borrador")}>{ESTADOS[op.estado]||"Borrador"}</span></td><td><div style={{fontWeight:700}}>{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]||op.tipo}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{op.inmueble_direccion||"Sin dirección"}</div><div className="op-table-partes" title={getName(op)}>{getName(op).replace(/\s*\((?:comprador|vendedor|locatario|locador)\)/gi,"")}</div></td><td>{getName(op)}</td><td style={{fontWeight:700,color:"var(--gold)"}}>{getMonto(op)||"—"}</td><td>{op.created_at&&Number.isFinite(new Date(op.created_at).getTime())?new Date(op.created_at).toLocaleDateString("es-AR"):"—"}</td><td>{op.broker_nombre||op.broker||"—"}</td><td><Btn v="secondary" s="sm" onClick={function(){onViewDoc(op);}}>Abrir</Btn></td></tr>;})}</tbody></table>}
+          {filtered.length===0?<div style={{padding:44,textAlign:"center",color:"var(--dim)",fontSize:13}}>{loading?"Cargando operaciones…":"No hay operaciones en esta vista."}</div>:<table className="op-table"><thead><tr><th>Estado</th><th>Operación</th><th>Partes</th><th>Monto</th><th>Fecha</th><th>Agente</th><th></th></tr></thead><tbody>{operacionesPagina.map(function(op){return <tr key={op.id}><td><span className={"op-status-badge "+(op.estado||"borrador")}>{ESTADOS[op.estado]||"Borrador"}</span></td><td><div style={{fontWeight:700}}>{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]||op.tipo}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{op.inmueble_direccion||"Sin dirección"}</div><div className="op-table-partes" title={getName(op)}>{getName(op).replace(/\s*\((?:comprador|vendedor|locatario|locador)\)/gi,"")}</div></td><td>{getName(op)}</td><td style={{fontWeight:700,color:"var(--gold)"}}>{getMonto(op)||"—"}</td><td>{op.created_at&&Number.isFinite(new Date(op.created_at).getTime())?new Date(op.created_at).toLocaleDateString("es-AR"):"—"}</td><td>{op.broker_nombre||op.broker||"—"}</td><td><Btn v="secondary" s="sm" onClick={function(){onViewDoc(op);}}>Abrir</Btn></td></tr>;})}</tbody></table>}
         </div>
       ) : (
       <div className="op-list" style={{display:"flex",flexDirection:"column",gap:9,paddingBottom:"calc(88px + env(safe-area-inset-bottom, 0px))"}}>
         {filtered.length===0&&<div role="status" aria-live="polite" style={{padding:44,textAlign:"center",background:"var(--card)",border:"1px solid var(--border)",borderRadius:14}}>{!loading&&<div style={{fontSize:38,marginBottom:10}}>📂</div>}<p style={{color:"var(--dim)",fontSize:13}}>{loading?"Cargando operaciones…":effectiveSearch?"Sin resultados para esa búsqueda.":"No hay operaciones en esta vista."}</p></div>}
-        {filtered.map(function(op){
+        {operacionesPagina.map(function(op){
           const hijos=childrenMap[op.id]||[];
           if(hijos.length===0) return renderOpRow(op,false);
           const isOpen=!!openFolders[op.id];
@@ -5225,6 +5304,15 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
         })}
       </div>
       )}
+      {filtered.length>OPERACIONES_POR_PAGINA&&
+        <nav className="dw-ops-pagination" aria-label="Páginas de operaciones">
+          <span className="dw-ops-pagination-caption">Mostrando {primeraVisible+1}–{Math.min(primeraVisible+OPERACIONES_POR_PAGINA,filtered.length)} de {filtered.length}</span>
+          <div className="dw-ops-pagination-controls">
+            <button type="button" className="btn btn-secondary btn-sm" disabled={paginaActual===1} onClick={function(){cambiarPaginaOperaciones(paginaActual-1);}}>← Anterior</button>
+            <span className="dw-ops-pagination-count" aria-live="polite">Página {paginaActual} de {totalPaginas}</span>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={paginaActual===totalPaginas} onClick={function(){cambiarPaginaOperaciones(paginaActual+1);}}>Siguiente →</button>
+          </div>
+        </nav>}
       </>
       )}
       {/* Modal "Documentos vinculados": único punto de entrada para agregar
