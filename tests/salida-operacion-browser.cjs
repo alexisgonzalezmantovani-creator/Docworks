@@ -119,7 +119,10 @@ await fresh();await page.getByRole('button',{name:'Simular demora',exact:true}).
 await page.getByRole('button',{name:'Seguir editando',exact:true}).click();assert.ok(await page.locator('#dw-field-locatario_nombre').isVisible());checks++;
 await page.getByRole('button',{name:'Volver a operaciones',exact:true}).click();assert.equal(await page.getByRole('button',{name:'Salir sin guardar',exact:true}).isDisabled(),true,'seguir editando no cancela el guardado en la nube');await page.getByRole('button',{name:'Seguir editando',exact:true}).click();checks++;
 await page.getByRole('button',{name:'Resolver demora',exact:true}).click();assert.equal(await page.locator('.dw-operation-page').count(),1);checks++;
-await fresh();await open();await page.locator('.dw-grupo-tipo-alquiler .dw-grupo-card').filter({hasText:'Contrato de Alquiler'}).click();await selectStep(5);
+await fresh();await open();await page.locator('.dw-grupo-tipo-alquiler .dw-grupo-card').filter({hasText:'Contrato de Alquiler'}).click();
+// El contrato nuevo ofrece recuperar una reserva o comenzar manualmente antes de mostrar campos.
+await page.getByRole('heading',{name:/Cómo querés preparar el contrato de alquiler/}).waitFor();
+await page.getByRole('button',{name:/Cargar los datos manualmente/}).click();await selectStep(5);
 assert.equal(await page.locator('.dw-operation-next-action .btn').evaluate(el=>getComputedStyle(el).fontSize),width>=761?'13.5px':'12.5px');checks++;
 if(width>=761){assert.ok(await page.locator('.dw-operation-next-action .btn').evaluate(el=>el.getBoundingClientRect().height>=44));assert.ok(await page.getByRole('button',{name:'Volver a operaciones',exact:true}).evaluate(el=>el.getBoundingClientRect().height>=44));checks++;}
 const meses=page.locator('#dw-field-alquiler_plazo_meses');await meses.fill('');assert.equal(await meses.inputValue(),'');await meses.pressSequentially('12');assert.equal(await meses.inputValue(),'12');checks++;
