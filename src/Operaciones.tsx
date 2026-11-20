@@ -1155,6 +1155,17 @@ export const GS = `
     .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch{flex:0 0 auto;white-space:nowrap;padding:2px;}
     .dw-dashboard-root .dw-dashboard-toolbar .op-view-switch button{width:28px;height:32px;}
   }
+  /* Selector nativo de orden: en iPhone es un botón compacto que abre las opciones del sistema. */
+  .dw-dashboard-root .dw-sort-control{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 10px;flex-shrink:0;border:1px solid var(--border2);border-radius:10px;background:var(--card);color:var(--text);cursor:pointer;}
+  .dw-dashboard-root .dw-sort-control:focus-within{outline:2px solid var(--gold);outline-offset:2px;}
+  .dw-dashboard-root .dw-sort-icon{font-size:18px;line-height:1;color:var(--gold);font-weight:700;}
+  .dw-dashboard-root .dw-sort-control select{min-width:0;max-width:195px;background:transparent;border:0;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:650;cursor:pointer;}
+  .dw-dashboard-root .dw-sort-control select:focus{outline:none;}
+  @media(max-width:700px){
+    .dw-dashboard-root .dw-sort-control{position:relative;justify-content:center;flex:0 0 38px;width:38px;height:36px;min-width:38px;padding:0;}
+    .dw-dashboard-root .dw-sort-control select{position:absolute;inset:0;width:100%;height:100%;max-width:none;opacity:0;cursor:pointer;}
+    .dw-dashboard-root .dw-sort-icon{font-size:19px;}
+  }
   /* Calendar overview: compact, readable three-column cards on phones. */
   .calendar-summary-card{padding:14px 16px;display:flex;align-items:center;gap:12px;border-radius:14px;min-width:0;}
   .calendar-summary-icon{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;}
@@ -4851,6 +4862,12 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   const [estadoTab,setEstadoTab]=useState(function(){return lsGet("dashboard_estado_tab_v1","activo");});
   useEffect(function(){lsSet("dashboard_estado_tab_v1",estadoTab||"activo");},[estadoTab]);
   const [modoVista,setModoVista]=useState(function(){return lsGet("dashboard_modo_vista_v1","tarjetas");});
+  // Orden independiente de los filtros. Se recuerda en este dispositivo.
+  const [ordenOperaciones,setOrdenOperaciones]=useState(function(){
+    var guardado=lsGet("dashboard_orden_v1","ultima_modificacion");
+    return ["ultima_modificacion","creacion","pendientes"].includes(guardado)?guardado:"ultima_modificacion";
+  });
+  useEffect(function(){lsSet("dashboard_orden_v1",ordenOperaciones);},[ordenOperaciones]);
   useEffect(function(){lsSet("dashboard_modo_vista_v1",modoVista);},[modoVista]);
   const [filtrosAbiertos,setFiltrosAbiertos]=useState(function(){return lsGet("dashboard_filtros_abiertos_v1",false);});
   const [filtros,setFiltros]=useState(function(){return lsGet("dashboard_filtros_v1",{desde:"",hasta:"",agente:"todos",montoMin:"",montoMax:"",sucursal:"todos"});});
@@ -4889,21 +4906,31 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     if(filtros.hasta) matchAvanzado=matchAvanzado&&grupoDe(op).some(function(o){return new Date(o.created_at||0)<=new Date(filtros.hasta+"T23:59:59");});
     return matchSearch&&matchTipo&&matchEstado&&matchAvanzado;
   });
-  // Prioridad visual: borradores que requieren completar, luego activas y cerradas; recientes primero.
+  // Orden configurable: fecha de creación, última edición de la carpeta o pendientes primero.
+  // La actualización de un documento vinculado también actualiza la posición de la carpeta.
+  function fechaOrdenOperacion(op,modo){
+    var fechas=modo==="creacion"?[op.created_at]:grupoDe(op).map(function(x){return x.actualizado_en||x.updated_at||x.created_at;});
+    return fechas.reduce(function(max,fecha){
+      var valor=new Date(fecha||0).getTime();
+      return Math.max(max,Number.isFinite(valor)?valor:0);
+    },0);
+  }
+  function prioridadOperacion(o){
+    var estado=estadoCarpetaOperacion(o,childrenMap[o.id]);
+    if(estado==="borrador"&&getCamposFaltantesDetalle(o,perfil).length>0)return 0;
+    if(estado==="activo")return 1;
+    if(estado==="borrador")return 2;
+    if(estado==="cerrado")return 3;
+    return 4;
+  }
   filtered.sort(function(a,b){
-    function prioridad(o){
-      // Priorizar trabajo pendiente real, sin convertir todas las operaciones en alertas.
-      var estado=estadoCarpetaOperacion(o,childrenMap[o.id]);
-      if(estado==="borrador"&&getCamposFaltantesDetalle(o,perfil).length>0)return 0;
-      if(estado==="activo")return 1;
-      if(estado==="borrador")return 2;
-      if(estado==="cerrado")return 3;
-      return 4;
+    if(ordenOperaciones==="pendientes"){
+      var p=prioridadOperacion(a)-prioridadOperacion(b);
+      if(p!==0)return p;
     }
-    var p=prioridad(a)-prioridad(b);
-    if(p!==0)return p;
-    var db=new Date(b.actualizado_en||b.updated_at||b.created_at||0).getTime(),da=new Date(a.actualizado_en||a.updated_at||a.created_at||0).getTime();
-    return (Number.isFinite(db)?db:0)-(Number.isFinite(da)?da:0);
+    var modo=ordenOperaciones==="creacion"?"creacion":"ultima_modificacion";
+    var diferencia=fechaOrdenOperacion(b,modo)-fechaOrdenOperacion(a,modo);
+    return diferencia||fechaOrdenOperacion(b,"creacion")-fechaOrdenOperacion(a,"creacion");
   });
   var total=raices.length;
   var activas=raices.filter(function(o){return estadoCarpetaOperacion(o,childrenMap[o.id])==="activo";}).length;
@@ -5154,6 +5181,14 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
           var nFiltros=Object.values(filtros).filter(function(v){return v!==""&&v!=="todos";}).length+(filtroTipo&&filtroTipo!=="todos"?1:0);
           return <button type="button" className={"btn btn-secondary btn-sm filtros-btn"+(filtrosAbiertos||nFiltros>0?" is-active":"")} aria-label="Filtros" aria-expanded={!!filtrosAbiertos} onClick={function(){setFiltrosAbiertos(function(v){return !v;});}}><DWIcon name="sliders" size={16} strokeWidth={1.9}/><span className="filtros-label">Filtros</span>{nFiltros>0&&<span className="filtros-badge">{nFiltros}</span>}</button>;
         })()}
+        <label className="dw-sort-control" title="Ordenar operaciones: creación, última modificación o pendientes primero">
+          <span className="dw-sort-icon" aria-hidden="true">↕</span>
+          <select aria-label="Ordenar operaciones" value={ordenOperaciones} onChange={function(e){setOrdenOperaciones(e.target.value);}}>
+            <option value="ultima_modificacion">Última modificación</option>
+            <option value="creacion">Más recientes (creación)</option>
+            <option value="pendientes">Pendientes primero</option>
+          </select>
+        </label>
         <div className="op-view-switch" title="Cambiar vista">
           <button type="button" className={modoVista==="tarjetas"?"active":""} onClick={function(){setModoVista("tarjetas");}} aria-label="Vista de tarjetas">▦</button>
           <button type="button" className={modoVista==="tabla"?"active":""} onClick={function(){setModoVista("tabla");}} aria-label="Vista de tabla">☷</button>
