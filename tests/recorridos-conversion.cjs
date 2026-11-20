@@ -9,7 +9,7 @@ check('un segundo refuerzo no queda bloqueado por el primero',()=>{
 });
 const operacionesSource=fs.readFileSync(dir+'/src/Operaciones.tsx','utf8'),operacionesAst=ts.createSourceFile('Operaciones.tsx',operacionesSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),selectores={};
 (function visit(n){if(ts.isFunctionDeclaration(n)&&n.name)selectores[n.name.text]=n.getText(operacionesAst);ts.forEachChild(n,visit)})(operacionesAst);
-function seleccionar(nombre,op){let resultado,paso=1;const deps={...a,data:{...a.EMPTY_OP},setBulk:x=>{resultado=x;},setStep:x=>{paso=x;}};new Function('deps','with(deps){'+functions.antecedenteReservaParaRefuerzo+';return ('+selectores[nombre]+');}')(deps)(op);assert.equal(paso,2,'La selección avanza al paso de datos');return resultado;}
+function seleccionar(nombre,op){let resultado,paso=1;const deps={...a,data:{...a.EMPTY_OP},setBulk:x=>{resultado=x;},setStep:x=>{paso=x;},setOrigenRecuperacion:()=>{},setRecuperacionAsistida:()=>{},setVerSoloPendientes:()=>{}};new Function('deps','with(deps){'+functions.antecedenteReservaParaRefuerzo+';return ('+selectores[nombre]+');}')(deps)(op);assert.equal(paso,2,'La selección avanza al paso de datos');return resultado;}
 
 const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
 const srcApp=source;
@@ -39,7 +39,7 @@ check('las reservas vinculadas no se pierden al entrar directamente a Refuerzo',
  for(const tipo of ['reserva','boleto','reserva_alquiler','alquiler','comodato','exclusividad','refuerzo_reserva','devolucion_reserva']){
    check(tipo+' inicia al hacer clic sin pulsar Continuar',()=>{
      let paso=1,seleccion='',confirmations=0;
-     const deps={data:{tipo:'reserva'},initial:null,set:(k,v)=>{if(k==='tipo')seleccion=v;},setStep:n=>{paso=n;},draftTieneContenido:()=>false,requestDwConfirm:()=>{confirmations++;}};
+     const deps={data:{tipo:'reserva'},initial:null,set:(k,v)=>{if(k==='tipo')seleccion=v;},setStep:n=>{paso=n;},setOrigenRecuperacion:()=>{},setRecuperacionAsistida:()=>{},setVerSoloPendientes:()=>{},draftTieneContenido:()=>false,requestDwConfirm:()=>{confirmations++;}};
      new Function('deps','with(deps){return ('+form+');}')(deps)('tipo',tipo);
      assert.equal(paso,2);assert.equal(seleccion,tipo);assert.equal(confirmations,0);
    });

@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
-const dom=new JSDOM('<html><body><div id="root"></div></body></html>',{url:'https://docworks-eight.vercel.app/'});
+const dom=new JSDOM('<html><body><div id="root"></div></body></html>',{url:'https://docworks.com.ar/login/'});
 for(const k of ['window','document','HTMLElement','CustomEvent','Event','Node','localStorage'])global[k]=dom.window[k];global.IS_REACT_ACT_ENVIRONMENT=true;
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-recovery-ui-'));
 require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.resolve(__dirname,'../src/App.tsx'),'utf8')+'\nimport {act,createElement} from "react";import {createRoot} from "react-dom/client";export {act,createElement,createRoot,LoginScreen,useDocWorksSession,RecordatoriosPanel};',resolveDir:path.resolve(__dirname,'../src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:tmp+'/app.cjs'});
