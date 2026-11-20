@@ -59,7 +59,7 @@ function FormalIcon({name,size=22,strokeWidth=1.75}){
     pen:<><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></>,
     plusCircle:<><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></>,
     undo:<><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></>,
-    housePlus:<><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10Z"/><path d="M9 22v-7h6v7"/><path d="M8 11h8M12 7v8"/></>,
+    housePlus:<><path d="m2.5 10 9.5-7 9.5 7v10a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 20V10Z"/><path d="M9 21.5v-8h6v8"/><path d="M5.5 11.5H7.5"/><path d="M16.5 11.5h2"/></>,
     doorOpen:<><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.6v16.1a1 1 0 0 1-1.25.97l-6-1.5A1 1 0 0 1 5 19.2V5.8a1 1 0 0 1 .75-.97l6-1.5A1 1 0 0 1 13 4.6Z"/></>,
     folderOpen:<><path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v3"/><path d="M3 19 6 12h15l-3 8H5a2 2 0 0 1-2-2V6"/></>
   };
@@ -6575,7 +6575,7 @@ function getProximoPasoOperacion(op, operaciones){
   if(op.proceso_estado==="en_negociacion") return {icon:"↔",texto:"Continuar negociación",tone:"var(--gold)"};
   return {icon:"→",texto:"Continuar documentación / cierre",tone:"var(--teal)"};
 }
-function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esContratoPropioOp=false,puedeGuardar=true}){
+function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esContratoPropioOp=false,puedeGuardar=true,recuperacionLista=false}){
   var partes=getResumenPartes(data);
   var monto=getResumenMonto(data);
   var faltantes=getCamposFaltantesDetalle(data,perfil);
@@ -6630,7 +6630,11 @@ function PasoResumenFinal({data,clausulas,perfil,onVolver,onFinalizarAccion,esCo
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:16,borderTop:"1px solid var(--border)",marginTop:6}}>
         <Btn v="ghost" className="dw-operation-back" onClick={onVolver}>← Volver a editar</Btn>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
-          <Btn v="success" disabled={!puedeGuardar} onClick={abrirMenu}>Guardar o emitir →</Btn>
+          {recuperacionLista&&!faltantes.length&&!requiereContratoCesion&&
+            <Btn v="success" disabled={!puedeGuardar} onClick={function(){onFinalizarAccion("vista_previa",data.estado||"borrador");}}>
+              Vista previa y descarga →
+            </Btn>}
+          <Btn v={recuperacionLista?"secondary":"success"} disabled={!puedeGuardar} onClick={abrirMenu}>Guardar o emitir →</Btn>
         </div>
       </div>
       <Modal open={showMenu} onClose={function(){setShowMenu(false);}} title="Guardar o emitir">
@@ -8821,9 +8825,9 @@ function TareasPanel(props){return <><TareasChecklist {...props}/><Recordatorios
 const NegociacionPanel = crearNegociacionPanel({Btn, Inp, Slt, Txa, fechaHoyISO, fmt$, fmtD, genId, useState});
 const ReservaDecisionPanel = crearReservaDecisionPanel({Btn, useState});
 const DocumentViewer = crearDocumentViewer({construirDocumentoConformidadReserva, modoConformidadReserva, canonizarMarcadoresAjuste, conservaChipsAjuste, ALIASES_TOKEN_OBLIGATORIO, BODY_TEMPLATE_PRESETS, ConfirmModal, DocSummaryPanel, DocTabsBar, FichaOperacionPanel, NegociacionPanel, ReservaCompactSummary, ReservaDecisionPanel, TIPOS, TareasPanel, aplicarEncabezadoPersonalizado, buildDocSections, buildReciboSections, campoDesdeTextoFaltante, campoPrincipalErrorExport, capRol, contactosDocumento, copiarAlPortapapeles, cuerpoTrasRotulo, descargarArchivo, dwNotify, entregarArchivo, fmt$, generarDOCX, generarPDF, getBodyBlocksConfig, getBodyBlocksForDocument, getComisionComponents, getDocTabs, getCamposFaltantesDetalle, labelTokenObligatorio, tokenLabelDocWorks, normalizarBodyBlock, normalizarTextoDocumento, opParaDocumento, prefijoClausulaDesdeNumTitulo, prefijoClausulaFormal, resaltarFaltantes, resolveVars, revisarDocumentoIA, rolParte, tipoIdentificacion, traducirError, useEffect, useRef, useState, validarDocumentoParaExport});
-const EstadisticasView = crearEstadisticasView({Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
+const EstadisticasView = crearEstadisticasView({Btn, Modal, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState});
 const CalendarioView = crearCalendarioView({finAlquilerISO, useState});
-const OperacionForm = crearOperacionForm({camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
+const OperacionForm = crearOperacionForm({camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, plazoReservaAlquiler, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState});
 const ClausulasView = crearClausulasView({useState, useRef, useEffect, requestDwConfirm, CLAUSULAS_DEFAULT, CLAUSULA_CATS, ClausulaFormBody, DWIcon, FORM_CLAUSULA_EMPTY, HistorialClausulaModal, TIPOS, genId, dwNotify, traducirError, narrarClausulaIA, clausulaYaEnTextoBase, clausulaAplicaTipo});
 const ClausulasWorkspace = crearClausulasWorkspace({dwNotify, TIPO_ICON,ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState});
 const DashboardView = crearDashboardView({parseMontoAR, Btn, CAMPOS_CRITICOS_POR_TIPO, ConfirmModal, DWIcon, Dropdown, ESTADOS, Modal, PapeleraView, TIPOS, TIPO_ICON, aplicarEncabezadoPersonalizado, buildDocSections, campoPrincipalErrorExport, dwNotify, entregarArchivo, fmt$, generarPDF, getCamposFaltantesDetalle, getProximoPasoOperacion, loadSupabaseJs, lsGet, lsSet, nombreConSufijo, opParaDocumento, operacionCoincideBusqueda, requestDwConfirm, traducirError, useEffect, useState, validarDocumentoParaExport});
@@ -9662,11 +9666,9 @@ function DocWorksApp(){
     return { ok:true };
   }
 
-  function exportarOperacionesCSV(){
-    var periodo=window.prompt("Exportar operaciones y comisiones\n\n1 = Año en curso\n2 = Últimos 3 meses\n3 = Últimos 6 meses\n4 = Últimos 12 meses\n5 = Todo el historial", "1");
-    if(periodo===null)return;
+  function exportarOperacionesCSV(periodo="1"){
     periodo=String(periodo).trim();
-    if(["1","2","3","4","5"].indexOf(periodo)<0){dwNotify("warning","Elegí una opción del 1 al 5 para exportar.");return;}
+    if(["1","2","3","4","5"].indexOf(periodo)<0){dwNotify("warning","Seleccioná un período de exportación válido.");return false;}
     var fechaCorte=new Date();fechaCorte.setHours(0,0,0,0);
     var u=(docworksAuth.contexto&&docworksAuth.contexto.usuario)||{},esBroker=u.rol_base==="broker";
     var visible=(esBroker&&u.id?operaciones.filter(function(o){return o.broker_id===u.id;}):operaciones.slice()).filter(function(o){
@@ -9677,12 +9679,13 @@ function DocWorksApp(){
       var desde=new Date(fechaCorte.getFullYear(),fechaCorte.getMonth()-(meses-1),1);desde.setHours(0,0,0,0);
       return new Date(f+"T00:00:00")>=desde&&new Date(f+"T00:00:00")<=fechaCorte;
     });
-    if(!visible.length){dwNotify("warning","No hay operaciones en el período seleccionado.");return;}
+    if(!visible.length){dwNotify("warning","No hay operaciones en el período seleccionado.");return false;}
     var splitDefault=Math.max(0,Math.min(100,parseFloat((perfil&&perfil.broker_split_pct)!=null?perfil.broker_split_pct:50)||0));
     var splitMode=(perfil&&perfil.broker_split_mode)==="individual"?"individual":"uniforme",splitMap=(perfil&&perfil.broker_splits&&typeof perfil.broker_splits==="object")?perfil.broker_splits:{};
     var filas=visible.map(function(o){var items=getComisionComponents(o)||[],split=splitMode==="individual"&&o.broker_id&&splitMap[o.broker_id]!=null?Math.max(0,Math.min(100,parseFloat(splitMap[o.broker_id])||0)):splitDefault;var usd=items.filter(function(i){return i.moneda==="USD";}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0),ars=items.filter(function(i){return i.moneda!=="USD";}).reduce(function(a,i){return a+(parseFloat(i.monto)||0);},0);return {fecha:(o.created_at||"").slice(0,10),tipo:TIPOS[o.tipo]||o.tipo||"",estado:ESTADOS[o.estado]||o.estado||"",direccion:o.inmueble_direccion||"",comprador:o.comprador_nombre||o.locatario_nombre||"",vendedor:o.vendedor_nombre||o.locador_nombre||"",precio:o.precio||o.alquiler_monto_inicial||o.res_alq_monto_mensual||"",moneda:o.moneda||o.alquiler_moneda||o.res_alq_moneda||"",agente:o.broker_nombre||o.broker||"",comision_usd:usd,comision_ars:ars,participacion_agente_pct:split,agente_usd:o.broker_id?usd*split/100:0,agente_ars:o.broker_id?ars*split/100:0};});
     var etiqueta=periodo==="1"?"anio-"+fechaCorte.getFullYear():periodo==="2"?"ultimos-3-meses":periodo==="3"?"ultimos-6-meses":periodo==="4"?"ultimos-12-meses":"historial-completo";
     descargarCSV(filas,"docworks-operaciones-comisiones-"+etiqueta+"-"+new Date().toISOString().slice(0,10)+".csv");
+    return true;
   }
 
   async function saveOp(data,accion,estadoFinal){
@@ -9784,9 +9787,12 @@ function DocWorksApp(){
       if(borradorAlIniciarGuardado && borradorDelContexto(borradorAlIniciarGuardado,docworksAuth.contexto) && mismoBorrador(borradorAlIniciarGuardado,borradorActual))lsRemove("draftOperacion");
       if(borradorCambioDuranteGuardado){dwNotify("warning","Se guardó una versión anterior. Conservamos tus cambios más recientes para que puedas guardarlos.");return {operacion:opGuardada,borradorPendiente:true};}
       setShowForm(false);setEditOp(null);setFormInitialOverride(null);
-      if(accion==="pdf"||accion==="whatsapp"){
+      if(accion==="pdf"||accion==="whatsapp"||accion==="vista_previa"){
         setDocAutoAction(accion==="whatsapp"?"whatsapp":null);
         abrirDoc(opGuardada);
+        // La recuperación completa abre la hoja real para leer y descargar,
+        // no la ficha-resumen del visor.
+        if(accion==="vista_previa")setDocTab(opGuardada.tipo);
       }
     } catch(e) {
       if(!vigente())return {contextoObsoleto:true};

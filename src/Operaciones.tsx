@@ -2659,6 +2659,20 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
  .dw-operation-page .dw-grupo-icon{width:48px;height:48px}
 }
 /* Refuerzo: elección previa limpia, sin mezclar el listado con datos personales. */
+
+/* Recuperación asistida: opciones antes de los pasos del formulario. */
+.dw-operation-page .dw-origen-recuperacion-lista{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0 14px}
+.dw-operation-page .dw-origen-recuperacion-item{display:flex;flex-direction:column;gap:6px;min-width:0;text-align:left;cursor:pointer;border-radius:11px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);padding:13px 14px;font:inherit;font-size:13px}
+.dw-operation-page .dw-origen-recuperacion-item:hover,.dw-operation-page .dw-origen-recuperacion-item:focus-visible{border-color:var(--gold);outline-offset:2px}
+.dw-operation-page .dw-origen-recuperacion-item span{color:var(--muted);font-size:11.5px}
+.dw-operation-page .dw-recuperacion-confirmacion{font-size:11px;color:var(--green);font-weight:700}
+.dw-operation-page .dw-recuperacion-pendientes{display:flex;flex-direction:column;gap:7px;margin-bottom:13px}
+.dw-operation-page .dw-recuperacion-faltante{display:flex;align-items:center;justify-content:space-between;gap:9px;width:100%;text-align:left;padding:12px 13px;cursor:pointer;border:1px solid var(--border2);border-radius:9px;background:var(--surface2);color:var(--text);font:inherit;font-size:12.5px}
+.dw-operation-page .dw-recuperacion-faltante:hover,.dw-operation-page .dw-recuperacion-faltante:focus-visible{border-color:var(--gold);outline-offset:2px}
+.dw-operation-page .dw-recuperacion-faltante strong{flex-shrink:0;white-space:nowrap;color:var(--gold);font-size:11.5px}
+.dw-operation-page .dw-recuperacion-volver{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-bottom:12px;padding:10px 12px;border:1px solid var(--border2);border-radius:10px;font-size:12px;font-weight:600;color:var(--muted)}
+@media(max-width:700px){.dw-operation-page .dw-origen-recuperacion-lista{grid-template-columns:1fr}}
+
 .dw-refuerzo-origen,.dw-refuerzo-reservas{border:1px solid var(--border2);border-radius:14px;background:var(--card);padding:18px;max-width:100%}
 .dw-refuerzo-origen h3,.dw-refuerzo-reservas h3{font-size:16px;font-weight:750;color:var(--text);margin-bottom:7px}
 .dw-refuerzo-origen>p,.dw-refuerzo-vacio{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:15px}
@@ -2672,6 +2686,96 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .dw-refuerzo-reservas>button:last-child{margin-top:14px}
 @media(max-width:640px){.dw-refuerzo-origen-grid{grid-template-columns:1fr}.dw-refuerzo-origen,.dw-refuerzo-reservas{padding:13px}}
 
+
+/* Columna derecha compacta en PC, misma altura de controles con y sin documentos. */
+@media(min-width:761px) and (min-height:501px), (min-width:1101px){
+  .dw-dashboard-root .op-card-premium .op-card-inner{
+    grid-template-columns:minmax(0,1fr) min(43%, 300px)!important;
+  }
+  .dw-dashboard-root .op-card-premium .op-card-side{
+    padding-left:8px!important;
+    gap:4px!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-side-progress{
+    justify-content:flex-end!important;
+    text-align:right;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-progress-heading .op-side-label{order:1}
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-progress-row{order:2}
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .dw-progress-help{order:3}
+}
+/* Ayuda accesible del porcentaje: hover en PC y toque en pantallas táctiles. */
+.dw-progress-help{display:inline-flex;align-items:center;position:relative;min-width:0;flex:none}
+.dw-progress-help-trigger{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;border:0;padding:4px 2px;margin:-4px -2px;
+  border-radius:6px;color:var(--gold);font:inherit;font-weight:800;
+  cursor:help;white-space:nowrap;min-height:26px
+}
+.dw-progress-help-trigger:hover,.dw-progress-help-trigger:focus-visible{
+  color:var(--text);background:var(--surface2);outline-offset:2px
+}
+.dw-progress-help-panel{
+  display:none;position:absolute;z-index:300;right:0;bottom:100%;
+  width:min(295px,calc(100vw - 44px));max-height:280px;overflow-y:auto;
+  border:1px solid var(--border2);border-radius:12px;padding:12px 14px;
+  background:var(--card);box-shadow:0 9px 26px rgba(0,0,0,.2);
+  text-align:left;color:var(--text);font-size:12px;line-height:1.5;
+  font-weight:450;white-space:normal;letter-spacing:normal
+}
+.dw-progress-help-panel strong{display:block;font-size:12.5px;font-weight:750;margin-bottom:6px}
+.dw-progress-help-panel p{margin:0 0 8px;font-size:12px;color:var(--muted)}
+.dw-progress-help-panel ul{padding-left:18px;margin:0 0 9px;display:flex;flex-direction:column;gap:4px;list-style:disc}
+.dw-progress-help-panel li{overflow-wrap:anywhere}
+.dw-progress-help-panel small{display:block;font-size:10.5px;color:var(--dim)}
+.dw-progress-help:hover .dw-progress-help-panel,
+.dw-progress-help:focus-within .dw-progress-help-panel,
+.dw-progress-help.is-open .dw-progress-help-panel{display:block}
+.dw-dashboard-root .op-card-premium{overflow:visible!important}
+.dw-dashboard-root .op-card-premium:hover,
+.dw-dashboard-root .op-card-premium:focus-within{z-index:9}
+.dw-operation-page .dw-progress-help-panel{right:0}
+.dw-operation-page .dw-progress-help-trigger{color:var(--gold);font-size:12px}
+@media(max-width:760px){
+  .dw-dashboard-root .dw-progress-help-panel{right:0;width:min(268px,calc(100vw - 42px))}
+  .dw-progress-help-trigger{min-width:34px;min-height:34px;cursor:pointer}
+}
+
+
+/* Estadísticas: densidad y altura similares a las tarjetas de Operaciones. */
+.dw-stats-root .stat-card{padding:12px 14px!important;border-radius:14px;min-height:0}
+.dw-stats-root .stat-card .stat-icon{font-size:17px;margin-bottom:5px}
+.dw-stats-root .stat-card .stat-val{font-size:24px;line-height:1.13}
+.dw-stats-root .stat-card .stat-lbl{font-size:11.5px;margin-top:4px}
+.dw-stats-root .stats-money-row .stats-money-card{padding:12px 13px!important;border-radius:13px}
+.dw-stats-root .section-header>.btn{min-height:35px;padding:7px 11px;font-size:11.5px}
+.dw-stats-root .dw-stats-period-selector>button{min-height:34px;padding:6px 12px!important;font-size:11.5px!important}
+.dw-stats-root .dw-stats-period-selector>.inp{min-height:34px;font-size:12px}
+@media(max-width:640px){
+ .dw-stats-root .stat-card{padding:11px 12px!important}
+ .dw-stats-root .stat-card .stat-val{font-size:22px}
+ .dw-stats-root .stats-money-row .stats-money-card{padding:9px 6px!important}
+}
+/* Exportación integrada con DocWorks, sin prompt del navegador. */
+.dw-stats-export-dialog{display:flex;flex-direction:column;gap:14px}
+.dw-stats-export-dialog>p{margin:0;color:var(--muted);line-height:1.5;font-size:12.5px}
+.dw-stats-export-list{display:flex;flex-direction:column;gap:7px}
+.dw-stats-export-option{
+ display:flex;align-items:center;gap:11px;width:100%;min-height:49px;
+ text-align:left;border:1px solid var(--border2);border-radius:11px;
+ background:var(--surface2);color:var(--text);cursor:pointer;padding:10px 12px;
+ font:inherit;transition:background .15s,border-color .15s
+}
+.dw-stats-export-option.is-selected{border-color:var(--gold);background:rgba(212,168,83,.08)}
+.dw-stats-export-option:hover,.dw-stats-export-option:focus-visible{border-color:var(--gold);outline-offset:2px}
+.dw-stats-export-option>span:last-child{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dw-stats-export-option strong{font-weight:700;font-size:12.5px}
+.dw-stats-export-option small{font-size:11px;color:var(--muted)}
+.dw-stats-export-radio{display:block;flex:0 0 17px;width:17px;height:17px;border-radius:50%;border:2px solid var(--dim);background:transparent}
+.dw-stats-export-option.is-selected .dw-stats-export-radio{border:5px solid var(--gold)}
+.dw-stats-export-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:5px}
+.dw-stats-export-footer .btn{min-height:36px;font-size:12px}
+
 .dw-dashboard-root .dw-dashboard-intro{margin-top:5px;font-size:12.5px;line-height:1.4;}
 @media(max-width:640px){
  .dw-dashboard-root .dw-dashboard-intro{font-size:11px;margin-top:4px;max-width:220px;}
@@ -2680,6 +2784,29 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 
 // Panel Superadmin: extracción funcional con dependencias explícitas.
 import {useState,useEffect,useRef} from "react";
+
+// Ayuda compartida entre el listado de Operaciones y el formulario.
+// Se despliega al pasar el cursor o al tocar el porcentaje (iPhone/tablet).
+function AyudaProgreso({porcentaje,faltantes=[],id}){
+  const [abierta,setAbierta]=useState(false);
+  const panelId="dw-progreso-ayuda-"+String(id||"form").replace(/[^a-zA-Z0-9_-]/g,"").slice(0,70);
+  const pendientes=Array.isArray(faltantes)?faltantes:[];
+  const completo=pendientes.length===0;
+  return <div className={"dw-progress-help"+(abierta?" is-open":"")} onBlur={function(e){if(!e.currentTarget.contains(e.relatedTarget))setAbierta(false);}}>
+    <button type="button" className="dw-progress-help-trigger op-progress-pct"
+      aria-label={"Progreso "+porcentaje+"%. "+(completo?"Todos los campos esenciales están completos":pendientes.length+" campos esenciales pendientes")+". Mostrar detalle"}
+      aria-controls={panelId} aria-expanded={abierta}
+      onClick={function(){setAbierta(function(v){return !v;});}}>{porcentaje}%</button>
+    <div id={panelId} className="dw-progress-help-panel" role="tooltip">
+      <strong>{completo?"✓ Campos esenciales completos":"Para llegar al 100% falta:"}</strong>
+      {completo
+        ? <p>Todos los campos esenciales están completos. La revisión final puede solicitar otros datos según el documento.</p>
+        : <ul>{pendientes.map(function(f,i){return <li key={f.campo||i}>{f.label||f.campo}</li>;})}</ul>}
+      <small>El porcentaje corresponde a los campos esenciales de este documento.</small>
+    </div>
+  </div>;
+}
+
 export function crearSuperAdminDashboard(deps){
   const { AUTH_RED, AUTH_MUTED, descargarCSV, loadSupabaseJs, traducirError, Field, dwNotify, requestDwConfirm, fmt$, Modal, DWIcon } = deps;
 var ESTADOS_MEMBRESIA = ["activa","pendiente","vencida","suspendida","cancelada","archivada"];
@@ -5254,8 +5381,8 @@ function DashboardView({oculto=false,mostrarAccesoRapido=false,usuarioActual=und
     // En carpetas con varios documentos, mantiene el progreso de documentos vinculados.
     var camposCriticos=CAMPOS_CRITICOS_POR_TIPO[op.tipo]||[];
     var detallePendientes=getCamposFaltantesDetalle(op,perfil);
-    var pendientesPrincipales=detallePendientes.filter(function(f){return camposCriticos.some(function(c){return c[0]===f.campo;});}).length;
-    var progreso=camposCriticos.length>0?Math.max(0,Math.min(100,Math.round((1-pendientesPrincipales/camposCriticos.length)*100))):0;
+    var faltantesEsenciales=camposCriticos.map(function(c){return detallePendientes.find(function(f){return f.campo===c[0];});}).filter(Boolean);
+    var progreso=camposCriticos.length>0?Math.max(0,Math.min(100,Math.round((1-faltantesEsenciales.length/camposCriticos.length)*100))):100;
     var etiquetaProgreso="Progreso";
     var ultima=op.actualizado_en||op.updated_at||op.created_at;
     function haceFecha(v){if(!v)return "Sin actividad";var d=new Date(v);if(!Number.isFinite(d.getTime()))return "Fecha no disponible";var ms=Math.max(0,Date.now()-d.getTime()),min=Math.floor(ms/60000),hor=Math.floor(min/60),dias=Math.floor(hor/24);if(min<1)return "Ahora";if(min<60)return "Hace "+min+" min";if(hor<24)return "Hace "+hor+" h";if(dias<30)return "Hace "+dias+" día"+(dias===1?"":"s");return d.toLocaleDateString("es-AR");}
@@ -5287,8 +5414,8 @@ function DashboardView({oculto=false,mostrarAccesoRapido=false,usuarioActual=und
           <div className="op-card-side">
             <div className="op-side-extra"><div className="op-side-label">Última actividad</div><div style={{fontSize:12,fontWeight:750,color:"var(--text)",marginTop:2}}>{haceFecha(ultima)}</div></div>
             <div><div className="op-docs-count">{docsHechos} {docsHechos===1?"documento":"documentos"}</div></div>
-            <div className="op-side-progress" title="Se calcula según los campos esenciales cargados.">
-              <div className="op-progress-heading"><span className="op-side-label">{etiquetaProgreso}</span><span className="op-progress-pct" style={progreso===100?{color:"#16a34a"}:undefined}>{progreso}%</span></div>
+            <div className="op-side-progress">
+              <div className="op-progress-heading"><span className="op-side-label">{etiquetaProgreso}</span><AyudaProgreso id={op.id} porcentaje={progreso} faltantes={faltantesEsenciales}/></div>
               <div className="op-progress-row" role="progressbar" aria-label="Progreso de campos esenciales" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progreso}><div className="op-progress"><span style={{width:(progreso+"%"),background:progreso===100?"#16a34a":undefined}} /></div></div>
             </div>
             <div>{acciones}</div>
@@ -5508,12 +5635,14 @@ export function calcularCanonesPorMoneda(raices, operaciones, parseMontoAR){
 }
 
 export function crearEstadisticasView(deps){
- const {Btn, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState} = deps;
+ const {Btn, Modal, parseMontoAR, getComisionComponents, loadRecharts, useEffect, useState} = deps;
 
 function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRole,onExportarCSV}){
   const [rechReady,setRechReady]=useState(typeof window !== "undefined" && !!window.Recharts);
   const [rechFailed,setRechFailed]=useState(false);
   const [periodoTab,setPeriodoTab]=useState("mensual");
+  const [exportarAbierto,setExportarAbierto]=useState(false);
+  const [periodoExportar,setPeriodoExportar]=useState("1");
   const [anioSel,setAnioSel]=useState(new Date().getFullYear());
   useEffect(function(){
     var cancelado=false;
@@ -5617,27 +5746,56 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
     {name:"Otros",v:operacionesVisibles.filter(function(o){return grupoRaiz(o).every(function(x){return !["reserva","boleto","reserva_alquiler","alquiler"].includes(x.tipo);});}).length,color:"#a78bfa"},
   ].filter(function(x){return x.v>0;});
 
+  var periodosCSV=[
+    {id:"1",label:"Año en curso",desc:"Desde enero hasta hoy"},
+    {id:"2",label:"Últimos 3 meses",desc:"Período reciente"},
+    {id:"3",label:"Últimos 6 meses",desc:"Seguimiento semestral"},
+    {id:"4",label:"Últimos 12 meses",desc:"Último año de actividad"},
+    {id:"5",label:"Todo el historial",desc:"Todos los registros disponibles"}
+  ];
+  function confirmarExportacion(){
+    if(onExportarCSV(periodoExportar)!==false)setExportarAbierto(false);
+  }
   var chartData=periodoTab==="mensual"?meses12:anios;
   var aniosDisp=[];
   for(var ay=minAnio;ay<=now.getFullYear();ay++) aniosDisp.push(ay);
 
   return(
-    <div>
+    <div className="dw-stats-root">
       <div className="section-header">
         <div><div className="section-title">Estadísticas</div><div className="section-sub">{esBroker ? "Tus operaciones y tus honorarios, sin mostrar información financiera de la inmobiliaria." : "Una lectura clara de tus operaciones, sin contar documentos vinculados dos veces."}</div></div>
-        <Btn v="secondary" s="sm" onClick={onExportarCSV}>⇩ Exportar operaciones + comisiones</Btn>
+        <Btn v="secondary" s="sm" onClick={function(){setExportarAbierto(true);}}>⇩ Exportar operaciones + comisiones</Btn>
       </div>
+      <Modal open={exportarAbierto} onClose={function(){setExportarAbierto(false);}} title="Exportar operaciones">
+        <div className="dw-stats-export-dialog">
+          <p>Elegí el período del informe. Vas a descargar un archivo CSV compatible con Excel con los datos de operaciones, importes y comisiones que tenés permiso para consultar.</p>
+          <div className="dw-stats-export-list" role="radiogroup" aria-label="Período del informe">
+            {periodosCSV.map(function(item){
+              return <button type="button" role="radio" aria-checked={periodoExportar===item.id} key={item.id}
+                className={"dw-stats-export-option"+(periodoExportar===item.id?" is-selected":"")}
+                onClick={function(){setPeriodoExportar(item.id);}}>
+                <span className="dw-stats-export-radio" aria-hidden="true"/>
+                <span><strong>{item.label}</strong><small>{item.desc}</small></span>
+              </button>;
+            })}
+          </div>
+          <div className="dw-stats-export-footer">
+            <Btn v="secondary" s="sm" onClick={function(){setExportarAbierto(false);}}>Cancelar</Btn>
+            <Btn s="sm" onClick={confirmarExportacion}>Descargar CSV</Btn>
+          </div>
+        </div>
+      </Modal>
 
       {/* Resumen global */}
-      <div className="stats-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
+      <div className="stats-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:9,marginBottom:12}}>
         {[{l:"Total operaciones",v:total,i:"📁"},{l:"Activas",v:operacionesVisibles.filter(function(o){return grupoRaiz(o).some(function(x){return x.estado==="activo";});}).length,i:"🟢"},{l:"Alquileres",v:operacionesVisibles.filter(function(o){return grupoRaiz(o).some(function(x){return x.tipo==="alquiler"||x.tipo==="reserva_alquiler";});}).length,i:"🏠"},{l:"Compraventas",v:operacionesVisibles.filter(function(o){return grupoRaiz(o).some(function(x){return x.tipo==="boleto"||x.tipo==="reserva";});}).length,i:"📄"}].map(function(s){
           return <div key={s.l} className="stat-card"><div className="stat-icon">{s.i}</div><div className="stat-val">{s.v}</div><div className="stat-lbl">{s.l}</div></div>;
         })}
       </div>
 
-      {!esBroker && <div className="stats-money-row" aria-label="Resumen de importes" style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,marginBottom:16}}>
+      {!esBroker && <div className="stats-money-row" aria-label="Resumen de importes" style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,marginBottom:12}}>
         {[{l:"Total USD",v:"U$D "+usd.toLocaleString("es-AR"),i:"💵"},{l:"Total ARS",v:"$ "+ars.toLocaleString("es-AR"),i:"💴"},{l:"Canon/mes",v:canonTexto,i:"🏘"}].map(function(s){
-          return <div key={s.l} className="card stats-money-card" title={s.l+": "+s.v.replace(/\n/g," · ")} style={{padding:18}}><div className="stats-money-icon" aria-hidden="true" style={{fontSize:18,marginBottom:6}}>{s.i}</div><div className="stats-money-value" style={{fontFamily:"DM Serif Display,serif",fontSize:18,color:"var(--teal)",lineHeight:1.2,marginBottom:3}}>{s.v}</div><div className="stats-money-label" style={{fontSize:12,color:"var(--dim)"}}>{s.l}</div></div>;
+          return <div key={s.l} className="card stats-money-card" title={s.l+": "+s.v.replace(/\n/g," · ")} style={{padding:13}}><div className="stats-money-icon" aria-hidden="true" style={{fontSize:18,marginBottom:6}}>{s.i}</div><div className="stats-money-value" style={{fontFamily:"DM Serif Display,serif",fontSize:18,color:"var(--teal)",lineHeight:1.2,marginBottom:3}}>{s.v}</div><div className="stats-money-label" style={{fontSize:12,color:"var(--dim)"}}>{s.l}</div></div>;
         })}
       </div>}
 
@@ -5671,7 +5829,7 @@ function EstadisticasView({operaciones,equipo,perfil,currentUserId,currentUserRo
       </div>)}
 
       {/* Tabs mensual/anual */}
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+      <div className="dw-stats-period-selector" style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
         {["mensual","anual"].map(function(t){
           return <button key={t} onClick={function(){setPeriodoTab(t);}} style={{padding:"6px 16px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:periodoTab===t?"var(--gold)":"var(--border)",color:periodoTab===t?"#0a0f1a":"var(--muted)",transition:"all 0.15s",textTransform:"capitalize"}}>{t==="mensual"?"📅 Últimos 12 meses":"📆 Por año"}</button>;
         })}
@@ -6531,7 +6689,7 @@ export function enfocarCampoOperacion(campo){
 }
 
 export function crearOperacionForm(deps){
- const {camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
+ const {camposTratamientoActivos,OperationSaveInline, Btn, EMPTY_OP, PasoResumenFinal, StepBar, StepClausulas, StepCondicionesAlquiler, StepCondicionesReservaAlq, StepDocSimple, StepEconomicoCompra, StepGarantia, StepGrupo, StepInmobiliariaAutorizada, StepInmueble, StepPersona, StepTipo, TIPO_GRUPOS, antecedenteReservaParaRefuerzo, clausulaAplicaTipo, draftTieneContenido, datosCompraCompartidos, fmt$, genId, getCamposFaltantesDetalle, getPasoDeCampo, plazoReservaAlquiler, limpiarComisionesIncompatibles, lsRemove, lsSet, obtenerPlantillaConfig, requestDwConfirm, rolParte, useAutosave, useCallback, useEffect, useMemo, useRef, useState} = deps;
 
 
 function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeNavigation=undefined,initial,modoEdicion=!!initial,clausulas,perfil,equipo,operaciones,onSave,onCancel,onTipoChange,saveStatus,reportSave,onAddClausula,focusCampo}){
@@ -6569,8 +6727,29 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     }
   },[initial,focusCampo]);
   const [revisando,setRevisando]=useState(false);
-  // Origen del refuerzo: primero elegir reserva existente o ingreso manual.
-  const [origenRefuerzo,setOrigenRefuerzo]=useState(function(){return initial?(initial.parent_id?"existente":"manual"):null;});
+  // La decisión de recuperación se hace ANTES de presentar datos de personas.
+  // No cambia el flujo de documentos existentes ya guardados.
+  const ORIGENES_POR_TIPO={
+    refuerzo_reserva:["reserva"],
+    devolucion_reserva:["reserva"],
+    boleto:["reserva"],
+    alquiler:["reserva_alquiler"],
+    comodato:["reserva"]
+  };
+  const TITULOS_RECUPERACION={
+    refuerzo_reserva:"refuerzo de reserva",
+    devolucion_reserva:"devolución de reserva",
+    boleto:"boleto de compraventa",
+    alquiler:"contrato de alquiler",
+    comodato:"comodato"
+  };
+  const [origenRecuperacion,setOrigenRecuperacion]=useState(function(){
+    if(modoEdicion)return "manual";
+    if(initial&&initial.parent_id)return "existente";
+    return initial&&draftTieneContenido(initial)?"manual":null;
+  });
+  const [recuperacionAsistida,setRecuperacionAsistida]=useState(function(){return !modoEdicion&&!!(initial&&initial.parent_id);});
+  const [verSoloPendientes,setVerSoloPendientes]=useState(true);
   const camposTecladoRef=useRef(null);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
@@ -6766,7 +6945,17 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   // En refuerzo y devolución, las reservas vinculables se ofrecen en el paso siguiente.
   function seleccionarTipoDidactico(campo,valor){
     if(campo!=="tipo"){set(campo,valor);return;}
-    function cambiar(){set("tipo",valor);if(valor==="refuerzo_reserva")setOrigenRefuerzo(initial?(initial.parent_id?"existente":"manual"):null);setStep(2);}
+    function cambiar(){
+      var cambioTipo=valor!==data.tipo;
+      set("tipo",valor);
+      if(cambioTipo){
+        setOrigenRecuperacion(initial&&modoEdicion?"manual":null);
+        setRecuperacionAsistida(false);
+        setVerSoloPendientes(true);
+        if(data.parent_id)setBulk({parent_id:null});
+      }
+      setStep(2);
+    }
     if(valor!==data.tipo&&(initial||draftTieneContenido(data))){
       requestDwConfirm("¿Cambiar el tipo de documento? Los datos que ya cargaste se conservarán; revisalos antes de generar el documento.",cambiar,"Cambiar documento");
       return;
@@ -6805,6 +6994,9 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   // que ya trae parent_id), se ofrece elegir una reserva abierta reciente para
   // no volver a tipear todos los datos de las partes y el inmueble.
   function elegirReservaParaDevolucion(op){
+    setOrigenRecuperacion("existente");
+    setRecuperacionAsistida(true);
+    setVerSoloPendientes(true);
     setBulk({...datosCompraCompartidos(op,false),
       compra_instrumento:op.compra_instrumento||"escritura",
       compra_boleto_origen:op.compra_boleto_origen||"",
@@ -6821,7 +7013,9 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     setStep(2);
   }
   function elegirReservaParaRefuerzo(op){
-    setOrigenRefuerzo("existente");
+    setOrigenRecuperacion("existente");
+    setRecuperacionAsistida(true);
+    setVerSoloPendientes(true);
     setBulk({...datosCompraCompartidos(op,false),
       compra_instrumento:op.compra_instrumento||"escritura",
       compra_boleto_origen:op.compra_boleto_origen||"",
@@ -6841,6 +7035,150 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     setStep(2);
   }
 
+
+  // Copia controlada: los valores jurídicos y económicos propios del nuevo
+  // documento se revisan y se dejan vacíos cuando no deben heredarse.
+  function recuperarOtraOperacion(op){
+    if(!op||!op.id)return;
+    if(data.tipo==="refuerzo_reserva"){elegirReservaParaRefuerzo(op);return;}
+    if(data.tipo==="devolucion_reserva"){elegirReservaParaDevolucion(op);return;}
+    var patch={
+      parent_id:op.id,
+      inmueble_direccion:op.inmueble_direccion||"",
+      inmueble_partido:op.inmueble_partido||"",
+      inmueble_provincia:op.inmueble_provincia||"",
+      inmueble_tipo:op.inmueble_tipo||"departamento",
+      inmueble_tipo_otro:op.inmueble_tipo_otro||"",
+      inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,
+      inmueble_barrio:op.inmueble_barrio||"",
+      inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",
+      nomenclatura_catastral:op.nomenclatura_catastral||"",
+      descripcion_inmueble:op.descripcion_inmueble||""
+    };
+    if(data.tipo==="alquiler"){
+      ["locador","locatario"].forEach(function(pref){
+        ["nombre","dni","domicilio","email","telefono","tratamiento","email_en_doc","telefono_en_doc"].forEach(function(k){
+          patch[pref+"_"+k]=op[pref+"_"+k]||"";
+        });
+        patch[pref+"_cotitulares"]=(op[pref+"_cotitulares"]||[]).map(function(p){return Object.assign({},p);});
+      });
+      patch.alquiler_monto_inicial=op.res_alq_monto_mensual||"";
+      patch.alquiler_moneda=op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS";
+      patch.alquiler_inicio=op.res_alq_inicio_estimado||"";
+      if(typeof plazoReservaAlquiler==="function"){
+        var plazoHeredado=plazoReservaAlquiler(op);
+        if(plazoHeredado&&plazoHeredado.valido){
+          patch.alquiler_plazo_meses=String(plazoHeredado.meses);
+          patch.alquiler_plazo_dias=String(plazoHeredado.dias);
+        }
+      }
+      patch.alquiler_dia_pago=op.res_alq_dia_pago||"1";
+      patch.alquiler_destino=op.res_alq_destino||"vivienda";
+      // Garantía, plazo, depósito y condiciones deben confirmarse en el contrato.
+    }else{
+      ["comprador","vendedor"].forEach(function(pref){
+        ["nombre","dni","domicilio","email","telefono","tratamiento","email_en_doc","telefono_en_doc"].forEach(function(k){
+          patch[pref+"_"+k]=op[pref+"_"+k]||"";
+        });
+        patch[pref+"_cotitulares"]=(op[pref+"_cotitulares"]||[]).map(function(p){return Object.assign({},p);});
+      });
+      if(data.tipo==="boleto"){
+        patch.precio=op.precio||"";
+        patch.moneda=op.moneda||"USD";
+        patch.anticipo=op.anticipo||"";
+        patch.escribania=op.escribania||"";
+        patch.compra_instrumento=op.compra_instrumento||"escritura";
+        patch.compra_boleto_origen=op.compra_boleto_origen||"";
+        patch.fecha_posesion="";
+        patch.saldo="";
+      }
+    }
+    setOrigenRecuperacion("existente");
+    setRecuperacionAsistida(true);
+    setVerSoloPendientes(true);
+    setBulk(patch);
+    setStep(2);
+  }
+  const elegiblesRecuperacion=(operaciones||[]).filter(function(op){
+    if(!op||!op.id||op.estado==="cerrado"||op.estado==="papelera")return false;
+    if(!(ORIGENES_POR_TIPO[data.tipo]||[]).includes(op.tipo))return false;
+    if(["devolucion_reserva","boleto","alquiler","comodato"].includes(data.tipo)){
+      if((operaciones||[]).some(function(h){return h.parent_id===op.id&&h.tipo===data.tipo;}))return false;
+    }
+    return true;
+  }).sort(function(a,b){
+    return (new Date(b.created_at||0).getTime()||0)-(new Date(a.created_at||0).getTime()||0);
+  }).slice(0,10);
+  const recuperableNuevo=!modoEdicion&&!!ORIGENES_POR_TIPO[data.tipo]&&!data.parent_id;
+  const elegirAntesDeCargar=recuperableNuevo&&step===2&&origenRecuperacion!=="manual";
+  const soloResumenRecuperado=recuperacionAsistida&&verSoloPendientes&&step<=total&&!!data.parent_id;
+  // Una recuperación completa va directamente a revisión. La exportación sigue
+  // pasando por el guardado y las advertencias del visor de documentos.
+  useEffect(function(){
+    if(soloResumenRecuperado&&faltantesDetalle.length===0)setStep(total+1);
+  },[soloResumenRecuperado,faltantesDetalle.length,total]);
+  function abrirCampoPendiente(f){
+    setVerSoloPendientes(false);
+    irACampo(f.campo);
+  }
+  function volverAPendientes(){
+    setVerSoloPendientes(true);
+    setStep(2);
+  }
+  function vistaRecuperacion(){
+    var titulo=TITULOS_RECUPERACION[data.tipo]||"documento";
+    if(!origenRecuperacion){
+      return <div className="dw-refuerzo-origen" data-testid="dw-elegir-origen">
+        <h3>¿Cómo querés preparar el {titulo}?</h3>
+        <p>Elegí cómo continuar. Los formularios aparecen recién después de esta elección.</p>
+        <div className="dw-refuerzo-origen-grid">
+          <button type="button" className="dw-refuerzo-opcion" onClick={function(){setOrigenRecuperacion("existente");}}>
+            <strong>Recuperar una operación existente</strong>
+            <span>Usá los datos ya cargados y completá únicamente lo que falta.</span>
+          </button>
+          <button type="button" className="dw-refuerzo-opcion" onClick={function(){setOrigenRecuperacion("manual");}}>
+            <strong>Cargar los datos manualmente</strong>
+            <span>Empezá desde cero con los datos de las partes y el inmueble.</span>
+          </button>
+        </div>
+      </div>;
+    }
+    return <div className="dw-refuerzo-reservas" data-testid="dw-listar-origenes">
+      <div className="dw-refuerzo-origen-head">
+        <h3>Elegí la operación que querés recuperar</h3>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setOrigenRecuperacion(null);}}>← Cambiar opción</button>
+      </div>
+      {elegiblesRecuperacion.length>0
+        ? <div className="dw-origen-recuperacion-lista">
+          {elegiblesRecuperacion.map(function(op){
+            return <button type="button" key={op.id} className="dw-origen-recuperacion-item" onClick={function(){recuperarOtraOperacion(op);}}>
+              <strong>{op.inmueble_direccion||"Inmueble sin dirección"}{op.inmueble_partido?" · "+op.inmueble_partido:""}</strong>
+              <span>{op.tipo==="reserva_alquiler"?"Reserva de alquiler":"Reserva de compra"} · {new Date(op.created_at).toLocaleDateString("es-AR")}</span>
+            </button>;
+          })}
+        </div>
+        : <p className="dw-refuerzo-vacio">No hay operaciones compatibles abiertas para recuperar.</p>}
+      <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setOrigenRecuperacion("manual");}}>Cargar los datos manualmente</button>
+    </div>;
+  }
+  function vistaSoloPendientes(){
+    return <div className="dw-refuerzo-reservas" data-testid="dw-solo-pendientes">
+      <div className="dw-refuerzo-origen-head">
+        <h3>{faltantesDetalle.length?"Solo faltan "+faltantesDetalle.length+" datos":"Datos recuperados"}</h3>
+        <span className="dw-recuperacion-confirmacion">Datos de origen recuperados</span>
+      </div>
+      <p className="dw-refuerzo-vacio">Los datos que ya estaban completos no necesitás volver a cargarlos. Tocá un faltante para completarlo.</p>
+      <div className="dw-recuperacion-pendientes">
+        {faltantesDetalle.map(function(f){
+          return <button type="button" key={f.campo} className="dw-recuperacion-faltante" onClick={function(){abrirCampoPendiente(f);}}>
+            <span>{f.label}</span><strong>Completar →</strong>
+          </button>;
+        })}
+      </div>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setVerSoloPendientes(false);setStep(2);}}>Ver y revisar todos los datos</button>
+    </div>;
+  }
+
   useEffect(function(){if(step>total)setRevisando(false);},[step,total]);
   // If no group selected yet (new op), show group picker
   if(!grupo){
@@ -6848,7 +7186,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       <div>
         <div className="dw-operation-groups-balanced" style={{minHeight:260,padding:"20px 0 12px",display:"flex",alignItems:"center"}}>
           <StepGrupo onSelect={function(g){
-            function cambiar(){setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);}
+            function cambiar(){
+              setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);
+              setOrigenRecuperacion(null);setRecuperacionAsistida(false);setVerSoloPendientes(true);
+            }
             if(draftTieneContenido(data))requestDwConfirm("¿Cambiar de categoría? Se conservarán los datos que ya cargaste, pero deberás revisarlos.",cambiar,"Cambiar categoría");
             else cambiar();
           }}/>
@@ -6861,6 +7202,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   }
 
   function renderStep(){
+    if(elegirAntesDeCargar)return vistaRecuperacion();
+    if(soloResumenRecuperado)return vistaSoloPendientes();
     if(esAlq){
       if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="alquiler"/>;
       if(step===2)return <StepPersona data={data} onChange={set} prefix="locador" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.locador}/>;
@@ -6882,38 +7225,9 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       var grupoReal=grupo||"otros";
       if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo={grupoReal} operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} onSelectReservaDevolucion={elegirReservaParaDevolucion}/>;
       if(step===2){
-        if(esRefuerzo&&!data.parent_id&&!origenRefuerzo){
-          return <div className="dw-refuerzo-origen">
-            <h3>¿Cómo querés preparar el refuerzo de reserva?</h3>
-            <p>Elegí una opción para continuar, sin mezclar las reservas con los campos de carga.</p>
-            <div className="dw-refuerzo-origen-grid">
-              <button type="button" className="dw-refuerzo-opcion" onClick={function(){setOrigenRefuerzo("existente");}}>
-                <strong>Usar una reserva existente</strong>
-                <span>Elegí una reserva abierta y recuperá comprador, vendedor e inmueble.</span>
-              </button>
-              <button type="button" className="dw-refuerzo-opcion" onClick={function(){setOrigenRefuerzo("manual");}}>
-                <strong>Cargar datos manualmente</strong>
-                <span>Completá nombre, DNI, domicilio y los demás datos desde cero.</span>
-              </button>
-            </div>
-          </div>;
-        }
-        if(esRefuerzo&&!data.parent_id&&origenRefuerzo==="existente"){
-          var abiertas=(operaciones||[]).filter(function(o){return o.tipo==="reserva"&&o.estado!=="cerrado";}).length;
-          return <div className="dw-refuerzo-reservas">
-            <div className="dw-refuerzo-origen-head">
-              <h3>Seleccioná la reserva que querés reforzar</h3>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setOrigenRefuerzo(null);}}>← Cambiar opción</button>
-            </div>
-            {abiertas>0?<StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="otros" operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} soloReservas/>:<p className="dw-refuerzo-vacio">No hay reservas abiertas para vincular.</p>}
-            <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setOrigenRefuerzo("manual");}}>Cargar los datos manualmente</button>
-          </div>;
-        }
-        return <>
-          {esDevolucion&&<StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="otros" operaciones={operaciones} onSelectReservaDevolucion={elegirReservaParaDevolucion} soloReservas/>}
-          {esRefuerzo&&!data.parent_id&&origenRefuerzo==="manual"&&<button type="button" className="dw-refuerzo-cambiar" onClick={function(){setOrigenRefuerzo(null);}}>← Cambiar origen del refuerzo</button>}
-          {data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.comprador}/>}
-        </>;
+        return data.tipo==="exclusividad"
+          ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/>
+          : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.comprador}/>;
       }
       if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.vendedor}/>;
       if(step===4)return <StepDocSimple data={data} onChange={set}/>;
@@ -6929,18 +7243,11 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     if(step===6)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
     return null;
   }
-  // El porcentaje representa datos realmente completados, nunca pantallas visitadas.
-  // No contar valores sugeridos que vienen precargados del modelo vacío.
+  // Misma base que las tarjetas del listado: porcentaje y ayuda nunca discrepan.
+  // Las validaciones condicionales adicionales siguen en la revisión final.
   var camposProgreso=CAMPOS_CRITICOS_POR_TIPO[data.tipo]||[];
-  var totalProgreso=camposProgreso.length;
-  var camposCompletados=camposProgreso.filter(function(item){
-    var campo=item[0],valor=data[campo],defecto=EMPTY_OP[campo];
-    if(valor===undefined||valor===null||String(valor).trim()==="")return false;
-    if(defecto!==undefined&&String(valor)===String(defecto))return false;
-    if(/monto|precio|anticipo/i.test(campo)&&!isNaN(Number(valor))&&Number(valor)<=0)return false;
-    return true;
-  }).length;
-  var pct=totalProgreso?Math.round(camposCompletados/totalProgreso*100):0;
+  var faltantesProgreso=camposProgreso.map(function(c){return faltantesDetalle.find(function(f){return f.campo===c[0];});}).filter(Boolean);
+  var pct=camposProgreso.length?Math.max(0,Math.min(100,Math.round((1-faltantesProgreso.length/camposProgreso.length)*100))):100;
   async function handleFinalizarAccion(accion,estadoFinal=undefined){
     // Una operación nueva sin datos no debe convertirse en registro ni papelera.
     // Tampoco iniciar un guardado duplicado por doble toque en móvil.
@@ -6977,30 +7284,39 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
         <span>{avisoDatosVinculados}</span>
         {operacionOrigen?.inmueble_direccion&&<span style={{display:"block",marginTop:4,color:"var(--muted)"}}>Inmueble: {operacionOrigen.inmueble_direccion}</span>}
       </div>}
-      <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
-      <div style={{marginBottom:18}}>
+      {!elegirAntesDeCargar&&!recuperacionAsistida&&<div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>}
+      {!elegirAntesDeCargar&&!recuperacionAsistida&&<div style={{marginBottom:18}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:7,marginBottom:5}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.05em"}} title="Se cuentan los campos esenciales completados, no los opcionales.">Progreso</span>
-          <span style={{fontSize:12,fontWeight:700,color:pct===100?"var(--green)":"var(--gold)"}}>{pct}%</span>
+          <AyudaProgreso id={data.id} porcentaje={pct} faltantes={faltantesProgreso}/>
         </div>
         <div role="progressbar" aria-label="Datos esenciales completados" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} style={{height:4,background:"rgba(255,255,255,0.06)",borderRadius:10,overflow:"hidden"}}>
           <div style={{height:"100%",width:pct+"%",background:pct===100?"linear-gradient(90deg,#22c55e,#4ade80)":"linear-gradient(90deg,#c9962a,var(--gold),var(--gold2))",borderRadius:10,transition:"width 0.4s cubic-bezier(0.4,0,0.2,1)"}}/>
         </div>
-      </div>
+      </div>}
+      {recuperacionAsistida&&!verSoloPendientes&&step<=total&&
+        <div className="dw-recuperacion-volver">
+          <span>{faltantesDetalle.length?faltantesDetalle.length+" datos pendientes":"Datos listos para revisar"}</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={volverAPendientes}>{faltantesDetalle.length?"← Ver solo los pendientes":"Ir a vista previa →"}</button>
+        </div>}
       {revisando&&step<=total&&camposFaltantes.length>0&&<div role="status" style={{marginBottom:12,padding:"9px 12px",borderRadius:9,border:"1px solid rgba(239,68,68,.35)",background:"rgba(239,68,68,.06)",fontSize:12.5,color:"var(--text)"}}>⚠ {camposFaltantes.length===1?"Hay un dato pendiente en este apartado":"Hay "+camposFaltantes.length+" datos pendientes en este apartado"}. Los campos están señalados en rojo para que puedas completarlos.</div>}
       <div ref={camposTecladoRef} data-dw-operation-fields style={{minHeight:260}}
         onFocusCapture={function(e){prepararTecladoOperacion(e.currentTarget);}}
         onKeyDown={function(e){avanzarConEnterOperacion(e,e.currentTarget);}}>
-        {step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} perfil={perfil} esContratoPropioOp={esContratoPropioOp} puedeGuardar={modoEdicion||draftTieneContenido(data)} onVolver={irACampo} onFinalizarAccion={handleFinalizarAccion}/>}
+        {step<=total?renderStep():<PasoResumenFinal data={data} clausulas={clausulas} perfil={perfil} esContratoPropioOp={esContratoPropioOp} puedeGuardar={modoEdicion||draftTieneContenido(data)} recuperacionLista={recuperacionAsistida&&!faltantesDetalle.length} onVolver={function(campo){
+          if(typeof campo==="string"&&campo){setVerSoloPendientes(false);irACampo(campo);return;}
+          if(recuperacionAsistida){setVerSoloPendientes(faltantesDetalle.length>0);setStep(2);return;}
+          setStep(total);
+        }} onFinalizarAccion={handleFinalizarAccion}/>}
       </div>
-      {step<=total&&<div className="dw-operation-form-footer">
+      {step<=total&&!elegirAntesDeCargar&&!recuperacionAsistida&&<div className="dw-operation-form-footer">
         <Btn v="ghost" onClick={step===1?function(){setGrupo(null);}:function(){setStep(function(s){return s-1;});}}>{step===1?"← Volver a opciones":"← Anterior"}</Btn>
         <div className="dw-operation-form-actions">
           {saveStatus?.state==="error"&&<span role="alert" className="dw-operation-save-error">No se pudo guardar. Revisá la conexión.</span>}
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           {revisando&&<Btn v="secondary" onClick={function(){setStep(total+1);}}>← Volver a revisión</Btn>}
           {puedeOmitirClausulas&&!revisando&&<Btn v="secondary" onClick={avanzarConAviso}>Agregar cláusulas</Btn>}
-          {step>1&&!revisando&&!(esRefuerzo&&step===2&&!data.parent_id&&origenRefuerzo!=="manual")&&<div className="dw-operation-next-action">
+          {step>1&&!revisando&&<div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
             {pasoCondicionesVinculadas?<Btn onClick={function(){setStep(pasoCondicionesVinculadas);}}>Ir a condiciones →</Btn>:puedeOmitirClausulas&&!revisando?<Btn v="success" onClick={function(){setStep(total+1);}}>Ir a revisión</Btn>:step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
           </div>}
