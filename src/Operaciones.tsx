@@ -7003,11 +7003,18 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       compra_boleto_origen:op.compra_boleto_origen||"",
       parent_id: op.id,
       comprador_nombre:op.comprador_nombre||"", comprador_dni:op.comprador_dni||"", comprador_domicilio:op.comprador_domicilio||"",
+      comprador_email:op.comprador_email||"", comprador_telefono:op.comprador_telefono||"",
+      comprador_tratamiento:op.comprador_tratamiento||"",
+      comprador_cotitulares:Array.isArray(op.comprador_cotitulares)?op.comprador_cotitulares.map(function(p){return {...p};}):[],
       vendedor_nombre:op.vendedor_nombre||"", vendedor_dni:op.vendedor_dni||"", vendedor_domicilio:op.vendedor_domicilio||"",
+      vendedor_email:op.vendedor_email||"", vendedor_telefono:op.vendedor_telefono||"",
+      vendedor_tratamiento:op.vendedor_tratamiento||"",
+      vendedor_cotitulares:Array.isArray(op.vendedor_cotitulares)?op.vendedor_cotitulares.map(function(p){return {...p};}):[],
       inmueble_direccion:op.inmueble_direccion||"", inmueble_partido:op.inmueble_partido||"", inmueble_provincia:op.inmueble_provincia||"",
       inmueble_tipo:op.inmueble_tipo||"departamento", inmueble_tipo_otro:op.inmueble_tipo_otro||"", inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"", inmueble_unidad_funcional:op.inmueble_unidad_funcional||"",
-      precio:op.anticipo??"", moneda:op.moneda||"USD",
-      devolucion_motivo:"La reserva no avanzó y corresponde devolver el monto oportunamente entregado.",
+      precio:op.anticipo??"", moneda:op.anticipo_moneda||op.moneda||"USD",
+      // El motivo concreto debe ser expresado por el usuario: no presumir obligación de devolver.
+      devolucion_motivo:"",
       clausulas_ids:Array.isArray(data.clausulas_ids)?data.clausulas_ids:[],
       clausulas_custom:data.clausulas_custom||"", clausulas_custom_titulo:data.clausulas_custom_titulo||""
     });
@@ -7023,8 +7030,12 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       parent_id: op.id,
       comprador_nombre:op.comprador_nombre||"", comprador_dni:op.comprador_dni||"",
       comprador_domicilio:op.comprador_domicilio||"", comprador_email:op.comprador_email||"", comprador_telefono:op.comprador_telefono||"",
+      comprador_tratamiento:op.comprador_tratamiento||"",
+      comprador_cotitulares:Array.isArray(op.comprador_cotitulares)?op.comprador_cotitulares.map(function(p){return {...p};}):[],
       vendedor_nombre:op.vendedor_nombre||"", vendedor_dni:op.vendedor_dni||"",
       vendedor_domicilio:op.vendedor_domicilio||"", vendedor_email:op.vendedor_email||"", vendedor_telefono:op.vendedor_telefono||"",
+      vendedor_tratamiento:op.vendedor_tratamiento||"",
+      vendedor_cotitulares:Array.isArray(op.vendedor_cotitulares)?op.vendedor_cotitulares.map(function(p){return {...p};}):[],
       inmueble_direccion:op.inmueble_direccion||"", inmueble_partido:op.inmueble_partido||"",
       inmueble_provincia:op.inmueble_provincia||"", inmueble_tipo:op.inmueble_tipo||"departamento", inmueble_tipo_otro:op.inmueble_tipo_otro||"",
       inmueble_en_barrio_complejo:op.inmueble_en_barrio_complejo,inmueble_barrio:op.inmueble_barrio||"",
@@ -7058,10 +7069,13 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     };
     if(data.tipo==="alquiler"){
       ["locador","locatario"].forEach(function(pref){
-        ["nombre","dni","domicilio","email","telefono","tratamiento","email_en_doc","telefono_en_doc"].forEach(function(k){
-          patch[pref+"_"+k]=op[pref+"_"+k]||"";
+        ["nombre","dni","domicilio","email","telefono","tratamiento"].forEach(function(k){
+          patch[pref+"_"+k]=op[pref+"_"+k]??"";
         });
-        patch[pref+"_cotitulares"]=(op[pref+"_cotitulares"]||[]).map(function(p){return Object.assign({},p);});
+        ["email_en_doc","telefono_en_doc"].forEach(function(k){
+          if(typeof op[pref+"_"+k]==="boolean")patch[pref+"_"+k]=op[pref+"_"+k];
+        });
+        patch[pref+"_cotitulares"]=Array.isArray(op[pref+"_cotitulares"])?op[pref+"_cotitulares"].map(function(p){return Object.assign({},p);}):[];
       });
       patch.alquiler_monto_inicial=op.res_alq_monto_mensual||"";
       patch.alquiler_moneda=op.res_alq_monto_mensual_moneda||op.res_alq_moneda||"ARS";
@@ -7078,10 +7092,13 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       // Garantía, plazo, depósito y condiciones deben confirmarse en el contrato.
     }else{
       ["comprador","vendedor"].forEach(function(pref){
-        ["nombre","dni","domicilio","email","telefono","tratamiento","email_en_doc","telefono_en_doc"].forEach(function(k){
-          patch[pref+"_"+k]=op[pref+"_"+k]||"";
+        ["nombre","dni","domicilio","email","telefono","tratamiento"].forEach(function(k){
+          patch[pref+"_"+k]=op[pref+"_"+k]??"";
         });
-        patch[pref+"_cotitulares"]=(op[pref+"_cotitulares"]||[]).map(function(p){return Object.assign({},p);});
+        ["email_en_doc","telefono_en_doc"].forEach(function(k){
+          if(typeof op[pref+"_"+k]==="boolean")patch[pref+"_"+k]=op[pref+"_"+k];
+        });
+        patch[pref+"_cotitulares"]=Array.isArray(op[pref+"_cotitulares"])?op[pref+"_cotitulares"].map(function(p){return Object.assign({},p);}):[];
       });
       if(data.tipo==="boleto"){
         patch.precio=op.precio||"";
@@ -7105,7 +7122,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     if(!op||!op.id||op.estado==="papelera"||op.deleted_at)return false;
     if(!(ORIGENES_POR_TIPO[data.tipo]||[]).includes(op.tipo))return false;
     if(["devolucion_reserva","boleto","alquiler","comodato"].includes(data.tipo)){
-      if((operaciones||[]).some(function(h){return h.parent_id===op.id&&h.tipo===data.tipo;}))return false;
+      if((operaciones||[]).some(function(h){return h.parent_id===op.id&&h.tipo===data.tipo&&h.estado!=="papelera"&&!h.deleted_at;}))return false;
     }
     return true;
   }).sort(function(a,b){
@@ -7315,7 +7332,10 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       {recuperacionAsistida&&!verSoloPendientes&&step<=total&&
         <div className="dw-recuperacion-volver">
           <span>{faltantesDetalle.length?faltantesDetalle.length+" datos pendientes":"Datos listos para revisar"}</span>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={volverAPendientes}>{faltantesDetalle.length?"← Ver solo los pendientes":"Ir a vista previa →"}</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={function(){
+            if(faltantesDetalle.length){volverAPendientes();return;}
+            setStep(total+1);
+          }}>{faltantesDetalle.length?"← Ver solo los pendientes":"Ir a revisión y vista previa →"}</button>
         </div>}
       {revisando&&step<=total&&camposFaltantes.length>0&&<div role="status" style={{marginBottom:12,padding:"9px 12px",borderRadius:9,border:"1px solid rgba(239,68,68,.35)",background:"rgba(239,68,68,.06)",fontSize:12.5,color:"var(--text)"}}>⚠ {camposFaltantes.length===1?"Hay un dato pendiente en este apartado":"Hay "+camposFaltantes.length+" datos pendientes en este apartado"}. Los campos están señalados en rojo para que puedas completarlos.</div>}
       <div ref={camposTecladoRef} data-dw-operation-fields style={{minHeight:260}}
