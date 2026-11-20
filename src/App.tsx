@@ -520,7 +520,7 @@ var PWA_MANIFEST = {
   description: "Generación de documentos legales para inmobiliarias argentinas",
   version: DOCWORKS_VERSION,
   id: "/",
-  start_url: "/",
+  start_url: "/app/",
   scope: "/",
   display: "standalone",
   background_color: "#0b1730",
@@ -8038,7 +8038,7 @@ function LoginScreen({ onLogin, onRecover, onRegister, error, loading, connError
         <button type="submit" disabled={loading||recoverLoading} style={{marginTop:4,padding:"11px 14px",borderRadius:10,border:"none",background:AUTH_GOLD,color:"#1a1206",fontWeight:700,fontSize:14,cursor:loading?"default":"pointer",opacity:loading?.6:1}}>{recoverMode ? (recoverLoading ? "Enviando…" : "Enviar enlace") : (loading ? "Ingresando…" : "Ingresar")}</button>
         {!recoverMode && <button type="button" disabled={recoverLoading||loading} onClick={onRegister} style={{background:"transparent",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:13,fontWeight:700,padding:"3px 0 0"}}>Registrate</button>}
         <button type="button" disabled={recoverLoading||loading} onClick={function(){setRecoverMode(function(v){return !v;});setRecoverMsg(null);setPassword("");}} style={{background:"transparent",border:"none",color:AUTH_MUTED,cursor:"pointer",fontSize:12,textDecoration:"underline",padding:0}}>{recoverMode ? "Volver a iniciar sesión" : "¿Olvidaste tu contraseña? Recuperala"}</button>
-        <a href="https://docworks-landing.vercel.app" style={{display:"block",textAlign:"center",color:AUTH_MUTED,fontSize:12,textDecoration:"none",padding:"5px 0 0"}}>← Volver al sitio web</a>
+        <a href="https://docworks.com.ar" style={{display:"block",textAlign:"center",color:AUTH_MUTED,fontSize:12,textDecoration:"none",padding:"5px 0 0"}}>← Volver al sitio web</a>
       </form>
     </div>
   );
@@ -8064,7 +8064,7 @@ function MembresiaSuspendidaScreen({ onLogout, estado }){
         <div style={{fontSize:28,marginBottom:10}}>⛔</div>
         <div style={{fontWeight:700,marginBottom:8}}>Membresía {estado === "vencida" ? "vencida" : "suspendida"}</div>
         <div style={{fontSize:13,color:AUTH_MUTED,lineHeight:1.5}}>{estado === "vencida" ? "El período de acceso terminó. Tus datos se conservan. Elegí un plan para seguir trabajando." : "Tu membresía está suspendida. Contactá al administrador de DocWorks."}</div>
-        <a href="https://docworks-landing.vercel.app/#planes" style={{display:"block",marginTop:18,color:AUTH_GOLD}}>Ver planes</a><button onClick={onLogout} style={{marginTop:18,padding:"9px 16px",borderRadius:9,border:"1px solid "+AUTH_BORDER,background:"transparent",color:AUTH_TEXT,fontSize:13,cursor:"pointer"}}>Cerrar sesión</button>
+        <a href="https://docworks.com.ar/#planes" style={{display:"block",marginTop:18,color:AUTH_GOLD}}>Ver planes</a><button onClick={onLogout} style={{marginTop:18,padding:"9px 16px",borderRadius:9,border:"1px solid "+AUTH_BORDER,background:"transparent",color:AUTH_TEXT,fontSize:13,cursor:"pointer"}}>Cerrar sesión</button>
       </div>
     </div>
   );
@@ -8341,7 +8341,7 @@ function SesionBadge({ contexto, onLogout, foto, perfilActual }){
       </button>
       {abierto&&<div style={{position:"absolute",right:0,top:"calc(100% + 7px)",minWidth:190,zIndex:500,background:"var(--card)",border:"1px solid var(--border2)",borderRadius:12,boxShadow:"var(--shadow-lg)",padding:6}}>
         <div style={{padding:"9px 10px",borderBottom:"1px solid var(--border)",marginBottom:5}}><div style={{fontSize:12,fontWeight:700,color:"var(--text)"}}>{usuario}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{contexto.usuario.email||""}</div></div>
-        <a href="https://docworks-landing.vercel.app" style={{display:"block",padding:"9px 10px",fontSize:12,fontWeight:650,color:"var(--text)",textDecoration:"none",borderRadius:8}}>← Volver al sitio web</a>
+        <a href="https://docworks.com.ar" style={{display:"block",padding:"9px 10px",fontSize:12,fontWeight:650,color:"var(--text)",textDecoration:"none",borderRadius:8}}>← Volver al sitio web</a>
         <button type="button" onClick={function(){setAbierto(false);onLogout();}} className="logout-btn" style={{width:"100%",textAlign:"left",padding:"9px 10px",border:0,borderRadius:8,background:"transparent",cursor:"pointer",fontSize:12,fontWeight:700}}>↪ Salir</button>
       </div>}
     </div>
@@ -10319,7 +10319,7 @@ function DocWorksApp(){
                   <OperacionForm snapshotRef={formSnapshotRef} key={claveContextoOperaciones(docworksAuth.contexto)+"|"+(editOp&&editOp.id||"nueva")} contextoBorrador={contextoBorradorOperacion(docworksAuth.contexto)} resumeNavigation={formResumeNavigation} initial={editOp||formInitialOverride} modoEdicion={!!editOp} clausulas={clausulas} perfil={perfil} equipo={equipo} operaciones={operaciones} onSave={saveOp} onCancel={cerrarFormularioSeguro} onTipoChange={function(t){setFormTipo(t);}} saveStatus={saveStatus} reportSave={reportSave} onAddClausula={addClausula} focusCampo={formFocusCampo}/>
                 </section>
               )}
-              {!showForm&&ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks-landing.vercel.app/#planes" style={{color:"inherit"}}>Ver planes</a></div>}
+              {!showForm&&ctx.membresia&&ctx.membresia.es_prueba&&<div className="notice notice-gold" style={{display:"flex",gap:10,justifyContent:"space-between",flexWrap:"wrap",marginBottom:16,fontSize:13}}><span>Prueba gratis · Vence el {new Date(ctx.membresia.fecha_vencimiento).toLocaleDateString("es-AR")}. Sin cobro automático.</span><a href="https://docworks.com.ar/#planes" style={{color:"inherit"}}>Ver planes</a></div>}
               
               {view==="dashboard"&&<DashboardView oculto={showForm} mostrarAccesoRapido={!viewDoc&&!confirmCloseForm&&!draftPrompt&&!dwConfirm} key={claveContextoOperaciones(docworksAuth.contexto)} usuarioActual={docworksAuth.contexto&&docworksAuth.contexto.usuario} operaciones={operaciones} clausulas={clausulas} perfil={perfil} bloquesReserva={bloquesReserva} onAuditExport={function(entry){return loadSupabaseJs().then(function(sb){if(!sb)return {error:{message:"Supabase no disponible"}};var operacionId=String(entry.operacion_id||"");return sb.rpc("fn_auditoria_registrar",{p_accion:String(entry.accion||"exportar_con_faltantes"),p_operacion_id:operacionId,p_valor_nuevo:Object.assign({},entry,{operacion_id:operacionId})});}).catch(function(err){return {error:err};});}} searchOverride={topSearch} onNew={abrirNuevaOperacion} onEdit={function(op){setFormFocusCampo(null);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onEditField={function(op,campo){setFormFocusCampo(campo);setEditOp(op);setFormTipo(op.tipo||"reserva");setShowForm(true);}} onDelete={eliminarOpDirecto} onExportarCSV={exportarOperacionesCSV} onRestoreVersion={restaurarVersion} onChangeEstado={changeEstado} onConvertir={convertirAContrato} onConvertirComodato={convertirAComodato} onConvertirRefuerzo={convertirARefuerzo} onConvertirBoleto={convertirABoleto} onConvertirDevolucion={onConvertirDevolucion} onDuplicar={duplicarOp} onViewDoc={function(op){abrirDoc(op);}} onPerfil={function(){setView("configuracion");}} papelera={papelera} onRestore={restoreOp} onDeletePermanente={deleteOpPermanente} onVaciarPapelera={vaciarPapelera} confirmVaciarPapelera={confirmVaciarPapelera} setConfirmVaciarPapelera={setConfirmVaciarPapelera} papeleraJump={papeleraJump} error={opsSupabase.error} papeleraError={opsSupabase.papeleraError} onRetry={opsSupabase.recargar} loading={opsSupabase.loading}/>}
               {!showForm&&<>

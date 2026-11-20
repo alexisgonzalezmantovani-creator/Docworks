@@ -1,3 +1,5 @@
 User-agent: *
 Allow: /
-Sitemap: https://docworks-landing.vercel.app/sitemap.xml
+Disallow: /login/
+Disallow: /app/
+Sitemap: https://docworks.com.ar/sitemap.xml

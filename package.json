@@ -16,7 +16,8 @@
     "predev": "node scripts/preparar-acceso.cjs && node scripts/copiar-pdf-preview.cjs",
     "prebuild": "node scripts/preparar-acceso.cjs && node scripts/copiar-pdf-preview.cjs",
     "audit:rpc": "node tests/database/contrato-rpc.cjs",
-    "capture:gallery": "node scripts/capturar-galeria.cjs"
+    "capture:gallery": "node scripts/capturar-galeria.cjs",
+    "postbuild": "node scripts/publicar-landing.cjs"
   },
   "dependencies": {
     "@vercel/analytics": "2.0.1",
