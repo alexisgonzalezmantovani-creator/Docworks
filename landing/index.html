@@ -3,6 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script id="dw-legacy-pwa">
+/* Compatibilidad con íconos instalados antes de trasladar la app a /app/. */
+(function(){
+  try{
+    var instalada=(typeof window.matchMedia==='function'&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+    if(instalada&&(location.pathname==='/'||location.pathname==='/index.html')){
+      location.replace('/app/'+location.search+location.hash);
+    }
+  }catch(_e){}
+})();
+</script>
 <title>DocWorks · Documentos inmobiliarios con otra categoría</title>
 <meta name="description" content="DocWorks arma reservas, boletos, alquileres y comodatos para tu inmobiliaria. Descargá en PDF y Word, desde el celular, con las cláusulas de tu inmobiliaria.">
 <meta name="theme-color" content="#0b1730">

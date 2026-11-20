@@ -1,6 +1,14 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{JSDOM}=require('jsdom');
 const dir=path.resolve(__dirname,'..'),html=fs.readFileSync(dir+'/landing/index.html','utf8');let count=0;const check=(s,f)=>{f();count++;console.log('OK',s)};
 (async()=>{
+check('PWA instalada antes de la migración mantiene acceso a la app',()=>{
+ const webmanifest=JSON.parse(fs.readFileSync(dir+'/public/manifest.webmanifest','utf8'));
+ assert.equal(webmanifest.start_url,'/app/');
+ assert.match(html,/id="dw-legacy-pwa"/);
+ assert.match(html,/display-mode: standalone/);
+ assert.match(html,/navigator\.standalone===true/);
+ assert.match(html,/location\.replace\('\/app\/'/);
+});
 check('landing y app se compilan juntas para Cloudflare',()=>{const pkg=JSON.parse(fs.readFileSync(dir+'/package.json','utf8'));assert.equal(pkg.scripts.postbuild,'node scripts/publicar-landing.cjs');const wrangler=JSON.parse(fs.readFileSync(dir+'/wrangler.jsonc','utf8'));assert.equal(wrangler.assets.directory,'./dist');assert.equal(wrangler.assets.not_found_handling,'single-page-application');});
 const dom=new JSDOM(html,{url:'https://docworks.com.ar/',runScripts:'outside-only'}),doc=dom.window.document;let calls=[],respuesta={ok:true,status:200,json:async()=>({id:'qa'})};dom.window.eval(fs.readFileSync(dir+'/landing/captcha.js','utf8'));dom.window.fetch=async(url,options)=>{calls.push({url,options});if(respuesta instanceof Error)throw respuesta;return respuesta;};for(const s of doc.querySelectorAll('script'))if(s.textContent.includes("getElementById('signup-form')"))dom.window.eval(s.textContent);
 check('sin notas internas, aprobación prometida ni promesa de seguridad absoluta',()=>{for(const text of ['oferta comercial definitiva','sin esperar una aprobación','previstas en la aplicación','La aplicación contempla','Minutos. Es súper rápido','Sí. Cada inmobiliaria'])assert.ok(!html.includes(text));});
