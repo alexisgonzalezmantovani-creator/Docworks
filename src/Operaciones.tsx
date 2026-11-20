@@ -6750,6 +6750,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   });
   const [recuperacionAsistida,setRecuperacionAsistida]=useState(function(){return !modoEdicion&&!!(initial&&initial.parent_id);});
   const [verSoloPendientes,setVerSoloPendientes]=useState(true);
+  const [busquedaOrigenRecuperacion,setBusquedaOrigenRecuperacion]=useState("");
   const camposTecladoRef=useRef(null);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
@@ -7100,7 +7101,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     setStep(2);
   }
   const elegiblesRecuperacion=(operaciones||[]).filter(function(op){
-    if(!op||!op.id||op.estado==="cerrado"||op.estado==="papelera")return false;
+    // Las cerradas también son antecedentes válidos. No modificar nunca el origen.
+    if(!op||!op.id||op.estado==="papelera"||op.deleted_at)return false;
     if(!(ORIGENES_POR_TIPO[data.tipo]||[]).includes(op.tipo))return false;
     if(["devolucion_reserva","boleto","alquiler","comodato"].includes(data.tipo)){
       if((operaciones||[]).some(function(h){return h.parent_id===op.id&&h.tipo===data.tipo;}))return false;
@@ -7108,7 +7110,15 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     return true;
   }).sort(function(a,b){
     return (new Date(b.created_at||0).getTime()||0)-(new Date(a.created_at||0).getTime()||0);
-  }).slice(0,10);
+  });
+  const buscarOrigen=String(busquedaOrigenRecuperacion||"").trim().toLocaleLowerCase("es-AR");
+  const origenesFiltrados=buscarOrigen
+    ? elegiblesRecuperacion.filter(function(op){
+        var texto=[op.inmueble_direccion,op.inmueble_partido,op.inmueble_barrio,op.inmueble_unidad_funcional,op.comprador_nombre,op.vendedor_nombre,op.locador_nombre,op.locatario_nombre]
+          .filter(Boolean).join(" ").toLocaleLowerCase("es-AR");
+        return texto.includes(buscarOrigen);
+      })
+    : elegiblesRecuperacion;
   const recuperableNuevo=!modoEdicion&&!!ORIGENES_POR_TIPO[data.tipo]&&!data.parent_id;
   const elegirAntesDeCargar=recuperableNuevo&&step===2&&origenRecuperacion!=="manual";
   const soloResumenRecuperado=recuperacionAsistida&&verSoloPendientes&&step<=total&&!!data.parent_id;
@@ -7148,16 +7158,24 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
         <h3>Elegí la operación que querés recuperar</h3>
         <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setOrigenRecuperacion(null);}}>← Cambiar opción</button>
       </div>
-      {elegiblesRecuperacion.length>0
+      {elegiblesRecuperacion.length>0&&
+        <label style={{display:"block",marginBottom:12,fontSize:12,color:"var(--muted)"}}>
+          Buscar operación
+          <input type="search" className="inp" value={busquedaOrigenRecuperacion}
+            onChange={function(e){setBusquedaOrigenRecuperacion(e.target.value);}}
+            placeholder="Dirección, barrio o nombre" aria-label="Buscar operación para recuperar"
+            style={{display:"block",width:"100%",marginTop:5}}/>
+        </label>}
+      {origenesFiltrados.length>0
         ? <div className="dw-origen-recuperacion-lista">
-          {elegiblesRecuperacion.map(function(op){
+          {origenesFiltrados.map(function(op){
             return <button type="button" key={op.id} className="dw-origen-recuperacion-item" onClick={function(){recuperarOtraOperacion(op);}}>
               <strong>{op.inmueble_direccion||"Inmueble sin dirección"}{op.inmueble_partido?" · "+op.inmueble_partido:""}</strong>
-              <span>{op.tipo==="reserva_alquiler"?"Reserva de alquiler":"Reserva de compra"} · {new Date(op.created_at).toLocaleDateString("es-AR")}</span>
+              <span>{op.tipo==="reserva_alquiler"?"Reserva de alquiler":"Reserva de compra"}{op.estado==="cerrado"?" · Cerrada":""}{op.created_at?" · "+new Date(op.created_at).toLocaleDateString("es-AR"):""}</span>
             </button>;
           })}
         </div>
-        : <p className="dw-refuerzo-vacio">No hay operaciones compatibles abiertas para recuperar.</p>}
+        : <p className="dw-refuerzo-vacio">{buscarOrigen?"No hay operaciones que coincidan con la búsqueda.":"No hay operaciones compatibles para recuperar."}</p>}
       <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setOrigenRecuperacion("manual");}}>Cargar los datos manualmente</button>
     </div>;
   }
