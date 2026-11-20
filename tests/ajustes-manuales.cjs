@@ -58,7 +58,7 @@ function simularDescarga(formato,modo='ok'){
 const a=require(tmp+'/app.cjs');let root,checks=0;
 const botones=()=>[...document.querySelectorAll('button')],boton=t=>{const el=botones().find(b=>b.textContent.trim()===t);assert.ok(el,'botón '+t);return el};
 async function click(el){await a.act(async()=>el.click())}
-async function iniciar(abrirEditor=true){if(root)await a.act(async()=>root.unmount());root=a.createRoot(document.getElementById('root'));await a.act(async()=>{root.render(a.createElement(a.AjustesHarness));await new Promise(r=>setTimeout(r,30))});if(abrirEditor){document.querySelector('[data-testid="dw-ajustes-manuales"]').open=true;await click(document.querySelector('[data-testid="dw-ajustes-manuales"] button'));}}
+async function iniciar(abrirEditor=true){if(root)await a.act(async()=>root.unmount());root=a.createRoot(document.getElementById('root'));await a.act(async()=>{root.render(a.createElement(a.AjustesHarness));await new Promise(r=>setTimeout(r,30))});if(abrirEditor){await click(boton("✎ Ajustes manuales"));await click(document.querySelector('[data-testid="dw-ajustes-manuales"] button'));}}
 async function escribir(valor){const el=document.querySelector('.dw-redaccion-clausula');assert.ok(el);await a.act(async()=>{const primero=el.firstChild;if(primero?.nodeType===Node.TEXT_NODE)primero.nodeValue=valor;else el.prepend(document.createTextNode(valor));el.dispatchEvent(new Event('input',{bubbles:true}))});}
 async function check(label,fn){await fn();checks++;console.log('OK',label)}
 (async()=>{
@@ -166,7 +166,7 @@ async function check(label,fn){await fn();checks++;console.log('OK',label)}
   const panel=document.querySelector('[data-testid="dw-editor-inline"]');
   assert.ok(panel,'La edición debe aparecer directamente en la vista previa');
   assert.ok(panel.querySelector('[data-testid="dw-ajuste-chip"]'),'El chip automático debe seguir protegido');
-  assert.equal(document.querySelector('[data-testid="dw-ajustes-manuales"]').open,false,'No se debe abrir el panel superior');
+  assert.equal(document.querySelector('[data-testid="dw-ajustes-manuales"]').hidden,true,'No se debe abrir el panel de ajustes');
   await escribir('El precio ajustado es ');
   await click(boton('Guardar ajuste'));
   assert.equal(document.querySelector('[data-testid="dw-editor-inline"]'),null,'El editor debe cerrarse tras guardar');
@@ -186,7 +186,7 @@ async function check(label,fn){await fn();checks++;console.log('OK',label)}
  await iniciar(false);
  await check('chip histórico sin cambios no crea un ajuste manual ni llama a Supabase',async()=>{
   const detalles=document.querySelector('[data-testid="dw-ajustes-manuales"]');
-  assert.ok(detalles);detalles.open=true;
+  assert.ok(detalles);await click(boton("✎ Ajustes manuales"));
   const fila=document.querySelector('[data-ajuste-id="reserva.legado"]');
   assert.ok(fila,'aparece el bloque histórico');
   await click(fila.querySelector('button'));

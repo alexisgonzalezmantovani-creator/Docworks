@@ -224,13 +224,26 @@ delete global.document;
  });
 
  // Regresión: el modelo esencial debe dejar las cláusulas elegidas al final, una sola vez.
- // Verificar también las exportaciones reales de una reserva y de una locación.
+ // Reabrir operaciones ficticias y verificar las exportaciones reales de los ocho tipos.
  for(const tipo of app.PLANTILLA_TIPOS){
    const marca="EXTRAUNICATEST"+tipo.replace(/_/g,"").toUpperCase();
    const extra={id:"qa.adicional."+tipo,titulo:"ACUERDO ADICIONAL",contenido:marca,tipos:[tipo],obligatoria:false};
    const base={...app.EMPTY_OP,...app.SAMPLE_OP_PREVIEW,tipo,clausulas_ids:[extra.id],alquiler_incluye_seguro:false};
    const bloques=app.getDefaultBodyBlocks(tipo,true);
-   const documento=app.buildDocSections(app.opParaDocumento(base),[extra],tipo,bloques);
+   const perfil={plantillas:{[tipo]:{version:2,body_blocks:bloques,clausulas_ids:[extra.id]}}};
+   const anterior=app.crearSnapshotPlantillaOperacion(base,{plantillas:{[tipo]:{version:1,body_blocks:bloques,clausulas_ids:[]}}},[extra]);
+   const snapshot=app.crearSnapshotPlantillaOperacion(base,perfil,[extra]);
+   const reabierta=JSON.parse(JSON.stringify({...base,plantilla_snapshot:snapshot}));
+   const extraActual={...extra,contenido:'CLÁUSULA EDITADA DESPUÉS DE EMITIR'};
+   const documento=app.buildDocSections(app.opParaDocumento(reabierta),[extraActual],tipo);
+   check(tipo+" nueva operación usa el modelo publicado y conserva su opcional al reabrir",()=>{
+     assert.equal(snapshot.version,2);
+     assert.equal(reabierta.plantilla_snapshot.clausulas.find(c=>c.id===extra.id)?.contenido,marca);
+     assert.ok(!app.docToPlainText(documento).includes(extraActual.contenido));
+     const historica=app.buildDocSections(app.opParaDocumento({...base,clausulas_ids:[],plantilla_snapshot:anterior}),[extraActual],tipo);
+     assert.equal(anterior.version,1);
+     assert.ok(!app.docToPlainText(historica).includes(marca));
+   });
    check(tipo+" adicional al final y sin duplicar",()=>{
      assert.equal(documento.clausulas.length,1);
      assert.equal(documento.clausulas[0].texto,marca);

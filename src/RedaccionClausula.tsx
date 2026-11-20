@@ -35,17 +35,33 @@ function leerRedaccion(root: HTMLElement): string {
   return texto.replace(/\u00a0/g, " ");
 }
 
+function renderizarRedaccion(root: HTMLElement, value: string, labelToken: (token: string) => string) {
+  const fragmento = document.createDocumentFragment();
+  let inicio = 0;
+  for (const match of value.matchAll(marcador)) {
+    fragmento.append(value.slice(inicio, match.index), crearChip(match[1], labelToken(match[1])));
+    inicio = match.index! + match[0].length;
+  }
+  fragmento.append(value.slice(inicio));
+  root.replaceChildren(fragmento);
+}
+
+function marcadoresDelTexto(texto: string) {
+  return Array.from(texto.matchAll(marcador), match => match[1]);
+}
+
 type Props = {
   value: string;
   onChange: (value: string) => void;
   label: string;
   labelToken: (token: string) => string;
   disabled?: boolean;
+  protegerChips?: boolean;
 };
 type EditorHandle = { insertarToken: (token: string) => void };
 
 export const RedaccionClausula = forwardRef<EditorHandle, Props>(function RedaccionClausula(
-  { value, onChange, label, labelToken, disabled }, ref
+  { value, onChange, label, labelToken, disabled, protegerChips }, ref
 ) {
   const editor = useRef<HTMLDivElement>(null);
   const ultimaRedaccion = useRef<string>();
@@ -54,17 +70,29 @@ export const RedaccionClausula = forwardRef<EditorHandle, Props>(function Redacc
   useLayoutEffect(() => {
     const root = editor.current!;
     if (value === ultimaRedaccion.current) return;
-    const fragmento = document.createDocumentFragment();
-    let inicio = 0;
-    for (const match of value.matchAll(marcador)) {
-      fragmento.append(value.slice(inicio, match.index), crearChip(match[1], labelToken(match[1])));
-      inicio = match.index! + match[0].length;
-    }
-    fragmento.append(value.slice(inicio));
-    root.replaceChildren(fragmento);
+    renderizarRedaccion(root, value, labelToken);
     cursor.current = undefined;
     ultimaRedaccion.current = value;
   }, [value, labelToken]);
+
+  useLayoutEffect(() => {
+    if (!protegerChips) return;
+    const root = editor.current!;
+    // El rango nativo también cubre borrados desde el teclado táctil y reemplazos.
+    function proteger(event: InputEvent) {
+      for (const objetivo of event.getTargetRanges?.() ?? []) {
+        const rango = document.createRange();
+        rango.setStart(objetivo.startContainer, objetivo.startOffset);
+        rango.setEnd(objetivo.endContainer, objetivo.endOffset);
+        if (!rango.collapsed && Array.from(root.querySelectorAll("[data-dw-token]")).some(chip => rango.intersectsNode(chip))) {
+          event.preventDefault();
+          return;
+        }
+      }
+    }
+    root.addEventListener("beforeinput", proteger);
+    return () => root.removeEventListener("beforeinput", proteger);
+  }, [protegerChips]);
 
   function guardarCursor() {
     const seleccion = window.getSelection();
@@ -74,8 +102,23 @@ export const RedaccionClausula = forwardRef<EditorHandle, Props>(function Redacc
     }
   }
 
-  function actualizar() {
-    const texto = leerRedaccion(editor.current!);
+  function actualizar(insercionAutorizada = false) {
+    const root = editor.current!;
+    const texto = leerRedaccion(root);
+    const anterior = ultimaRedaccion.current ?? value;
+    // Algunos cambios del sistema o del teclado no emiten beforeinput cancelable.
+    if (protegerChips && !insercionAutorizada &&
+        JSON.stringify(marcadoresDelTexto(texto)) !== JSON.stringify(marcadoresDelTexto(anterior))) {
+      renderizarRedaccion(root, anterior, labelToken);
+      const rango = document.createRange();
+      rango.selectNodeContents(root);
+      rango.collapse(false);
+      const seleccion = window.getSelection();
+      seleccion?.removeAllRanges();
+      seleccion?.addRange(rango);
+      guardarCursor();
+      return;
+    }
     ultimaRedaccion.current = texto;
     onChange(texto);
     guardarCursor();
@@ -94,6 +137,10 @@ export const RedaccionClausula = forwardRef<EditorHandle, Props>(function Redacc
         rango.collapse(false);
       }
       root.focus();
+      if (protegerChips && !rango.collapsed &&
+          Array.from(root.querySelectorAll("[data-dw-token]")).some(chip => rango.intersectsNode(chip))) {
+        rango.collapse(false);
+      }
       rango.deleteContents();
       const chip = crearChip(token, labelToken(token));
       rango.insertNode(chip);
@@ -101,14 +148,14 @@ export const RedaccionClausula = forwardRef<EditorHandle, Props>(function Redacc
       rango.collapse(true);
       seleccion.removeAllRanges();
       seleccion.addRange(rango);
-      actualizar();
+      actualizar(true);
     }
   }));
 
   return <div ref={editor} className="inp dw-redaccion-clausula" role="textbox"
     aria-label={label} aria-multiline="true" aria-disabled={disabled || undefined}
     contentEditable={!disabled} suppressContentEditableWarning
-    onInput={actualizar} onBlur={guardarCursor} onDrop={event => event.preventDefault()}
+    onInput={() => actualizar()} onBlur={guardarCursor} onDrop={event => event.preventDefault()}
     onPaste={event => {
       event.preventDefault();
       // Inserción de texto nativa para conservar el historial de deshacer.

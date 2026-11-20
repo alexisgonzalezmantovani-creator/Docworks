@@ -2388,15 +2388,6 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     overflow-y:auto;
     overflow-x:hidden;
   }
-  .modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][open]{
-    flex:0 0 auto!important;
-    max-height:min(38dvh,340px);
-    min-height:72px;
-    overflow-y:auto;
-    overflow-x:hidden;
-    overscroll-behavior:contain;
-    -webkit-overflow-scrolling:touch;
-  }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
     flex-basis:160px;
     flex-shrink:0;
@@ -2404,14 +2395,12 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   }
 }
 
-/* La pestaña Ajustes manuales utiliza el espacio completo del visor;
-   no conserva los límites de altura del antiguo desplegable sobre la hoja. */
-.modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][data-vista-ajustes="1"]{
-  flex:1 1 auto!important;
-  max-height:none!important;
-  min-height:0!important;
-  overflow-y:auto!important;
+.dw-ajustes-manuales{
+  order:1;flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+  padding:8px 12px;margin-bottom:6px
 }
+.dw-ajustes-manuales[hidden]{display:none}
+.dw-ajustes-resumen{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;min-height:30px;font-size:13px}
 /* Lectura en pantalla. La maquetación de PDF y Word usa sus propios estilos. */
 .modal-overlay-viewer .viewer-modal .doc-reading-scroll{
   flex:1 0 155px;
@@ -2438,7 +2427,6 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
 .viewer-modal .reserva-compact-summary{margin-bottom:6px}
 .viewer-modal .reserva-status-strip{padding:6px 10px}
 .viewer-modal .reserva-mini-timeline{margin-top:4px}
-.viewer-modal details[data-testid="dw-ajustes-manuales"]{padding:4px 12px;margin-bottom:6px}
 @media (min-width:641px){
   .modal-overlay-viewer{align-items:flex-start!important;justify-content:center!important;padding:max(2px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(2px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left))!important}
   .modal-overlay-viewer .viewer-modal{
@@ -2457,13 +2445,6 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
     overflow-y:auto!important;
     overflow-x:hidden!important;
     padding:0 2px 4px!important;
-  }
-  .modal-overlay-viewer .viewer-modal details[data-testid="dw-ajustes-manuales"][open]{
-    flex:0 0 auto;
-    max-height:min(31dvh,270px);
-    min-height:72px;
-    overflow:auto;
-    overscroll-behavior:contain;
   }
   .modal-overlay-viewer .viewer-modal .doc-reading-scroll>.pdf-preview{
     padding:7px;
@@ -5730,7 +5711,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
   }
   function renderAjusteEditor(b,vigente){
     return <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:8}}>
-      <RedaccionClausula value={redaccionAjuste} onChange={setRedaccionAjuste} disabled={guardandoAjuste}
+      <RedaccionClausula value={redaccionAjuste} onChange={setRedaccionAjuste} disabled={guardandoAjuste} protegerChips
         label={"Redacción de "+(b.titulo||"la cláusula")} labelToken={function(token){
           return token==="precio_letras"?tokenLabelDocWorks(token):labelTokenObligatorio(token)||tokenLabelDocWorks(token);
         }}/>
@@ -6105,7 +6086,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
           <span style={{fontSize:12,color:"var(--muted)",fontWeight:650,marginRight:5}}>Documento</span>
           {[{key:false,label:"Reserva de Compra"},{key:true,label:"Conformidad del vendedor"}].map(function(o){
             var activo=vistaConformidadSeparada===o.key;
-            return <button type="button" key={o.label} aria-pressed={activo} onClick={function(){if(!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaConformidadSeparada(o.key);setErr("");}} style={{padding:"9px 12px",borderRadius:9,border:"1px solid "+(activo?"rgba(56,189,248,.6)":"var(--border2)"),background:activo?"rgba(56,189,248,.12)":"transparent",color:activo?"var(--text)":"var(--muted)",fontSize:12.5,fontWeight:activo?750:550,cursor:"pointer"}}>{o.label}</button>;
+            return <button type="button" key={o.label} aria-pressed={activo} onClick={function(){if(activo||!permitirDescartarAjuste())return;cerrarEdicionAjuste();setVistaAjustes(false);setVistaConformidadSeparada(o.key);setErr("");}} style={{padding:"9px 12px",borderRadius:9,border:"1px solid "+(activo?"rgba(56,189,248,.6)":"var(--border2)"),background:activo?"rgba(56,189,248,.12)":"transparent",color:activo?"var(--text)":"var(--muted)",fontSize:12.5,fontWeight:activo?750:550,cursor:"pointer"}}>{o.label}</button>;
           })}
           <span style={{fontSize:11,color:"var(--dim)",width:"100%"}}>Descargá o compartí cada archivo por separado desde sus botones PDF, Word o Compartir.</span>
         </div>}
@@ -6119,18 +6100,18 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
         </div>}
         {!perfil.nombre&&<div className="notice notice-amber" style={{marginBottom:12,flex:"0 0 auto"}}>Tip: configurá el perfil para agregar logo y nombre en los documentos.</div>}
         {onUpdateOperation&&!vistaConformidadSeparada&&!tabActual.esRecibo&&!((op.plantilla_snapshot||{}).documento_propio)&&bloquesParaAjustes().length>0&&
-          <details className="card" open={vistaAjustes} data-vista-ajustes={vistaAjustes?"1":"0"} style={{order:1,flex:vistaAjustes?"1 1 auto":"0 0 auto",minHeight:0,overflowY:"auto",display:vistaAjustes?"block":"none"}} data-testid="dw-ajustes-manuales">
-            <summary style={{cursor:"pointer",fontSize:14,fontWeight:700,color:"var(--text)",minHeight:36,display:"flex",alignItems:"center"}}>
-              ✎ Ajustes manuales <span style={{marginLeft:8,fontSize:11,fontWeight:400,color:"var(--muted)"}}>(opcional)</span>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
-            </summary>
-            <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"8px 0 12px"}}>
-              Los ajustes se guardan solo en esta operación; el modelo no cambia. Los chips azules son datos automáticos protegidos. Guardá cada cláusula para actualizar el documento.{" · "+bloquesParaAjustes().length+" cláusulas disponibles"}
+          <section className="card dw-ajustes-manuales" hidden={!vistaAjustes} aria-label="Cláusulas editables" data-testid="dw-ajustes-manuales">
+            <div className="dw-ajustes-resumen">
+              <strong>{bloquesParaAjustes().length} cláusulas editables</strong>{op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.keys(op.ajustes_manuales[tab]).length>0&&<span style={{marginLeft:"auto",fontSize:11,color:"var(--green)",fontWeight:650}}>{Object.keys(op.ajustes_manuales[tab]).length===1?"1 cláusula modificada":Object.keys(op.ajustes_manuales[tab]).length+" cláusulas modificadas"}</span>}
+            </div>
+            <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"4px 0 12px"}}>
+              Editá el texto libre y guardá cada cláusula para actualizar esta operación. Los chips azules se completan automáticamente.
             </div>
             {bloquesParaAjustes().map(function(b){
               var vigente=op.ajustes_manuales&&op.ajustes_manuales[tab]&&Object.prototype.hasOwnProperty.call(op.ajustes_manuales[tab],b.id);
               return <div key={b.id} data-ajuste-id={b.id} style={{padding:"10px 0",borderTop:"1px solid var(--border)"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-                  <span style={{fontSize:13,fontWeight:650,color:"var(--text)"}}>{b.titulo||"Cláusula"}</span>
+                  <span style={{fontSize:13,fontWeight:650,color:"var(--text)",minWidth:0,overflowWrap:"anywhere"}}>{b.titulo||"Cláusula"}</span>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     {vigente&&<span style={{fontSize:10,color:"var(--green)"}}>Ajuste guardado</span>}
                     <button type="button" className="btn btn-secondary btn-sm" disabled={guardandoAjuste} onClick={function(){if(ajusteEditando===b.id){if(permitirDescartarAjuste())cerrarEdicionAjuste();}else if(permitirDescartarAjuste()){setEditorEnVistaPrevia(false);abrirAjuste(b);}}}>{ajusteEditando===b.id?"Cerrar":"Editar"}</button>
@@ -6139,7 +6120,7 @@ function DocumentViewer({op,clausulas,perfil,operaciones,bloquesReserva,onToggle
                 {ajusteEditando===b.id&&!editorEnVistaPrevia&&renderAjusteEditor(b,vigente)}
               </div>;
             })}
-          </details>}
+          </section>}
         <div className="doc-reading-scroll" style={{order:0,flex:vistaAjustes?"0 0 auto":undefined,flexBasis:vistaAjustes?"auto":undefined,minHeight:vistaAjustes?0:undefined,overflow:vistaAjustes?"visible":undefined}}> 
           <div className="pdf-preview" style={{marginBottom:vistaAjustes?0:14,height:vistaAjustes?"auto":undefined,flex:vistaAjustes?"0 0 auto":undefined}}> 
             <EncabezadoVistaPrevia titulo={vistaAjustes?"Ajustes manuales":vistaConformidadSeparada?"Conformidad del vendedor":tabActual.esRecibo?"Recibo de honorarios":TIPOS[op.tipo]||op.tipo}>

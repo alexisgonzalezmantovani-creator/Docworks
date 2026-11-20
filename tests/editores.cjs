@@ -66,6 +66,18 @@ async function fill(el,value){assert.ok(el);await app.act(async()=>{if(el.matche
   const edits=buttons().filter(b=>b.textContent.trim()==='Editar');await click(edits[edits.length-1]);
   await fill(document.querySelector('.dw-redaccion-clausula'),'Segunda versión.');await click(button('Guardar cláusula'));
   check(tipo+' historial conserva versión anterior',()=>{const hist=profile.plantillas[tipo].historial_clausulas;assert.ok(Object.values(hist).flat().some(v=>v.contenido==='Texto guardado de prueba.'));});
+  if(tipo==='boleto'){
+   const estados=[...document.querySelectorAll('select[aria-label^="Estado de la cláusula"]')];
+   const activa=estados.find(el=>el.value==='obligatoria');
+   assert.ok(activa,'una cláusula editable y obligatoria en el modelo de prueba');
+   const etiqueta=activa.getAttribute('aria-label');
+   fail=true;
+   await app.act(async()=>{activa.value='apagada';activa.dispatchEvent(new Event('change',{bubbles:true}));});
+   check('un cambio de estado rechazado conserva la versión guardada',()=>{
+    assert.equal([...document.querySelectorAll('select')].find(el=>el.getAttribute('aria-label')===etiqueta)?.value,'obligatoria');
+    assert.match(document.querySelector('[role="alert"]').textContent,/No se pudo guardar/);
+   });
+  }
   await app.act(async()=>root.unmount());
   const readOnly=app.createRoot(document.getElementById('test'));
   await app.act(async()=>readOnly.render(require('react').createElement(app.CuerpoPlantillaPanel,{perfil:profile,tipo,puedeEditar:false,clausulas:[],onChange:()=>{throw new Error('Solo lectura');}})));

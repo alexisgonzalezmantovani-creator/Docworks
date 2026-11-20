@@ -169,7 +169,8 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
     try{
       var resultado=editId?await onEdit(editId,form):await onAdd(Object.assign({},form,{id:genId(),obligatoria:modoIntegrado?false:!!form.obligatoria}),{habilitar:!!modoIntegrado&&habilitarParaAsesores,creadaId:clausulaCreadaId});
       if(resultado&&resultado.error){if(resultado.clausulaCreadaId)setClausulaCreadaId(resultado.clausulaCreadaId);if(resultado.creacionSinConfirmar)setCreacionSinConfirmar(true);throw resultado.error;}
-      if(!editId)dwNotify("success",modoIntegrado&&habilitarParaAsesores?"Cláusula guardada y disponible para los asesores en los documentos elegidos.":"Cláusula guardada en la biblioteca.");
+      if(editId)dwNotify("success","Cambios guardados en la biblioteca.");
+      else dwNotify("success",modoIntegrado&&habilitarParaAsesores?"Cláusula guardada y disponible para los asesores en los documentos elegidos.":"Cláusula guardada en la biblioteca.");
       setClausulaCreadaId(null);
       setForm(FORM_CLAUSULA_EMPTY);setEditId(null);setClausulaTab("biblioteca");
     }catch(err){
@@ -240,7 +241,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
           {errorIdea&&<div style={{fontSize:12,color:"var(--red)",marginTop:7}}>{errorIdea}</div>}
         </div>}
         {errorGuardadoClausula&&<div role="alert" style={{color:"var(--red)",fontSize:12.5,marginBottom:9}}>{errorGuardadoClausula}</div>}
-        <ClausulaFormBody form={form} setForm={setForm} editId={editId} onSubmit={submit} guardando={guardandoClausula} habilitarParaAsesores={modoIntegrado&&!editId?habilitarParaAsesores:undefined} onHabilitarChange={setHabilitarParaAsesores} soloHabilitar={!!clausulaCreadaId||creacionSinConfirmar} bloquearGuardado={creacionSinConfirmar} guardarLabel={clausulaCreadaId?"Reintentar habilitación":modoIntegrado&&!editId&&habilitarParaAsesores?"Guardar y habilitar":undefined} advertencia={similares.length>0&&!clausulaCreadaId?<div role="status" style={{padding:12,border:"1px solid var(--gold)",borderRadius:10,fontSize:12.5,lineHeight:1.5}}><b>Hay títulos parecidos en la biblioteca</b><p style={{margin:"5px 0"}}>Podrían tener condiciones o plazos diferentes. Revisá el texto; podés guardar esta cláusula igualmente.</p>{similares.map(function(c){return <details key={c.id} style={{marginTop:6}}><summary style={{cursor:"pointer",fontWeight:650}}>{c.titulo}</summary><div style={{whiteSpace:"pre-wrap",marginTop:5}}>{c.contenido}</div></details>;})}</div>:null} onCancel={function(){solicitarSalida(cerrarEditor);}}/>
+        <ClausulaFormBody form={form} setForm={setForm} editId={editId} onSubmit={submit} guardando={guardandoClausula} habilitarParaAsesores={modoIntegrado&&!editId?habilitarParaAsesores:undefined} onHabilitarChange={setHabilitarParaAsesores} soloHabilitar={!!clausulaCreadaId||creacionSinConfirmar} bloquearGuardado={creacionSinConfirmar} guardarLabel={clausulaCreadaId?"Reintentar habilitación":modoIntegrado&&!editId&&habilitarParaAsesores?"Guardar y habilitar":undefined} advertencia={similares.length>0&&!clausulaCreadaId?<div role="status" style={{padding:12,border:"1px solid var(--gold)",borderRadius:10,fontSize:12.5,lineHeight:1.5}}><b>Hay títulos parecidos en la biblioteca</b><p style={{margin:"5px 0"}}>Podrían tener condiciones o plazos diferentes. Revisá el texto; podés guardar esta cláusula igualmente.</p>{similares.map(function(c){return <details key={c.id} style={{marginTop:6}}><summary style={{cursor:"pointer",fontWeight:650}}>{c.titulo}</summary><div style={{whiteSpace:"pre-wrap",marginTop:5}}>{c.contenido}</div></details>;})}</div>:null}/>
       </div>}
       {clausulaTab==="biblioteca"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div className="dw-clause-library-toolbar">
@@ -303,7 +304,7 @@ function ClausulasView({clausulas,onAdd,onEdit,onDelete,puedeEditar,rolLabel,err
 }
 
 export function crearClausulasWorkspace(deps){
- const {ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, TIPO_ICON={}, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState} = deps;
+ const {dwNotify, ClausulasView, CuerpoPlantillaPanel, DEFAULT_BLOQUES_RESERVA, EncabezadoFijadoPanel, PLANTILLA_TIPOS, ROLES_DEF, ReservaBloquesPanel, TIPOS, TIPO_ICON={}, clausulaAplicaTipo, clausulaYaEnTextoBase, contarBloquesCuerpo, mostrarTokensDocWorks, obtenerIdsProtegidosDePlantillas, obtenerPlantillaConfig, navegarConProteccionModelo, requestDwConfirm, useEffect, useRef, useState} = deps;
 
 
 /* Componente legado de cláusulas personales eliminado: ya no forma parte del producto. */
@@ -370,6 +371,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       var resultado=await onEditClausula(opcionalEditando,opcionalBorrador);
       if(resultado&&resultado.error)throw resultado.error;
       setOpcionalEditando(null);setOpcionalBorrador(null);
+      dwNotify("success","Cambios guardados en la biblioteca.");
     }catch(e){setOpcionalError(e&&e.message?e.message:"No se pudo guardar la cláusula.");}
     finally{setOpcionalGuardando(false);}
   }
@@ -521,8 +523,8 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         {opcionalesDocumentoFiltradas.map(function(c){var cfg=configAdicionalesDocumento;var elegida=(cfg.clausulas_ids||[]).indexOf(c.id)!==-1;var obligatoriaModelo=c.obligatoria===true||(cfg.obligatorias_ids||[]).indexOf(c.id)!==-1;var estado=obligatoriaModelo?"obligatoria":elegida?"asesor":"apagada";return <div key={c.id} data-clausula-id={c.id} style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 0",borderBottom:"1px solid var(--border)",minWidth:0}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13.5,fontWeight:650,color:"var(--text)",overflowWrap:"anywhere"}}>{c.titulo||"Cláusula sin título"}</div><div style={{fontSize:12.5,color:"var(--dim)",marginTop:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{mostrarTokensDocWorks(c.contenido||"")}</div></div><select aria-label={"Estado de "+(c.titulo||"cláusula")} value={estado} disabled={!puedeEditar||obligatoriaModelo||estadoClausulaGuardando!==null} onChange={function(e){cambiarEstadoClausulaBiblioteca(c,e.target.value);}} style={{width:150,maxWidth:"44%",minWidth:0,fontSize:12.5,padding:"9px 6px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--card)",color:"var(--text)"}}>{estado==="obligatoria"&&<option value="obligatoria" disabled>Siempre (modelo anterior)</option>}<option value="asesor">El asesor elige</option><option value="apagada">No usar</option></select>{puedeEditar&&estado!=="obligatoria"&&<button type="button" className="btn btn-secondary btn-sm" disabled={opcionalGuardando} onClick={function(){abrirEdicionOpcional(c);}}>Editar</button>}
         {opcionalEditando===c.id&&opcionalBorrador&&<div style={{flex:"1 0 100%",minWidth:0,padding:12,border:"1px solid var(--border)",borderRadius:10,display:"flex",flexDirection:"column",gap:9}}>
           <div style={{fontSize:12,color:"var(--muted)"}}>Editás el texto compartido de la biblioteca. Si se utiliza en otros documentos, el cambio también puede afectarlos.</div>
-          <label style={{fontSize:12}}>Título<input className="inp" style={{width:"100%",boxSizing:"border-box"}} value={opcionalBorrador.titulo} onChange={function(e){setOpcionalBorrador(Object.assign({},opcionalBorrador,{titulo:e.target.value}));}}/></label>
-          <label style={{fontSize:12}}>Contenido<textarea className="inp" rows={6} style={{width:"100%",boxSizing:"border-box"}} value={opcionalBorrador.contenido} onChange={function(e){setOpcionalBorrador(Object.assign({},opcionalBorrador,{contenido:e.target.value}));}}/></label>
+          <label style={{fontSize:12}}>Título<input className="inp" style={{width:"100%",boxSizing:"border-box"}} value={opcionalBorrador.titulo} disabled={opcionalGuardando} onChange={function(e){setOpcionalBorrador(Object.assign({},opcionalBorrador,{titulo:e.target.value}));}}/></label>
+          <label style={{fontSize:12}}>Contenido<textarea className="inp" rows={6} style={{width:"100%",boxSizing:"border-box"}} value={opcionalBorrador.contenido} disabled={opcionalGuardando} onChange={function(e){setOpcionalBorrador(Object.assign({},opcionalBorrador,{contenido:e.target.value}));}}/></label>
           {opcionalError&&<div role="alert" style={{color:"var(--red)",fontSize:12}}>{opcionalError}</div>}
           <div style={{display:"flex",justifyContent:"flex-end",gap:8,flexWrap:"wrap"}}>
             <button type="button" className="btn btn-secondary btn-sm" disabled={opcionalGuardando} onClick={function(){setOpcionalEditando(null);setOpcionalBorrador(null);}}>Cancelar</button>

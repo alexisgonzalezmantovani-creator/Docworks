@@ -72,7 +72,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
  let checks=0;
  try{
  const base='http://127.0.0.1:'+server.address().port;
- for(const [width,height] of [[1920,1080],[1366,768],[1024,768],[768,1024],[393,852],[430,932],[852,393]]){
+ for(const [width,height] of [[1920,1080],[1366,768],[1024,768],[768,1024],[320,740],[390,844],[430,932],[852,393]]){
   const size=width+'x'+height;
   const page=await browser.newPage();
   await page.setViewportSize({width,height});
@@ -126,7 +126,20 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.screenshot({path:path.join(out,'auditoria-visor-'+size+'.png'),animations:'disabled'});
   await page.getByRole('button',{name:'Ajustes manuales'}).click();
   await page.getByTestId('dw-ajustes-manuales').getByRole('button',{name:'Editar',exact:true}).last().click();
-  await page.getByTestId('dw-ajuste-chip').waitFor();
+  const manual = page.getByTestId('dw-ajustes-manuales').getByRole('textbox');
+  await manual.getByTestId('dw-ajuste-chip').waitFor();
+  const original = await manual.textContent();
+  await manual.evaluate(el=>{
+   el.focus();
+   const range=document.createRange();
+   range.selectNodeContents(el);
+   const selection=window.getSelection();
+   selection.removeAllRanges();
+   selection.addRange(range);
+  });
+  await page.keyboard.press('Backspace');
+  assert.equal(await manual.textContent(),original,size+' borrar una selección no elimina el chip ni el borrador');
+  await page.screenshot({path:path.join(out,'auditoria-editor-manual-'+size+'.png'),animations:'disabled'});
   await page.getByRole('button',{name:'Cancelar',exact:true}).click();
   await page.getByRole('button',{name:'Volver a vista previa',exact:true}).click();
 
@@ -150,8 +163,9 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    return [...el.querySelectorAll('input, button')].every(b=>b.getBoundingClientRect().right<=max+1);
   }),size+' controles de biblioteca contenidos');
   await page.screenshot({path:path.join(out,'auditoria-biblioteca-'+size+'.png'),animations:'disabled'});
-  if(width===393||height===393||width===1366){
+  if(width===390||height===393||width===1366){
    await page.goto(base+'/ajustes-largos?separada');
+   await page.getByRole('button',{name:'Ajustes manuales'}).click();
    await page.getByRole('button',{name:'Conformidad del vendedor',exact:true}).click();
    assert.equal(await reader.locator('.dw-preview-title').textContent(),'Conformidad del vendedor');
    await reader.locator('.pdf-text').waitFor();
