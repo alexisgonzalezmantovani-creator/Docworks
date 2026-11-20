@@ -2512,6 +2512,51 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .fab{bottom:calc(54px + env(safe-area-inset-bottom,0px) + 14px)!important;}
   .ia-fab{bottom:calc(54px + env(safe-area-inset-bottom,0px) + 82px)!important;}
 }
+
+/* Ajuste de marca: ícono a su escala original, texto ~20% más ancho.
+   Se recortan DOS áreas del mismo PNG para no deformar el ícono.
+   El logo de carga, login y documentos NO se modifica. */
+.topbar-logo,.mobile-topbar-logo{position:relative;}
+.topbar-logo .dw-header-brand-img,.mobile-topbar-logo .dw-header-brand-img{
+  position:absolute!important;width:1px!important;height:1px!important;
+  max-width:1px!important;clip-path:inset(50%);overflow:hidden;pointer-events:none;
+}
+.topbar-logo::before,.topbar-logo::after,
+.mobile-topbar-logo::before,.mobile-topbar-logo::after{
+  content:"";display:block;flex-shrink:0;
+  background-image:url("/docworks-header-logo.png");
+  background-repeat:no-repeat;
+}
+.topbar-logo{gap:0;overflow:visible;align-items:center;}
+.topbar-logo::before{
+  width:56px;height:47px;background-size:169.2px 47px;background-position:left center;order:1;
+}
+.topbar-logo::after{
+  width:136px;height:47px;background-size:202.8px 47px;background-position:right center;order:2;
+}
+.topbar-logo .dw-header-version{order:3;margin-left:10px;}
+.mobile-topbar-logo{gap:0;align-items:center;}
+.mobile-topbar-logo::before{
+  width:47px;height:39px;background-size:140.4px 39px;background-position:left center;order:1;
+}
+.mobile-topbar-logo::after{
+  width:113px;height:39px;background-size:168.5px 39px;background-position:right center;order:2;
+}
+.mobile-topbar-logo .dw-header-version{order:3;margin-left:7px;}
+
+/* Los contadores siguen siendo filtros, pero dejan más espacio al listado. */
+@media(min-width:701px){
+ .dw-dashboard-root .dw-dashboard-overview{gap:9px;margin-bottom:15px;}
+ .dw-dashboard-root .dw-overview-stat{
+   min-height:68px;padding:10px 13px;gap:7px;border-radius:12px;
+ }
+ .dw-dashboard-root .dw-overview-label{font-size:11.5px;gap:7px;}
+ .dw-dashboard-root .dw-overview-value{font-size:23px;}
+}
+.dw-dashboard-root .dw-dashboard-intro{margin-top:5px;font-size:12.5px;line-height:1.4;}
+@media(max-width:640px){
+ .dw-dashboard-root .dw-dashboard-intro{font-size:11px;margin-top:4px;max-width:220px;}
+}
 `;
 
 // Panel Superadmin: extracción funcional con dependencias explícitas.
@@ -5081,7 +5126,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
   return(
     <div className="dw-dashboard-root">
       <div className="section-header" style={{marginBottom:18}}>
-        <div><div className="section-title">Operaciones</div></div>
+        <div><div className="section-title">Operaciones</div><div className="section-sub dw-dashboard-intro">Creá, buscá y continuá tus operaciones desde un solo lugar.</div></div>
         {!enPapelera&&permisosGenerales.crear&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
       </div>
       <div className="dw-dashboard-overview" aria-label="Resumen de operaciones">
