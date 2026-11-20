@@ -3904,13 +3904,13 @@ function ConfiguracionView({ requestedTab, modoAspectoDesdeDocumentos=false, onV
     if(!file||!String(file.type||"").startsWith("image/"))throw new Error("Seleccioná una imagen válida.");
     var limite=logo?8*1024*1024:5*1024*1024;
     if(file.size>limite)throw new Error("La imagen supera los "+(logo?"8":"5")+" MB permitidos.");
-    var src=await new Promise(function(resolve,reject){
+    var src:string=await new Promise<string>(function(resolve,reject){
       var reader=new FileReader();
       reader.onload=function(){resolve(String(reader.result||""));};
       reader.onerror=function(){reject(new Error("No se pudo leer la imagen."));};
       reader.readAsDataURL(file);
     });
-    var img=await new Promise(function(resolve,reject){
+    var img:HTMLImageElement=await new Promise<HTMLImageElement>(function(resolve,reject){
       var el=new Image();el.onload=function(){resolve(el);};el.onerror=function(){reject(new Error("No se pudo abrir esta imagen."));};el.src=src;
     });
     var w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
@@ -7054,7 +7054,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     if(!op||!op.id)return;
     if(data.tipo==="refuerzo_reserva"){elegirReservaParaRefuerzo(op);return;}
     if(data.tipo==="devolucion_reserva"){elegirReservaParaDevolucion(op);return;}
-    var patch={
+    var patch:Record<string,any>={
       parent_id:op.id,
       inmueble_direccion:op.inmueble_direccion||"",
       inmueble_partido:op.inmueble_partido||"",
