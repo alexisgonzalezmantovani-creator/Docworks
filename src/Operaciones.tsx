@@ -2629,6 +2629,49 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
  .dw-dashboard-root .dw-overview-label{font-size:11.5px;gap:7px;}
  .dw-dashboard-root .dw-overview-value{font-size:23px;}
 }
+
+/* Selección de operación: tres categorías en PC, siempre centradas. */
+.dw-operation-page .dw-operation-groups-balanced{justify-content:center}
+.dw-operation-page .dw-grupo-grid{align-items:stretch}
+.dw-operation-page .dw-grupo-card{align-items:center;justify-content:space-between;min-height:124px;gap:12px}
+.dw-operation-page .dw-grupo-icon{width:56px;height:56px;display:grid;place-items:center;flex-shrink:0}
+.dw-operation-page .dw-grupo-compra .dw-grupo-icon{background:rgba(71,124,173,.13);color:#477cad}
+.dw-operation-page .dw-grupo-alquiler .dw-grupo-icon{background:rgba(177,129,64,.13);color:#b18140}
+.dw-operation-page .dw-grupo-otros .dw-grupo-icon{background:rgba(126,119,176,.13);color:#7e77b0}
+.dw-operation-page .dw-grupo-tipo-sections{min-height:235px;justify-content:center;padding:12px 0 20px}
+.dw-operation-page .dw-grupo-tipo-grid{align-items:stretch}
+.dw-operation-page .dw-grupo-tipo-grid .dw-grupo-card{height:100%;min-height:124px}
+@media(min-width:761px){
+ .dw-operation-page .dw-grupo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .dw-operation-page .dw-grupo-tipo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:761px) and (max-width:1050px){
+ .dw-operation-page .dw-grupo-card{padding:13px 10px;gap:8px}
+ .dw-operation-page .dw-grupo-icon{width:42px;height:46px}
+ .dw-operation-page .dw-grupo-text strong{font-size:15px}
+ .dw-operation-page .dw-grupo-text small{font-size:11px}
+}
+@media(max-width:760px){
+ .dw-operation-page .dw-grupo-grid{grid-template-columns:1fr}
+ .dw-operation-page .dw-grupo-tipo-grid{grid-template-columns:1fr}
+ .dw-operation-page .dw-grupo-card{min-height:86px;padding:12px 14px}
+ .dw-operation-page .dw-grupo-tipo-grid .dw-grupo-card{min-height:86px}
+ .dw-operation-page .dw-grupo-icon{width:48px;height:48px}
+}
+/* Refuerzo: elección previa limpia, sin mezclar el listado con datos personales. */
+.dw-refuerzo-origen,.dw-refuerzo-reservas{border:1px solid var(--border2);border-radius:14px;background:var(--card);padding:18px;max-width:100%}
+.dw-refuerzo-origen h3,.dw-refuerzo-reservas h3{font-size:16px;font-weight:750;color:var(--text);margin-bottom:7px}
+.dw-refuerzo-origen>p,.dw-refuerzo-vacio{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:15px}
+.dw-refuerzo-origen-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.dw-refuerzo-opcion{appearance:none;display:flex;flex-direction:column;gap:8px;text-align:left;min-height:113px;padding:15px;border-radius:12px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);font:inherit;font-size:12px;line-height:1.5;cursor:pointer}
+.dw-refuerzo-opcion:hover,.dw-refuerzo-opcion:focus-visible{border-color:var(--gold);outline-offset:2px}
+.dw-refuerzo-opcion strong{font-weight:750;color:var(--text);font-size:14px}
+.dw-refuerzo-origen-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.dw-refuerzo-cambiar{border:0;background:none;color:var(--muted);font-size:12px;font-weight:650;cursor:pointer;padding:8px 0 12px}
+.dw-refuerzo-cambiar:hover{color:var(--gold)}
+.dw-refuerzo-reservas>button:last-child{margin-top:14px}
+@media(max-width:640px){.dw-refuerzo-origen-grid{grid-template-columns:1fr}.dw-refuerzo-origen,.dw-refuerzo-reservas{padding:13px}}
+
 .dw-dashboard-root .dw-dashboard-intro{margin-top:5px;font-size:12.5px;line-height:1.4;}
 @media(max-width:640px){
  .dw-dashboard-root .dw-dashboard-intro{font-size:11px;margin-top:4px;max-width:220px;}
@@ -3729,52 +3772,76 @@ function ConfiguracionView({ requestedTab, modoAspectoDesdeDocumentos=false, onV
     }catch(e){if(e&&e.name==="AbortError")return;dwNotify("error","No se pudo abrir el canal para enviar la consulta.");}
   }
 
-  function handleLogo(e){var file=e.target.files[0];if(!file)return;var r=new FileReader();r.onload=function(ev){setLocalPerfil(function(p){return Object.assign({},p,{logoDataUrl:ev.target.result});});};r.readAsDataURL(file);}
-  async function handleMiFotoPerfil(e){
-    var file=e.target.files&&e.target.files[0]; if(!file) return;
-    if(file.size>5*1024*1024){dwNotify("error","La foto es demasiado grande. Elegí una imagen de hasta 5 MB.");e.target.value="";return;}
-    try{
-      var r=new FileReader();
-      r.onload=function(ev){
-        var img=new Image();
-        img.onload=async function(){
-          var max=420, scale=Math.min(1,max/Math.max(img.width,img.height));
-          var canvas=document.createElement("canvas"); canvas.width=Math.max(1,Math.round(img.width*scale)); canvas.height=Math.max(1,Math.round(img.height*scale));
-          var c=canvas.getContext("2d"); c.drawImage(img,0,0,canvas.width,canvas.height);
-          var data=canvas.toDataURL("image/jpeg",0.82);
-          var next=Object.assign({},localPerfil,{broker_fotos:Object.assign({},localPerfil.broker_fotos||{},currentUserId?{[currentUserId]:data}: {})});
-          setLocalPerfil(next);
-          try{
-            await persistirPerfil(next);
-            dwNotify("success","Foto de perfil actualizada. El equipo podrá verla en operaciones compartidas.");
-          }catch(err){
-            dwNotify("error","No se pudo sincronizar la foto con el equipo. Verificá tu conexión.");
-          }
-        };
-        img.onerror=function(){dwNotify("error","No se pudo procesar la imagen.");};
-        img.src=String(ev.target?.result||"");
-      };
-      r.readAsDataURL(file);
-    }catch(err){dwNotify("error","No se pudo cargar la foto.");}
-    e.target.value="";
+  // La imagen se comprime ANTES de persistir en el perfil, no después.
+  async function optimizarImagenPerfil(file, logo){
+    if(!file||!String(file.type||"").startsWith("image/"))throw new Error("Seleccioná una imagen válida.");
+    var limite=logo?8*1024*1024:5*1024*1024;
+    if(file.size>limite)throw new Error("La imagen supera los "+(logo?"8":"5")+" MB permitidos.");
+    var src=await new Promise(function(resolve,reject){
+      var reader=new FileReader();
+      reader.onload=function(){resolve(String(reader.result||""));};
+      reader.onerror=function(){reject(new Error("No se pudo leer la imagen."));};
+      reader.readAsDataURL(file);
+    });
+    var img=await new Promise(function(resolve,reject){
+      var el=new Image();el.onload=function(){resolve(el);};el.onerror=function(){reject(new Error("No se pudo abrir esta imagen."));};el.src=src;
+    });
+    var w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+    if(!w||!h)throw new Error("La imagen no tiene dimensiones válidas.");
+    var max=logo?960:300, maxBytes=logo?300*1024:65*1024, calidad=logo?0.83:0.73;
+    for(var i=0;i<5;i++){
+      var scale=Math.min(1,max/Math.max(w,h));
+      var canvas=document.createElement("canvas");
+      canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
+      var ctx=canvas.getContext("2d");if(!ctx)throw new Error("No se pudo procesar la imagen.");
+      if(!logo){ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);}
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      var data=canvas.toDataURL(logo?"image/webp":"image/jpeg",calidad);
+      if(logo&&!data.startsWith("data:image/webp")){
+        data=canvas.toDataURL("image/png");
+        if(Math.ceil(data.length*0.75)>maxBytes){
+          ctx.globalCompositeOperation="destination-over";ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);
+          data=canvas.toDataURL("image/jpeg",calidad);
+        }
+      }
+      if(Math.ceil(data.length*0.75)<=maxBytes||i===4)return data;
+      max=Math.max(80,Math.round(max*0.78));calidad=Math.max(.62,calidad-.07);
+    }
+    throw new Error("No se pudo optimizar la imagen.");
   }
-  function handleFotoBroker(miembro,e){
-    var file=e.target.files&&e.target.files[0]; if(!file) return;
-    if(file.size>5*1024*1024){dwNotify("error","La foto es demasiado grande. Elegí una imagen de hasta 5 MB.");return;}
-    var r=new FileReader();
-    r.onload=function(ev){
-      var img=new Image();
-      img.onload=function(){
-        var max=420, scale=Math.min(1,max/Math.max(img.width,img.height));
-        var canvas=document.createElement("canvas"); canvas.width=Math.max(1,Math.round(img.width*scale)); canvas.height=Math.max(1,Math.round(img.height*scale));
-        var c=canvas.getContext("2d"); c.drawImage(img,0,0,canvas.width,canvas.height);
-        var data=canvas.toDataURL("image/jpeg",0.82);
-        setLocalPerfil(function(p){var fotos=Object.assign({},p.broker_fotos||{});fotos[miembro.id]=data;var next=Object.assign({},p,{broker_fotos:fotos});persistirPerfil(next);return next;});
-      };
-      img.src=String(ev.target?.result||"");
-    };
-    r.readAsDataURL(file);
-    e.target.value="";
+  async function handleLogo(e){
+    var input=e.target,file=input.files&&input.files[0];if(!file)return;
+    try{
+      var logo=await optimizarImagenPerfil(file,true);
+      setLocalPerfil(function(p){return Object.assign({},p,{logoDataUrl:logo});});
+      dwNotify("success","Logo optimizado. Guardá el perfil para conservar el cambio.");
+    }catch(err){dwNotify("error",err.message||"No se pudo procesar el logo.");}
+    finally{input.value="";}
+  }
+  async function handleMiFotoPerfil(e){
+    var input=e.target,file=input.files&&input.files[0];if(!file)return;
+    try{
+      var foto=await optimizarImagenPerfil(file,false);
+      if(!currentUserId)throw new Error("No se pudo identificar al usuario.");
+      var next=Object.assign({},localPerfil,{broker_fotos:Object.assign({},localPerfil.broker_fotos||{},{[currentUserId]:foto})});
+      setLocalPerfil(next);
+      var saved=await persistirPerfil(next);
+      if(saved.error)throw new Error("Se redujo la foto, pero no se pudo sincronizar.");
+      dwNotify("success","Foto de perfil optimizada y guardada.");
+    }catch(err){dwNotify("error",err.message||"No se pudo guardar la foto.");}
+    finally{input.value="";}
+  }
+  async function handleFotoBroker(miembro,e){
+    var input=e.target,file=input.files&&input.files[0];if(!file)return;
+    try{
+      var foto=await optimizarImagenPerfil(file,false);
+      var next=Object.assign({},localPerfil,{broker_fotos:Object.assign({},localPerfil.broker_fotos||{},{[miembro.id]:foto})});
+      setLocalPerfil(next);
+      var saved=await persistirPerfil(next);
+      if(saved.error)throw new Error("La foto se redujo, pero no se pudo sincronizar.");
+      dwNotify("success","Foto del asesor optimizada y guardada.");
+    }catch(err){dwNotify("error",err.message||"No se pudo guardar la foto.");}
+    finally{input.value="";}
   }
   function quitarFotoBroker(miembro){
     setLocalPerfil(function(p){var fotos=Object.assign({},p.broker_fotos||{});delete fotos[miembro.id];return Object.assign({},p,{broker_fotos:fotos});});
@@ -6502,6 +6569,8 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     }
   },[initial,focusCampo]);
   const [revisando,setRevisando]=useState(false);
+  // Origen del refuerzo: primero elegir reserva existente o ingreso manual.
+  const [origenRefuerzo,setOrigenRefuerzo]=useState(function(){return initial?(initial.parent_id?"existente":"manual"):null;});
   const camposTecladoRef=useRef(null);
   // 4.30: comisión sugerida (3%) al crear una operación de venta o autorización: queda prellenada y se puede editar o borrar.
   useEffect(function(){
@@ -6697,7 +6766,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   // En refuerzo y devolución, las reservas vinculables se ofrecen en el paso siguiente.
   function seleccionarTipoDidactico(campo,valor){
     if(campo!=="tipo"){set(campo,valor);return;}
-    function cambiar(){set("tipo",valor);setStep(2);}
+    function cambiar(){set("tipo",valor);if(valor==="refuerzo_reserva")setOrigenRefuerzo(initial?(initial.parent_id?"existente":"manual"):null);setStep(2);}
     if(valor!==data.tipo&&(initial||draftTieneContenido(data))){
       requestDwConfirm("¿Cambiar el tipo de documento? Los datos que ya cargaste se conservarán; revisalos antes de generar el documento.",cambiar,"Cambiar documento");
       return;
@@ -6752,6 +6821,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     setStep(2);
   }
   function elegirReservaParaRefuerzo(op){
+    setOrigenRefuerzo("existente");
     setBulk({...datosCompraCompartidos(op,false),
       compra_instrumento:op.compra_instrumento||"escritura",
       compra_boleto_origen:op.compra_boleto_origen||"",
@@ -6776,7 +6846,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   if(!grupo){
     return(
       <div>
-        <div className="dw-operation-groups-balanced" style={{minHeight:260,paddingTop:4}}>
+        <div className="dw-operation-groups-balanced" style={{minHeight:260,padding:"20px 0 12px",display:"flex",alignItems:"center"}}>
           <StepGrupo onSelect={function(g){
             function cambiar(){setGrupo(g);setStep(1);set("tipo",TIPO_GRUPOS[g].tipos[0].value);}
             if(draftTieneContenido(data))requestDwConfirm("¿Cambiar de categoría? Se conservarán los datos que ya cargaste, pero deberás revisarlos.",cambiar,"Cambiar categoría");
@@ -6811,10 +6881,40 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
     if(esDocSimple){
       var grupoReal=grupo||"otros";
       if(step===1)return <StepTipo data={data} onChange={seleccionarTipoDidactico} grupo={grupoReal} operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} onSelectReservaDevolucion={elegirReservaParaDevolucion}/>;
-      if(step===2)return <>
-        {(esRefuerzo||esDevolucion)&&<StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="otros" operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} onSelectReservaDevolucion={elegirReservaParaDevolucion} soloReservas/>}
-        {data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.comprador}/>}
-      </>;
+      if(step===2){
+        if(esRefuerzo&&!data.parent_id&&!origenRefuerzo){
+          return <div className="dw-refuerzo-origen">
+            <h3>¿Cómo querés preparar el refuerzo de reserva?</h3>
+            <p>Elegí una opción para continuar, sin mezclar las reservas con los campos de carga.</p>
+            <div className="dw-refuerzo-origen-grid">
+              <button type="button" className="dw-refuerzo-opcion" onClick={function(){setOrigenRefuerzo("existente");}}>
+                <strong>Usar una reserva existente</strong>
+                <span>Elegí una reserva abierta y recuperá comprador, vendedor e inmueble.</span>
+              </button>
+              <button type="button" className="dw-refuerzo-opcion" onClick={function(){setOrigenRefuerzo("manual");}}>
+                <strong>Cargar datos manualmente</strong>
+                <span>Completá nombre, DNI, domicilio y los demás datos desde cero.</span>
+              </button>
+            </div>
+          </div>;
+        }
+        if(esRefuerzo&&!data.parent_id&&origenRefuerzo==="existente"){
+          var abiertas=(operaciones||[]).filter(function(o){return o.tipo==="reserva"&&o.estado!=="cerrado";}).length;
+          return <div className="dw-refuerzo-reservas">
+            <div className="dw-refuerzo-origen-head">
+              <h3>Seleccioná la reserva que querés reforzar</h3>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setOrigenRefuerzo(null);}}>← Cambiar opción</button>
+            </div>
+            {abiertas>0?<StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="otros" operaciones={operaciones} onSelectReservaRefuerzo={elegirReservaParaRefuerzo} soloReservas/>:<p className="dw-refuerzo-vacio">No hay reservas abiertas para vincular.</p>}
+            <button type="button" className="btn btn-secondary btn-sm" onClick={function(){setOrigenRefuerzo("manual");}}>Cargar los datos manualmente</button>
+          </div>;
+        }
+        return <>
+          {esDevolucion&&<StepTipo data={data} onChange={seleccionarTipoDidactico} grupo="otros" operaciones={operaciones} onSelectReservaDevolucion={elegirReservaParaDevolucion} soloReservas/>}
+          {esRefuerzo&&!data.parent_id&&origenRefuerzo==="manual"&&<button type="button" className="dw-refuerzo-cambiar" onClick={function(){setOrigenRefuerzo(null);}}>← Cambiar origen del refuerzo</button>}
+          {data.tipo==="exclusividad" ? <StepInmobiliariaAutorizada data={data} perfil={perfil}/> : <StepPersona data={data} onChange={set} prefix="comprador" titulo={data.tipo==="comodato"?"Comodatario (recibe el bien)":data.tipo==="refuerzo_reserva"||data.tipo==="devolucion_reserva"?"Comprador":"Parte solicitante"} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.comprador}/>}
+        </>;
+      }
       if(step===3)return <StepPersona data={data} onChange={set} prefix="vendedor" titulo={rolParte(data.tipo,0).charAt(0)+rolParte(data.tipo,0).slice(1).toLowerCase()} faltantes={camposFaltantes} mostrarTratamiento={tratamientosEnModelo.vendedor}/>;
       if(step===4)return <StepDocSimple data={data} onChange={set}/>;
       if(step===5)return esContratoPropioOp ? <div className="card" style={{padding:16,fontSize:13,color:"var(--muted)",lineHeight:1.6}}>Esta inmobiliaria utiliza su contrato propio. Las cláusulas están definidas en el documento y no se agregan otras automáticamente.</div> : <StepClausulas data={data} onChange={set} clausulas={clausulas} esAlquiler={false} onAddClausula={onAddClausula} perfil={perfil} faltantes={camposFaltantes}/>;
@@ -6879,7 +6979,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
       </div>}
       <div style={{marginBottom:10}}><StepBar current={step} tipo={data.tipo} ultimoPaso={total} pasosFaltantes={pasosFaltantes} onGoTo={function(id){setStep(Math.min(Math.max(1,id),total));}}/></div>
       <div style={{marginBottom:18}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:7,marginBottom:5}}>
           <span style={{fontSize:12,fontWeight:600,color:"var(--dim)",textTransform:"uppercase",letterSpacing:"0.05em"}} title="Se cuentan los campos esenciales completados, no los opcionales.">Progreso</span>
           <span style={{fontSize:12,fontWeight:700,color:pct===100?"var(--green)":"var(--gold)"}}>{pct}%</span>
         </div>
@@ -6900,7 +7000,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
           {modoEdicion&&<Btn v="success" onClick={function(){handleFinalizarAccion("guardar");}}>💾 Guardar cambios</Btn>}
           {revisando&&<Btn v="secondary" onClick={function(){setStep(total+1);}}>← Volver a revisión</Btn>}
           {puedeOmitirClausulas&&!revisando&&<Btn v="secondary" onClick={avanzarConAviso}>Agregar cláusulas</Btn>}
-          {step>1&&!revisando&&<div className="dw-operation-next-action">
+          {step>1&&!revisando&&!(esRefuerzo&&step===2&&!data.parent_id&&origenRefuerzo!=="manual")&&<div className="dw-operation-next-action">
             <span className="dw-operation-save-slot"><OperationSaveInline status={saveStatus}/></span>
             {pasoCondicionesVinculadas?<Btn onClick={function(){setStep(pasoCondicionesVinculadas);}}>Ir a condiciones →</Btn>:puedeOmitirClausulas&&!revisando?<Btn v="success" onClick={function(){setStep(total+1);}}>Ir a revisión</Btn>:step<total?<Btn onClick={avanzarConAviso}>Continuar →</Btn>:<Btn v={modoEdicion?undefined:"success"} onClick={avanzarConAviso}>Revisar →</Btn>}
           </div>}

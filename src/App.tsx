@@ -58,7 +58,10 @@ function FormalIcon({name,size=22,strokeWidth=1.75}){
     users:<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
     pen:<><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></>,
     plusCircle:<><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></>,
-    undo:<><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></>
+    undo:<><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></>,
+    housePlus:<><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10Z"/><path d="M9 22v-7h6v7"/><path d="M8 11h8M12 7v8"/></>,
+    doorOpen:<><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.6v16.1a1 1 0 0 1-1.25.97l-6-1.5A1 1 0 0 1 5 19.2V5.8a1 1 0 0 1 .75-.97l6-1.5A1 1 0 0 1 13 4.6Z"/></>,
+    folderOpen:<><path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v3"/><path d="M3 19 6 12h15l-3 8H5a2 2 0 0 1-2-2V6"/></>
   };
   return <svg className="dw-ico" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{paths[name]||paths.ops}</svg>;
 }
@@ -6386,26 +6389,26 @@ const TIPO_GRUPOS = {
     label:"🏡 Compra",
     desc:"Operaciones de compra y venta de inmuebles",
     tipos:[
-      {value:"reserva",          label:"Reserva de Compra",    desc:"Reservar con seña ad referéndum",  icon:"🔒"},
-      {value:"boleto",           label:"Boleto de Compraventa", desc:"Contrato privado de compraventa",  icon:"📄"},
+      {value:"reserva",          label:"Reserva de Compra",    desc:"Reservar con seña ad referéndum",  icon:"🔒", icono:"lock"},
+      {value:"boleto",           label:"Boleto de Compraventa", desc:"Contrato privado de compraventa",  icon:"📄", icono:"ops"},
     ]
   },
   alquiler: {
     label:"🏠 Alquiler",
     desc:"Locaciones habitacionales y comerciales",
     tipos:[
-      {value:"reserva_alquiler", label:"Reserva de Alquiler",  desc:"Reserva previa al contrato",        icon:"🗝"},
-      {value:"alquiler",         label:"Contrato de Alquiler", desc:"Locación habitacional o comercial",  icon:"📋"},
+      {value:"reserva_alquiler", label:"Reserva de Alquiler",  desc:"Reserva previa al contrato",        icon:"🗝", icono:"key"},
+      {value:"alquiler",         label:"Contrato de Alquiler", desc:"Locación habitacional o comercial",  icon:"📋", icono:"ops"},
     ]
   },
   otros: {
     label:"📌 Otros documentos",
     desc:"Comodato, autorización de venta, refuerzo y devolución",
     tipos:[
-      {value:"comodato",           label:"Comodato",              desc:"Préstamo de uso gratuito",          icon:"🤝"},
-      {value:"exclusividad",       label:"Autorización de Venta", desc:"Con o sin exclusividad",            icon:"✍️"},
-      {value:"refuerzo_reserva",   label:"Refuerzo de Reserva",   desc:"Complementa una reserva existente", icon:"📌"},
-      {value:"devolucion_reserva", label:"Devolución de Reserva", desc:"Devolución del monto reservado",    icon:"↩"},
+      {value:"comodato",           label:"Comodato",              desc:"Préstamo de uso gratuito",          icon:"🤝", icono:"users"},
+      {value:"exclusividad",       label:"Autorización de Venta", desc:"Con o sin exclusividad",            icon:"✍️", icono:"pen"},
+      {value:"refuerzo_reserva",   label:"Refuerzo de Reserva",   desc:"Complementa una reserva existente", icon:"📌", icono:"plusCircle"},
+      {value:"devolucion_reserva", label:"Devolución de Reserva", desc:"Devolución del monto reservado",    icon:"↩", icono:"undo"},
     ]
   },
 };
@@ -6419,7 +6422,7 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
   });
   // Reservas de compra abiertas que todavía no tienen datos cargados en el
   // refuerzo/devolución se ofrecen como atajo para no volver a tipear.
-  var modoReservaVinculada = (data.tipo==="refuerzo_reserva" || data.tipo==="devolucion_reserva") && !data.parent_id && !data.comprador_nombre;
+  var modoReservaVinculada = soloReservas && (data.tipo==="refuerzo_reserva" || data.tipo==="devolucion_reserva") && !data.parent_id;
   var reservasSugeridas = modoReservaVinculada
     ? (operaciones||[]).filter(function(o){
         if(o.tipo!=="reserva" || o.estado==="cerrado") return false;
@@ -6446,7 +6449,7 @@ function StepTipo({data,onChange,grupo,operaciones,onSelectReservaRefuerzo,onSel
                     <button type="button" key={t.value}
                       className={"dw-grupo-card dw-grupo-"+key}
                       onClick={function(){onChange("tipo",t.value);}}>
-                      <span className="dw-grupo-icon" aria-hidden="true">{t.icon}</span>
+                      <span className="dw-grupo-icon" aria-hidden="true"><FormalIcon name={t.icono||"ops"} size={30} strokeWidth={1.7}/></span>
                       <span className="dw-grupo-text"><strong>{t.label}</strong><small>{t.desc}</small></span>
                       <span className="dw-grupo-chevron" aria-hidden="true">›</span>
                     </button>
@@ -6486,11 +6489,11 @@ function StepGrupo({onSelect}){
       <div className="dw-grupo-grid">
         {Object.entries(TIPO_GRUPOS).map(function([key,g]){
           var labels={compra:"Compra",alquiler:"Alquiler",otros:"Otros documentos"};
-          var icons={compra:"🏡",alquiler:"🏠",otros:"📌"};
+          var iconos={compra:"housePlus",alquiler:"doorOpen",otros:"folderOpen"};
           var desc={compra:"Reserva de compra o boleto",alquiler:"Reserva o contrato de alquiler",otros:"Refuerzos, devoluciones, comodatos y exclusividades"};
           return (
             <button type="button" key={key} className={"dw-grupo-card dw-grupo-"+key} onClick={function(){onSelect(key);}}>
-              <span className="dw-grupo-icon" aria-hidden="true">{icons[key]}</span>
+              <span className="dw-grupo-icon" aria-hidden="true"><FormalIcon name={iconos[key]||"ops"} size={31} strokeWidth={1.65}/></span>
               <span className="dw-grupo-text"><strong>{labels[key]}</strong><small>{desc[key]}</small></span>
               <span className="dw-grupo-chevron" aria-hidden="true">›</span>
             </button>
