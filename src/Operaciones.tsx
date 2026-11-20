@@ -7128,11 +7128,15 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
   }).sort(function(a,b){
     return (new Date(b.created_at||0).getTime()||0)-(new Date(a.created_at||0).getTime()||0);
   });
-  const buscarOrigen=String(busquedaOrigenRecuperacion||"").trim().toLocaleLowerCase("es-AR");
+  const buscarOrigen=normalizarTextoComparacion(busquedaOrigenRecuperacion);
   const origenesFiltrados=buscarOrigen
     ? elegiblesRecuperacion.filter(function(op){
-        var texto=[op.inmueble_direccion,op.inmueble_partido,op.inmueble_barrio,op.inmueble_unidad_funcional,op.comprador_nombre,op.vendedor_nombre,op.locador_nombre,op.locatario_nombre]
-          .filter(Boolean).join(" ").toLocaleLowerCase("es-AR");
+        var texto=normalizarTextoComparacion([
+          op.inmueble_direccion,op.inmueble_partido,op.inmueble_provincia,
+          op.inmueble_barrio,op.inmueble_unidad_funcional,
+          op.comprador_nombre,op.comprador_dni,op.vendedor_nombre,op.vendedor_dni,
+          op.locador_nombre,op.locador_dni,op.locatario_nombre,op.locatario_dni
+        ].filter(Boolean).join(" "));
         return texto.includes(buscarOrigen);
       })
     : elegiblesRecuperacion;
@@ -7180,7 +7184,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
           Buscar operación
           <input type="search" className="inp" value={busquedaOrigenRecuperacion}
             onChange={function(e){setBusquedaOrigenRecuperacion(e.target.value);}}
-            placeholder="Dirección, barrio o nombre" aria-label="Buscar operación para recuperar"
+            placeholder="Dirección, barrio, nombre o DNI" aria-label="Buscar operación para recuperar"
             style={{display:"block",width:"100%",marginTop:5}}/>
         </label>}
       {origenesFiltrados.length>0
@@ -7188,7 +7192,7 @@ function OperacionForm({snapshotRef=undefined,contextoBorrador=undefined,resumeN
           {origenesFiltrados.map(function(op){
             return <button type="button" key={op.id} className="dw-origen-recuperacion-item" onClick={function(){recuperarOtraOperacion(op);}}>
               <strong>{op.inmueble_direccion||"Inmueble sin dirección"}{op.inmueble_partido?" · "+op.inmueble_partido:""}</strong>
-              <span>{op.tipo==="reserva_alquiler"?"Reserva de alquiler":"Reserva de compra"}{op.estado==="cerrado"?" · Cerrada":""}{op.created_at?" · "+new Date(op.created_at).toLocaleDateString("es-AR"):""}</span>
+              <span>{op.tipo==="reserva_alquiler"?"Reserva de alquiler":"Reserva de compra"}{op.estado==="cerrado"?" · Cerrada":""}{op.created_at&&!isNaN(new Date(op.created_at).getTime())?" · "+new Date(op.created_at).toLocaleDateString("es-AR"):""}</span>
             </button>;
           })}
         </div>
