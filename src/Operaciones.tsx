@@ -2704,6 +2704,37 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
   .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-progress-row{order:2}
   .dw-dashboard-root .op-card-premium:not(.op-doc-card) .dw-progress-help{order:3}
 }
+/* Acciones de operaciones en PC: una sola línea, también con Documento.
+   Reducir solo los controles, sin aumentar la columna ni la altura de la tarjeta. */
+@media (min-width:1101px) and (min-height:501px){
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-action-zone{
+    display:flex!important;flex-flow:row nowrap!important;
+    align-items:center!important;justify-content:space-between!important;
+    gap:4px!important;width:100%!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-action-doc{
+    flex:0 1 auto!important;min-width:0!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-action-doc .op-add-doc-action{
+    white-space:nowrap!important;font-size:10.5px!important;
+    padding-inline:7px!important;min-height:34px!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side .op-actions{
+    display:flex!important;flex-flow:row nowrap!important;
+    flex:0 0 auto!important;width:auto!important;max-width:none!important;
+    min-width:max-content!important;align-items:center!important;
+    justify-content:flex-end!important;margin:0!important;gap:4px!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side .op-actions>.btn{
+    flex:0 0 auto!important;font-size:11px!important;
+    padding-inline:7px!important;min-height:34px!important;
+    white-space:nowrap!important;
+  }
+  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-card-side .op-actions .op-more{
+    min-width:34px!important;max-width:34px!important;width:34px!important;
+    min-height:34px!important;
+  }
+}
 /* Ayuda accesible del porcentaje: hover en PC y toque en pantallas táctiles. */
 .dw-progress-help{display:inline-flex;align-items:center;position:relative;min-width:0;flex:none}
 .dw-progress-help-trigger{

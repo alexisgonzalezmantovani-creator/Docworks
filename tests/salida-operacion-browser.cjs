@@ -60,7 +60,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const engine=process.argv.includes('--webkit')?'webkit':'chromium';const browser=await require('playwright')[engine].launchPersistentContext(path.join(out,'profile'),{headless:true,hasTouch:true,...(engine==='chromium'?{executablePath:process.env.DOCWORKS_BROWSER_EXECUTABLE,args:['--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-zygote','--single-process','--use-gl=angle','--use-angle=swiftshader']}: {})});let checks=0;
 try{for(const [width,height] of [[320,694],[390,844],[430,932],[820,1180],[844,390],[1280,800],[1440,1000],[1920,1080]].filter(([w,h])=>!process.argv.includes("--landscape-only")||w===844&&h===390)){const page=await browser.newPage(),errors=[];await page.setViewportSize({width,height});page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>r.request().url().startsWith('http://127.0.0.1:')?r.continue():r.abort());page.setDefaultTimeout(15000);const url='http://127.0.0.1:'+server.address().port;
 const usaBotonFlotante=await page.evaluate(()=>matchMedia('(max-width:640px), (orientation:landscape) and (max-height:500px) and (hover:none)').matches);
-const fresh=async()=>{await page.goto(url);await page.getByRole('heading',{name:'Operaciones de prueba',exact:true}).waitFor({timeout:20000});await page.evaluate(()=>localStorage.clear());};const add=async()=>{if(usaBotonFlotante){if(await page.locator('.fab').count()===0)await navOp();await page.locator('.fab').click();}else await page.getByRole('button',{name:'Crear operación de prueba',exact:true}).click();};const navOp=()=>page.locator('.mobile-nav').getByRole('button',{name:'Operaciones',exact:true}).click();
+const fresh=async()=>{await page.goto(url);await page.getByRole('heading',{name:'Operaciones de prueba',exact:true}).waitFor({timeout:20000});await page.evaluate(()=>localStorage.clear());};const add=async()=>{const fab=page.locator('.dw-dashboard-root .fab');const top=page.locator('.dw-dashboard-root .btn-nueva');if(usaBotonFlotante&&await fab.isVisible())await fab.click();else if(usaBotonFlotante&&await top.isVisible())await top.click();else await page.getByRole('button',{name:'Crear operación de prueba',exact:true}).click();};const navOp=()=>page.locator('.mobile-nav').getByRole('button',{name:'Operaciones',exact:true}).click();
 const open=async()=>{await add();await page.locator('.dw-grupo-alquiler').click();};
 const selectStep=n=>page.locator('.step-dot').nth(n-1).click();
 await page.goto(url+'/?primer-documento=1');
@@ -157,7 +157,7 @@ await page.getByRole('button',{name:'Vista de tarjetas',exact:true}).click();
    });
    assert.ok(layout.ancho<334&&layout.anchoProgreso>0&&layout.botones.length>=4&&
      layout.botones.every(b=>b.encaja&&Math.abs(b.centro-layout.botones[0].centro)<=2)&&
-     layout.derecha<8&&layout.izqContador<4&&Math.abs(layout.izqPanel-14)<3,
+     layout.derecha<8&&layout.izqContador<4&&Math.abs(layout.izqPanel-9)<3,
      'Panel de PC alineado y sin recortes: '+JSON.stringify(layout));
    checks++;
  }
