@@ -84,6 +84,32 @@ const casosPartes=[
   check('Papelera '+caso.tipo,()=>assert.ok(document.querySelector('.op-card')?.textContent.includes(caso.esperado),document.querySelector('.op-card')?.textContent.slice(0,350)));
   await render(null);
  }
+ const operacionesPaginadas=Array.from({length:12},(_,i)=>({
+  ...fakeOp,id:'pagina-'+i,created_at:new Date(Date.UTC(2026,10,i+1)).toISOString(),
+  inmueble_direccion:'Domicilio '+i,actualizado_en:i===0?'2026-11-30T12:00:00Z':undefined
+ }));
+ const renderPaginada=(extras={})=>render(app.createElement(app.DashboardView,{
+  ...dashboardProps,operaciones:operacionesPaginadas,mostrarAccesoRapido:true,...extras
+ }));
+ await renderPaginada();
+ check('fecha de creación ordena primero la operación más nueva con diez tarjetas',()=>{
+  assert.equal(document.querySelectorAll('.op-card-premium').length,10);
+  assert.match(document.querySelector('.op-card-premium .op-address-strong').textContent,/Domicilio 11/);
+ });
+ await click(button('Siguiente →'));
+ await renderPaginada({oculto:true});
+ check('el formulario oculta el listado y el acceso rápido',()=>assert.equal(document.querySelector('.dw-dashboard-root, .fab'),null));
+ await renderPaginada();
+ check('volver del editor conserva la segunda página y el acceso rápido',()=>{
+  assert.match(document.querySelector('.dw-ops-pagination-count').textContent,/Página 2 de 2/);
+  assert.equal(document.querySelectorAll('.op-card-premium').length,2);
+  assert.equal(document.querySelector('.fab')?.getAttribute('aria-label'),'Nueva operación');
+ });
+ await click(document.querySelector('[aria-label="Abrir papelera"]'));
+ check('la papelera oculta el acceso rápido',()=>assert.equal(document.querySelector('.fab'),null));
+ await click(document.querySelector('[aria-label="Volver a operaciones"]'));
+ check('cambiar el filtro vuelve a la primera página',()=>assert.match(document.querySelector('.dw-ops-pagination-count').textContent,/Página 1 de 2/));
+ await render(null);
  for(const role of ['dueno','admin','broker','vendedor','viewer']){
   const id=['broker','vendedor'].includes(role)?role:'owner';currentUser=id;
   await render(app.createElement(app.DashboardView,{...dashboardProps,usuarioActual:{id,rol_base:role}}));

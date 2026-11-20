@@ -2544,6 +2544,9 @@ html.dw-modal-open,html.dw-modal-open body{overflow:hidden!important;overscroll-
  .dw-dashboard-root .op-card-premium:not(.op-doc-card) .op-side-progress .op-progress-pct{font-size:10px!important}
 }
 /* Paginación: una carpeta (con documentos derivados) cuenta como una sola operación. */
+@media (max-width:640px), (orientation:landscape) and (max-height:500px) and (hover:none){
+ .dw-dashboard-root.dw-dashboard-with-fab{padding-bottom:76px}
+}
 .dw-dashboard-root .dw-ops-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:13px;padding:12px 4px 20px;border-top:1px solid var(--border2)}
 .dw-dashboard-root .dw-ops-pagination-caption{color:var(--dim);font-size:11.5px;font-weight:600}
 .dw-dashboard-root .dw-ops-pagination-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -4910,7 +4913,7 @@ export function crearDashboardView(deps){
 
 
 
-function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,bloquesReserva,onAuditExport,onNew,onEdit,onEditField,onDelete,onChangeEstado,onConvertir,onConvertirComodato,onConvertirRefuerzo,onConvertirBoleto,onConvertirDevolucion,onDuplicar,onViewDoc,onPerfil,onExportarCSV,onRestoreVersion,searchOverride,papelera,onRestore,onDeletePermanente,onVaciarPapelera,confirmVaciarPapelera,setConfirmVaciarPapelera,papeleraJump,error,papeleraError,onRetry,loading}){
+function DashboardView({oculto=false,mostrarAccesoRapido=false,usuarioActual=undefined,operaciones,clausulas,perfil,bloquesReserva,onAuditExport,onNew,onEdit,onEditField,onDelete,onChangeEstado,onConvertir,onConvertirComodato,onConvertirRefuerzo,onConvertirBoleto,onConvertirDevolucion,onDuplicar,onViewDoc,onPerfil,onExportarCSV,onRestoreVersion,searchOverride,papelera,onRestore,onDeletePermanente,onVaciarPapelera,confirmVaciarPapelera,setConfirmVaciarPapelera,papeleraJump,error,papeleraError,onRetry,loading}){
 
   var actor=usuarioActual||{rol_base:perfil&&perfil.rol};
   var permisosGenerales=permisosOperacion(actor);
@@ -4995,7 +4998,7 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     }
     var modo=ordenOperaciones==="creacion"?"creacion":"ultima_modificacion";
     var diferencia=fechaOrdenOperacion(b,modo)-fechaOrdenOperacion(a,modo);
-    return diferencia||fechaOrdenOperacion(b,"creacion")-fechaOrdenOperacion(a,"creacion");
+    return diferencia||fechaOrdenOperacion(b,"creacion")-fechaOrdenOperacion(a,"creacion")||String(a.id).localeCompare(String(b.id));
   });
   const OPERACIONES_POR_PAGINA=10;
   const totalPaginas=Math.max(1,Math.ceil(filtered.length/OPERACIONES_POR_PAGINA));
@@ -5229,8 +5232,11 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
     );
   }
 
+  if(oculto)return null;
+  const accesoRapido=mostrarAccesoRapido&&!enPapelera&&permisosGenerales.crear;
   return(
-    <div className="dw-dashboard-root">
+    <div className={"dw-dashboard-root"+(accesoRapido?" dw-dashboard-with-fab":"")}>
+      {accesoRapido&&<button type="button" className="fab" aria-label="Nueva operación" title="Nueva operación" onClick={onNew}><DWIcon name="plus" size={24} strokeWidth={2.4}/></button>}
       <div className="section-header" style={{marginBottom:18}}>
         <div><div className="section-title">Operaciones</div><div className="section-sub dw-dashboard-intro">Creá, buscá y continuá tus operaciones desde un solo lugar.</div></div>
         {!enPapelera&&permisosGenerales.crear&&<Btn onClick={onNew} className="btn-nueva">+ Nueva operación</Btn>}
@@ -5286,10 +5292,10 @@ function DashboardView({usuarioActual=undefined,operaciones,clausulas,perfil,blo
       {!perfil.nombre&&<div className="notice notice-gold" style={{marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}><span>Configurá el perfil de tu inmobiliaria para agregar logo en los PDFs.</span><Btn v="ghost" s="sm" onClick={onPerfil} style={{color:"var(--gold)",flexShrink:0}}>⚙ Configurar</Btn></div>}
       {modoVista==="tabla" ? (
         <div className="op-table-wrap">
-          {filtered.length===0?<div style={{padding:44,textAlign:"center",color:"var(--dim)",fontSize:13}}>{loading?"Cargando operaciones…":"No hay operaciones en esta vista."}</div>:<table className="op-table"><thead><tr><th>Estado</th><th>Operación</th><th>Partes</th><th>Monto</th><th>Fecha</th><th>Agente</th><th></th></tr></thead><tbody>{operacionesPagina.map(function(op){return <tr key={op.id}><td><span className={"op-status-badge "+(op.estado||"borrador")}>{ESTADOS[op.estado]||"Borrador"}</span></td><td><div style={{fontWeight:700}}>{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]||op.tipo}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{op.inmueble_direccion||"Sin dirección"}</div><div className="op-table-partes" title={getName(op)}>{getName(op).replace(/\s*\((?:comprador|vendedor|locatario|locador)\)/gi,"")}</div></td><td>{getName(op)}</td><td style={{fontWeight:700,color:"var(--gold)"}}>{getMonto(op)||"—"}</td><td>{op.created_at&&Number.isFinite(new Date(op.created_at).getTime())?new Date(op.created_at).toLocaleDateString("es-AR"):"—"}</td><td>{op.broker_nombre||op.broker||"—"}</td><td><Btn v="secondary" s="sm" onClick={function(){onViewDoc(op);}}>Abrir</Btn></td></tr>;})}</tbody></table>}
+          {filtered.length===0?<div style={{padding:44,textAlign:"center",color:"var(--dim)",fontSize:13}}>{loading?"Cargando operaciones…":"No hay operaciones en esta vista."}</div>:<table className="op-table"><thead><tr><th>Estado</th><th>Operación</th><th>Partes</th><th>Monto</th><th>Fecha</th><th>Agente</th><th></th></tr></thead><tbody>{operacionesPagina.map(function(op){return <tr key={op.id}><td><span className={"op-status-badge "+(op.estado||"borrador")}>{ESTADOS[op.estado]||"Borrador"}</span></td><td><div style={{fontWeight:700}}>{TIPO_ICON[op.tipo]} {TIPOS[op.tipo]||op.tipo}</div><div style={{fontSize:12,color:"var(--dim)",marginTop:2}}>{op.inmueble_direccion||"Sin dirección"}</div><div className="op-table-partes" title={getName(op)}>{getName(op).replace(/\s*\((?:comprador|vendedor|locatario|locador)\)/gi,"")}</div></td><td>{getName(op)}</td><td><span className="monto-tag">{getMonto(op)||"—"}</span></td><td>{op.created_at&&Number.isFinite(new Date(op.created_at).getTime())?new Date(op.created_at).toLocaleDateString("es-AR"):"—"}</td><td>{op.broker_nombre||op.broker||"—"}</td><td><Btn v="secondary" s="sm" onClick={function(){onViewDoc(op);}}>Abrir</Btn></td></tr>;})}</tbody></table>}
         </div>
       ) : (
-      <div className="op-list" style={{display:"flex",flexDirection:"column",gap:9,paddingBottom:"calc(88px + env(safe-area-inset-bottom, 0px))"}}>
+      <div className="op-list" style={{display:"flex",flexDirection:"column",gap:9}}>
         {filtered.length===0&&<div role="status" aria-live="polite" style={{padding:44,textAlign:"center",background:"var(--card)",border:"1px solid var(--border)",borderRadius:14}}>{!loading&&<div style={{fontSize:38,marginBottom:10}}>📂</div>}<p style={{color:"var(--dim)",fontSize:13}}>{loading?"Cargando operaciones…":effectiveSearch?"Sin resultados para esa búsqueda.":"No hay operaciones en esta vista."}</p></div>}
         {operacionesPagina.map(function(op){
           const hijos=childrenMap[op.id]||[];
