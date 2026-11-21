@@ -1,0 +1,12 @@
+# DocWorks — HTML y rutas de login siempre frescos en Workers Static Assets
+# Los JS/CSS con hash conservan su caché normal; no se cachea la entrada de la SPA.
+/
+  Cache-Control: no-store, max-age=0
+/login/*
+  Cache-Control: no-store, max-age=0
+/app/*
+  Cache-Control: no-store, max-age=0
+/sw.js
+  Cache-Control: no-cache, must-revalidate
+/manifest.webmanifest
+  Cache-Control: no-cache, must-revalidate
