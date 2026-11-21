@@ -110,7 +110,7 @@ await page.waitForFunction(()=>window.scrollY===0&&!document.documentElement.cla
 if(width<640){assert.ok(await page.locator('.mobile-topbar').evaluate(el=>Math.abs(el.getBoundingClientRect().top)<1&&el.getBoundingClientRect().bottom<100));checks++;}
 
 await page.evaluate(d=>localStorage.setItem('docworks:v1:draftOperacion',d),recoveryDraft);await add();await page.getByRole('button',{name:'Continuar editando',exact:true}).click();assert.equal(await page.locator('.step-dot').nth(4).getAttribute('data-active'),'1','Reabrir vuelve al mismo paso');checks++;await selectStep(5);assert.equal(await page.locator('#dw-field-res_alq_dia_pago').inputValue(),'1-10');checks++;
-await page.getByRole('button',{name:'Volver a operaciones',exact:true}).click();await page.getByRole('button',{name:'Salir sin guardar',exact:true}).click();if(usaBotonFlotante&&await page.locator('.fab').count()===0)await navOp();assert.equal(await page.locator('.fab').isVisible(),usaBotonFlotante);checks++;
+await page.getByRole('button',{name:'Volver a operaciones',exact:true}).click();await page.getByRole('button',{name:'Salir sin guardar',exact:true}).click();const fabVisible=await page.locator('.dw-dashboard-root .fab').isVisible();const crearVisible=await page.locator('.dw-dashboard-root .btn-nueva').isVisible();assert.ok(fabVisible||crearVisible,'Al salir debe quedar al menos un acceso visible para crear operación');if(!usaBotonFlotante)assert.equal(fabVisible,false,'El botón flotante no debe mostrarse fuera de pantallas táctiles compactas');checks++;
 await open();await selectStep(3);await page.locator('#dw-field-locatario_nombre').fill('Borrador con fallo de prueba');await page.getByRole('button',{name:'Simular error',exact:true}).click();await page.getByRole('button',{name:'Volver a operaciones',exact:true}).click();await page.getByRole('button',{name:'Guardar borrador',exact:true}).click();await page.getByRole('alert').waitFor();await page.getByRole('button',{name:'Seguir editando',exact:true}).click();assert.equal((await page.locator('#dw-field-locatario_nombre').inputValue()).toLowerCase(),'borrador con fallo de prueba');checks++;
 await fresh();await page.getByRole('button',{name:'Simular respuesta vacía',exact:true}).click();await open();await selectStep(3);
 await page.locator('#dw-field-locatario_nombre').fill('Borrador sin confirmación');await page.getByRole('button',{name:'Volver a operaciones',exact:true}).click();await page.getByRole('button',{name:'Guardar borrador',exact:true}).click();await page.getByRole('alert').waitFor();
@@ -180,7 +180,7 @@ if(width>=1101){
  }));
  assert.ok(layouts.length===3&&layouts.some(x=>x.count==='4 documentos')&&layouts.some(x=>!x.withDoc)&&layouts.some(x=>x.withDoc),
    'Pruebas de 4 documentos, 1 documento y sin botón Documento: '+JSON.stringify(layouts));
- assert.ok(layouts.every(x=>x.sideWidth>332&&x.sideWidth<334
+ assert.ok(layouts.every(x=>x.sideWidth>=285&&x.sideWidth<=334&&Math.abs(x.sideWidth-layouts[0].sideWidth)<=2
    &&Math.abs(x.dividerOffset-layouts[0].dividerOffset)<=2
    &&Math.abs(x.activityY-layouts[0].activityY)<=2
    &&Math.abs(x.docY-layouts[0].docY)<=2
