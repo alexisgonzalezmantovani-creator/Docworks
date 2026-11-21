@@ -318,7 +318,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   function setSeccion(next){
     if(next===seccion)return;
     if(seccion==="modelos"&&(opcionalGuardando||estadoClausulaGuardandoRef.current)){setEstadoClausulaError("Terminá de guardar la cláusula antes de salir.");return;}
-    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setBusquedaExtrasModelo("");setSeccionDirecto(next);if(next==="papelera"){setErrorPapeleraClausulas("");if(onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}}
+    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setBusquedaExtrasModelo("");setVistaCompacta("editar");setSeccionDirecto(next);if(next==="papelera"){setErrorPapeleraClausulas("");if(onRecargarPapeleraClausulas)onRecargarPapeleraClausulas();}}
     if(seccion==="adicionales"||verEditorPropio){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando&&next!==seccion)requestDwConfirm("¿Descartar los cambios sin guardar antes de salir del modelo?",cambiar);else cambiar();
   }
@@ -331,6 +331,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   const [modoDocumento,setModoDocumento]=useState("simple");
   const [vistaMadre,setVistaMadre]=useState(null);
   const [vistaPropio,setVistaPropio]=useState(null);
+  const [vistaCompacta,setVistaCompacta]=useState("editar");
   var modoDocumentoActual=verEditorPropio?"avanzado":modoDocumento;
   function cambiarModoDocumento(nuevo){
     if(nuevo===modoDocumentoActual)return;
@@ -347,7 +348,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   function cambiarDocumento(tipo){
     if(tipo===tipoDocSel)return;
     if(opcionalGuardando||estadoClausulaGuardandoRef.current){setEstadoClausulaError("Terminá de guardar la cláusula antes de cambiar de documento.");return;}
-    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setOpcionalError("");setBusquedaExtrasModelo("");setPasoModeloActivo("");setVistaMadre(null);setVistaPropio(null);setModoDocumento("simple");setTipoDocSel(tipo);}
+    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setOpcionalError("");setBusquedaExtrasModelo("");setPasoModeloActivo("");setVistaMadre(null);setVistaPropio(null);setVistaCompacta("editar");setModoDocumento("simple");setTipoDocSel(tipo);}
     if(verEditorPropio){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de cambiar de documento?",cambiar);else cambiar();
   }
@@ -512,21 +513,34 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
 .dw-model-disclosure>summary::-webkit-details-marker{display:none}
 .dw-model-disclosure .dw-chevron{color:var(--muted);font-size:16px;transition:transform .15s ease}
 .dw-model-disclosure[open] .dw-chevron{transform:rotate(180deg)}
+.dw-madre-mobile-tabs{display:none}
 .dw-madre-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(310px,.95fr);gap:16px;align-items:start}
 .dw-madre-edicion{display:flex;flex-direction:column;gap:12px;min-width:0}
 .dw-madre-vista{position:sticky;top:88px;min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:var(--card);padding:12px}
 .dw-madre-hoja{background:#fff;color:#16233b;border:1px solid #dbe1e9;border-radius:8px;padding:24px 22px;min-height:280px;max-height:67vh;overflow-y:auto;overflow-wrap:anywhere;box-shadow:0 4px 18px rgba(0,0,0,.06);font-size:12px;line-height:1.8;white-space:pre-wrap}
 .dw-madre-simple .dw-clause-actions button[title="Subir"],.dw-madre-simple .dw-clause-actions button[title="Bajar"],.dw-madre-simple .dw-clause-actions button[title="Eliminar"],.dw-madre-simple .dw-clause-actions button[title="Historial de la cláusula"]{display:none!important}
 .dw-madre-simple .dw-clause-number-draggable{cursor:default;pointer-events:none}
-@media(max-width:1050px){.dw-madre-grid{grid-template-columns:minmax(0,1fr)}.dw-madre-vista{position:static}.dw-madre-hoja{max-height:540px}}
+@media(max-width:1050px){
+ .dw-madre-mobile-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;position:sticky;top:72px;z-index:12;padding:8px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.07)}
+ .dw-madre-mobile-tabs>button{min-width:0;min-height:43px}
+ .dw-madre-grid{grid-template-columns:minmax(0,1fr)}
+ .dw-madre-grid[data-mobile-view="editar"] .dw-madre-vista{display:none}
+ .dw-madre-grid[data-mobile-view="vista"] .dw-madre-edicion{display:none}
+ .dw-madre-vista{position:static}
+ .dw-madre-hoja{max-height:540px}
+}
 @media(max-width:600px){.dw-madre-grid{gap:10px}.dw-madre-vista{padding:9px}.dw-madre-hoja{padding:17px 14px;max-height:460px;min-height:200px}.dw-madre-edicion>.card{padding:12px!important}}
 @media(prefers-reduced-motion:reduce){.dw-model-disclosure .dw-chevron{transition:none}}
 `}</style>
       {<div id="dw-config-tipo" className="card" style={{padding:12,scrollMarginTop:90}}>
         <SelectorDocumento id="dw-modelo-documento" titulo="Elegí el documento" tipos={PLANTILLA_TIPOS} nombres={TIPOS} iconos={TIPO_ICON} value={tipoDocSel} onChange={cambiarDocumento}/>
       </div>}
-      <div className="dw-madre-grid" data-testid="dw-documento-madre-mesa">
-        <div className={"dw-madre-edicion"+(modoDocumentoActual==="simple"?" dw-madre-simple":"")}>
+      <div className="dw-madre-mobile-tabs" role="group" aria-label="Mostrar edición o vista previa del documento">
+        <button type="button" className={"btn "+(vistaCompacta==="editar"?"btn-primary":"btn-secondary")} aria-pressed={vistaCompacta==="editar"} aria-controls="dw-madre-editor-panel" onClick={function(){setVistaCompacta("editar");}}>Editar documento</button>
+        <button type="button" className={"btn "+(vistaCompacta==="vista"?"btn-primary":"btn-secondary")} aria-pressed={vistaCompacta==="vista"} aria-controls="dw-madre-vista-panel" onClick={function(){setVistaCompacta("vista");}}>Ver documento</button>
+      </div>
+      <div className="dw-madre-grid" data-mobile-view={vistaCompacta} data-testid="dw-documento-madre-mesa">
+        <div id="dw-madre-editor-panel" className={"dw-madre-edicion"+(modoDocumentoActual==="simple"?" dw-madre-simple":"")}>
       <div data-testid="dw-documento-madre-editor" className="card" style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:11}}>
         <div><div style={{fontSize:16,fontWeight:750,color:"var(--text)"}}>Tu documento madre ya está preparado</div><div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5,marginTop:3}}>Revisá solo lo que quieras cambiar. Los ocho modelos están listos para usar.</div></div>
         <div role="group" aria-label="Modo de edición del documento madre" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:7}}>
@@ -616,7 +630,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         </div>
       </details>}
         </div>
-        <aside data-testid="dw-documento-madre-preview" className="dw-madre-vista" aria-label="Vista previa del documento madre">
+        <aside id="dw-madre-vista-panel" data-testid="dw-documento-madre-preview" className="dw-madre-vista" aria-label="Vista previa del documento madre">
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap",marginBottom:11}}>
             <div><div style={{fontSize:14,fontWeight:750,color:"var(--text)"}}>Vista del documento</div><div style={{fontSize:11,color:"var(--dim)",marginTop:3}}>Ejemplo con datos ficticios</div></div>
             {!verEditorPropio&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){setPreviewModeloAbierta(true);}}>Ampliar ↗</button>}

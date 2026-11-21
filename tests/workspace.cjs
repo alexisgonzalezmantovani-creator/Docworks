@@ -10,6 +10,15 @@ assert.ok(document.querySelector('[data-testid="dw-documento-madre-mesa"]'),'Una
 assert.ok(document.querySelector('[data-testid="dw-documento-madre-preview"]'),'Vista previa siempre presente');
 assert.ok(document.querySelector('[data-testid="dw-documento-madre-preview"]').textContent.includes('DOCWORKS · DOCUMENTO DE EJEMPLO'),'Se genera la vista real con datos ficticios');
 assert.ok(document.querySelector('[data-testid="dw-documento-madre-editor"]'),'Editor del documento madre');
+const panelCompacto=document.querySelector('[aria-label="Mostrar edición o vista previa del documento"]');
+const mesa=document.querySelector('[data-testid="dw-documento-madre-mesa"]');
+assert.ok(panelCompacto,'Navegación de iPhone y tablet disponible');
+assert.equal(mesa.getAttribute('data-mobile-view'),'editar','Comienza editando');
+await click(panelCompacto.querySelector('[aria-controls="dw-madre-vista-panel"]'));
+assert.equal(mesa.getAttribute('data-mobile-view'),'vista','Permite leer el documento sin scrollear todas las cláusulas');
+assert.ok(document.querySelector('#dw-model-clauses'),'El editor no se desmonta al ver la vista previa');
+await click(panelCompacto.querySelector('[aria-controls="dw-madre-editor-panel"]'));
+assert.equal(mesa.getAttribute('data-mobile-view'),'editar','Se puede volver a editar sin perder el formulario');
 assert.equal(document.querySelector('#dw-model-clauses').open,true,'Cuerpo listo para editar de entrada');
 assert.equal(document.querySelector('[aria-label="Desplegar introducción"]').getAttribute('aria-expanded'),'false','Introducción plegada');
 await click(document.querySelector('[aria-label="Desplegar introducción"]'));

@@ -396,6 +396,18 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.waitForFunction(()=>document.querySelector('.dw-pdf-preview')?.getAttribute('aria-busy')==='false');
   await page.screenshot({path:path.join(out,'aspecto-'+name+'.png'),fullPage:true});
   await page.goto('http://127.0.0.1:'+server.address().port+'/workspace');
+  const pestañasMadre=page.getByRole('group',{name:'Mostrar edición o vista previa del documento'});
+  if(width<=1050){
+    assert.ok(await pestañasMadre.isVisible(),name+' alternador de documento visible en iPhone o tablet');checks++;
+    await pestañasMadre.getByRole('button',{name:'Ver documento',exact:true}).click();
+    assert.equal(await page.getByTestId('dw-documento-madre-preview').isVisible(),true,name+' vista previa accesible sin recorrer las cláusulas');checks++;
+    assert.equal(await page.locator('#dw-model-clauses').isVisible(),false,name+' el editor se oculta al leer el documento');checks++;
+    await pestañasMadre.getByRole('button',{name:'Editar documento',exact:true}).click();
+    assert.equal(await page.locator('#dw-model-clauses').isVisible(),true,name+' el editor vuelve sin perder datos');checks++;
+  }else{
+    assert.equal(await pestañasMadre.isVisible(),false,name+' escritorio conserva doble columna');checks++;
+    assert.equal(await page.getByTestId('dw-documento-madre-preview').isVisible(),true,name+' vista lateral en PC');checks++;
+  }
   for(const label of ['Reserva de Compra','Boleto de Compraventa','Reserva de Alquiler','Contrato de Alquiler','Comodato','Autorización de Venta','Refuerzo de Reserva','Devolución de Reserva']){
    const botonModelo=page.locator('#dw-modelo-documento').getByRole('button',{name:label,exact:true});
    const tipoElegido=await botonModelo.getAttribute('data-document-type');
