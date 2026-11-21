@@ -439,19 +439,22 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
 
   }
   await page.locator('#dw-modelo-documento').getByRole('button',{name:'Reserva de Compra',exact:true}).click();
-  // El espacio de documentos muestra Introducción, Cláusulas y Firmas
-  // plegadas inicialmente: se abre solo la sección que se está revisando.
-  assert.equal(await page.locator('#dw-model-clauses').evaluate(el=>el.open),false);
+  // Editor único: el cuerpo aparece abierto en modo simple; introducir y
+  // personalizar un contrato siguen siendo opciones deliberadas.
+  assert.equal(await page.locator('#dw-model-clauses').evaluate(el=>el.open),true);
   assert.equal(await page.getByRole('button',{name:'Desplegar introducción'}).getAttribute('aria-expanded'),'false');
-  assert.equal(await page.locator('#dw-model-source-switch').evaluate(el=>el.open),false);
-  checks+=3;
-  await page.locator('#dw-model-clauses > summary').click();
+  assert.equal(await page.locator('#dw-model-source-switch').count(),0);
+  assert.equal(await page.getByTestId('dw-documento-madre-preview').count(),1,'Vista lateral siempre presente');
+  checks+=4;
   const primeraClausula=page.locator('.dw-clause-compact').first();
   await primeraClausula.locator('.dw-clause-toggle').click();
   const nombreClausula=primeraClausula.locator('.dw-clause-name');
   assert.ok(await nombreClausula.evaluate(el=>el.getBoundingClientRect().width>=60),name+' título de cláusula legible');checks++;
   assert.ok(await nombreClausula.evaluate(el=>el.getBoundingClientRect().height<=parseFloat(getComputedStyle(el).lineHeight)*1.1),name+' Precio no se parte');checks++;
-  for(const titulo of ['Subir','Bajar']){assert.ok(await primeraClausula.locator('button[title="'+titulo+'"]').evaluate(el=>el.getBoundingClientRect().width>=36),name+' '+titulo+' sin comprimir');checks++;}
+  assert.equal(await primeraClausula.locator('button[title="Subir"]').isVisible(),false,'En modo simple no hay acciones técnicas');checks++;
+  await page.getByRole('button',{name:/Modo avanzado/}).click();
+  assert.equal(await page.locator('#dw-model-source-switch').count(),1,'El modo avanzado conserva el contrato propio');checks++;
+  for(const titulo of ['Subir','Bajar']){assert.ok(await primeraClausula.locator('button[title="'+titulo+'"]').evaluate(el=>el.getBoundingClientRect().width>=28),name+' '+titulo+' en modo avanzado');checks++;}
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' cláusula abierta sin desborde');checks++;
   await primeraClausula.screenshot({path:path.join(out,'clausula-precio-'+name+'.png')});
   await primeraClausula.locator('.dw-clause-toggle').click();
@@ -520,7 +523,8 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
   await page.locator('#dw-biblioteca-documento').getByRole('button',{name:'Todos los documentos',exact:true}).click();
   assert.equal(await page.locator('#dw-config-tipo').count(),0);checks++;
   await nav.getByRole('button',{name:'Modelos de documentos',exact:true}).click();
-  await page.locator('#dw-model-clauses > summary').click();
+  await page.getByRole('button',{name:/Modo avanzado/}).click();
+  assert.equal(await page.locator('#dw-model-clauses').evaluate(el=>el.open),true,'El cuerpo sigue accesible');
   await page.getByRole('button',{name:'＋ Escribir cláusula del modelo',exact:true}).click();
   await page.locator('.dw-redaccion-clausula').fill('Borrador conservado al cambiar de sección.');
   await nav.getByRole('button',{name:'Biblioteca de cláusulas',exact:true}).click();
