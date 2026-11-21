@@ -75,10 +75,12 @@ check('agregar cláusula está al final de la lista y no arriba',()=>{
  assert.ok(a>=0&&b>a);
  assert.equal(src.split('＋ Escribir cláusula del modelo').length-1,1);
 });
-check('aspecto se mueve al final de documentos, no aparece junto al título del modelo',()=>{
+check('aspecto queda fuera del contenido del documento madre y no duplica el acceso',()=>{
  const src=fs.readFileSync(root+'/src/Clausulas.tsx','utf8');
- const title=src.indexOf('data-testid="dw-model-source"'),advance=src.indexOf('id="dw-model-source-switch"'),aspect=src.indexOf('data-testid="dw-aspecto-al-final"');
- assert.ok(title>=0&&advance>title&&aspect>advance);
+ const aspect=src.indexOf('data-testid="dw-aspecto-independiente"'),guia=src.indexOf('data-testid="dw-documento-madre-guia"'),advance=src.indexOf('id="dw-model-source-switch"');
+ assert.ok(aspect>=0&&guia>aspect&&advance>guia);
+ assert.ok(src.includes('>Documentos madre</h1>')||src.includes('?"Documentos madre"'));
  assert.equal(src.split('title="Configurar aspecto del documento"').length-1,1);
+ assert.ok(!src.includes('dw-aspecto-al-final'));
 });
 console.log('APROBADAS',count,'pruebas de refuerzo y organización del modelo.');

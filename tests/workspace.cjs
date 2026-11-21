@@ -6,6 +6,18 @@ await selectDoc('reserva');
 const modeloAntes=perfil.plantillas.reserva.body_blocks[1].contenido;
 const otraAntes=perfil.plantillas.boleto.body_blocks[1].contenido;
 assert.ok([...document.querySelectorAll('nav button')].some(b=>b.getAttribute('aria-label')==='Modelos de documentos'&&b.querySelector('strong')?.textContent==='Documentos'),'Nombre claro y compacto de la sección');
+assert.ok(document.querySelector('[data-testid="dw-documento-madre-guia"]'),'Editor simple con modelo preparado');
+assert.equal(document.querySelectorAll('[aria-label="Editar documento madre"] button').length,3,'Introducción, cuerpo y adicionales accesibles en un clic');
+await click(document.querySelector('[aria-label="Editar documento madre"] button[aria-controls="dw-model-clauses"]'));
+assert.equal(document.querySelector('#dw-model-clauses').open,true,'Atajo de cuerpo abre el editor sin pasos intermedios');
+await click(document.querySelector('[aria-label="Editar documento madre"] button[aria-controls="dw-model-extra-clauses"]'));
+assert.equal(document.querySelector('#dw-model-extra-clauses').open,true,'Atajo de adicionales abre la selección');
+await click(document.querySelector('[aria-label="Editar documento madre"] button[aria-controls="dw-config-introduccion"]'));
+assert.equal(document.querySelector('[aria-label="Ocultar introducción"]').getAttribute('aria-expanded'),'true','Atajo abre introducción');
+await click(document.querySelector('[aria-label="Ocultar introducción"]'));
+document.querySelector('#dw-model-clauses').open=false;
+document.querySelector('#dw-model-extra-clauses').open=false;
+
 assert.equal(document.querySelector('#dw-modelo-documento .dw-document-selector-title').textContent.trim(),'Elegí el documento','Selector sin título confuso');
 const niveles=['#dw-config-introduccion','#dw-model-clauses','#dw-model-extra-clauses','[data-testid=dw-model-actions]','#dw-model-source-switch'].map(selector=>document.querySelector(selector));
 assert.ok(niveles.every(Boolean),'Cinco zonas útiles del editor');

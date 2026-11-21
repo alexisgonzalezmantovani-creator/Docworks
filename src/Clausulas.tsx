@@ -333,13 +333,44 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   function cambiarDocumento(tipo){
     if(tipo===tipoDocSel)return;
     if(opcionalGuardando||estadoClausulaGuardandoRef.current){setEstadoClausulaError("Terminá de guardar la cláusula antes de cambiar de documento.");return;}
-    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setOpcionalError("");setBusquedaExtrasModelo("");setTipoDocSel(tipo);}
+    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setOpcionalError("");setBusquedaExtrasModelo("");setPasoModeloActivo("");setTipoDocSel(tipo);}
     if(verEditorPropio){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de cambiar de documento?",cambiar);else cambiar();
   }
   const [filtroAdicional,setFiltroAdicional]=useState("todas");
   const [busquedaExtrasModelo,setBusquedaExtrasModelo]=useState("");
   const [previewModeloAbierta,setPreviewModeloAbierta]=useState(false);
+  const [pasoModeloActivo,setPasoModeloActivo]=useState("");
+  // Accesos de un solo clic: la interfaz ordena los editores ya existentes,
+  // sin alterar ni recrear bloques, tokens, cláusulas o versiones.
+  function abrirParteDocumento(parte){
+    if(verEditorPropio)return;
+    if(parte==="preview"){setPreviewModeloAbierta(true);return;}
+    if(opcionalGuardando||estadoClausulaGuardandoRef.current){
+      dwNotify("info","Esperá a que termine el guardado antes de cambiar de sección.");return;
+    }
+    if(modeloEditando&&pasoModeloActivo&&pasoModeloActivo!==parte){
+      dwNotify("info","Guardá o cancelá la edición actual antes de cambiar de sección.");return;
+    }
+    setPasoModeloActivo(parte);
+    if(typeof document==="undefined")return;
+    const selector=parte==="introduccion"?"#dw-config-introduccion":parte==="cuerpo"?"#dw-model-clauses":"#dw-model-extra-clauses";
+    const destino=document.querySelector(selector);
+    if(!destino)return;
+    if(parte==="introduccion"){
+      const abrir=destino.querySelector('button[aria-label="Desplegar introducción"]');
+      if(abrir)abrir.click();
+    }else if("open" in destino){destino.open=true;}
+    if(typeof destino.scrollIntoView==="function"){
+      destino.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+  }
+  function abrirAspectoDocumento(){
+    if(!onAbrirAspecto)return;
+    if(verEditorPropio)navegarConProteccionModelo(onAbrirAspecto);
+    else if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);
+    else onAbrirAspecto();
+  }
   const [opcionalEditando,setOpcionalEditando]=useState(null);
   const [opcionalBorrador,setOpcionalBorrador]=useState(null);
   const [opcionalGuardando,setOpcionalGuardando]=useState(false);
@@ -443,7 +474,10 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var cantidadAdicionalesHeredadas=opcionalesDocumento.filter(function(c){return c.obligatoria===true||(configAdicionalesDocumento.obligatorias_ids||[]).includes(c.id);}).length;
   var hayClausulasAdicionalesConfigurables=cantidadAdicionalesEditables>0;
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
-    <div className="section-header"><div><h1 className="section-title" style={{margin:0}}>{seccion==="modelos"?"Modelos de documentos":seccion==="papelera"?"Papelera de cláusulas":"Biblioteca de cláusulas"}</h1><div className="section-sub">{seccion==="papelera"?"Recuperá cláusulas eliminadas.":seccion==="adicionales"?"Textos adicionales para tus operaciones.":"Configurá el modelo que usarán los asesores."}</div></div></div>
+    <div className="section-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+      <div><h1 className="section-title" style={{margin:0}}>{seccion==="modelos"?"Documentos madre":seccion==="papelera"?"Papelera de cláusulas":"Biblioteca de cláusulas"}</h1><div className="section-sub">{seccion==="papelera"?"Recuperá cláusulas eliminadas.":seccion==="adicionales"?"Textos adicionales para tus operaciones.":"Tus ocho documentos base ya están listos. Elegí uno y modificá solo lo que necesites."}</div></div>
+      {seccion==="modelos"&&puedeEditar&&onAbrirAspecto&&<button type="button" data-testid="dw-aspecto-independiente" title="Configurar aspecto del documento" aria-label="Configurar aspecto del documento" className="btn btn-secondary btn-sm" style={{minHeight:42,flexShrink:0,display:"flex",alignItems:"center",gap:7}} onClick={abrirAspectoDocumento}>✦ Aspecto <span style={{fontSize:11,fontWeight:400,opacity:.75}}>Solo diseño</span></button>}
+    </div>
     {puedeEditar&&<nav className="dw-clause-workspace-nav" aria-label="Cláusulas y documentos" style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,minWidth:0}}>
       <button type="button" aria-label="Biblioteca de cláusulas" aria-pressed={seccion==="adicionales"} className={seccion==="adicionales"?"btn btn-primary":"btn btn-secondary"} style={{minHeight:54,minWidth:0,width:"100%",display:"flex",justifyContent:"flex-start",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:12,textAlign:"left"}} onClick={function(){setSeccion("adicionales");}}>
         <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:38,height:38,flexShrink:0,borderRadius:10,background:"rgba(147,197,253,.12)"}}><svg aria-hidden="true" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 3.5l2.2 1.3 2.3-.8 1.7 2.2-.4 2.2 2.2 1.5 2.7-.3 1.3 2.3-1.8 2-.1 2.7-2.5.7-1.8-1.5-2.4.9-.9 2.4-2.7.2-1.4-2.2-2.7-.3-.7-2.6 1.5-1.8-.8-2.5-2.3-.8-.3-2.6 2.2-1.3z"/><path d="M11 10h2v2h-2z"/></svg></span>
@@ -463,6 +497,26 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
       {<div id="dw-config-tipo" className="card" style={{padding:12,scrollMarginTop:90}}>
         <SelectorDocumento id="dw-modelo-documento" titulo="Elegí el documento" tipos={PLANTILLA_TIPOS} nombres={TIPOS} iconos={TIPO_ICON} value={tipoDocSel} onChange={cambiarDocumento}/>
       </div>}
+      {!verEditorPropio&&<section className="card" data-testid="dw-documento-madre-guia" style={{padding:"18px 16px",background:"linear-gradient(145deg,rgba(212,168,83,.065),var(--card))",border:"1px solid var(--border)",borderRadius:14}}>
+        <div style={{display:"flex",gap:12,alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",marginBottom:13}}>
+          <div style={{minWidth:0,flex:"1 1 230px"}}><div style={{fontWeight:750,color:"var(--text)",fontSize:17}}>Tu documento madre ya está preparado</div><p style={{fontSize:12.5,color:"var(--muted)",lineHeight:1.55,margin:"5px 0 0"}}>Seleccioná una parte para revisarla. Si el modelo te sirve como está, no tenés que cambiar nada. Los asesores lo usarán al crear operaciones.</p></div>
+          <button type="button" className="btn btn-primary btn-sm" style={{minHeight:42,whiteSpace:"nowrap"}} onClick={function(){abrirParteDocumento("preview");}}>Ver documento completo ↗</button>
+        </div>
+        <div role="group" aria-label="Editar documento madre" className="dw-documento-madre-pasos" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(166px,1fr))",gap:8}}>
+          {[
+            {id:"introduccion",titulo:"1. Introducción",detalle:"Cómo empieza el documento",icon:"✎"},
+            {id:"cuerpo",titulo:"2. Cuerpo",detalle:"Textos y condiciones base",icon:"▤"},
+            {id:"extras",titulo:"3. Cláusulas adicionales",detalle:"Qué puede sumar el asesor",icon:"＋"}
+          ].map(function(item){
+            var activo=pasoModeloActivo===item.id;
+            return <button type="button" key={item.id} aria-controls={item.id==="introduccion"?"dw-config-introduccion":item.id==="cuerpo"?"dw-model-clauses":"dw-model-extra-clauses"} aria-pressed={activo} className="dw-documento-madre-paso" onClick={function(){abrirParteDocumento(item.id);}} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 11px",minWidth:0,minHeight:70,borderRadius:11,cursor:"pointer",textAlign:"left",border:"1px solid "+(activo?"var(--gold)":"var(--border2)"),background:activo?"rgba(212,168,83,.12)":"var(--surface)",color:"var(--text)"}}>
+              <span aria-hidden="true" style={{width:30,height:30,flexShrink:0,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(212,168,83,.12)",color:"var(--gold)",fontWeight:700,fontSize:17}}>{item.icon}</span>
+              <span style={{minWidth:0}}><strong style={{fontSize:12.7,display:"block",lineHeight:1.3}}>{item.titulo}</strong><small style={{fontSize:11,color:"var(--muted)",display:"block",lineHeight:1.4,marginTop:3}}>{item.detalle}</small></span>
+            </button>;
+          })}
+        </div>
+        <p style={{fontSize:11.5,color:"var(--dim)",lineHeight:1.5,margin:"12px 1px 0"}}>Las firmas y los campos automáticos se incorporan al generar el documento. La apariencia se configura por separado en «Aspecto».</p>
+      </section>}
       <div data-testid="dw-model-source" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",padding:"5px 2px 0"}}>
         <div style={{minWidth:0}}>
           <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{modeloPropioActivo?"Modelo activo: contrato propio":"Modelo activo: DocWorks"}</div>
@@ -500,7 +554,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         ? <DocumentoPropioEditor key={"contrato-propio-"+tipoDocSel} tipo={tipoDocSel} perfil={perfil} onSavePerfil={guardarPerfil} confirmar={requestDwConfirm} onCancelar={function(){setPegarMiContrato(false);}}/>
         : <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
         <details id="dw-model-clauses" className="card dw-model-disclosure" style={{padding:14}}>
-          <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Adaptar modelo</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Cláusulas incluidas automáticamente</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+          <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>2. Cuerpo del documento</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Textos que vienen incluidos y se completan con cada operación</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
           
           <div id="dw-model-preview-area">
             {bloquesError&&tipoDocSel==="reserva"&&<div className="notice notice-amber" style={{fontSize:12,marginBottom:10}}>{bloquesError} {onRetryBloques&&<button type="button" onClick={onRetryBloques} className="btn btn-secondary btn-sm">Reintentar</button>}</div>}
@@ -509,7 +563,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
           </div>
         </details>
       {<details key={"biblioteca-"+tipoDocSel} id="dw-model-extra-clauses" className="card dw-model-disclosure" style={{padding:14,scrollMarginTop:90}} data-step="clausulas">
-        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Agregar cláusulas ({cantidadAdicionalesDisponibles})</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Opciones de la biblioteca</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>3. Cláusulas adicionales ({cantidadAdicionalesDisponibles})</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Elegí cuáles podrá sumar el asesor. Tu biblioteca no cambia.</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
         
         <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.5,margin:"5px 0 12px"}}>«El asesor elige» permite sumar la cláusula en cada operación sin agregarla automáticamente. Las condiciones heredadas se conservan.</div>
         {estadoClausulaGuardando!==null&&<div role="status" style={{fontSize:12,color:"var(--muted)",marginBottom:8}}>Guardando disponibilidad de la cláusula…</div>}
@@ -537,17 +591,14 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
 
       </EncabezadoFijadoPanel>}
       <details id="dw-model-source-switch" className="card dw-model-disclosure" style={{padding:"12px 14px",marginTop:2}}>
-        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>{verEditorPropio?"Volver al modelo DocWorks":"Pegar mi contrato"}</span><span style={{fontSize:11.5,color:"var(--dim)"}}>{verEditorPropio?"Recuperar el modelo base":"Usar un contrato completo"}</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
+        <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>Opciones avanzadas</span><span style={{fontSize:11.5,color:"var(--dim)"}}>{verEditorPropio?"Recuperar el modelo base de DocWorks":"Pegar un contrato completo propio (opcional)"}</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
         <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:10,paddingTop:12}}>
           <div style={{fontSize:12,color:"var(--dim)",lineHeight:1.6}}>{verEditorPropio?"Podés recuperar el modelo DocWorks. Sus cláusulas y tus contratos anteriores se conservan.":"Si ya tenés un contrato completo redactado, podés pegarlo como alternativa. No hace falta cambiar de modalidad para editar cláusulas. El cambio solo se aplica cuando guardás el texto propio."}</div>
           <button type="button" className="btn btn-secondary btn-sm" style={{minHeight:44,whiteSpace:"normal"}} onClick={verEditorPropio?volverModeloEstandar:abrirEditorContratoPropio}>{verEditorPropio?"Volver al modelo DocWorks":"Pegar mi contrato"}</button>
           {errorModeloPropio&&<div role="alert" style={{fontSize:12,color:"var(--red)"}}>{errorModeloPropio}</div>}
         </div>
       </details>
-      {onAbrirAspecto&&<div className="card" data-testid="dw-aspecto-al-final" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",padding:"12px 14px"}}>
-        <div><div style={{fontSize:13.5,fontWeight:700,color:"var(--text)"}}>Aspecto del documento</div><div style={{fontSize:11.5,color:"var(--dim)",marginTop:3}}>Logo, tipografía, encabezado y márgenes.</div></div>
-        {onAbrirAspecto&&<button type="button" className="btn btn-secondary btn-sm" title="Configurar aspecto del documento" aria-label="Configurar aspecto del documento" style={{minHeight:40,marginLeft:"auto",padding:"8px 12px",fontWeight:700,flex:"0 0 auto"}} onClick={function(){if(verEditorPropio)navegarConProteccionModelo(onAbrirAspecto);else if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de abrir Aspecto?",onAbrirAspecto);else onAbrirAspecto();}}>✦ Aspecto</button>}
-      </div>}
+
     </div>}
     {seccion==="modelos"&&!puedeEditar&&<div className="notice" style={{fontSize:12}}>Los modelos de los documentos están disponibles únicamente para Dueño y Administrador.</div>}
   </div>;
