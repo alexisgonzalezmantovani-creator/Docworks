@@ -358,7 +358,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
     const destino=document.querySelector(selector);
     if(!destino)return;
     if(parte==="introduccion"){
-      const abrir=destino.querySelector('button[aria-label="Desplegar introducción"]');
+      const abrir=destino.querySelector<HTMLButtonElement>('button[aria-label="Desplegar introducción"]');
       if(abrir)abrir.click();
     }else if("open" in destino){destino.open=true;}
     if(typeof destino.scrollIntoView==="function"){
