@@ -7910,13 +7910,19 @@ function AuthLoadingScreen({ error, onRetry }){
 // ya vienen en español (los que arman nuestras propias funciones con
 // `raise exception 'Texto...'`) no matchean ningún patrón de acá y se
 // devuelven sin tocar.
+function esErrorRedDocWorks(error){
+  var texto=String(error&&error.message?error.message:error||"").toLowerCase();
+  return /(?:load failed|failed to fetch|fetch failed|networkerror|network request failed|network error|network request timeout|err_network|err_connection|network is offline)/.test(texto);
+}
 function traducirError(msg){
   var original = msg || "";
   var m = original.toLowerCase();
   if (!m) return "Ocurrió un error inesperado. Intentá de nuevo.";
   if (m.indexOf("currently experiencing high demand")>-1 || m.indexOf("service unavailable")>-1 || m.indexOf("status: \"unavailable\"")>-1 || m.indexOf("503")>-1) return "El servicio de IA está temporalmente saturado. DocWorks intentó una alternativa; esperá unos segundos y volvé a probar.";
-  if (m.indexOf("load failed")>-1 || m.indexOf("failed to fetch")>-1 || m.indexOf("networkerror")>-1 || m.indexOf("network request failed")>-1) {
-    return "No se pudo conectar con Supabase (error de red del navegador). Si abriste este archivo con doble clic desde tu disco, tenés que servirlo por http(s):// — los navegadores bloquean estos pedidos desde archivos locales. Si ya lo estás sirviendo por http(s), puede ser una extensión, VPN o firewall bloqueando xpjiydwjawjizubyldtk.supabase.co.";
+  if (esErrorRedDocWorks(original)) {
+    if(typeof window!=="undefined"&&window.location&&window.location.protocol==="file:")
+      return "No se pudo conectar: este archivo necesita abrirse desde una dirección http(s), no desde el disco.";
+    return "No pudimos comunicarnos con el servidor. DocWorks intentó reconectarse. Probá de nuevo y, si persiste, cambiá entre Wi-Fi y datos móviles o desactivá temporalmente VPN y bloqueadores.";
   }
   if (m.indexOf("invalid login credentials")>-1) return "Correo electrónico o contraseña incorrectos.";
   if (m.indexOf("email not confirmed")>-1) return "Todavía no confirmaste tu correo electrónico.";
@@ -8258,16 +8264,28 @@ function useDocWorksSession(){
 
   function login(email, password){
     setLoginError(null); setLoginLoading(true);
-    solicitarCaptcha().then(function(captchaToken){return loadSupabaseJs().then(function(sb){
-      if (!sb) { setLoginLoading(false); setLoginError("No se pudo cargar Supabase. Recargá la página e intentá de nuevo."); return; }
-      return sb.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: password, options:{captchaToken:captchaToken} }).then(function(res){
-        setLoginLoading(false);
-        if (res.error) { setLoginError(traducirError(res.error.message)); return; }
-      }).catch(function(err){
-        setLoginLoading(false);
-        setLoginError(traducirError(err && err.message ? err.message : "Error de conexión, intentá de nuevo."));
-      });
-    });}).catch(function(err){ setLoginLoading(false); setLoginError(traducirError(err&&err.message||"No se pudo cargar Supabase.")); });
+    (async function(){
+      var sb=await loadSupabaseJs();
+      if(!sb){setLoginError("No se pudo cargar el inicio de sesión. Recargá la página e intentá de nuevo.");return;}
+      var ultimoError=null;
+      for(var intento=0;intento<2;intento++){
+        try{
+          // Un token CAPTCHA es de un solo uso: renovarlo también en el reintento.
+          var captchaToken=await solicitarCaptcha();
+          var respuesta=await sb.auth.signInWithPassword({
+            email:email.trim().toLowerCase(),password:password,options:{captchaToken:captchaToken}
+          });
+          if(!respuesta.error)return;
+          ultimoError=respuesta.error;
+        }catch(error){ultimoError=error;}
+        // Reintentar solo los errores de conexión, nunca credenciales rechazadas.
+        if(intento!==0||!esErrorRedDocWorks(ultimoError))break;
+        await new Promise(function(resolve){setTimeout(resolve,900);});
+      }
+      setLoginError(traducirError(ultimoError&&ultimoError.message||"No se pudo iniciar sesión."));
+    })().catch(function(err){
+      setLoginError(traducirError(err&&err.message||"No se pudo iniciar sesión."));
+    }).finally(function(){setLoginLoading(false);});
   }
   function recoverPassword(email){
     var correo=String(email||"").trim().toLowerCase();

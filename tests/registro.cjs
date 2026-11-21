@@ -25,7 +25,7 @@ const {JSDOM}=require('jsdom');
  let signup=[],logins=[],recoveries=[];
  const sb={auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async args=>{logins.push(args);return {data:{},error:null};},resetPasswordForEmail:async(...args)=>{recoveries.push(args);return {};},signUp:async args=>{signup.push(args);return {data:{user:{id:'new'},session:null},error:null};}},rpc:async()=>({data:null})};window.supabase={createClient:()=>sb};
  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dw-registro-'));
- require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.resolve(__dirname,'../src/App.tsx'),'utf8')+'\nexport {RegistroScreen,useDocWorksSession,LoginGate};',resolveDir:path.resolve(__dirname,'../src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs'),external:['react','react-dom','react/jsx-runtime']});
+ require('esbuild').buildSync({stdin:{contents:fs.readFileSync(path.resolve(__dirname,'../src/App.tsx'),'utf8')+'\nexport {RegistroScreen,useDocWorksSession,LoginGate,traducirError,esErrorRedDocWorks};',resolveDir:path.resolve(__dirname,'../src'),loader:'tsx'},bundle:true,jsx:'automatic',platform:'node',format:'cjs',outfile:path.join(tmp,'app.cjs'),external:['react','react-dom','react/jsx-runtime']});
  // Resolve shared React from the project rather than the temporary bundle directory.
  const Module=require('node:module');const original=Module._resolveFilename;const reactPaths=Object.fromEntries(['react','react/jsx-runtime','react-dom'].map(x=>[x,require.resolve(x)]));Module._resolveFilename=function(request,parent,...rest){if(reactPaths[request])return reactPaths[request];return original.call(this,request,parent,...rest);};
  const app=require(path.join(tmp,'app.cjs')),React=require('react'),{createRoot}=require('react-dom/client');let api;
@@ -46,7 +46,23 @@ const {JSDOM}=require('jsdom');
  assert.equal(signup.at(-1).options.captchaToken,'token-1');
  await React.act(async()=>{api.login(' QA@example.invalid ','Password123');await new Promise(r=>setImmediate(r));});
  assert.equal(logins.at(-1).options.captchaToken,'token-2');assert.equal(logins.at(-1).email,'qa@example.invalid');
+ assert.equal(app.esErrorRedDocWorks('Failed to fetch'),true);
+ assert.equal(app.esErrorRedDocWorks('Invalid login credentials'),false);
+ assert.match(app.traducirError('Failed to fetch'),/Wi-Fi y datos móviles/);
+ assert.doesNotMatch(app.traducirError('Failed to fetch'),/archivo con doble clic|disco/);
  await React.act(async()=>api.recoverPassword(' QA@example.invalid '));assert.equal(recoveries.at(-1)[1].captchaToken,'token-3');
+ // La primera petición de login falla en la red; la siguiente debe usar CAPTCHA nuevo.
+ let intentosRed=0;
+ sb.auth.signInWithPassword=async args=>{
+   logins.push(args);
+   intentosRed++;
+   return intentosRed===1?{error:{message:'Failed to fetch'}}:{data:{},error:null};
+ };
+ await React.act(async()=>{api.login('qa@example.invalid','Password123');await new Promise(r=>setTimeout(r,1300));});
+ assert.equal(intentosRed,2,'Reintenta una sola vez el error de red');
+ assert.notEqual(logins.at(-1).options.captchaToken,logins.at(-2).options.captchaToken,'Cada reintento usa otro CAPTCHA');
+ assert.equal(api.loginError,null,'Un reintento exitoso no muestra error');
+ console.log('OK error de red se recupera con reintento seguro y mensaje claro');
  window.turnstile.render=(el,opts)=>{queueMicrotask(()=>opts['error-callback']());return 'fallo';};
  await React.act(async()=>api.recoverPassword('qa@example.invalid'));assert.equal(recoveries.length,1);assert.match(api.registroSuccess,/verificá/);
  console.log('OK tokens únicos en registro, login y recuperación; error de CAPTCHA impide la petición');
