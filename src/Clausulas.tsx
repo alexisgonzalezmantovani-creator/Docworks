@@ -330,6 +330,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   var verEditorPropio=modeloPropioActivo||pegarMiContrato;
   const [modoDocumento,setModoDocumento]=useState("simple");
   const [vistaMadre,setVistaMadre]=useState(null);
+  const [vistaPropio,setVistaPropio]=useState(null);
   var modoDocumentoActual=verEditorPropio?"avanzado":modoDocumento;
   function cambiarModoDocumento(nuevo){
     if(nuevo===modoDocumentoActual)return;
@@ -346,7 +347,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
   function cambiarDocumento(tipo){
     if(tipo===tipoDocSel)return;
     if(opcionalGuardando||estadoClausulaGuardandoRef.current){setEstadoClausulaError("Terminá de guardar la cláusula antes de cambiar de documento.");return;}
-    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setOpcionalError("");setBusquedaExtrasModelo("");setPasoModeloActivo("");setVistaMadre(null);setModoDocumento("simple");setTipoDocSel(tipo);}
+    function cambiar(){setPegarMiContrato(false);setModeloEditando(false);setIntroduccionEditando(false);setOpcionalEditando(null);setOpcionalBorrador(null);setOpcionalError("");setBusquedaExtrasModelo("");setPasoModeloActivo("");setVistaMadre(null);setVistaPropio(null);setModoDocumento("simple");setTipoDocSel(tipo);}
     if(verEditorPropio){navegarConProteccionModelo(cambiar);return;}
     if(modeloEditando)requestDwConfirm("¿Descartar los cambios sin guardar antes de cambiar de documento?",cambiar);else cambiar();
   }
@@ -567,7 +568,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
         {modoConformidadError&&<div role="alert" style={{fontSize:12,color:"var(--red)",marginTop:6}}>{modoConformidadError}</div>}
       </div>}
       {verEditorPropio
-        ? <DocumentoPropioEditor key={"contrato-propio-"+tipoDocSel} tipo={tipoDocSel} perfil={perfil} onSavePerfil={guardarPerfil} confirmar={requestDwConfirm} onCancelar={function(){setPegarMiContrato(false);}}/>
+        ? <DocumentoPropioEditor key={"contrato-propio-"+tipoDocSel} tipo={tipoDocSel} perfil={perfil} onVistaTextoCambio={setVistaPropio} onSavePerfil={guardarPerfil} confirmar={requestDwConfirm} onCancelar={function(){setPegarMiContrato(false);}}/>
         : <EncabezadoFijadoPanel key={"documento-"+tipoDocSel} onEditingChange={setIntroduccionEditando} modeloEnEdicion={modeloEditando} pasoModelo={3} perfil={perfil} onSavePerfil={guardarPerfil} clausulas={Array.isArray(clausulas)?clausulas:[]} tipoDocExterno={tipoDocSel} onTipoDocChange={cambiarDocumento} ocultarSelector={true} barraSuperior={true} previewOpen={previewModeloAbierta} onPreviewChange={setPreviewModeloAbierta}>
         <details id="dw-model-clauses" className="card dw-model-disclosure" open style={{padding:14}}>
           <summary><span style={{display:"flex",flexDirection:"column",gap:3,minWidth:0}}><span style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>2. Cuerpo del documento</span><span style={{fontSize:11.5,color:"var(--dim)"}}>Textos que vienen incluidos y se completan con cada operación</span></span><span className="dw-chevron" aria-hidden="true">⌄</span></summary>
@@ -621,7 +622,15 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
             {!verEditorPropio&&<button type="button" className="btn btn-secondary btn-sm" onClick={function(){setPreviewModeloAbierta(true);}}>Ampliar ↗</button>}
           </div>
           {verEditorPropio?
-            <div style={{padding:"26px 15px",textAlign:"center",border:"1px dashed var(--border2)",borderRadius:10,fontSize:12.5,color:"var(--muted)",lineHeight:1.7}}>Tu contrato propio tiene una vista previa dentro del editor avanzado, donde podés revisarlo antes de guardarlo.</div>
+            <div>
+              {vistaPropio&&vistaPropio.tipo===tipoDocSel&&vistaPropio.texto?
+                <div className="dw-madre-hoja" role="document" aria-label="Ejemplo de contrato propio">
+                  <div style={{textAlign:"right",fontSize:10,color:"#64748b",marginBottom:9}}>DOCWORKS · CONTRATO PROPIO</div>
+                  {vistaPropio.texto.slice(0,20000).replace(/\\{\\{([a-zA-Z0-9_]+)\\}\\}/g,function(_,token){return "["+token.replace(/_/g," ")+"]";})}
+                </div>:
+                <div style={{padding:"26px 15px",textAlign:"center",border:"1px dashed var(--border2)",borderRadius:10,fontSize:12.5,color:"var(--muted)",lineHeight:1.7}}>Pegá tu contrato en el editor y aparecerá acá para revisarlo.</div>}
+              <div style={{fontSize:11,color:"var(--dim)",marginTop:9,lineHeight:1.5}}>Vista de lectura de tu contrato propio. Los campos automáticos se completarán con los datos de cada operación.</div>
+            </div>
             :vistaMadre&&vistaMadre.tipo===tipoDocSel&&vistaMadre.texto?
             <div>
               {!!(vistaMadre.alertas||[]).length&&<details style={{fontSize:11.5,marginBottom:9,color:"var(--gold)"}}><summary>Revisar {vistaMadre.alertas.length} aviso(s) del ejemplo</summary><div style={{padding:"7px 0",color:"var(--muted)",lineHeight:1.5}}>{vistaMadre.alertas.slice(0,8).map(function(a,i){return <div key={i}>• {a}</div>;})}</div></details>}

@@ -41,6 +41,7 @@ assert.ok(document.querySelector('[data-testid=dw-model-source]').textContent.in
 assert.ok(document.querySelector('[data-testid=dw-model-source]').textContent.includes('Se activará cuando guardes'),'Se distingue la preparación de la activación');
 const textoPropio='CONTRATO DE PRUEBA. El cedente {{vendedor_nombre}} y el cesionario {{comprador_nombre}} acuerdan sobre el inmueble {{inmueble_direccion}}. Firmas y jurisdicción a completar.';
 await fill(document.querySelector('textarea[aria-label="Texto del contrato propio"]'),textoPropio);
+assert.ok(document.querySelector('[aria-label="Ejemplo de contrato propio"]')?.textContent.includes('CONTRATO DE PRUEBA'),'El contrato propio también tiene vista previa lateral en vivo');
 await click(btn('Guardar cambios'));
 assert.equal(perfil.plantillas.reserva.modo_documento,'propio','Solo guardar activa contrato propio');
 assert.ok(document.querySelector('[data-testid=dw-model-source]').textContent.includes('Modelo activo: contrato propio'),'Guardar actualiza el modelo activo visible');

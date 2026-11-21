@@ -119,14 +119,16 @@ export function nombreDatoBreve(dato:string,etiqueta:string){
 }
 
 export default function DocumentoPropioEditor({
-  tipo, perfil, onSavePerfil, confirmar, onCancelar
+  tipo, perfil, onSavePerfil, confirmar, onCancelar, onVistaTextoCambio
 }: {
   tipo:string; perfil:any; onSavePerfil:(next:any)=>Promise<any>;
   confirmar:(mensaje:string,accion:()=>void)=>void; onCancelar:()=>void;
+  onVistaTextoCambio?:(vista:{tipo:string;texto:string})=>void;
 }) {
   const config=(perfil?.plantillas||{})[tipo]||{};
   const textoActual=String(config.documento_propio||"");
   const [texto,setTexto]=useState(textoActual);
+  useEffect(()=>{if(onVistaTextoCambio)onVistaTextoCambio({tipo,texto});},[onVistaTextoCambio,tipo,texto]);
   const [estado,setEstado]=useState<"idle"|"saving"|"saved"|"error">("idle");
   const [error,setError]=useState("");
   const [revisar,setRevisar]=useState(false);
