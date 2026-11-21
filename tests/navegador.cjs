@@ -173,6 +173,7 @@ const server=http.createServer((req,res)=>{if(req.url==='/fonts/dm-sans-latin.wo
    await page.screenshot({path:path.join(out,'auditoria-conformidad-'+size+'.png'),animations:'disabled'});
 
    await page.goto(base+'/workspace');
+   await page.getByRole('button',{name:/Modo avanzado/}).click();
    await page.locator('#dw-model-source-switch summary').click();
    await page.getByRole('button',{name:'Pegar mi contrato',exact:true}).click();
    await page.getByRole('button',{name:'Confirmar',exact:true}).click();

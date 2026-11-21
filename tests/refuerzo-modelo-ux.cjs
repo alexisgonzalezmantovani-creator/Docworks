@@ -77,8 +77,9 @@ check('agregar cláusula está al final de la lista y no arriba',()=>{
 });
 check('aspecto queda fuera del contenido del documento madre y no duplica el acceso',()=>{
  const src=fs.readFileSync(root+'/src/Clausulas.tsx','utf8');
- const aspect=src.indexOf('data-testid="dw-aspecto-independiente"'),guia=src.indexOf('data-testid="dw-documento-madre-guia"'),advance=src.indexOf('id="dw-model-source-switch"');
- assert.ok(aspect>=0&&guia>aspect&&advance>guia);
+ const aspect=src.indexOf('data-testid="dw-aspecto-independiente"'),mesa=src.indexOf('data-testid="dw-documento-madre-mesa"'),vista=src.indexOf('data-testid="dw-documento-madre-preview"'),advance=src.indexOf('id="dw-model-source-switch"');
+ assert.ok(aspect>=0&&mesa>aspect&&advance>mesa&&vista>advance);
+ assert.equal(src.includes('data-testid="dw-documento-madre-guia"'),false,'Se elimina la guía duplicada');
  assert.ok(src.includes('>Documentos madre</h1>')||src.includes('?"Documentos madre"'));
  assert.equal(src.split('title="Configurar aspecto del documento"').length-1,1);
  assert.ok(!src.includes('dw-aspecto-al-final'));
