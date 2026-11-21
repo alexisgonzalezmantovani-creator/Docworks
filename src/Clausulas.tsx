@@ -626,7 +626,7 @@ function ClausulasWorkspace({perfil,onSavePerfil,operaciones,clausulas,onAddClau
               {vistaPropio&&vistaPropio.tipo===tipoDocSel&&vistaPropio.texto?
                 <div className="dw-madre-hoja" role="document" aria-label="Ejemplo de contrato propio">
                   <div style={{textAlign:"right",fontSize:10,color:"#64748b",marginBottom:9}}>DOCWORKS · CONTRATO PROPIO</div>
-                  {vistaPropio.texto.slice(0,20000).replace(/\\{\\{([a-zA-Z0-9_]+)\\}\\}/g,function(_,token){return "["+token.replace(/_/g," ")+"]";})}
+                  {vistaPropio.texto.slice(0,20000).replace(/\{\{([a-zA-Z0-9_]+)\}\}/g,function(_,token){return "["+token.replace(/_/g," ")+"]";})}
                 </div>:
                 <div style={{padding:"26px 15px",textAlign:"center",border:"1px dashed var(--border2)",borderRadius:10,fontSize:12.5,color:"var(--muted)",lineHeight:1.7}}>Pegá tu contrato en el editor y aparecerá acá para revisarlo.</div>}
               <div style={{fontSize:11,color:"var(--dim)",marginTop:9,lineHeight:1.5}}>Vista de lectura de tu contrato propio. Los campos automáticos se completarán con los datos de cada operación.</div>
